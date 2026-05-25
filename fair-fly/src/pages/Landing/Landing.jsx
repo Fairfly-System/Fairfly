@@ -1,0 +1,34 @@
+import React from 'react'
+import './landing.css'
+
+export default function Landing() {
+  return (
+    <section className="hero">
+      <div className="badge">
+        <span className="dot" />
+        Trusted Travel Partner
+      </div>
+
+      <h1 className="heading">
+        Your Journey Starts Here
+        <br />
+        <span className="headingGradient">With Fairfly Travel & Tours</span>
+      </h1>
+
+      <p className="sub">
+        Professional travel services for documents, visas, tour packages, and more. We
+        make your travel dreams a reality.
+      </p>
+
+      <div className="actions">
+        <a href="#services" className="btnPrimary">
+          Get Started <i class="fa-solid fa-arrow-right"></i>
+        </a>
+        <a href="#login" className="btnSecondary">
+          Sign In
+        </a>
+      </div>
+
+    </section>
+  )
+}

@@ -1,3 +1,4 @@
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -9,7 +10,7 @@
   --text-dark: #1a1a2e;
   --text-mid: #4a4a6a;
   --text-light: #8888aa;
-  --white: #ffffff;
+  --bg: #F9FBFF;
   --card-bg: #ffffff;
   --font: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
@@ -18,7 +19,7 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: var(--font);
-  background: var(--white);
+  background: var(--bg);
   color: var(--text-dark);
   line-height: 1.6;
   overflow-x: hidden;
