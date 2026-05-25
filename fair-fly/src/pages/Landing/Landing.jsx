@@ -1,8 +1,11 @@
 import React from 'react'
 import './landing.css'
+import Services from '../../components/Services/Services'
+import FooterCard from '../../components/FooterCard/FooterCard'
 
 export default function Landing() {
   return (
+    <>
     <section className="hero">
       <div className="badge">
         <span className="dot" />
@@ -30,5 +33,9 @@ export default function Landing() {
       </div>
 
     </section>
+
+    <Services></Services>
+    <FooterCard></FooterCard>
+    </>
   )
 }

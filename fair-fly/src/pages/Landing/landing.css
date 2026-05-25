@@ -49,7 +49,7 @@
 }
 
 .headingGradient {
-  background: linear-gradient(90deg, #7B7FFF 0%, #F97316 100%);
+  background: linear-gradient(90deg, #7B7FFF 0%, #FF9746 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
