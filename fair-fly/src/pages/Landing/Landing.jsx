@@ -15,7 +15,7 @@ export default function Landing() {
       <h1 className="heading">
         Your Journey Starts Here
         <br />
-        <span className="headingGradient">With Fairfly Travel & Tours</span>
+        With<span className="headingGradient"> Fairfly Travel & Tours</span>
       </h1>
 
       <p className="sub">

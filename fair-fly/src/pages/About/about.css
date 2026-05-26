@@ -1,0 +1,245 @@
+.about-page {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  min-height: 100vh;
+  padding-bottom: 4rem;
+}
+
+
+.about-header {
+  text-align: center;
+  padding: 4rem 2rem 0rem;
+
+}
+
+.about-title {
+  font-size: clamp(2.8rem, 4vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.8rem;
+  color: #0f0f23;
+  animation: fadeDown 0.6s ease forwards;
+}
+
+.titleBlue  { color: #6B6FF5; }
+.titleOrange { color: #F97316; }
+
+.subtitle {
+  font-size: 0.97rem;
+  color: #5a5a7a;
+  max-width: 420px;
+  margin: 0 auto;
+  line-height: 1.7;
+  animation: fadeUp 0.6s ease forwards;
+}
+
+
+.about-section {
+  padding: 2rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f0f23;
+  text-align: center;
+  margin-bottom: 1.4rem;
+  letter-spacing: -0.01em;
+  animation: fadeUp 0.6s ease forwards;
+}
+
+
+.branchesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #e8e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(107,111,245,0.06);
+  animation: fadeUp 0.8s ease forwards;
+}
+
+.branchCard {
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr;
+  gap: 1rem;
+  padding: 2.6rem 2.8rem;
+  align-items: start;
+  border-bottom: 1px solid #f0f0f8;
+  transition: background 0.2s;
+}
+
+.branchCard:last-child { border-bottom: none; }
+.branchCard:hover { background: #fafafe; }
+
+.branchLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.branchIcon {
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+
+.branchName {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f0f23;
+  line-height: 1.3;
+}
+
+.branchManager {
+  font-size: 0.78rem;
+  color: #8a8aaa;
+  margin-top: 2px;
+}
+
+
+.branchMiddle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding-top: 2px;
+}
+
+.branchAddress {
+  font-size: 0.82rem;
+  color: #4a4a6a;
+  line-height: 1.55;
+}
+
+.branchRight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.infoRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.infoIcon {
+  margin-top: 2px;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.infoText {
+  font-size: 0.82rem;
+  color: #4a4a6a;
+  line-height: 1.5;
+}
+
+.emailLink {
+  font-size: 0.82rem;
+  color: #F97316;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.emailLink:hover { opacity: 0.75; text-decoration: underline; }
+
+
+.headOfficeCard {
+  animation: fadeUp 0.6s ease forwards;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  border: 1px solid #e8e8f0;
+  border-radius: 14px;
+  padding: 2.6rem 2.8rem;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(107,111,245,0.06);
+}
+
+.headOfficeTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.headOfficeTitle h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f0f23;
+}
+
+.headOfficeAddr {
+  font-size: 0.83rem;
+  color: #4a4a6a;
+  line-height: 1.6;
+  margin-bottom: 0.6rem;
+}
+
+.headOfficeRight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.2rem;
+}
+
+
+.connectSection {
+  padding: 2rem 2rem 1rem;
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.socialBtns {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.socialBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  text-decoration: none;
+  padding: 0.65rem 1.4rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+.socialBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 700px) {
+  .branchCard { grid-template-columns: 1fr; gap: 1rem; }
+  .headOfficeCard { grid-template-columns: 1fr; gap: 1rem; }
+  .section { padding: 2rem 1rem; }
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

@@ -15,7 +15,11 @@
   --font: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-html { scroll-behavior: smooth; }
+html { 
+  
+  scroll-behavior: smooth; 
+
+}
 
 body {
   font-family: var(--font);

@@ -9,7 +9,7 @@
 }
 
 .title {
-  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  font-size: clamp(2.7rem, 4vw, 3.2rem);
   font-weight: 800;
   color: #0f0f23;
   margin-bottom: 0.5rem;
@@ -26,7 +26,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.4rem;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 

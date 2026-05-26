@@ -8,7 +8,7 @@ export default function Chatbot() {
   const [messages, setMessages] = useState([
     {
       role: "model",
-      text: "Hello! I'm Fairfly AI Assistant 🤖. How can I help you today? I can answer questions about our services, requirements, and processing times.",
+      text: "Hello! I'm Fairfly AI Assistant. How can I help you today? I can answer questions about our services, requirements, and processing times.",
     },
   ]);
   const [input, setInput] = useState("");

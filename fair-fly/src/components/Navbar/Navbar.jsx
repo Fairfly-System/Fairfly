@@ -1,22 +1,23 @@
 import React from 'react'
 import './navbar.css'
+import { NavLink } from 'react-router'
 
 export default function Navbar() {
   return (
     <nav className="nav">
-      <a href="#" className="logo">
+      <NavLink to="/home" className="logo">
         <div className="logoIcon">
 
         <img src='FairflyLogo.png'></img>
 
         </div>
 
-      </a>
+      </NavLink>
 
       <div className="right">
-        <a href="#about" className="linkAbout">
+        <NavLink to="/about" className="linkAbout">
           About
-        </a>
+        </NavLink>
 
         <a href="#login" className="linkLogin">
           Login
