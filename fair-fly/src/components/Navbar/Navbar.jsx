@@ -19,9 +19,9 @@ export default function Navbar() {
           About
         </NavLink>
 
-        <a href="#login" className="linkLogin">
+        <NavLink to="/login" className="linkLogin">
           Login
-        </a>
+        </NavLink>
 
         <a href="#franchise" className="btnFranchise">
           <i class="fa-solid fa-suitcase"></i> Apply for Franchise
