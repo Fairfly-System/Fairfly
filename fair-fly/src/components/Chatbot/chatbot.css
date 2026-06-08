@@ -213,7 +213,7 @@
 }
 
 .chatbot-send-button:hover:not(:disabled) {
-  background-color: #5E71F3;
+  background-color: #8390ea;
 }
 
 .chatbot-send-button:disabled {
