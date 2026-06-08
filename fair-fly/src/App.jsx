@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import Login from './pages/Login/login';
 import Register from './pages/Register/Register';
+import ClientDashbord from './pages/Client-Dashboard/ClientDashboard';
 
 function App() {
 
@@ -43,6 +44,7 @@ function App() {
 
         <Route path="/home" element={<Landing/>} />
         <Route path="/about" element={<About />} />
+        <Route path ="/client" element={<ClientDashbord />} />
         <Route path ="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/*" element={<Navigate to="/home" />} />

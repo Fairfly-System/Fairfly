@@ -3,7 +3,7 @@ import './about.css'
 
 const branches = [
   {
-    name: 'Fairfly Baliuag Branch',
+    name: 'Fairfly Baliuag',
     manager: 'Emmanuel Manlapig',
     iconBg: 'linear-gradient(135deg, #4B6FFF, #6B8FFF)',
     address: 'Unit 35 Ground Flr. A Square Mall Brgy. Pinagbarilan, Baliuag, Philippines, 3006',

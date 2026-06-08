@@ -59,7 +59,7 @@ export default function Chatbot() {
       let fallbackText = "Oops, Something went wrong. Please try again in a bit!";
       
       if (errorString.includes("429") || errorString.includes("quota")) {
-        fallbackText = "Slow down a bit! ☕ You've hit Google's temporary free tier speed limit. Please wait about a minute before sending your next message, thanks!";
+        fallbackText = "Slow down a bit! ☕ You've hit Google's temporary limit. Please wait about a minute before sending your next message, thanks!";
       }
 
       setMessages([
@@ -124,7 +124,7 @@ export default function Chatbot() {
               className="chatbot-input-field"
               disabled={loading}
             />
-            <button type="submit" className="chatbot-send-button" disabled={loading}><i class="fa-solid fa-paper-plane"></i></button>
+            <button type="submit" className="chatbot-send-button" disabled={loading}><i class="fa-regular fa-paper-plane"></i></button>
           </form>
         </div>
       )}

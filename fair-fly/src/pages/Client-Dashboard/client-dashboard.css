@@ -1,0 +1,320 @@
+.page {
+  min-height: 100vh;
+  background: #fff;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 24px 60px;
+}
+
+.pageTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f0f23;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.pageSub {
+  font-size: 14px;
+  color: #6a6a8a;
+  margin-bottom: 28px;
+}
+
+/* APPOINTMENT CARD */
+.appointmentCard {
+  border: 1px solid #e8e8f0;
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-bottom: 24px;
+  background: #fff;
+  box-shadow: 0 1px 8px rgba(107,111,245,0.05);
+}
+
+.appointmentHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.appointmentIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(107, 111, 245, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.appointmentTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f0f23;
+  margin-bottom: 3px;
+}
+
+.appointmentSub {
+  font-size: 13px;
+  color: #6a6a8a;
+}
+
+.appointmentBody {
+  background: #f8f8fc;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.appointmentDesc {
+  font-size: 13.5px;
+  color: #3a3a5a;
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+
+.scheduleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #6B6FF5;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 3px 12px rgba(107,111,245,0.3);
+}
+
+.scheduleBtn:hover {
+  background: #5558E3;
+  transform: translateY(-1px);
+}
+
+/* SERVICES CARD */
+.servicesCard {
+  border: 1px solid #e8e8f0;
+  border-radius: 14px;
+  padding: 22px 24px;
+  background: #fff;
+  box-shadow: 0 1px 8px rgba(107,111,245,0.05);
+}
+
+.servicesTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f0f23;
+  margin-bottom: 3px;
+}
+
+.servicesSub {
+  font-size: 13px;
+  color: #6a6a8a;
+  margin-bottom: 20px;
+}
+
+.servicesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* SERVICE CARD */
+.serviceCard {
+  border: 1px solid #e8e8f0;
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+
+.serviceCard:last-child { margin-bottom: 0; }
+
+.serviceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.serviceTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f0f23;
+  margin-bottom: 3px;
+  letter-spacing: -0.01em;
+}
+
+.serviceDate {
+  font-size: 12.5px;
+  color: #7a7a9a;
+}
+
+/* BADGE */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badgeInProgress {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.badgeComplete {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+/* PROGRESS */
+.progressRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.progressLabel {
+  font-size: 13px;
+  color: #3a3a5a;
+  font-weight: 500;
+}
+
+.progressPct {
+  font-size: 13px;
+  color: #3a3a5a;
+  font-weight: 600;
+}
+
+.progressTrack {
+  height: 6px;
+  background: #e8e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressBar {
+  height: 100%;
+  background: #6B6FF5;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.progressBarComplete {
+  background: #22C55E;
+}
+
+.estimated {
+  font-size: 12.5px;
+  color: #7a7a9a;
+  margin-bottom: 12px;
+}
+
+/* TOGGLE */
+.toggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #6B6FF5;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.toggleBtn:hover { opacity: 0.75; }
+
+/* WORKFLOW */
+.workflow {
+  margin-top: 16px;
+  background: #f8f8fc;
+  border-radius: 10px;
+  padding: 18px 20px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.workflowTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f0f23;
+  margin-bottom: 14px;
+}
+
+.stepList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stepIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+}
+
+.stepLabel {
+  font-size: 13.5px;
+  color: #3a3a5a;
+  line-height: 1.4;
+}
+
+.stepDone .stepLabel {
+  text-decoration: line-through;
+  color: #9a9ab8;
+}
+
+.stepCurrent .stepLabel {
+  color: #6B6FF5;
+  font-weight: 600;
+}
+
+.currentTag {
+  display: inline-block;
+  background: #e8e8ff;
+  color: #5558E3;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+@media (max-width: 600px) {
+  .nav { padding: 12px 16px; }
+  .welcome { display: none; }
+  .main { padding: 24px 14px 40px; }
+  .pageTitle { font-size: 1.4rem; }
+}

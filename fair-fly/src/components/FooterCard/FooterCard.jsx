@@ -1,5 +1,6 @@
 import React from 'react'
 import './footer-card.css'
+import { NavLink } from 'react-router'
 
 export default function FooterCard() {
   return (
@@ -9,9 +10,9 @@ export default function FooterCard() {
         <p className="footer-sub">
           Join dozens of satisfied travelers who trust Fairfly for their travel needs
         </p>
-        <a href="#signup" className="footer-btn">
+        <NavLink  to="/register" className="footer-btn">
           Create an Account <i class="fa-solid fa-arrow-right"></i>
-        </a>
+        </NavLink>
       </div>
     </section>
   )
