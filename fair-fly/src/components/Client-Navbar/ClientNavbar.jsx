@@ -12,54 +12,28 @@ export default function ClientNavbar({ onNavigate, currentPage }) {
             onNavigate && onNavigate('home')
           }}
         >
-          <div className="client-logoIcon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 2L2 7l10 5 10-5-10-5z"
-                fill="white"
-              />
-              <path
-                d="M2 17l10 5 10-5M2 12l10 5 10-5"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
+        <div className="client-logoIcon">
 
-          <span>
-            <span className="fair">fair</span>
-            <span className="fly">fly</span>
-          </span>
+        <img src='FairflyLogo.png'></img>
+
+        </div>
+
         </a>
 
-        <div className="navRight">
-          <span className="welcome">
+        <div className="client-navRight">
+          <span className="client-welcome">
             Welcome, client@email.com
           </span>
 
           <a
             href="#"
-            className="logout"
+            className="client-logout"
             onClick={(e) => {
               e.preventDefault()
               onNavigate && onNavigate('home')
             }}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <p><i class="fa-solid fa-arrow-right-from-bracket"></i></p>
             Logout
           </a>
         </div>

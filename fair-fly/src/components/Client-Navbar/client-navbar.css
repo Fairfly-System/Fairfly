@@ -8,7 +8,7 @@
   border-bottom: 1px solid rgba(107, 111, 245, 0.1);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 999;
 }
 
 .client-logo {
@@ -21,17 +21,16 @@
 }
 
 .client-logoIcon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: #6B6FF5;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.fair { color: #6B6FF5; }
-.fly  { color: #F97316; }
+.client-logoIcon img {
+  height: 60px;
+  width: auto;
+  display: block;
+}
 
 .client-navRight {
   display: flex;
