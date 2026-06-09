@@ -24,7 +24,7 @@
   margin-bottom: 28px;
 }
 
-/* APPOINTMENT CARD */
+
 .appointmentCard {
   border: 1px solid #e8e8f0;
   border-radius: 14px;
@@ -45,6 +45,8 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
+  color: #6B6FF5;
+  font-size: 25px;
   background: rgba(107, 111, 245, 0.1);
   display: flex;
   align-items: center;

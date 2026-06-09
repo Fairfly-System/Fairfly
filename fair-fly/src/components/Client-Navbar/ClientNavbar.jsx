@@ -1,16 +1,11 @@
 import React from 'react'
 import './client-navbar.css'
+import { NavLink } from 'react-router'
 
 export default function ClientNavbar({ onNavigate, currentPage }) {
   return (
     <nav className="client-nav">
-        <a
-          href="#"
-          className="client-logo"
-          onClick={(e) => {
-            e.preventDefault()
-            onNavigate && onNavigate('home')
-          }}
+        <NavLink to="/home"
         >
         <div className="client-logoIcon">
 
@@ -18,7 +13,7 @@ export default function ClientNavbar({ onNavigate, currentPage }) {
 
         </div>
 
-        </a>
+        </NavLink>
 
         <div className="client-navRight">
           <span className="client-welcome">

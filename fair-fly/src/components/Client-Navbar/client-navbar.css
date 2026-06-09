@@ -11,15 +11,6 @@
   z-index: 999;
 }
 
-.client-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
 .client-logoIcon {
   display: flex;
   align-items: center;
@@ -27,7 +18,7 @@
 }
 
 .client-logoIcon img {
-  height: 60px;
+  height: 70px;
   width: auto;
   display: block;
 }
@@ -56,3 +47,15 @@
 }
 
 .client-logout:hover { color: #6B6FF5; }
+
+@media (max-width: 640px) {
+
+
+
+.client-logoIcon img {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
+}
