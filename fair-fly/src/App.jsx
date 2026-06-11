@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import Login from './pages/Login/login';
 import Register from './pages/Register/Register';
-import ClientDashbord from './pages/Client-Dashboard/ClientDashboard';
+import ClientDashbord from './pages/ClientDashboard/ClientDashboard';
 
 function App() {
 
