@@ -30,6 +30,14 @@
   background: none;
   font-size: 20px;
   cursor: pointer;
+
+  transition: 0.3s;
+}
+
+.closeBtn:hover {
+
+    transition: 0.3s;
+    color: rgb(74, 74, 74);
 }
 
 .appointmentForm {
