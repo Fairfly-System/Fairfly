@@ -29,6 +29,11 @@ export default function ClientAppointmentForm({ isOpen, onClose }) {
             <option>Airline Tickets</option>
           </select>
 
+          <label>Branch</label>
+          <select>
+            <option>Fairfly Baliuag</option>
+          </select>
+
           <label>Email Address</label>
           <input
             type="email"
