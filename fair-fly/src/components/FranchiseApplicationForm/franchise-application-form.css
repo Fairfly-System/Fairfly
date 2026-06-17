@@ -1,0 +1,192 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal {
+  background: white;
+  width: 90%;
+  max-width: 540px;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+/* Optional clean scrollbar styling */
+.modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 0 16px 16px 0;
+}
+
+.modal::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.modal::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+  z-index: 10;
+}
+
+.closeBtn:hover {
+  transition: 0.3s;
+  color: rgb(74, 74, 74);
+}
+
+/* --- Header Section --- */
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.modalHeader h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111111;
+  margin: 0;
+}
+
+.modalDescription {
+  font-size: 14px;
+  color: #666666;
+  line-height: 1.5;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+/* --- Form & Grid Setup --- */
+.franchiseApplicationForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Row wrapper for fields that sit side-by-side */
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Individual field wrapper containing the label and input */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroup label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* --- Form Controls --- */
+.franchiseApplicationForm input,
+.franchiseApplicationForm select,
+.franchiseApplicationForm textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background-color: #f5f5f7;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a1a;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+/* Placeholder styling */
+.franchiseApplicationForm input::placeholder,
+.franchiseApplicationForm textarea::placeholder {
+  color: #8e8e93;
+}
+
+/* Focus states */
+.franchiseApplicationForm input:focus,
+.franchiseApplicationForm select:focus,
+.franchiseApplicationForm textarea:focus {
+  background-color: #f5f5f7;
+  border-color: #858efe;
+  box-shadow: 0 0 0 3px rgba(133, 142, 254, 0.25);
+}
+
+.franchiseApplicationForm textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* --- Action Buttons Footer --- */
+.formActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.submitBtn {
+  background: #ff843d; 
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.submitBtn:hover {
+  background: #e66f2a;
+}
+
+.cancelBtn {
+  background: white;
+  color: #1a1a1a;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancelBtn:hover {
+  background: #f5f5f7;
+}
