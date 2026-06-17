@@ -132,7 +132,7 @@ export default function Register() {
       .then(() => {
         //make a copy of the user data, but remove the password
         const { password, confirmPassword, ...userWithoutPassword } = formData;
-        set(ref(db, "users/" + auth.currentUser.uid), {...userWithoutPassword, createdAt: Date.now()}); //Set the userdata except password
+        set(ref(db, "users/" + auth.currentUser.uid), {...userWithoutPassword, createdAt: Date.now(), role: "client"}); //Set the userdata except password
         navigate("/home");
         alert("Registration successful!"); //Placeholder
       })
@@ -172,6 +172,7 @@ export default function Register() {
                     handleInputChange(e.target.value, "fullName");
                     validateFullName(e.target.value);
                   }}
+                  placeholder="Your Name"
                 />
               </div>
               {errors.fullName && (
@@ -191,6 +192,7 @@ export default function Register() {
                     handleInputChange(e.target.value, "email");
                     validateEmail(e.target.value);
                   }}
+                  placeholder="youremail@example.com"
                 />
               </div>
               {errors.email && (
@@ -210,6 +212,7 @@ export default function Register() {
                     handleInputChange(e.target.value, "phone");
                     validatePhone(e.target.value);
                   }}
+                  placeholder="+63 123 456 7890"
                 />
               </div>
               {errors.phone && (
@@ -229,6 +232,7 @@ export default function Register() {
                     handleInputChange(e.target.value, "password");
                     validatePassword(e.target.value);
                   }}
+                  placeholder="••••••••"
                 />
               </div>
               {errors.password && (
@@ -251,6 +255,7 @@ export default function Register() {
                     );
                     validateConfirmPassword(e.target.value);
                   }}
+                  placeholder="••••••••"
                 />
               </div>
               {errors.confirmPassword && (
