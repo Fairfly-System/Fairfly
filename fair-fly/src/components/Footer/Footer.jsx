@@ -14,10 +14,11 @@ export default function Footer() {
 
       <p className="copy">© 2026 Fairfly Travel & Tours. All rights reserved.</p>
 
-      <div className="links">
+      {/* <div className="links">
         <a href="#admin" className="link">Admin Portal</a>
         <a href="#operator" className="link">Operator Portal</a>
-      </div>
+      </div> */}
+      
     </footer>
   )
 }

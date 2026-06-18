@@ -12,7 +12,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
       <div className="modal">
         {/* Close Button */}
         <button className="closeBtn" onClick={onClose} aria-label="Close modal">
-          <i className="fa-solid fa-xmark"></i>
+          <i class="fa-solid fa-circle-xmark"></i>
         </button>
 
         {/* Header Section */}
@@ -105,7 +105,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
           {/* Footer Action Buttons */}
           <div className="formActions">
             <button type="submit" className="submitBtn">
-              <i className="fa-regular fa-paper-plane"></i> Submit Franchise Application
+              <i className="fa-regular fa-paper-plane"></i> Submit Application
             </button>
             <button type="button" className="cancelBtn" onClick={onClose}>
               Cancel
