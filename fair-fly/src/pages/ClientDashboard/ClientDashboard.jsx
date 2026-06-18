@@ -65,7 +65,7 @@ export default function ClientDashboard({ onNavigate }) {
           <h2 className="servicesTitle">My Services</h2>
 
           <p className="servicesSub">
-            Track the progress of your service requests
+            Track the progress of your availed services
           </p>
 
           <div className="servicesList">
