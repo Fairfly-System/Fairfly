@@ -10,6 +10,7 @@ import { auth } from './firebase';
 import Login from './pages/Login/login';
 import Register from './pages/Register/Register';
 import ClientDashbord from './pages/ClientDashboard/ClientDashboard';
+import ScrollToTop from './components/ScrollToTop/ScrollToTop';
 
 function App() {
 
@@ -35,6 +36,7 @@ function App() {
     <>
 
     <BrowserRouter>
+    <ScrollToTop></ScrollToTop>
 
     <Navbar></Navbar>
 
