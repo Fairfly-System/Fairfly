@@ -4,7 +4,7 @@ import { Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
 import "./register.css";
 import logo from "../../../public/FairflyLogo.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import {ref, set} from "firebase/database";
+import { ref, set } from "firebase/database";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -86,8 +86,7 @@ export default function Register() {
     if (!strongPassword.test(password)) {
       setErrors((prev) => ({
         ...prev,
-        password:
-          "Must be 8+ chars, include uppercase, lowercase & number",
+        password: "Must be 8+ chars, include uppercase, lowercase & number",
       }));
     } else {
       setErrors((prev) => {
@@ -98,7 +97,7 @@ export default function Register() {
   };
 
   const validateConfirmPassword = (confirmPassword) => {
-    if (confirmPassword !== formData.password || confirmPassword == "") {
+    if (confirmPassword !== formData.password || confirmPassword === "") {
       setErrors((prev) => ({
         ...prev,
         confirmPassword: "Passwords do not match",
@@ -115,10 +114,21 @@ export default function Register() {
   // DISABLE BUTTON LOGIC
   // -----------------------
   useEffect(() => {
-    const hasErrors = Object.values(errors).some(
-      (error) => error !== ""
+    const hasErrors = Object.keys(errors).length > 0;
+
+    const requiredFields = [
+      "fullName",
+      "email",
+      "phone",
+      "password",
+      "confirmPassword",
+    ];
+
+    const isNotFilled = requiredFields.some(
+      (field) => formData[field] === ""
     );
-    setDisabled(hasErrors);
+
+    setDisabled(hasErrors || isNotFilled);
   }, [errors, formData]);
 
   // -----------------------
@@ -130,11 +140,16 @@ export default function Register() {
 
     createUserWithEmailAndPassword(auth, formData.email, formData.password)
       .then(() => {
-        //make a copy of the user data, but remove the password
         const { password, confirmPassword, ...userWithoutPassword } = formData;
-        set(ref(db, "users/" + auth.currentUser.uid), {...userWithoutPassword, createdAt: Date.now(), role: "client"}); //Set the userdata except password
+
+        set(ref(db, "users/" + auth.currentUser.uid), {
+          ...userWithoutPassword,
+          createdAt: Date.now(),
+          role: "client",
+        });
+
         navigate("/home");
-        alert("Registration successful!"); //Placeholder
+        alert("Registration successful!");
       })
       .catch((error) => {
         alert(error.message);
@@ -144,14 +159,12 @@ export default function Register() {
   return (
     <div className="register-page">
       <div className="register-container">
-
         <Link to="/" className="back-button">
           <ArrowLeft size={16} />
           Back to Home
         </Link>
 
         <div className="register-card">
-
           <div className="register-header">
             <img src={logo} alt="logo" className="logo" />
             <h1>Create Account</h1>
@@ -159,7 +172,6 @@ export default function Register() {
           </div>
 
           <form className="register-form" onSubmit={handleSubmit}>
-
             {/* FULL NAME */}
             <div className="input-group">
               <label>Full Name</label>
@@ -175,9 +187,7 @@ export default function Register() {
                   placeholder="Your Name"
                 />
               </div>
-              {errors.fullName && (
-                <p className="error">{errors.fullName}</p>
-              )}
+              {errors.fullName && <p className="error">{errors.fullName}</p>}
             </div>
 
             {/* EMAIL */}
@@ -195,9 +205,7 @@ export default function Register() {
                   placeholder="youremail@example.com"
                 />
               </div>
-              {errors.email && (
-                <p className="error">{errors.email}</p>
-              )}
+              {errors.email && <p className="error">{errors.email}</p>}
             </div>
 
             {/* PHONE */}
@@ -215,9 +223,7 @@ export default function Register() {
                   placeholder="+63 123 456 7890"
                 />
               </div>
-              {errors.phone && (
-                <p className="error">{errors.phone}</p>
-              )}
+              {errors.phone && <p className="error">{errors.phone}</p>}
             </div>
 
             {/* PASSWORD */}
@@ -235,9 +241,7 @@ export default function Register() {
                   placeholder="••••••••"
                 />
               </div>
-              {errors.password && (
-                <p className="error">{errors.password}</p>
-              )}
+              {errors.password && <p className="error">{errors.password}</p>}
             </div>
 
             {/* CONFIRM PASSWORD */}
@@ -249,43 +253,30 @@ export default function Register() {
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) => {
-                    handleInputChange(
-                      e.target.value,
-                      "confirmPassword"
-                    );
+                    handleInputChange(e.target.value, "confirmPassword");
                     validateConfirmPassword(e.target.value);
                   }}
                   placeholder="••••••••"
                 />
               </div>
               {errors.confirmPassword && (
-                <p className="error">
-                  {errors.confirmPassword}
-                </p>
+                <p className="error">{errors.confirmPassword}</p>
               )}
             </div>
 
-            <button
-              type="submit"
-              className="submit-button"
-              disabled={disabled}
-            >
+            <button type="submit" className="submit-button" disabled={disabled}>
               Create Account
             </button>
-
           </form>
 
           <div className="switch-link">
-            Already have an account?{" "}
-            <Link to="/login">Sign In</Link>
+            Already have an account? <Link to="/login">Sign In</Link>
           </div>
-
         </div>
 
         <div className="footer-text">
           By signing up, you agree to Terms & Privacy Policy
         </div>
-
       </div>
     </div>
   );
