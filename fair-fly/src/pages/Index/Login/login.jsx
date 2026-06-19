@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 import "./login.css";
-import logo from "../../../public/FairflyLogo.png";
-import {auth} from "../../firebase";
+import logo from "/FairflyLogo.png";
+import {auth} from "../../../firebase";
 import {signInWithEmailAndPassword} from "firebase/auth";
 
 export default function Login() {
@@ -16,8 +16,8 @@ export default function Login() {
     e.preventDefault();
     signInWithEmailAndPassword(auth, email, password)
       .then(() => {
-        navigate("/home");
-        alert("Login successful!"); //Placeholder
+        navigate("/client");
+        alert("Login successful!");
       })
       .catch((error) => {
         alert(error.message);
@@ -28,7 +28,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-container">
 
-        <Link to="/" className="back-button">
+        <Link to="/home" className="back-button">
           <ArrowLeft size={16} />
           Back to Home
         </Link>

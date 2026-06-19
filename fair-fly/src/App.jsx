@@ -2,15 +2,16 @@ import { onAuthStateChanged } from 'firebase/auth';
 import Chatbot from './components/Chatbot/Chatbot'
 import Footer from './components/Footer/Footer'
 import Navbar from './components/Navbar/Navbar'
-import About from './pages/About/About';
-import Landing from './pages/Landing/Landing'
+import About from './pages/Index/About/About';
+import Landing from './pages/Index/Landing/Landing'
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router";
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
-import Login from './pages/Login/login';
-import Register from './pages/Register/Register';
-import ClientDashbord from './pages/ClientDashboard/ClientDashboard';
+import Login from './pages/Index/Login/login';
+import Register from './pages/Index/Register/Register';
 import ScrollToTop from './components/ScrollToTop/ScrollToTop';
+import Index from './pages/Index/Index';
+import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
 
 function App() {
 
@@ -38,34 +39,25 @@ function App() {
     <BrowserRouter>
     <ScrollToTop></ScrollToTop>
 
-    <Navbar></Navbar>
-
     {loading ? <div>Placeholder muna...</div> : 
-    
       <Routes>
 
-        <Route path="/home" element={<Landing/>} />
-        <Route path="/about" element={<About />} />
-        <Route path ="/client" element={<ClientDashbord />} />
-        <Route path ="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/*" element={<Navigate to="/home" />} />
-
-        {user &&
-
-          <>
-            {/* Placeholder muna */}   
-          </>
-
+        {user && 
+        <Route path="/client" element={<ClientDashboard />} /> 
         }
+        <Route element={<Index />}>
+          <Route path="/home" element={<Landing/>} />
+          <Route path="/about" element={<About />} />
+          <Route path ="/login" element={user ? <Navigate to="/client" /> : <Login/>} />
+          <Route path="/register" element={user ? <Navigate to="/client" /> : <Register/>} />
+          <Route path="/*" element={<Navigate to="/home" />} />
+        </Route>
 
       </Routes>
-    
     }
 
-
-    <Chatbot></Chatbot>
-    <Footer></Footer>
+      <Chatbot></Chatbot>
+      <Footer></Footer>
     </BrowserRouter>
     
 

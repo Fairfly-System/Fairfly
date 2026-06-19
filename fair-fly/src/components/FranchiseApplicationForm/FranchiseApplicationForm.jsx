@@ -133,10 +133,12 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
       'preferredMeetingTime',
     ];
 
+    //Check if there are any fields that are not filled with .some()
     const isNotFilled = requiredFields.some(
       (field) => formData[field] === ''
     );
 
+    //Check if there are any errors by seeing if the errors object is not empty
     const hasErrors = Object.keys(errors).length > 0;
 
     setDisabled(isNotFilled || hasErrors);

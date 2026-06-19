@@ -1,7 +1,7 @@
 import React from 'react'
 import './landing.css'
-import Services from '../../components/Services/Services'
-import FooterCard from '../../components/FooterCard/FooterCard'
+import Services from '../../../components/Services/Services'
+import FooterCard from '../../../components/FooterCard/FooterCard'
 
 export default function Landing() {
   return (

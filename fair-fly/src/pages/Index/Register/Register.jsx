@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
 import "./register.css";
-import logo from "../../../public/FairflyLogo.png";
+import logo from "/FairflyLogo.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, set } from "firebase/database";
+import { auth, db } from "../../../firebase";
 
 export default function Register() {
   const navigate = useNavigate();
