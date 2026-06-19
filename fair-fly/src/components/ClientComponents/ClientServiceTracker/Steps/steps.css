@@ -1,0 +1,89 @@
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 16px;
+    border: 1px solid #e0dede;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.steps-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.step-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.steps-header h3 {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.step-item p {
+    font-size: 0.8rem;
+    color: var(--text-mid);
+}
+
+.icon {
+    width: 20px;
+}
+
+.icon-check {
+    color: var(--complete-green);
+}
+
+.icon-circle {
+    color: var(--purple);
+}
+
+.icon-loader {
+    color: var(--text-light);
+}
+
+.step-item.completed p {
+    text-decoration: line-through;
+}
+
+.step-item{
+    padding: 5px 5px;
+}
+
+.step-item.in-progress{
+
+    background: var(--purple-light-2);
+    border-radius: 10px;
+    padding: 10px 5px;
+
+}
+
+.step-item.in-progress p {
+    color: var(--purple);
+    font-weight: 600;
+    justify-self: center;
+}
+
+.step-item-progress{
+    font-size: 0.7rem !important;
+    margin-left: 30px;
+    color: var(--purple);
+    font-weight: 400 !important;
+    justify-self: center;
+    border : 1px solid var(--purple);
+    border-radius: 5px;
+    padding: 0px 5px;
+    width: fit-content;
+}

@@ -3,9 +3,17 @@ import './client-dashboard.css'
 import ClientNavbar from '../../../components/Client-Navbar/ClientNavbar'
 import AppointmentModal from '../../../components/ClientAppointmentForm/ClientAppointmentForm';
 import ClientAppointmentForm from '../../../components/ClientAppointmentForm/ClientAppointmentForm';
+import ClientServiceTracker from '../../../components/ClientComponents/ClientServiceTracker/ClientServiceTracker';
 
 export default function ClientDashboard({ onNavigate }) {
   const [showModal, setShowModal] = useState(false);
+  const [services, setServices] = useState({
+        title: `Request Service Appointment`,
+        dateRequested: `2023-03-01`,
+        status: `completed`,
+        progress: 40,
+        estimatedCompletion: `2023-03-01`
+    });
 
   return (
 
@@ -69,6 +77,8 @@ export default function ClientDashboard({ onNavigate }) {
           </p>
 
           <div className="servicesList">
+
+            <ClientServiceTracker service={services}></ClientServiceTracker>
 
           </div>
         </div>

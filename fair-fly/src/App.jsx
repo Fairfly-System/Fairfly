@@ -25,7 +25,6 @@ function App() {
       setUser(user);
       setLoading(false);
     });
-
     // Clean up the subscription
     return () => {
       unsubscribe();
@@ -42,16 +41,20 @@ function App() {
     {loading ? <div>Placeholder muna...</div> : 
       <Routes>
 
-        {user && 
-        <Route path="/client" element={<ClientDashboard />} /> 
-        }
+        {user ?
+        <>
+          <Route path="/client" element={<ClientDashboard />} />
+          <Route path="/*" element={<Navigate to="/client" />} />
+        </>
+        :
         <Route element={<Index />}>
           <Route path="/home" element={<Landing/>} />
           <Route path="/about" element={<About />} />
-          <Route path ="/login" element={user ? <Navigate to="/client" /> : <Login/>} />
-          <Route path="/register" element={user ? <Navigate to="/client" /> : <Register/>} />
+          <Route path ="/login" element={<Login/>} />
+          <Route path="/register" element={<Register/>} />
           <Route path="/*" element={<Navigate to="/home" />} />
         </Route>
+        }
 
       </Routes>
     }

@@ -20,7 +20,7 @@ export default function Navbar() {
       <nav className="nav">
         <NavLink to="/home" className="logo">
           <div className="logoIcon">
-            <img src="FairflyLogo.png" alt="Fairfly Logo" />
+            <img src="/FairflyLogo.png" alt="Fairfly Logo" />
           </div>
         </NavLink>
 
