@@ -18,11 +18,13 @@ export default function Navbar() {
   return (
     <>
       <nav className="nav">
-        <NavLink to="/home" className="logo">
+        
           <div className="logoIcon">
+            <NavLink to="/home" className="logo">
             <img src="/FairflyLogo.png" alt="Fairfly Logo" />
+            </NavLink>
           </div>
-        </NavLink>
+        
 
         <div className="right">
           <NavLink to="/about" className="linkAbout">

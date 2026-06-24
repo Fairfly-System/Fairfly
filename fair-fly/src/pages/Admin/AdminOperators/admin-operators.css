@@ -1,0 +1,17 @@
+.operators-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.operators-header p {
+  color: gray;
+}
+
+.operator-btn {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+}

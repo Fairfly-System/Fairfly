@@ -1,0 +1,22 @@
+
+
+.admin-layout-container {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 24px;
+  padding: 24px;
+  min-height: calc(100vh - 90px);
+  background: #f5f7fb;
+}
+
+.admin-layout-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 992px) {
+  .admin-layout-container {
+    grid-template-columns: 1fr;
+  }
+}

@@ -2,7 +2,8 @@ import React from 'react';
 import './admin-navbar.css';
 import { NavLink, useNavigate } from 'react-router';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { auth } from '../../../firebase';
+
 
 
 export default function AdminNavbar({ onNavigate, currentPage }) {
@@ -29,14 +30,14 @@ export default function AdminNavbar({ onNavigate, currentPage }) {
             </NavLink>
 
             <div className='admin-right'>
-            <p id='top-title'>Fairfly Admin</p>
+            <p id='top-title'>Admin</p>
             <p id='down-title'>Management Portal</p>
             </div>
 
         </div>
 
       <div className="admin-navRight">
-        <button className="admin-welcome">
+        <button className="admin-chat">
           <i class="fa-regular fa-message"></i> Team Chat
         </button>
 
