@@ -12,6 +12,7 @@ import Register from './pages/Index/Register/Register';
 import ScrollToTop from './components/ScrollToTop/ScrollToTop';
 import Index from './pages/Index/Index';
 import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
+import Admin from './pages/Admin/Admin';
 
 function App() {
 
@@ -48,11 +49,14 @@ function App() {
         </>
         :
         <Route element={<Index />}>
+
           <Route path="/home" element={<Landing/>} />
+          <Route path="/admin" element={<Admin/>} /> 
           <Route path="/about" element={<About />} />
           <Route path ="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />
           <Route path="/*" element={<Navigate to="/home" />} />
+
         </Route>
         }
 
