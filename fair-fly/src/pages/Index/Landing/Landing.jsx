@@ -24,7 +24,7 @@ export default function Landing() {
       </p>
 
       <div className="actions">
-        <a href="#services" className="btnPrimary">
+        <a href="/register" className="btnPrimary">
           Get Started <i class="fa-solid fa-arrow-right"></i>
         </a>
         <a href="/login" className="btnSecondary">

@@ -25,19 +25,22 @@ export default function AdminNavbar({ onNavigate, currentPage }) {
     <nav className="admin-nav">
       
         <div className="admin-logoIcon">
-            <NavLink to="/home">
-            <img src="/FairflyLogo.png" alt="Fairfly Logo" />
-            </NavLink>
+
+                <NavLink to="/home">
+                  <div className="client-logoIcon">
+                    <img src="/FairflyLogo.png" alt="Fairfly Logo" />
+                  </div>
+                </NavLink>
 
             <div className='admin-right'>
-            <p id='top-title'>Admin</p>
+            <p id='top-title'>Fairfly Admin</p>
             <p id='down-title'>Management Portal</p>
             </div>
 
         </div>
 
       <div className="admin-navRight">
-        <button className="admin-chat">
+        <button className="admin-welcome">
           <i class="fa-regular fa-message"></i> Team Chat
         </button>
 

@@ -13,9 +13,9 @@ import ScrollToTop from './components/ScrollToTop/ScrollToTop';
 import Index from './pages/Index/Index';
 import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
 import AdminLayout from './pages/Admin/AdminLayout/AdminLayout';
-import AdminDashboard from "./pages/Admin/AdminDashboard/AdminDashboard";
-import AdminServices from "./pages/Admin/AdminServices/AdminServices";
-import AdminOperators from "./pages/Admin/AdminOperators/AdminOperators";
+import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
+import AdminServices from './pages/Admin/AdminServices/AdminServices';
+import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 
 function App() {
 
@@ -53,13 +53,12 @@ function App() {
         :
         <Route element={<Index />}>
 
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="services" element={<AdminServices />} />
-          <Route path="operators" element={<AdminOperators />} />
-        </Route>
-
           <Route path="/home" element={<Landing/>} />
+          <Route path="/admin" element={<AdminLayout/>}>
+            <Route index element={<AdminDashboard/>} />
+            <Route path="services" element={<AdminServices/>} />
+            <Route path="operators" element={<AdminOperators/>} />
+          </Route>
           <Route path="/about" element={<About />} />
           <Route path ="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />

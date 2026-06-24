@@ -3,34 +3,34 @@ import { NavLink } from 'react-router';
 
 export default function AdminSidebar() {
   return (
-    <aside className="sidebar">
-      <NavLink to="/">
-       <i class="fa-solid fa-chart-line"></i>
+    <aside className="card sidebar">
+      <NavLink to="/admin" end>
+        <i className="fa-solid fa-arrow-trend-up"></i>
         Analytics
       </NavLink>
 
-      <NavLink to="services">
-        <i class="fa-regular fa-file-lines"></i>
+      <NavLink to="/admin/services">
+        <i className="fa-regular fa-file-lines"></i>
         Services
       </NavLink>
 
-      <NavLink to="operators">
-        <i class="fa-solid fa-users"></i>
+      <NavLink to="/admin/operators">
+        <i className="fa-solid fa-users"></i>
         Operators
       </NavLink>
 
       <a href="#">
-        <i class="fa-solid fa-briefcase"></i>
-        Applications
+        <i className="fa-solid fa-briefcase"></i>
+        Franchise Apps
       </a>
 
       <a href="#">
-        <i class="fa-solid fa-clipboard-list"></i>
+        <i className="fa-solid fa-clipboard-list"></i>
         Inquiry History
       </a>
 
       <a href="#">
-        <i class="fa-solid fa-link"></i>
+        <i className="fa-solid fa-link"></i>
         Quick Links
       </a>
     </aside>

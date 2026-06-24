@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import './client-dashboard.css'
-import ClientNavbar from '../../../components/ClientNavbar/ClientNavbar'
-import AppointmentModal from '../../../components/ClientAppointmentForm/ClientAppointmentForm';
-import ClientAppointmentForm from '../../../components/ClientAppointmentForm/ClientAppointmentForm';
+import AppointmentModal from '../../../components/ClientComponents/ClientAppointmentForm/ClientAppointmentForm';
+import ClientAppointmentForm from '../../../components/ClientComponents/ClientAppointmentForm/ClientAppointmentForm';
 import ClientServiceTracker from '../../../components/ClientComponents/ClientServiceTracker/ClientServiceTracker';
+import ClientNavbar from '../../../components/ClientComponents/ClientNavbar/ClientNavbar';
 
 export default function ClientDashboard({ onNavigate }) {
   const [showModal, setShowModal] = useState(false);

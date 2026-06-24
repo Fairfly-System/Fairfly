@@ -1,41 +1,37 @@
+
 .admin-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  padding: 18px 40px;
+  padding: 14px 32px;
   background: #fff;
-
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
-
+  border-bottom: 1px solid rgba(107, 111, 245, 0.1);
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 999;
 }
 
 .admin-logoIcon {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.admin-logoIcon img {
-  height: 60px;
+.admin-right{
+
+    margin-left: 15px;
 }
 
-.admin-right {
-  margin-left: 15px;
+#top-title{
+
+    font-weight: 900;
+    font-size: 25px;
 }
 
-#top-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
-}
+#down-title{
 
-#down-title {
-  color: #6b7280;
-  font-size: 14px;
+    font-weight: 400;
+    font-size: 15px;
 }
 
 .admin-navRight {
@@ -44,63 +40,44 @@
   gap: 16px;
 }
 
-.admin-chat {
-  background: #eef2ff;
-  color: #5b63ff;
-  border-color:#5b63ff ;
-
-  padding: 10px 18px;
-  border-radius: 12px;
-
+.admin-welcome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
+  color: #6B6FF5;
   font-weight: 600;
-  transition: 0.3s;
+  padding: 9px 16px;
+  border: 1px solid #8D9BF8;
+  border-radius: 12px;
+  background-color: white;
+  transition: 0.15s;
 }
 
-.admin-chat:hover {
-  background: #5b63ff;
+.admin-welcome:hover {
   color: #ffffff;
-  border-color:#5b63ff ;
-
-  padding: 10px 18px;
-  border-radius: 12px;
-
-  font-size: 14px;
-  font-weight: 600;
-  transition: 0.3s;
+  background-color: #8D9BF8;
 }
 
 .admin-logout {
   display: flex;
   align-items: center;
-  gap: 8px;
-
-  padding: 10px 18px;
-
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-
-  color: #374151;
-  background: white;
-
-  transition: 0.2s ease;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  text-decoration: none;
+  transition: color 0.2s;
 }
 
-.admin-logout:hover {
-  background: #5b63ff;
-  color: white;
+.admin-logout:hover { color: #6B6FF5; }
+
+@media (max-width: 640px) {
+
+
+
+.admin-shield i {
+  font-size: 22px;
 }
 
-@media (max-width: 768px) {
-  .admin-nav {
-    flex-direction: column;
-    gap: 20px;
-    padding: 20px;
-  }
-
-  .admin-navRight {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
 }

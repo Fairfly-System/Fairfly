@@ -2,8 +2,7 @@ import React from 'react';
 import './client-navbar.css';
 import { NavLink, useNavigate } from 'react-router';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase';
-
+import { auth } from '../../../firebase';
 
 export default function ClientNavbar({ onNavigate, currentPage }) {
   const navigate = useNavigate();

@@ -1,17 +1,107 @@
+.operators-page {
+  padding: 28px;
+}
+
+.operators-page:hover{
+
+  transform: none;
+
+}
+
 .operators-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 30px;
 }
 
+.operators-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .operators-header p {
   color: gray;
+  font-size: 13.5px;
+  margin-top: 4px;
 }
 
 .operator-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: #16a34a;
   color: white;
   border: none;
-  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 22px;
   border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.operator-btn:hover {
+  background: #128039;
+}
+
+.operators-page table th {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 14px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.operators-page table td {
+  padding: 18px 10px;
+  font-size: 14.5px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.operators-page table tr:last-child td {
+  border-bottom: none;
+}
+
+.actions-col {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.operator-badge {
+  background: #22c55e;
+  color: white;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 999px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: #f0653e;
+  font-size: 15px;
+  padding: 6px;
+  margin-left: 6px;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  background: #fdeee9;
+}
+
+.icon-btn.delete {
+  color: #ef4444;
+}
+
+.icon-btn.delete:hover {
+  background: #fee2e2;
+}
+
+@media (max-width: 640px) {
+  .operators-page {
+    padding: 18px;
+    overflow-x: auto;
+  }
 }

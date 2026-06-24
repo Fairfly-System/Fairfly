@@ -1,0 +1,26 @@
+.stat-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card-top h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.stat-card-top i {
+  font-size: 18px;
+}
+
+.stat-card h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 14px 0 6px;
+}
+
+.stat-card p {
+  font-size: 13.5px;
+  color: #6b7280;
+}
