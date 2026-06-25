@@ -19,20 +19,20 @@ export default function AdminSidebar() {
         Operators
       </NavLink>
 
-      <a href="#">
+      <NavLink to="/admin/franchise-apps">
         <i className="fa-solid fa-briefcase"></i>
-        Franchise Apps
-      </a>
+        Franchise Application
+      </NavLink>
 
-      <a href="#">
+      <NavLink to="/admin/inquiry-history">
         <i className="fa-solid fa-clipboard-list"></i>
         Inquiry History
-      </a>
+      </NavLink>
 
-      <a href="#">
+      <NavLink to="/admin/quick-links">
         <i className="fa-solid fa-link"></i>
         Quick Links
-      </a>
+      </NavLink>
     </aside>
   );
 }

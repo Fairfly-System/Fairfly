@@ -16,6 +16,9 @@ import AdminLayout from './pages/Admin/AdminLayout/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
 import AdminServices from './pages/Admin/AdminServices/AdminServices';
 import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
+import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
+import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
+import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
 
 function App() {
 
@@ -58,6 +61,9 @@ function App() {
             <Route index element={<AdminDashboard/>} />
             <Route path="services" element={<AdminServices/>} />
             <Route path="operators" element={<AdminOperators/>} />
+            <Route path="franchise-apps" element={<AdminFranchiseApps/>} />
+            <Route path="inquiry-history" element={<AdminInquiryHistory/>} />
+            <Route path="quick-links" element={<AdminQuickLinks/>} />
           </Route>
           <Route path="/about" element={<About />} />
           <Route path ="/login" element={<Login/>} />

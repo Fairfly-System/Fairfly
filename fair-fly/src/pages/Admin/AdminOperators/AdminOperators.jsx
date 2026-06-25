@@ -1,9 +1,7 @@
 import './admin-operators.css';
 
 const OPERATORS = [
-  { branch: 'Manila Branch', username: 'manila_operator', status: 'Active', services: 45 },
-  { branch: 'Cebu Branch', username: 'cebu_operator', status: 'Active', services: 32 },
-  { branch: 'Davao Branch', username: 'davao_operator', status: 'Active', services: 28 },
+  { branch: 'Baliuag Branch', username: 'baliuag_operator', status: 'Active', services: 45 },
 ];
 
 export default function AdminOperators() {
@@ -17,7 +15,7 @@ export default function AdminOperators() {
 
         <button className="operator-btn">
           <i className="fa-solid fa-user-plus"></i>
-          Create Operator
+          Add Operator
         </button>
       </div>
 
@@ -40,10 +38,10 @@ export default function AdminOperators() {
               <td><span className="operator-badge">{op.status}</span></td>
               <td>{op.services} services</td>
               <td className="actions-col">
-                <button className="icon-btn ban" title="Disable operator">
+                <button className="icon-btn ban" title="Disable">
                   <i className="fa-solid fa-ban"></i>
                 </button>
-                <button className="icon-btn delete" title="Delete operator">
+                <button className="icon-btn delete" title="Delete">
                   <i className="fa-solid fa-trash"></i>
                 </button>
               </td>

@@ -1,0 +1,33 @@
+.inquiry-page {
+  padding: 28px;
+}
+
+.inquiry-page:hover {
+  transform: none;
+}
+
+.inquiry-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #eceef3;
+  margin-bottom: 50px;
+}
+
+.inquiry-header > i {
+  font-size: 17px;
+  color: #5b63ff;
+  margin-top: 3px;
+}
+
+.inquiry-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.inquiry-header p {
+  color: gray;
+  font-size: 13.5px;
+  margin-top: 4px;
+}

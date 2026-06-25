@@ -42,10 +42,10 @@ export default function AdminServices() {
               <td>{service.time}</td>
               <td><span className="service-badge">{service.status}</span></td>
               <td className="actions-col">
-                <button className="icon-btn edit" title="Edit service">
+                <button className="icon-btn edit" title="Edit">
                   <i className="fa-solid fa-pen-to-square"></i>
                 </button>
-                <button className="icon-btn delete" title="Delete service">
+                <button className="icon-btn delete" title="Delete">
                   <i className="fa-solid fa-trash"></i>
                 </button>
                 <button className="icon-btn clipboard" title="View details">
