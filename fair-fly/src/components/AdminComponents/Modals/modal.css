@@ -1,0 +1,141 @@
+/* Overlay background */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000;
+}
+
+/* Main Modal Card */
+.modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.modalHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; 
+  text-align: left;
+  margin-bottom: 24px; 
+  width: 100%;
+  padding-right: 24px; 
+}
+
+/* Header typography */
+.modalHeader h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+  display: block;
+  width: 100%;
+}
+
+.modalHeader p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0; 
+  display: block;
+  width: 100%;
+}
+
+/* Close button (X) */
+.closeBtn {
+  position: absolute;
+  top: 20px; 
+  right: 24px; 
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1; 
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.closeBtn:hover {
+  color: #4b5563;
+}
+
+/* Form layouts */
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroup label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+
+.modalInput, .modalSelect {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #f3f4f6;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+/* Active focus outline */
+.modalInput:focus, .modalSelect:focus {
+  border-color: #93c5fd;
+  background-color: #f9fafb;
+  box-shadow: 0 0 0 3px #bfdbfe;
+}
+
+.modalInput::placeholder {
+  color: #9ca3af;
+}
+
+/* Action Buttons */
+.modalSubmitBtn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.modalSubmitBtn:hover {
+  opacity: 0.9;
+}
+
+/* Button variants */
+.btnBlue {
+  background-color: #5865f2; /* From link/service screenshots */
+}
+
+.btnGreen {
+  background-color: #00a651; /* From operator account screenshot */
+}

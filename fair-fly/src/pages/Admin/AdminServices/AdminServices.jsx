@@ -1,4 +1,7 @@
+import React, { useState } from 'react'; // 1. Added useState
 import './admin-services.css';
+import ModalWrapper from '../../../components/AdminComponents/Modals/ModalWrapper'; // 2. Import the wrapper
+import ServiceForm from '../../../components/AdminComponents/Modals/ServiceForm';
 
 const SERVICES = [
   { name: 'PSA Birth Certificate', price: '₱365', time: '7-10 days', status: 'Active' },
@@ -9,6 +12,18 @@ const SERVICES = [
 ];
 
 export default function AdminServices() {
+
+  // 3. Define state to handle modal opening and closing
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 4. Handle form submission logic
+  const handleAddServiceSubmit = (newServiceData) => {
+    console.log('New Service Data:', newServiceData);
+    // You can handle your API calls here or update your state array
+    
+    setIsModalOpen(false); // Close modal on successful submission
+  };
+
   return (
     <div className="card services-page">
       <div className="services-header">
@@ -17,7 +32,7 @@ export default function AdminServices() {
           <p>Create, update, or delete services</p>
         </div>
 
-        <button className="service-btn">
+       <button className="service-btn" onClick={() => setIsModalOpen(true)}>
           <i className="fa-solid fa-plus"></i>
           Add Service
         </button>
@@ -56,6 +71,16 @@ export default function AdminServices() {
           ))}
         </tbody>
       </table>
+
+      <ModalWrapper 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title="Add New Service"
+        subtitle="Create a new service offering"
+      >
+        <ServiceForm onSubmit={handleAddServiceSubmit} />
+      </ModalWrapper>
+      
     </div>
   );
 }
