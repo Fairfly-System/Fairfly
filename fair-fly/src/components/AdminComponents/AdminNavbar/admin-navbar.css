@@ -70,7 +70,7 @@
   transition: color 0.2s;
 }
 
-.admin-logout:hover { color: #6B6FF5; }
+.admin-logout:hover { color: #FC9648; }
 
 @media (max-width: 640px) {
 

@@ -7,7 +7,7 @@ export default function ModalWrapper({ isOpen, onClose, title, subtitle, childre
   return (
     <div className="modalOverlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="closeBtn" onClick={onClose}>&times;</button>
+        <button className="closeBtn" onClick={onClose}><i className="fa-solid fa-circle-xmark"></i></button>
         <div className="modalHeader">
           <h2>{title}</h2>
           <p>{subtitle}</p>
