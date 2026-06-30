@@ -1,0 +1,147 @@
+.chat-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.chat-modal {
+  background: white;
+  width: 100%;
+  max-width: 610px;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.chat-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.chat-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-modal-title i {
+  font-size: 19px;
+  color: #5b63ff;
+}
+
+.chat-modal-title h2 {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.chat-modal-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 18px;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.chat-modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.chat-modal-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 6px 0 20px;
+}
+
+.chat-modal-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #f9fafb;
+  border: 1px solid #eceef3;
+  border-radius: 14px;
+  padding: 50px 20px;
+  margin-bottom: 18px;
+}
+
+.chat-modal-messages i {
+  font-size: 36px;
+  color: #d1d5db;
+  margin-bottom: 14px;
+}
+
+.chat-modal-messages h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.chat-modal-messages p {
+  font-size: 13.5px;
+  color: #9ca3af;
+}
+
+.chat-modal-input {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  background: #f9fafb;
+  border: 1.5px solid #8b8fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+.chat-modal-input::placeholder {
+  color: #9ca3af;
+}
+
+.chat-modal-input:focus {
+  outline: none;
+  border-color: #5b63ff;
+  box-shadow: 0 0 0 3px rgba(91, 99, 255, 0.15);
+}
+
+.chat-modal-send {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #5b63ff;
+  color: white;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+
+.chat-modal-send:hover {
+  background: #4a51e0;
+}
+
+@media (max-width: 640px) {
+  .chat-modal {
+    padding: 20px;
+  }
+
+  .chat-modal-title h2 {
+    font-size: 18px;
+  }
+}

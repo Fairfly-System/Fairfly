@@ -1,25 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './admin-navbar.css';
 import { NavLink, useNavigate } from 'react-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../firebase';
-
+import TeamChatModal from '../TeamChatModal/TeamChatModal';
 
 
 export default function AdminNavbar({ onNavigate, currentPage }) {
-  const navigate = useNavigate();
-
-  const handleLogout = async (e) => {
-    e.preventDefault();
-
-    try {
-      await signOut(auth);
-      console.log('User signed out');
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
+    const navigate = useNavigate();
+    const [isChatOpen, setIsChatOpen] = useState(false);
+  
+    const handleLogout = async (e) => {
+      e.preventDefault();
+  
+      try {
+        await signOut(auth);
+        console.log('User signed out');
+        navigate('/');
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    };
 
   return (
     <nav className="admin-nav">
@@ -40,9 +41,9 @@ export default function AdminNavbar({ onNavigate, currentPage }) {
         </div>
 
       <div className="admin-navRight">
-        <button className="admin-welcome">
+          <button className="admin-welcome" onClick={() => setIsChatOpen(true)}>
           <i class="fa-regular fa-message"></i> Team Chat
-        </button>
+          </button>
 
         <a
           href="#"
@@ -55,6 +56,8 @@ export default function AdminNavbar({ onNavigate, currentPage }) {
           Logout
         </a>
       </div>
+
+      {isChatOpen && <TeamChatModal onClose={() => setIsChatOpen(false)} />}
     </nav>
   );
 }
