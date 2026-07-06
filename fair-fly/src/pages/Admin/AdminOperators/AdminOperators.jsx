@@ -1,20 +1,68 @@
-import React, { useState } from 'react'; // Added useState
+import React, { useState, useEffect } from 'react'; // Added useState and useEffect
 import './admin-operators.css';
 import ModalWrapper from '../../../components/AdminComponents/Modals/ModalWrapper';
 import OperatorForm from '../../../components/AdminComponents/Modals/OperatorForm';
-
-const OPERATORS = [
-  { branch: 'Baliuag Branch', username: 'baliuag_operator', status: 'Active', services: 45 },
-];
+import { createOperator, getOperators, deleteOperator } from '../../../services/franchiseService';
 
 export default function AdminOperators() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [operators, setOperators] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateOperatorSubmit = (newOperatorData) => {
-    console.log('New Operator Account Data:', newOperatorData);
-    // Handle API processing here
-    setIsModalOpen(false);
+  // Load operators on component mount
+  useEffect(() => {
+    loadOperators();
+  }, []);
+
+  const loadOperators = async () => {
+    try {
+      setLoading(true);
+      const ops = await getOperators();
+      setOperators(ops);
+    } catch (error) {
+      console.error('Error loading operators:', error);
+      // Keep empty array if error occurs
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleCreateOperatorSubmit = async (newOperatorData) => {
+    try {
+      await createOperator(newOperatorData);
+      // Refresh operators list
+      await loadOperators();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error creating operator:', error);
+      alert('Failed to create operator: ' + error.message);
+    }
+  };
+
+  const handleDeleteOperator = async (operatorId) => {
+    if (window.confirm('Are you sure you want to delete this operator?')) {
+      try {
+        await deleteOperator(operatorId);
+        await loadOperators(); // Refresh list
+      } catch (error) {
+        console.error('Error deleting operator:', error);
+        alert('Failed to delete operator: ' + error.message);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="card operators-page">
+        <div className="operators-header">
+          <div>
+            <h2>Page Management</h2>
+            <p>Loading operator accounts...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card operators-page">
@@ -43,22 +91,28 @@ export default function AdminOperators() {
         </thead>
 
         <tbody>
-          {OPERATORS.map((op) => (
-            <tr key={op.username}>
-              <td>{op.branch}</td>
-              <td>{op.username}</td>
-              <td><span className="operator-badge">{op.status}</span></td>
-              <td>{op.services} services</td>
-              <td className="actions-col">
-                <button className="icon-btn ban" title="Disable">
-                  <i className="fa-solid fa-ban"></i>
-                </button>
-                <button className="icon-btn delete" title="Delete">
-                  <i className="fa-solid fa-trash"></i>
-                </button>
-              </td>
+          {operators.length === 0 ? (
+            <tr>
+              <td colSpan="5">No operators found</td>
             </tr>
-          ))}
+          ) : (
+            operators.map((op) => (
+              <tr key={op.id}>
+                <td>{op.branchName || 'N/A'}</td>
+                <td>{op.username}</td>
+                <td><span className="operator-badge">{op.status}</span></td>
+                <td>{op.servicesHandled || 0} services</td>
+                <td className="actions-col">
+                  <button className="icon-btn ban" title="Disable">
+                    <i className="fa-solid fa-ban"></i>
+                  </button>
+                  <button className="icon-btn delete" title="Delete" onClick={() => handleDeleteOperator(op.id)}>
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 

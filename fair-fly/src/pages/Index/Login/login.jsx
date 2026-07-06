@@ -5,9 +5,11 @@ import "./login.css";
 import logo from "/FairflyLogo.png";
 import {auth} from "../../../firebase";
 import {signInWithEmailAndPassword} from "firebase/auth";
+import { useToast } from '../../../components/toast/ToastProvider';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,10 +19,10 @@ export default function Login() {
     signInWithEmailAndPassword(auth, email, password)
       .then(() => {
         navigate("/client");
-        alert("Login successful!");
+        addToast("Login successful!", "success");
       })
       .catch((error) => {
-        alert(error.message);
+        addToast(error.message, "error");
       });
   };
 

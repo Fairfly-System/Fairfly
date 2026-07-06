@@ -10,6 +10,7 @@ import { auth } from './firebase';
 import Login from './pages/Index/Login/login';
 import Register from './pages/Index/Register/Register';
 import ScrollToTop from './components/ScrollToTop/ScrollToTop';
+import Loading from './components/Loading/Loading';
 import Index from './pages/Index/Index';
 import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
 import AdminLayout from './pages/Admin/AdminLayout/AdminLayout';
@@ -19,6 +20,7 @@ import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
+import ToastProvider from './components/toast/ToastProvider';
 
 function App() {
 
@@ -40,49 +42,56 @@ function App() {
   }, []);
 
   return (
-    <>
+      <>
+        <ToastProvider>
+          <BrowserRouter>
+            <ScrollToTop />
 
-    <BrowserRouter>
-    <ScrollToTop></ScrollToTop>
+            {loading ? (
+              <Loading />
+            ) : (
+              <Routes>
+                {user ? (
+                  <>
+                    <Route path="/client" element={<ClientDashboard />} />
+                    <Route path="/*" element={<Navigate to="/client" />} />
+                  </>
+                ) : (
+                  <Route element={<Index />}>
+                    <Route path="/home" element={<Landing />} />
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="services" element={<AdminServices />} />
+                      <Route path="operators" element={<AdminOperators />} />
+                      <Route
+                        path="franchise-apps"
+                        element={<AdminFranchiseApps />}
+                      />
+                      <Route
+                        path="inquiry-history"
+                        element={<AdminInquiryHistory />}
+                      />
+                      <Route
+                        path="quick-links"
+                        element={<AdminQuickLinks />}
+                      />
+                    </Route>
 
-    {loading ? <div>Placeholder muna...</div> : 
-      <Routes>
+                    <Route path="/about" element={<About />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/*" element={<Navigate to="/home" />} />
+                  </Route>
+                )}
+              </Routes>
+            )}
 
-        {user ?
-        <>
-          <Route path="/client" element={<ClientDashboard />} />
-          <Route path="/*" element={<Navigate to="/client" />} />
-        </>
-        :
-        <Route element={<Index />}>
-
-          <Route path="/home" element={<Landing/>} />
-          <Route path="/admin" element={<AdminLayout/>}>
-            <Route index element={<AdminDashboard/>} />
-            <Route path="services" element={<AdminServices/>} />
-            <Route path="operators" element={<AdminOperators/>} />
-            <Route path="franchise-apps" element={<AdminFranchiseApps/>} />
-            <Route path="inquiry-history" element={<AdminInquiryHistory/>} />
-            <Route path="quick-links" element={<AdminQuickLinks/>} />
-          </Route>
-          <Route path="/about" element={<About />} />
-          <Route path ="/login" element={<Login/>} />
-          <Route path="/register" element={<Register/>} />
-          <Route path="/*" element={<Navigate to="/home" />} />
-
-        </Route>
-        }
-
-      </Routes>
-    }
-
-      <Chatbot></Chatbot>
-      <Footer></Footer>
-    </BrowserRouter>
-    
-
-    </>
-  )
+            <Chatbot />
+            <Footer />
+          </BrowserRouter>
+        </ToastProvider>
+      </>
+    );
 }
 
 export default App

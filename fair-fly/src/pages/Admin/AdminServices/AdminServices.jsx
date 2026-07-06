@@ -1,28 +1,72 @@
-import React, { useState } from 'react'; // 1. Added useState
+import React, { useState, useEffect } from 'react';
 import './admin-services.css';
-import ModalWrapper from '../../../components/AdminComponents/Modals/ModalWrapper'; // 2. Import the wrapper
+import ModalWrapper from '../../../components/AdminComponents/Modals/ModalWrapper';
 import ServiceForm from '../../../components/AdminComponents/Modals/ServiceForm';
-
-const SERVICES = [
-  { name: 'PSA Birth Certificate', price: '₱365', time: '7-10 days', status: 'Active' },
-  { name: 'Passport Processing', price: '₱1,200', time: '12-15 days', status: 'Active' },
-  { name: 'VISA Assistance', price: '₱5,000', time: '15-30 days', status: 'Active' },
-  { name: 'Package Tour - Boracay', price: '₱12,000', time: 'Varies', status: 'Active' },
-  { name: 'Airline Tickets', price: 'Varies', time: 'Instant', status: 'Active' },
-];
+import { createService, getServices, deleteService } from '../../../services/franchiseService';
 
 export default function AdminServices() {
-
-  // 3. Define state to handle modal opening and closing
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(null); // Track which service is being deleted
 
-  // 4. Handle form submission logic
-  const handleAddServiceSubmit = (newServiceData) => {
-    console.log('New Service Data:', newServiceData);
-    // You can handle your API calls here or update your state array
-    
-    setIsModalOpen(false); // Close modal on successful submission
+  // Load services on component mount
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      setLoading(true);
+      const svcs = await getServices();
+      setServices(svcs);
+    } catch (error) {
+      console.error('Error loading services:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Handle form submission logic
+  const handleAddServiceSubmit = async (newServiceData) => {
+    try {
+      await createService(newServiceData);
+      // Refresh services list
+      await loadServices();
+      setIsModalOpen(false); // Close modal on successful submission
+    } catch (error) {
+      console.error('Error adding service:', error);
+      alert('Failed to add service: ' + error.message);
+    }
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    if (window.confirm('Are you sure you want to delete this service?')) {
+      try {
+        setDeleting(serviceId);
+        await deleteService(serviceId);
+        await loadServices(); // Refresh list
+      } catch (error) {
+        console.error('Error deleting service:', error);
+        alert('Failed to delete service: ' + error.message);
+      } finally {
+        setDeleting(null);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="card services-page">
+        <div className="services-header">
+          <div>
+            <h2>Service Management</h2>
+            <p>Loading services...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card services-page">
@@ -32,7 +76,7 @@ export default function AdminServices() {
           <p>Create, update, or delete services</p>
         </div>
 
-       <button className="service-btn" onClick={() => setIsModalOpen(true)}>
+        <button className="service-btn" onClick={() => setIsModalOpen(true)}>
           <i className="fa-solid fa-plus"></i>
           Add Service
         </button>
@@ -50,37 +94,47 @@ export default function AdminServices() {
         </thead>
 
         <tbody>
-          {SERVICES.map((service) => (
-            <tr key={service.name}>
-              <td>{service.name}</td>
-              <td>{service.price}</td>
-              <td>{service.time}</td>
-              <td><span className="service-badge">{service.status}</span></td>
-              <td className="actions-col">
-                <button className="icon-btn edit" title="Edit">
-                  <i className="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button className="icon-btn delete" title="Delete">
-                  <i className="fa-solid fa-trash"></i>
-                </button>
-                <button className="icon-btn clipboard" title="View details">
-                  <i className="fa-solid fa-clipboard-list"></i>
-                </button>
-              </td>
+          {services.length === 0 ? (
+            <tr>
+              <td colSpan="5">No services found</td>
             </tr>
-          ))}
+          ) : (
+            services.map((service) => (
+              <tr key={service.id}>
+                <td>{service.name}</td>
+                <td>{service.price}</td>
+                <td>{service.time}</td>
+                <td><span className="service-badge">{service.status}</span></td>
+                <td className="actions-col">
+                  <button className="icon-btn edit" title="Edit">
+                    <i className="fa-solid fa-pen-to-square"></i>
+                  </button>
+                  <button
+                    className="icon-btn delete"
+                    title="Delete"
+                    onClick={() => handleDeleteService(service.id)}
+                    disabled={deleting === service.id}
+                  >
+                    {deleting === service.id ? 'Deleting...' : <i className="fa-solid fa-trash"></i>}
+                  </button>
+                  <button className="icon-btn clipboard" title="View details">
+                    <i className="fa-solid fa-clipboard-list"></i>
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
-      <ModalWrapper 
-        isOpen={isModalOpen} 
+      <ModalWrapper
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Add New Service"
         subtitle="Create a new service offering"
       >
         <ServiceForm onSubmit={handleAddServiceSubmit} />
       </ModalWrapper>
-      
     </div>
   );
 }

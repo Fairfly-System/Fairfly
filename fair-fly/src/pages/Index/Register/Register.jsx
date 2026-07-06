@@ -4,11 +4,13 @@ import { Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
 import "./register.css";
 import logo from "/FairflyLogo.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { ref, set } from "firebase/database";
-import { auth, db } from "../../../firebase";
+import { auth } from "../../../firebase";
+import { setToDatabase } from "../../../utils/firebaseutils";
+import { useToast } from "../../../components/toast/ToastProvider";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -143,17 +145,17 @@ export default function Register() {
       .then(() => {
         const { password, confirmPassword, ...userWithoutPassword } = formData;
 
-        set(ref(db, "users/" + auth.currentUser.uid), {
+        setToDatabase("users/" + auth.currentUser.uid, {
           ...userWithoutPassword,
-          createdAt: Date.now(),
+          createdAt: new Date().toISOString(),
           role: "client",
         });
 
         navigate("/home");
-        alert("Registration successful!");
+        addToast("Registration successful!", "success");
       })
       .catch((error) => {
-        alert(error.message);
+        addToast(error.message, "error");
       });
   };
 
