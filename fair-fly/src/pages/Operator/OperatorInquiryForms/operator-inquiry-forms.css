@@ -1,0 +1,87 @@
+.op-inquiry {
+  padding: 26px;
+}
+
+.op-inquiry:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  cursor: default;
+}
+
+.op-inquiry-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.op-inquiry-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.op-inquiry-title i {
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.op-inquiry-title h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.op-inquiry-title p {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
+.op-inquiry-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #5b63ff;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.op-inquiry-btn:hover {
+  background: #4a51e0;
+}
+
+.op-inquiry-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px 60px;
+  gap: 0;
+}
+
+.op-inquiry-empty i {
+  font-size: 42px;
+  color: #9ca3af;
+  margin-bottom: 18px;
+}
+
+.op-inquiry-empty h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+}
+
+.op-inquiry-empty p {
+  font-size: 13.5px;
+  color: #9ca3af;
+  margin-bottom: 22px;
+}

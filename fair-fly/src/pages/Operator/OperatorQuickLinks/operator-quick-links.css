@@ -1,0 +1,92 @@
+.op-quicklinks {
+  padding: 26px;
+}
+
+.op-quicklinks:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  cursor: default;
+}
+
+.op-quicklinks-header {
+  margin-bottom: 20px;
+}
+
+.op-quicklinks-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.op-quicklinks-title i {
+  font-size: 18px;
+  margin-top: 3px;
+}
+
+.op-quicklinks-title h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.op-quicklinks-title p {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
+.op-quicklinks .op-tab-strip {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: 24px;
+}
+
+.op-quicklinks .op-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 10px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.op-quicklinks .op-tab.active {
+  background: #fff;
+  color: #1a1a2e;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.op-links-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.op-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.op-link-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.op-link-btn i {
+  font-size: 14px;
+  opacity: 0.85;
+}

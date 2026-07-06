@@ -1,0 +1,88 @@
+.op-history {
+  padding: 26px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+}
+
+.op-history:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  cursor: default;
+}
+
+.op-history-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.op-history-header i {
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.op-history-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.op-history-header p {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
+.op-history .op-tab-strip {
+  display: flex;
+  background: #e5e7eb;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: 40px;
+}
+
+.op-history .op-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 11px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.op-history .op-tab.active {
+  background: #fff;
+  color: #1a1a2e;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.op-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px 60px;
+}
+
+.op-history-empty i {
+  font-size: 40px;
+  color: #9ca3af;
+  margin-bottom: 16px;
+}
+
+.op-history-empty h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.op-history-empty p {
+  font-size: 13.5px;
+  color: #9ca3af;
+}

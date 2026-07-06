@@ -19,6 +19,13 @@ import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
+import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
+import OperatorDashboard from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorDashboard/OperatorDashboard';
+import OperatorAppointments from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorAppointments/OperatorAppointments';
+import OperatorWorkflows from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorWorkflows/OperatorWorkflows';
+import OperatorHistory from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorHistory/OperatorHistory';
+import OperatorQuickLinks from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
+import OperatorInquiryForms from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
 
 function App() {
 
@@ -65,6 +72,16 @@ function App() {
             <Route path="inquiry-history" element={<AdminInquiryHistory/>} />
             <Route path="quick-links" element={<AdminQuickLinks/>} />
           </Route>
+
+          <Route path="/operator" element={<OperatorLayout/>}>
+            <Route index element={<OperatorDashboard/>} />
+            <Route path="appointments" element={<OperatorAppointments/>} />
+            <Route path="workflows" element={<OperatorWorkflows/>} />
+            <Route path="history" element={<OperatorHistory/>} />
+            <Route path="quick-links" element={<OperatorQuickLinks/>} />
+            <Route path="inquiry-forms" element={<OperatorInquiryForms/>} />
+          </Route>
+
           <Route path="/about" element={<About />} />
           <Route path ="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />
