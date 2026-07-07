@@ -1,0 +1,94 @@
+.op-workflows {
+  padding: 26px;
+}
+
+.op-workflows:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  cursor: default;
+}
+
+.op-workflows-header {
+  margin-bottom: 20px;
+}
+
+.op-workflows-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.op-workflows-header p {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
+.op-tab-strip {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: 24px;
+}
+
+.op-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.op-tab.active {
+  background: #fff;
+  color: #1a1a2e;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.op-tab:hover:not(.active) {
+  color: #1a1a2e;
+}
+
+.op-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.op-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 4px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.op-step:last-child {
+  border-bottom: none;
+}
+
+.op-step-num {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.op-step-text {
+  font-size: 14.5px;
+  color: #374151;
+  font-weight: 500;
+}

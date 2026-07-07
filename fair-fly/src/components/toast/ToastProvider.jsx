@@ -16,6 +16,7 @@ export const useToast = () => {
 const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
+  //This is the function that adds a toast to the state, Math.random() generates a random number between 0 and 1, which is used to generate a unique id for each toast
   const addToast = useCallback((message, type = 'info') => {
     const id = Math.random().toString(36).substr(2, 9);
     setToasts(prev => [...prev, { id, message, type }]);
