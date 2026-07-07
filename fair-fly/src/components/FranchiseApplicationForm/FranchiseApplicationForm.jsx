@@ -1,7 +1,8 @@
 import './franchise-application-form.css';
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { setToDatabase } from '../../utils/firebaseutils';
+import { submitFranchiseApplication } from '../../services/franchiseService';
+import { useToast } from '../toast/ToastProvider';
 
 export default function FranchiseApplicationForm({ isOpen, onClose }) {
 
@@ -20,6 +21,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
   const [errors, setErrors] = useState({});
   const [disabled, setDisabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const { addToast } = useToast();
 
   const handleInputChange = (value, name) => {
     setFormData((prev) => ({
@@ -31,20 +33,29 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    //Upload to firebase storage
-    let id = uuidv4(); //Generate a unique id for the file
-    let path = `appointments/${id}`; //Set the path for the file in the storage bucket
-    setToDatabase(path, {...formData, id: id}).then(()=> {setIsLoading(false); onClose(); setFormData({
-      fullName: '',
-      phoneNumber: '',
-      email: '',
-      preferredBranchLocation: '',
-      businessExperience: '',
-      investmentCapacity: '',
-      preferredMeetingDate: '',
-      preferredMeetingTime: '',
-      additionalInformation: '',
-    })}).catch(()=> {setIsLoading(false); alert('Error uploading file to firebase storage')});
+    // Submit to Firestore using franchise service
+    submitFranchiseApplication({
+      ...formData,
+    }).then(() => {
+      setIsLoading(false);
+      onClose();
+      setFormData({
+        fullName: '',
+        phoneNumber: '',
+        email: '',
+        preferredBranchLocation: '',
+        businessExperience: '',
+        investmentCapacity: '',
+        preferredMeetingDate: '',
+        preferredMeetingTime: '',
+        additionalInformation: '',
+      });
+      addToast('Application submitted successfully!', 'success');
+    }).catch((error) => {
+      setIsLoading(false);
+      addToast('Error submitting application: ' + error.message, 'error');
+      console.error('Application submission error:', error);
+    });
   };
 
   const validateName = (name) => {
