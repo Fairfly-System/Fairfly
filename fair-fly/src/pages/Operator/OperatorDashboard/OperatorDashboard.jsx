@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import AddServiceModal from '../../../components/OperatorComponents/AddServiceModal/AddServiceModal';
 import './operator-dashboard.css';
 
 const SERVICES = [
@@ -31,6 +33,8 @@ const SERVICES = [
 ];
 
 export default function OperatorDashboard() {
+  const [showAddService, setShowAddService] = useState(false);
+  
   return (
     <div className="card op-dashboard">
       <div className="op-dashboard-header">
@@ -38,11 +42,15 @@ export default function OperatorDashboard() {
           <h2>Active Services</h2>
           <p>Services currently being processed</p>
         </div>
-        <button className="op-dashboard-btn">
+        <button className="op-dashboard-btn" onClick={() => setShowAddService(true)}>
           <i className="fa-solid fa-plus"></i>
+
           Add Service
+
         </button>
       </div>
+
+      {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
 
       <div className="op-service-list">
         {SERVICES.map((s) => {

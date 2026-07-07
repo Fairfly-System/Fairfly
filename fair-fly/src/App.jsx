@@ -20,12 +20,12 @@ import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseA
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
 import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
-import OperatorDashboard from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorDashboard/OperatorDashboard';
-import OperatorAppointments from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorAppointments/OperatorAppointments';
-import OperatorWorkflows from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorWorkflows/OperatorWorkflows';
-import OperatorHistory from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorHistory/OperatorHistory';
-import OperatorQuickLinks from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
-import OperatorInquiryForms from '../../../../../Downloads/fairfly-admin-src/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
+import OperatorDashboard from './pages/Operator/OperatorDashboard/OperatorDashboard';
+import OperatorAppointments from './pages/Operator/OperatorAppointments/OperatorAppointments';
+import OperatorWorkflows from './pages/Operator/OperatorWorkflows/OperatorWorkflows';
+import OperatorQuickLinks from './pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
+import OperatorHistory from './pages/Operator/OperatorHistory/OperatorHistory';
+import OperatorInquiryForms from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
 
 function App() {
 
