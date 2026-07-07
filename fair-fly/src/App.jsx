@@ -22,11 +22,14 @@ import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
-import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
 import OperatorDashboard from './pages/Operator/OperatorDashboard/OperatorDashboard';
 import OperatorAppointments from './pages/Operator/OperatorAppointments/OperatorAppointments';
 import OperatorWorkflows from './pages/Operator/OperatorWorkflows/OperatorWorkflows';
 import { useAuthContext } from './context/AuthContext';
+import OperatorHistory from './pages/Operator/OperatorHistory/OperatorHistory';
+import OperatorQuickLinks from './pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
+import OperatorInquiryForms from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
+import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
 
 function App() {
 
