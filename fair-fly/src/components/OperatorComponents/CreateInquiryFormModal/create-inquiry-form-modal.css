@@ -1,0 +1,258 @@
+.cif-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.cif-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Fixed header ─────────────────────────────── */
+.cif-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 26px 28px 18px;
+  border-bottom: 1px solid #eceef3;
+  flex-shrink: 0;
+}
+
+.cif-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.cif-header p {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.cif-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cif-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* ── Scrollable body ──────────────────────────── */
+.cif-body {
+  overflow-y: auto;
+  padding: 22px 28px 28px;
+  flex: 1;
+}
+
+/* Custom scrollbar */
+.cif-body::-webkit-scrollbar {
+  width: 8px;
+}
+.cif-body::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 99px;
+}
+.cif-body::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 99px;
+}
+.cif-body::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ── Section title ────────────────────────────── */
+.cif-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eceef3;
+  margin: 24px 0 18px;
+}
+
+/* ── Field ────────────────────────────────────── */
+.cif-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cif-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cif-field label span {
+  color: #ef4444;
+}
+
+.cif-field input,
+.cif-field textarea {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #111827;
+  background: #f9fafb;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cif-field input:focus,
+.cif-field textarea:focus {
+  outline: none;
+  border-color: #5b63ff;
+  box-shadow: 0 0 0 3px rgba(91, 99, 255, 0.13);
+  background: #fff;
+}
+
+.cif-field input::placeholder,
+.cif-field textarea::placeholder {
+  color: #9ca3af;
+}
+
+.cif-field textarea {
+  resize: vertical;
+}
+
+.cif-textarea-light {
+  background: #f3f4f6 !important;
+}
+
+/* half-width date field */
+.cif-field-half {
+  max-width: 260px;
+}
+
+/* ── Layout rows ──────────────────────────────── */
+.cif-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.cif-row3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* ── Checkboxes ───────────────────────────────── */
+.cif-checkboxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px 16px;
+  margin-top: 2px;
+}
+
+.cif-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cif-checkbox-label input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #5b63ff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Actions ──────────────────────────────────── */
+.cif-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.cif-btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #5b63ff;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 13px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cif-btn-submit:hover {
+  background: #4a51e0;
+}
+
+.cif-btn-cancel {
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 13px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cif-btn-cancel:hover {
+  background: #f3f4f6;
+}
+
+@media (max-width: 640px) {
+  .cif-modal {
+    max-height: 95vh;
+  }
+
+  .cif-row2,
+  .cif-row3 {
+    grid-template-columns: 1fr;
+  }
+
+  .cif-checkboxes {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cif-field-half {
+    max-width: 100%;
+  }
+
+  .cif-actions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,6 +1,11 @@
+import { useState } from 'react';
+import CreateInquiryFormModal from '../../../components/OperatorComponents/CreateInquiryFormModal/CreateInquiryFormModal';
 import './operator-inquiry-forms.css';
 
 export default function OperatorInquiryForms() {
+
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <div className="card op-inquiry">
       <div className="op-inquiry-header">
@@ -11,21 +16,13 @@ export default function OperatorInquiryForms() {
             <p>Create and manage client inquiry forms</p>
           </div>
         </div>
-        <button className="op-inquiry-btn">
+        <button className="op-inquiry-btn" onClick={() => setShowModal(true)} >
           <i className="fa-solid fa-plus"></i>
           Create Inquiry Form
         </button>
       </div>
 
-      <div className="op-inquiry-empty">
-        <i className="fa-regular fa-file-lines"></i>
-        <h3>No Inquiry Forms Yet</h3>
-        <p>Create your first inquiry form to get started</p>
-        <button className="op-inquiry-btn">
-          <i className="fa-solid fa-plus"></i>
-          Create Inquiry Form
-        </button>
-      </div>
+      {showModal && <CreateInquiryFormModal onClose={() => setShowModal(false)} />}
     </div>
   );
 }
