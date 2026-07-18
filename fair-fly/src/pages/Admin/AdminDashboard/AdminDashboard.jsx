@@ -1,7 +1,47 @@
 import './admin-dashboard.css';
 import StatCards from '../../../components/AdminComponents/StatCards/StatCards';
+import { useEffect, useState } from 'react';
+import { firestore } from '../../../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export default function Dashboard() {
+
+  //Get the Statistics from the firestore listener and display them in the dashboard
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [activeServices, setActiveServices] = useState(0);
+  const [clients, setClients] = useState(0);
+  const [operators, setOperators] = useState(0);
+
+  //For now, only the Total Active Services and Operators will be fetched from the firestore, the rest will be hardcoded for now
+  useEffect(() => {
+    // Subscribe to the services collection in Firestore
+    const unsubscribeServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
+      //Filter the services that are active and set the count to the state
+      const activeServices = snapshot.docs.filter(doc => doc.data().status === 'Active');
+      setActiveServices(activeServices.length); // Update active services count
+    });
+
+    // Subscribe to the operators collection in Firestore
+    const unsubscribeOperators = onSnapshot(collection(firestore, 'users'), (snapshot) => {
+      //Filter the operators that are active and set the count to the state
+      const activeOperators = snapshot.docs.filter(doc => doc.data().status === 'Active' && doc.data().role === 'operator');
+      setOperators(activeOperators.length); // Update operators count
+    });
+
+    //Get the Clients count from the users collection in Firestore 
+    const unsubscribeClients = onSnapshot(collection(firestore, 'users'), (snapshot) => {
+      const activeClients = snapshot.docs.filter(doc => doc.data().role === 'client');
+      setClients(activeClients.length); // Update clients count
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeServices();
+      unsubscribeOperators();
+      unsubscribeClients();
+    };
+  }, []);
+
   return (
     <div className="dashboard">
 
@@ -17,7 +57,7 @@ export default function Dashboard() {
 
         <StatCards
           title="Active Services"
-          value="0"
+          value={activeServices}
           subtitle="Total service"
           icon="fa-regular fa-file-lines"
           iconColor="#3b82f6"
@@ -25,7 +65,7 @@ export default function Dashboard() {
 
         <StatCards
           title="Clients"
-          value="0"
+          value={clients}
           subtitle="Total clients"
           icon="fa-solid fa-user-group"
           iconColor="#a855f7"
@@ -34,7 +74,7 @@ export default function Dashboard() {
 
         <StatCards
           title="Operators"
-          value="1"
+          value={operators}
           subtitle="Franchise branches"
           icon="fa-solid fa-people-group"
           iconColor="#f0653e"

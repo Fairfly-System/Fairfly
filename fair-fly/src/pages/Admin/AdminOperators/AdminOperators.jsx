@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react'; // Added useState and useEffect
 import './admin-operators.css';
+import {firestore, storage} from '../../../firebase';
+import { onSnapshot, collection} from 'firebase/firestore';
+import { useToast } from '../../../components/toast/ToastProvider';
+import {useAuthContext} from '../../../context/AuthContext';
 import ModalWrapper from '../../../components/AdminComponents/Modals/ModalWrapper';
 import OperatorForm from '../../../components/AdminComponents/Modals/OperatorForm';
 import { createOperator, getOperators, deleteOperator } from '../../../services/franchiseService';
@@ -8,45 +12,76 @@ export default function AdminOperators() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { userToken } = useAuthContext();
+  const { addToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
 
-  // Load operators on component mount
+  //subscribe to the operators collection in Firestore and update the state when changes occur
   useEffect(() => {
-    loadOperators();
-  }, []);
+    const unsubscribe = onSnapshot(
+      collection(firestore, "users"),
+      (snapshot) => {
 
-  const loadOperators = async () => {
-    try {
-      setLoading(true);
-      const ops = await getOperators();
-      setOperators(ops);
-    } catch (error) {
-      console.error('Error loading operators:', error);
-      // Keep empty array if error occurs
-    } finally {
-      setLoading(false);
-    }
-  };
+        // Filter only operators from the users collection
+        const operators = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(user => user.role === 'operator');
+        setOperators(operators);
+        setLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   const handleCreateOperatorSubmit = async (newOperatorData) => {
     try {
-      await createOperator(newOperatorData);
-      // Refresh operators list
-      await loadOperators();
+      setIsSubmitting(true); // Set submission state to true
+      // Post the new operator data to the backend
+      const response = await fetch("http://localhost:5001/api/operators", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}` // Include the token in the Authorization header
+        },
+        body: JSON.stringify(newOperatorData),
+      });
+      if (!response.ok) {
+        const errorText = await response.json();
+        throw new Error(errorText.statusMessage || 'Failed to create operator');
+      }
+      addToast('Operator created successfully!', 'success');
       setIsModalOpen(false);
     } catch (error) {
       console.error('Error creating operator:', error);
-      alert('Failed to create operator: ' + error.message);
+      addToast('Failed to create operator: ' + error.message, 'error');
+      setIsModalOpen(false); // Close modal on error
+    } finally {
+      setIsSubmitting(false); // Reset submission state
     }
   };
 
   const handleDeleteOperator = async (operatorId) => {
     if (window.confirm('Are you sure you want to delete this operator?')) {
       try {
-        await deleteOperator(operatorId);
-        await loadOperators(); // Refresh list
+        // Send a DELETE request to the backend to delete the operator
+        const response = await fetch(`http://localhost:5001/api/operators/${operatorId}`, {
+          method: 'DELETE',
+          headers: {
+            "Authorization": `Bearer ${userToken}` // Include the token in the Authorization header
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete operator: ' + response.error);
+        }
+        addToast('Operator deleted successfully!', 'success');
       } catch (error) {
         console.error('Error deleting operator:', error);
-        alert('Failed to delete operator: ' + error.message);
+        addToast('Failed to delete operator: ' + error.message, 'error');
+        setIsModalOpen(false); // Close modal on error
       }
     }
   };
@@ -83,7 +118,7 @@ export default function AdminOperators() {
         <thead>
           <tr>
             <th>Branch Name</th>
-            <th>Username</th>
+            <th>Email</th>
             <th>Status</th>
             <th>Services Handled</th>
             <th className="actions-col">Actions</th>
@@ -99,7 +134,7 @@ export default function AdminOperators() {
             operators.map((op) => (
               <tr key={op.id}>
                 <td>{op.branchName || 'N/A'}</td>
-                <td>{op.username}</td>
+                <td>{op.email || 'N/A'}</td>
                 <td><span className="operator-badge">{op.status}</span></td>
                 <td>{op.servicesHandled || 0} services</td>
                 <td className="actions-col">
@@ -123,7 +158,7 @@ export default function AdminOperators() {
         title="Create Operator Account"
         subtitle="Add a new franchise operator account"
       >
-        <OperatorForm onSubmit={handleCreateOperatorSubmit} />
+        <OperatorForm onSubmit={handleCreateOperatorSubmit} isLoading={isSubmitting} />
       </ModalWrapper>
     </div>
   );

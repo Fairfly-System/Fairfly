@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function ServiceForm({ onSubmit }) {
+export default function ServiceForm({ onSubmit, isLoading }) {
   const [formData, setFormData] = useState({ name: '', price: '', processingTime: '' });
 
   const handleSubmit = (e) => {
@@ -40,7 +40,9 @@ export default function ServiceForm({ onSubmit }) {
           onChange={(e) => setFormData({...formData, processingTime: e.target.value})}
         />
       </div>
-      <button type="submit" className="modalSubmitBtn btnBlue">Add Service</button>
+      <button type="submit" className="modalSubmitBtn btnBlue" disabled={isLoading}>
+        {isLoading ? 'Adding Service...' : 'Add Service'}
+      </button>
     </form>
   );
 }

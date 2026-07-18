@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import {doc, onSnapshot, getDocs} from 'firebase/firestore';
+import { doc, onSnapshot, getDocs } from 'firebase/firestore';
 import Chatbot from './components/Chatbot/Chatbot'
 import Footer from './components/Footer/Footer'
 import Navbar from './components/Navbar/Navbar'
@@ -8,7 +8,7 @@ import Landing from './pages/Index/Landing/Landing'
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router";
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
-import {getFromDatabase} from './utils/firebaseutils';
+import { getFromDatabase } from './utils/firebaseutils';
 import Login from './pages/Index/Login/login';
 import Register from './pages/Index/Register/Register';
 import ScrollToTop from './components/ScrollToTop/ScrollToTop';
@@ -22,18 +22,18 @@ import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
+import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
 import OperatorDashboard from './pages/Operator/OperatorDashboard/OperatorDashboard';
 import OperatorAppointments from './pages/Operator/OperatorAppointments/OperatorAppointments';
 import OperatorWorkflows from './pages/Operator/OperatorWorkflows/OperatorWorkflows';
-import { useAuthContext } from './context/AuthContext';
 import OperatorHistory from './pages/Operator/OperatorHistory/OperatorHistory';
 import OperatorQuickLinks from './pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
 import OperatorInquiryForms from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
-import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
+import { useAuthContext } from './context/AuthContext';
 
 function App() {
 
-  const {user, userDetails, userLoading} = useAuthContext();
+  const { user, userDetails, userLoading } = useAuthContext();
 
   const roleRoutes = {
     client: (
@@ -70,50 +70,42 @@ function App() {
   };
 
   return (
-          <>
-            <BrowserRouter>
-              <ScrollToTop />
+    <>
+      <BrowserRouter>
+        <ScrollToTop />
 
-              {userLoading ? (
-                <Loading />
-              ) : (
-                <Routes>
-                  {// User Routes */}
-                  userDetails ? (
-                    roleRoutes[userDetails.role]
-                  ) : ( //Unauthenticated Route
-                    <Route element={<Index />}>
-                      <Route path="/home" element={<Landing />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Route>
-                  )}
+        {userLoading ? (
+          <Loading />
+        ) : (
+          <Routes>
+            {/* User Routes */}
+            {userDetails ? (
+              <>
+                {roleRoutes[userDetails.role]}
+                <Route
+                  path="*"
+                  element={<Navigate to={`/${userDetails.role}`} replace />}
+                />
+              </>
+            ) : (
+              /* Unauthenticated Route */
+              <Route element={<Index />}>
+                <Route index element={<Navigate to="/home" replace />} />
+                <Route path="/home" element={<Landing />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="*" element={<Navigate to="/home" replace />} />
+              </Route>
+            )}
+          </Routes>
+        )}
 
-                  {/* Global catch-all */}
-                  <Route
-                    path="*"
-                    element={
-                      <Navigate
-                        to={
-                          userDetails
-                            ? `/${userDetails.role}`
-                            : "/"
-                        }
-                        replace
-                      />
-                    }
-                  />
-
-                </Routes>
-              )}
-
-              <Chatbot />
-              <Footer />
-          </BrowserRouter>
-        </>
-    );
+        <Chatbot />
+        <Footer />
+      </BrowserRouter>
+    </>
+  );
 }
 
 export default App;

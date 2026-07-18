@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-export default function OperatorForm({ onSubmit }) {
-  const [formData, setFormData] = useState({ branchName: '', username: '', password: '' });
+export default function OperatorForm({ onSubmit, isLoading }) {
+  const [formData, setFormData] = useState({ branchName: '', email: '', password: '' });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,13 +21,33 @@ export default function OperatorForm({ onSubmit }) {
         />
       </div>
       <div className="formGroup">
-        <label>Username</label>
+        <label>Address</label>
         <input 
           type="text" 
           className="modalInput" 
-          placeholder="e.g., manila_operator"
-          value={formData.username}
-          onChange={(e) => setFormData({...formData, username: e.target.value})}
+          placeholder="e.g., 123 Main St, Manila"
+          value={formData.address}
+          onChange={(e) => setFormData({...formData, address: e.target.value})}
+        />
+      </div>
+      <div className="formGroup">
+        <label>Contact Number</label>
+        <input
+          type="text"
+          className="modalInput"
+          placeholder="e.g., +63 912 345 6789"
+          value={formData.contactNumber}
+          onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+        />
+      </div>
+      <div className="formGroup">
+        <label>Email</label>
+        <input 
+          type="email" 
+          className="modalInput" 
+          placeholder="e.g., manila_operator@example.com"
+          value={formData.email}
+          onChange={(e) => setFormData({...formData, email: e.target.value})}
         />
       </div>
       <div className="formGroup">
@@ -40,7 +60,9 @@ export default function OperatorForm({ onSubmit }) {
           onChange={(e) => setFormData({...formData, password: e.target.value})}
         />
       </div>
-      <button type="submit" className="modalSubmitBtn btnGreen">Create Account</button>
+      <button type="submit" className="modalSubmitBtn btnGreen" disabled={isLoading}>
+        {isLoading ? 'Creating Account...' : 'Create Account'}
+      </button>
     </form>
   );
 }
