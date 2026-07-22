@@ -13,6 +13,10 @@
   --text-light: #8888aa;
   --text-light-2: #c4c4d8;
   --complete-green: #2ebb4c;
+  --complete-green-dark: #259b3d;
+  --error-red: #e74c3c;
+  --error-red-dark: #c0392b;
+  --warning-yellow: #f1c40f;
   --bg: #F9FBFF;
   --card-bg: #ffffff;
   --font: 'Plus Jakarta Sans', system-ui, sans-serif;

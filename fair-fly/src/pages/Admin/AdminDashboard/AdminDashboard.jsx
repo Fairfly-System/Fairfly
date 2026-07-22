@@ -3,84 +3,92 @@ import StatCards from '../../../components/AdminComponents/StatCards/StatCards';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts';
+
+// Placeholder data — replace with real Firestore aggregates later
+const revenueData = [
+  { month: 'Jan', revenue: 185000 },
+  { month: 'Feb', revenue: 210000 },
+  { month: 'Mar', revenue: 195000 },
+  { month: 'Apr', revenue: 240000 },
+  { month: 'May', revenue: 220000 },
+  { month: 'Jun', revenue: 260000 },
+  { month: 'Jul', revenue: 275000 },
+  { month: 'Aug', revenue: 250000 },
+  { month: 'Sep', revenue: 290000 },
+  { month: 'Oct', revenue: 310000 },
+  { month: 'Nov', revenue: 295000 },
+  { month: 'Dec', revenue: 330000 },
+];
+
+const servicesCompletedData = [
+  { month: 'Jan', completed: 32 },
+  { month: 'Feb', completed: 41 },
+  { month: 'Mar', completed: 38 },
+  { month: 'Apr', completed: 50 },
+  { month: 'May', completed: 47 },
+  { month: 'Jun', completed: 55 },
+  { month: 'Jul', completed: 60 },
+  { month: 'Aug', completed: 58 },
+  { month: 'Sep', completed: 63 },
+  { month: 'Oct', completed: 70 },
+  { month: 'Nov', completed: 66 },
+  { month: 'Dec', completed: 75 },
+];
 
 export default function Dashboard() {
-
-  //Get the Statistics from the firestore listener and display them in the dashboard
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [activeServices, setActiveServices] = useState(0);
-  const [clients, setClients] = useState(0);
-  const [operators, setOperators] = useState(0);
-
-  //For now, only the Total Active Services and Operators will be fetched from the firestore, the rest will be hardcoded for now
-  useEffect(() => {
-    // Subscribe to the services collection in Firestore
-    const unsubscribeServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
-      //Filter the services that are active and set the count to the state
-      const activeServices = snapshot.docs.filter(doc => doc.data().status === 'Active');
-      setActiveServices(activeServices.length); // Update active services count
-    });
-
-    // Subscribe to the operators collection in Firestore
-    const unsubscribeOperators = onSnapshot(collection(firestore, 'users'), (snapshot) => {
-      //Filter the operators that are active and set the count to the state
-      const activeOperators = snapshot.docs.filter(doc => doc.data().status === 'Active' && doc.data().role === 'operator');
-      setOperators(activeOperators.length); // Update operators count
-    });
-
-    //Get the Clients count from the users collection in Firestore 
-    const unsubscribeClients = onSnapshot(collection(firestore, 'users'), (snapshot) => {
-      const activeClients = snapshot.docs.filter(doc => doc.data().role === 'client');
-      setClients(activeClients.length); // Update clients count
-    });
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      unsubscribeServices();
-      unsubscribeOperators();
-      unsubscribeClients();
-    };
-  }, []);
 
   return (
     <div className="dashboard">
 
-      <div className="dashboard-stats">
-        <StatCards
-          title="Total Revenue"
-          value="000,000"
-          subtitle="From last month"
-          icon="fa-solid fa-peso-sign"
-          iconColor="#16a34a"
-          subtitleColor="#16a34a"
-        />
+      <section className="dashboard-charts">
+        <div className="chart-card">
+          <h3 className="chart-title">Monthly Revenue</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={revenueData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eceef3" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(val) => `₱${val / 1000}k`} />
+              <Tooltip formatter={(val) => [`₱${val.toLocaleString()}`, 'Revenue']} />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                name="Revenue"
+                stroke="#16a34a"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
-        <StatCards
-          title="Active Services"
-          value={activeServices}
-          subtitle="Total service"
-          icon="fa-regular fa-file-lines"
-          iconColor="#3b82f6"
-        />
-
-        <StatCards
-          title="Clients"
-          value={clients}
-          subtitle="Total clients"
-          icon="fa-solid fa-user-group"
-          iconColor="#a855f7"
-          subtitleColor="#c026d3"
-        />
-
-        <StatCards
-          title="Operators"
-          value={operators}
-          subtitle="Franchise branches"
-          icon="fa-solid fa-people-group"
-          iconColor="#f0653e"
-        />
-      </div>
-
+        <div className="chart-card">
+          <h3 className="chart-title">Services Completed</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={servicesCompletedData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eceef3" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="completed" name="Completed" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
     </div>
   );
 }

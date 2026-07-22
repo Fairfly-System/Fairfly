@@ -16,6 +16,17 @@ const addToDatabase = async (collectionName, data) => {
   }
 };
 
+const addToDocumentWithId = async (collectionName, docId, data) => {
+  try {
+    const docRef = db.collection(collectionName).doc(docId);
+    await docRef.set(data);
+    return docRef.id;
+  } catch (error) {
+    console.error(`Firebase Admin SDK: Error adding to ${collectionName}/${docId}:`, error);
+    throw error;
+  }
+}
+
 /**
  * Retrieves a single document from a Firestore path.
  * @param {string} path - (e.g. 'users/userId')
@@ -131,5 +142,6 @@ module.exports = {
   updateToDatabase,
   deleteFromDatabase,
   getAllFromDatabase,
-  queryDatabaseAdvanced
+  queryDatabaseAdvanced,
+  addToDocumentWithId
 };

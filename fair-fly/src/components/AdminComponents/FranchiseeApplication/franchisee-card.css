@@ -1,0 +1,129 @@
+/* --- Franchise Card --- */
+
+.franchise-card{
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  border: 1px solid #eceef3;
+  border-left: 4px solid var(--orange);
+  gap: 16px;
+  padding: 16px;
+}
+
+.franchise-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.franchisee-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.franchisee-details h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.franchisee-details p {
+  font-size: 14px;
+  color: gray;
+  margin: 0;
+}
+
+.franchisee-status {
+  background-color: #f97316;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.franchise-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.franchise-card-actions button {
+  background-color: transparent;
+  padding: 5px 10px;
+  border-radius: 7px;
+}
+
+.franchise-card-actions .view {
+  border: var(--purple-dark) 2px solid;
+  color: var(--purple-dark);
+  font-weight: 500;
+}
+
+.franchise-card-actions .delete {
+  border: var(--error-red) 2px solid;
+  color: var(--error-red);
+  font-weight: 500;
+}
+
+.franchisee-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 12px;
+}
+
+.franchise-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background-color: #f9fbff;
+  border-radius: 8px;
+}
+
+.franchise-card-item {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.franchise-card-item h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: #9c9c9c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.franchise-card-item p {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+.franchise-card-footer {
+  padding: 16px;
+  background-color: #e0eaffbd;
+  border: 1px solid #d0e0ff;
+  border-radius: 8px;
+}
+
+.franchise-card-footer h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--purple-dark);
+}
+
+.additional-message {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}

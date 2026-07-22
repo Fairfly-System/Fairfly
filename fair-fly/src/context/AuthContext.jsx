@@ -65,6 +65,7 @@ const AuthProvider = ({ children }) => {
                 if (userdoc.exists()) {
                     console.log('User document exists!');
                     setUserDetails({ id: userdoc.id, ...userdoc.data() });
+                    console.log('User details set to state:', { id: userdoc.id, ...userdoc.data() });
                 } else {
                     signOut(auth);
                     console.log('User document does not exist!');

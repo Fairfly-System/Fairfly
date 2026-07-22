@@ -1,0 +1,234 @@
+.modal-overlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    backdrop-filter: blur(1px);
+}
+
+.modal-content {
+    position: fixed;
+    border-top: 10px solid var(--orange);
+    top: 50%;
+    left: 50%;
+    overflow-y: hidden;
+    max-height: 90vh;
+    transform: translate(-50%, -50%);
+    background-color: #fff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    width: 80%;
+    max-width: 600px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.modal-header svg {
+    width: 24px;
+    height: 24px;
+}
+
+.modal-header .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-header .modal-title span{
+    color: var(--orange);
+    line-height: 0;
+}
+
+.modal-close{
+    display: flex;
+    height: 30px;
+    width: 30px;
+    color: var(--orange);
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.close-icon{
+    line-height: 0;
+}
+
+.modal-close:hover{
+    background-color: var(--orange);
+    color: white;
+    transform: rotate(360deg);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 500;
+}
+
+.modal-subheader{
+    font-size: 13px;
+    margin-bottom: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.modal-subheader h3{
+    font-weight: 400;
+    color: var(--text-mid);
+    margin-bottom: 5px;
+    align-self: center;
+}
+
+.modal-app-status{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #e0eaffbd;
+    padding: 20px 20px;
+    border-radius: 5px;
+    border: 1px solid rgb(202, 221, 253);
+    margin-bottom: 20px;
+}
+
+.modal-app-status .app-status{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.modal-app-status .app-status h3{
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.modal-app-status .app-status p{
+    padding: 1px 10px;
+    width: fit-content;
+    background-color: var(--orange-light);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+.app-submitted-date{
+    font-size: 12px;
+    color: var(--text-mid);
+    font-weight: 400;
+}
+
+.modal-section{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modal-body-scrollable{
+    overflow-y: auto;
+    max-height: 50vh;
+    padding-right: 10px;
+    gap: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-section-header{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.modal-section-header h3{
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.modal-section-header svg{
+    width: 20px;
+    height: 20px;
+    color: var(--purple);
+}
+
+.modal-section-content{
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-section-content .section-header{
+    font-size: 14px;
+    font-weight: 400;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    color: var(--text-mid);
+}
+
+.modal-section-content .section-header svg{
+    color: var(--text-mid);
+    width: 16px;
+    height: 16px;
+}
+
+.modal-section-content .section-content{
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.additional-message-content{
+    background-color: #e0eaffbd;
+    padding: 20px 15px;
+    border-radius: 5px;
+    border: 1px solid rgb(202, 221, 253);
+    font-size: 14px;
+}
+
+.button-group{
+    display: flex;
+    width: 100%;
+    gap: 10px;
+}
+
+.button-group button{
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.approve-button{
+    background-color: var(--complete-green);
+}
+
+.approve-button:hover{
+    background-color: var(--complete-green-dark);
+}
+
+.reject-button{
+    background-color: var(--error-red);
+}
+
+.reject-button:hover{
+    background-color: var(--error-red-dark);
+}
+

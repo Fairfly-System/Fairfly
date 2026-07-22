@@ -1,12 +1,12 @@
 import React from 'react';
 import './Loading.css';
 
-const Loading = () => {
+const Loading = ({text = 'Fairfly'}) => {
   return (
     <div className="loading-container">
       <div className="loading-content">
         <div className="spinner"></div>
-        <p>Loading Fairfly...</p>
+        <p>Loading {text}...</p>
       </div>
     </div>
   );

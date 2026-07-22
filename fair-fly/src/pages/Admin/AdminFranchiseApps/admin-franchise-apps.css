@@ -1,10 +1,14 @@
 .franchise-page {
   padding: 28px;
+  height: calc(100vh - 102px);
+  overflow-y: hidden;
+  border-bottom: 25px solid #ffffff;
+  
 }
 
 .franchise-page:hover {
   transform: none;
-
+  cursor: default;
 }
 
 .franchise-header {
@@ -13,7 +17,7 @@
   gap: 12px;
   padding-bottom: 24px;
   border-bottom: 1px solid #eceef3;
-  margin-bottom: 50px;
+  margin-bottom: 25px;
 }
 
 .franchise-header > i {
@@ -31,4 +35,12 @@
   color: gray;
   font-size: 13.5px;
   margin-top: 4px;
+}
+
+.franchise-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow-y: auto;
 }

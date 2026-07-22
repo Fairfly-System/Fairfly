@@ -1,3 +1,11 @@
+.steps{
+  color: #5b63ff;
+}
+
+.edit{
+  color: var(--primary-color);
+}
+
 .services-page {
   padding: 28px;
 }

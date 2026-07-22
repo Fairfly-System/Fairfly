@@ -3,21 +3,21 @@ const {
   getFromDatabase, 
   getAllFromDatabase, 
   updateToDatabase, 
-  deleteFromDatabase 
+  deleteFromDatabase,
+  addToDocumentWithId
 } = require('../services/firebaseService');
 const { staticDataCache } = require('../services/cacheService');
 const admin = require('firebase-admin');
 const COLLECTIONS = {
   USERS: 'users',
 };
-const CACHE_KEYS = {
-  OPERATORS: 'operators-list'
-};
 
 /**
  * Create a new operator (Admin only)
  */
 const createOperator = async (req, res) => {
+
+  let uid;// Variable to hold the UID of the newly created operator, We input this later when we add the operator to the database, we set the docID to the UID of the operator so that we can easily reference it later. This is important because we want to ensure that each operator has a unique identifier in our database, and using the UID from Firebase Authentication allows us to maintain consistency between our authentication system and our database records.
 
   try {
     const operatorData = req.body;
@@ -29,23 +29,28 @@ const createOperator = async (req, res) => {
         displayName: operatorData.branchName
       });
       console.log('Successfully created new user:', userRecord.uid);
+      // Store the UID for later use
+      uid = userRecord.uid;
     } catch (error) {
       console.error('Error creating new user:', error);
       return res.status(500).json({ error: 'Failed to create operator account on Firebase: ' + error.message });
     }
 
     //Add the new operator to the database
-    const docId = await addToDatabase(COLLECTIONS.USERS, {
-      ...operatorData,
-      role: 'operator',
-      status: operatorData.status || 'Active', // Default to 'Active' if not provided
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
+    try{
+      const docId = await addToDocumentWithId(COLLECTIONS.USERS, uid, {
+        ...operatorData,
+        role: 'operator',
+        status: operatorData.status || 'Active', // Default to 'Active' if not provided
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error adding operator to database:', error);
+      return res.status(500).json({ error: 'Failed to add operator to database: ' + error.message });
+    }
     
-    // Invalidate Cache
-    staticDataCache.delete(CACHE_KEYS.USERS);
-    return res.status(201).json({ id: docId, message: 'Operator created successfully' });
+    return res.status(201).json({ id: uid, message: 'Operator created successfully' });
 
   } catch (error) {
     console.error('Error creating operator:', error);
@@ -75,9 +80,6 @@ const updateOperator = async (req, res) => {
       ...updates,
       updatedAt: new Date().toISOString()
     });
-
-    // Invalidate Cache
-    staticDataCache.delete(CACHE_KEYS.USERS);
 
     return res.status(200).json({ message: 'Operator updated successfully' });
   } catch (error) {
@@ -112,9 +114,6 @@ const deleteOperator = async (req, res) => {
     }
 
     await deleteFromDatabase(dbPath);
-
-    // Invalidate Cache
-    staticDataCache.delete(CACHE_KEYS.USERS);
 
     return res.status(200).json({ message: 'Operator deleted successfully' });
   } catch (error) {

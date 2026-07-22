@@ -144,7 +144,7 @@ export default function AdminServices() {
                 <td><span className="service-badge">{service.status}</span></td>
                 <td className="actions-col">
                   <button className="icon-btn edit" title="Edit">
-                    <i className="fa-solid fa-pen-to-square"></i>
+                    <i className="fa-solid fa-pen-to-square edit"></i>
                   </button>
                   <button
                     className="icon-btn delete"
@@ -154,8 +154,8 @@ export default function AdminServices() {
                   >
                     {deleting === service.id ? 'Deleting...' : <i className="fa-solid fa-trash"></i>}
                   </button>
-                  <button className="icon-btn clipboard" title="View details">
-                    <i className="fa-solid fa-clipboard-list"></i>
+                  <button className="icon-btn clipboard" title="View Steps">
+                    <i className="fa-solid fa-clipboard-list steps"></i>
                   </button>
                 </td>
               </tr>

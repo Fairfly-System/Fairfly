@@ -1,4 +1,5 @@
 const express = require('express');
+const { performanceProfiler } = require('../middleware/performanceProfiler');
 const router = express.Router();
 const { 
   createService, 
@@ -14,14 +15,14 @@ const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
 // Services Routes
-router.post('/', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime']), createService);
-router.patch('/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime']), updateService);
-router.delete('/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteService);
+router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime']), createService));
+router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime']), updateService));
+router.delete('/:id', performanceProfiler('DELETE /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteService));
 
 // Quick Links Routes
-router.get('/quicklinks', apiRateLimiter, getQuickLinks);
-router.post('/quicklinks', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, createQuickLink);
-router.patch('/quicklinks/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateQuickLink);
-router.delete('/quicklinks/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteQuickLink);
+router.get('/quicklinks', performanceProfiler('GET /services/quicklinks', apiRateLimiter, getQuickLinks));
+router.post('/quicklinks', performanceProfiler('POST /services/quicklinks', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, createQuickLink));
+router.patch('/quicklinks/:id', performanceProfiler('PATCH /services/quicklinks/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateQuickLink));
+router.delete('/quicklinks/:id', performanceProfiler('DELETE /services/quicklinks/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteQuickLink));
 
 module.exports = router;
