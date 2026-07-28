@@ -98,9 +98,9 @@
   border-radius: 999px;
 }
 
-.service-badge-inactive {
-  background-color: #fee2e2;
-  color: #ef4444;
+.service-badge.inactive {
+  background-color: #fee2e2 !important;
+  color: #ef4444 !important;
 }
 .icon-btn {
   background: none;

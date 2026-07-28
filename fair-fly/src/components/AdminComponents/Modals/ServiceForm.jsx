@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ServiceStepsModal from "./ServiceStepsModal";
+import {firestore} from "../../../firebase";
 
 // Maps the stored label back to the <select> value used in the unit dropdown
 const LABEL_TO_UNIT = {
@@ -16,11 +17,13 @@ function parseProcessingTime(processingTime) {
   if (!processingTime) return fallback;
   if (typeof processingTime === "object") return processingTime; // already in the right shape
 
+  // Match patterns like "7-10 Day/s" or "3 Day/s"
   const match = processingTime.match(/^(\d+)(?:-(\d+))?\s+(.+)$/);
-  if (!match) return fallback;
+  if (!match) return fallback; // If it doesn't match the expected pattern, return fallback
 
-  const [, min, max, labelRaw] = match;
-  const unit = LABEL_TO_UNIT[labelRaw.trim().toLowerCase()] || "days";
+  // Destructure the match results
+  const [ ,min, max, labelRaw] = match;
+  const unit = LABEL_TO_UNIT[labelRaw.trim().toLowerCase()] || "days"; // Default to "days" if the label isn't recognized
 
   return {
     min: min || "",
@@ -35,15 +38,16 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     price: initialData?.price || "",
-    processingTime: parseProcessingTime(initialData?.processingTime),
+    processingTime: parseProcessingTime(initialData?.processingTime)
   });
 
-  const [steps, setSteps] = useState(initialData?.steps || []);
+  const [steps, setSteps] = useState(initialData?.actions || []);
   const [isStepsModalOpen, setIsStepsModalOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ ...formData, steps });
+    //Attach the steps to the formData before submitting in the actions field
+    onSubmit({ ...formData, actions: steps });
   };
 
   return (
@@ -158,8 +162,8 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
               ? "Update Service"
               : "Add Service"}
         </button>
-      </form>
 
+      </form>
       <ServiceStepsModal
         isOpen={isStepsModalOpen}
         onClose={() => setIsStepsModalOpen(false)}

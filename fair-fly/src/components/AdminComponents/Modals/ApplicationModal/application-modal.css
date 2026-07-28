@@ -11,7 +11,6 @@
 
 .modal-content {
     position: fixed;
-    border-top: 10px solid var(--orange);
     top: 50%;
     left: 50%;
     overflow-y: hidden;
@@ -24,6 +23,18 @@
     z-index: 1000;
     width: 80%;
     max-width: 600px;
+}
+
+.modal-content.pending {
+    border-top: 10px solid var(--orange);
+}
+
+.modal-content.approved {
+    border-top: 10px solid var(--complete-green);
+}
+
+.modal-content.rejected {
+    border-top: 10px solid var(--error-red);
 }
 
 .modal-header {
@@ -118,13 +129,24 @@
 .modal-app-status .app-status p{
     padding: 1px 10px;
     width: fit-content;
-    background-color: var(--orange-light);
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
     border-radius: 5px;
     font-size: 12px;
+}
+
+.modal-app-status .app-status p.pending{
+    background-color: var(--orange);
+}
+
+.modal-app-status .app-status p.approved{
+    background-color: var(--complete-green);
+}
+
+.modal-app-status .app-status p.rejected{
+    background-color: var(--error-red);
 }
 
 .app-submitted-date{

@@ -7,7 +7,7 @@ const BaseModal = forwardRef(({ children, title, onClose }, ref) => {
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
-    if (onClose) onClose();
+    if (onClose) onClose(); //If there's an onClose prop, call it when the modal is closed
   };
 
   useImperativeHandle(ref, () => ({

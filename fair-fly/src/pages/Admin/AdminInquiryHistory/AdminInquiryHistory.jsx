@@ -1,6 +1,16 @@
 import './admin-inquiry-history.css';
+import '../AdminFranchiseApps/admin-franchise-apps.css';
+import { useState, useEffect, useRef } from 'react';
+import { useAdminContext } from '../../../context/AdminContext';
+import ApplicationModal from '../../../components/AdminComponents/Modals/ApplicationModal/application-modal';
+import FranchiseCard from '../../../components/AdminComponents/FranchiseeApplication/FranchiseeCard';
 
 export default function AdminInquiryHistory() {
+
+  const { franchiseApplications} = useAdminContext();
+  const modalRef = useRef(null); //Modal reference to open the modal when the view button is clicked
+  const [isLoading, setIsLoading] = useState(false); //State to indicate if the API call is loading
+
   return (
     <div className="card inquiry-page">
       <div className="inquiry-header">
@@ -11,6 +21,26 @@ export default function AdminInquiryHistory() {
         </div>
       </div>
 
+      {/* TODO: Search Bar and Filters */}
+
+      <div className="franchise-cards-container">
+          {franchiseApplications.filter((app) => app.status !== 'pending').map((application) => (
+            <FranchiseCard key={application.id} 
+              avatar={`https://placehold.co/400x400/000000/FFFFFF?text=` + application.fullName.substring(0, 1).toUpperCase()} 
+              name={application.fullName}
+              email={application.email}
+              status={application.status.toUpperCase()}
+              contactNumber={application.phoneNumber}
+              address={application.preferredBranchLocation}
+              experience={application.businessExperience + " year(s)"}  
+              investmentCapacity={"PHP " + application.investmentCapacity}
+              preferredMeetingDate={new Date(application.preferredMeetingDate).toLocaleDateString()}
+              additionalMessage={application.additionalMessage}
+              onView={() => modalRef.current.openModal(application)}
+            />
+          ))}
+        </div>
+      <ApplicationModal ref={modalRef} isLoading={isLoading} showButtons={false}/>
     </div>
   );
 }

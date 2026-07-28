@@ -15,6 +15,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import AlertBar from '../../../components/AlertBar/AlertBar';
 
 // Placeholder data — replace with real Firestore aggregates later
 const revenueData = [
@@ -51,6 +52,8 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+
+    <AlertBar message="Welcome to the Admin Dashboard! Here you can monitor key metrics, manage services, and review franchise applications." type="info" />
 
       <section className="dashboard-charts">
         <div className="chart-card">

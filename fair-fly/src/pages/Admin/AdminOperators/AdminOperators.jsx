@@ -12,6 +12,8 @@ import {
   getOperators,
   deleteOperator,
 } from "../../../services/franchiseService";
+import ApiCaller from "../../../utils/ApiCaller";
+import { useAdminContext } from "../../../context/AdminContext";
 
 // Wrappers so ConfirmationModal's `Icon` prop (expects a component) works with Font Awesome classes
 const TrashIcon = (props) => (
@@ -20,9 +22,9 @@ const TrashIcon = (props) => (
 const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
 export default function AdminOperators() {
+  const {operators, operatorLoading} = useAdminContext(); // Get operators and loading state from AdminContext
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null); // null = add mode, object = edit mode
-  const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -31,26 +33,6 @@ export default function AdminOperators() {
   // Confirmation modal state: { type: 'delete' | 'deactivate', operator } | null
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
-
-  //subscribe to the operators collection in Firestore and update the state when changes occur
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(firestore, "users"),
-      (snapshot) => {
-        // Filter only operators from the users collection
-        const operators = snapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((user) => user.role === "operator");
-        setOperators(operators);
-        setLoading(false);
-      },
-      (error) => {
-        console.error(error);
-        setLoading(false);
-      },
-    );
-    return () => unsubscribe();
-  }, []);
 
   const handleOpenAddModal = () => {
     setEditingOperator(null);
@@ -77,111 +59,78 @@ export default function AdminOperators() {
   };
 
   const handleCreateOperatorSubmit = async (newOperatorData) => {
-    try {
-      setIsSubmitting(true); // Set submission state to true
-      // Post the new operator data to the backend
-      const response = await fetch("http://localhost:5001/api/operators", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`, // Include the token in the Authorization header
-        },
-        body: JSON.stringify(newOperatorData),
-      });
-      if (!response.ok) {
-        const errorText = await response.json();
-        throw new Error(errorText.statusMessage || "Failed to create operator");
-      }
-      addToast("Operator created successfully!", "success");
-      handleCloseModal();
-    } catch (error) {
-      console.error("Error creating operator:", error);
-      addToast("Failed to create operator: " + error.message, "error");
-      handleCloseModal(); // Close modal on error
-    } finally {
-      setIsSubmitting(false); // Reset submission state
-    }
+    ApiCaller(
+      "http://localhost:5001/api/operators",
+      "POST",
+      newOperatorData,
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast("Operator created successfully!", "success");
+        handleCloseModal();
+      },
+      (error) => {
+        console.error("Error creating operator:", error);
+        addToast("Failed to create operator: " + error.message, "error");
+      },
+      setIsSubmitting,
+    );
   };
 
   // Handle edit form submission logic (email is intentionally excluded from the payload)
   const handleEditOperatorSubmit = async (updatedOperatorData) => {
-    try {
-      setIsSubmitting(true);
-      const { email, password, ...editableData } = updatedOperatorData; // strip email/password before sending
-      const response = await fetch(
-        `http://localhost:5001/api/operators/${editingOperator.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${userToken}`, // Include the token in the Authorization header
-          },
-          body: JSON.stringify(editableData),
-        },
-      );
-      if (!response.ok) {
-        const errorText = await response.json();
-        throw new Error(errorText.statusMessage || "Failed to update operator");
-      }
-      addToast("Operator updated successfully!", "success");
-      handleCloseModal();
-    } catch (error) {
-      console.error("Error updating operator:", error);
-      addToast("Failed to update operator: " + error.message, "error");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const { email, ...dataToUpdate } = updatedOperatorData; // Exclude email from the payload
+    ApiCaller(
+      `http://localhost:5001/api/operators/${editingOperator.id}`,
+      "PATCH",
+      dataToUpdate,
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast("Operator updated successfully!", "success");
+        handleCloseModal();
+      },
+      (error) => {
+        console.error("Error updating operator:", error);
+        addToast("Failed to update operator: " + error.message, "error");
+      },
+      setIsSubmitting,
+    );
   };
 
   // Actual delete call — now triggered from the ConfirmationModal instead of window.confirm
   const handleDeleteOperator = async (operatorId) => {
-    try {
-      // Send a DELETE request to the backend to delete the operator
-      const response = await fetch(
-        `http://localhost:5001/api/operators/${operatorId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${userToken}`, // Include the token in the Authorization header
-          },
-        },
-      );
-      if (!response.ok) {
-        throw new Error("Failed to delete operator: " + response.error);
-      }
-      addToast("Operator deleted successfully!", "success");
-    } catch (error) {
-      console.error("Error deleting operator:", error);
-      addToast("Failed to delete operator: " + error.message, "error");
-    }
+    ApiCaller(
+      `http://localhost:5001/api/operators/${operatorId}`,
+      "DELETE",
+      null,
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast("Operator deleted successfully!", "success");
+      },
+      (error) => {
+        console.error("Error deleting operator:", error);
+        addToast("Failed to delete operator: " + error.message, "error");
+      },
+      setIsConfirmLoading,
+    );
   };
 
-  // Toggles an operator's status between Active/Inactive
+  // Toggles an operator's status between Active/Disabled
   const handleDeactivateOperator = async (operator) => {
-    const newStatus = operator.status === "Active" ? "Inactive" : "Active";
-    try {
-      const response = await fetch(
-        `http://localhost:5001/api/operators/${operator.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${userToken}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error("Failed to update operator status");
-      }
-      addToast(
-        `Operator ${newStatus === "Active" ? "activated" : "deactivated"} successfully!`,
-        "success",
-      );
-    } catch (error) {
-      console.error("Error updating operator status:", error);
-      addToast("Failed to update operator status: " + error.message, "error");
-    }
+    const newStatus = operator.status === "Active" ? "Disabled" : "Active";
+    ApiCaller(
+      `http://localhost:5001/api/operators/${operator.id}`,
+      "PATCH",
+      { status: newStatus },
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast(`Operator ${newStatus === "Active" ? "enabled" : "disabled"} successfully!`, "success");
+      },
+      (error) => {
+        console.error("Error updating operator status:", error);
+        addToast("Failed to update operator status: " + error.message, "error");
+      },
+      setIsConfirmLoading,
+    );
   };
 
   // Runs whichever action the confirmation modal is currently open for
@@ -200,7 +149,7 @@ export default function AdminOperators() {
     }
   };
 
-  if (loading) {
+  if (operatorLoading) {
     return (
       <div className="card operators-page">
         <div className="operators-header">
@@ -252,7 +201,7 @@ export default function AdminOperators() {
                 <td>{op.servicesHandled || 0} services</td>
                 <td>
                   <span
-                    className={`operator-badge ${op.status === "Inactive" ? "operator-badge-inactive" : ""}`}>
+                    className={`operator-badge ${op.status === "Disabled" ? "operator-badge-inactive" : ""}`}>
                     {op.status}
                   </span>
                 </td>
@@ -291,7 +240,7 @@ export default function AdminOperators() {
       {/* Render the Operator Modal */}
       <ModalWrapper
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={handleCloseModal} //Pass the close handler to the modal (Can be called by handlers in this component)
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <i

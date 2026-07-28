@@ -13,6 +13,7 @@ export default function ConfirmationModal({
   cancelText = 'Cancel',
   isLoading = false,
 }) {
+  
   const handleConfirm = async () => {
     if (OnConfirm) {
       await OnConfirm();

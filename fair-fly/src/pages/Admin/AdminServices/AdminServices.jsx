@@ -12,6 +12,8 @@ import { firestore, storage } from "../../../firebase";
 import { onSnapshot, collection } from "firebase/firestore";
 import { useAuthContext } from "../../../context/AuthContext";
 import { useToast } from "../../../components/toast/ToastProvider";
+import ApiCaller from "../../../utils/ApiCaller";
+import { useAdminContext } from "../../../context/AdminContext";
 
 // Unit labels used when converting the form's { min, max, unit } object into a string
 const UNIT_LABELS = {
@@ -42,8 +44,7 @@ export default function AdminServices() {
   const { userToken } = useAuthContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null); // null = add mode, object = edit mode
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { services, serviceLoading } = useAdminContext(); // Get services and loading state from AdminContext
   const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
   const { addToast } = useToast();
 
@@ -92,7 +93,6 @@ export default function AdminServices() {
       ...serviceData,
       processingTime: formatProcessingTime(serviceData.processingTime),
     };
-
     if (editingService) {
       await handleEditServiceSubmit(normalizedData);
     } else {
@@ -101,138 +101,97 @@ export default function AdminServices() {
   };
 
   const handleAddServiceSubmit = async (newServiceData) => {
-    setIsSubmitting(true); // Set submission state to true
-    try {
-      //Post the new service data to the backend
-      const response = await fetch("http://localhost:5001/api/services", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`, // Include the token in the Authorization header
-        },
-        body: JSON.stringify(newServiceData),
-      });
-      if (!response.ok) {
-        let errorText = await response.json();
-        throw new Error(errorText.statusText || "Failed to add service");
-      }
-      console.log(response);
-      addToast("Service added successfully!", "success");
-      handleCloseModal(); // Close modal on successful submission
-    } catch (error) {
-      addToast("Failed to add service: " + error, "error");
-      console.error("Error adding service:", error);
-    } finally {
-      setIsSubmitting(false); // Reset submission state
-    }
+    ApiCaller(
+      'http://localhost:5001/api/services',
+      'POST',
+      newServiceData,
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast("Service added successfully!", "success");
+        handleCloseModal(); // Close modal on successful submission
+      },
+      (error) => {
+        addToast("Failed to add service: " + error.message, "error");
+        console.error("Error adding service:", error);
+      },
+      setIsSubmitting
+    )
   };
 
   // Handle edit form submission logic
   const handleEditServiceSubmit = async (updatedServiceData) => {
-    setIsSubmitting(true);
-    try {
-      //Send updated service data to the backend
-      const response = await fetch(
-        `http://localhost:5001/api/services/${editingService.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${userToken}`, // Include the token in the Authorization header
-          },
-          body: JSON.stringify(updatedServiceData),
-        },
-      );
-      if (!response.ok) {
-        let errorText = await response.json();
-        throw new Error(errorText.statusText || "Failed to update service");
-      }
-      console.log(response);
-      addToast("Service updated successfully!", "success");
-      handleCloseModal(); // Close modal on successful submission
-    } catch (error) {
-      addToast("Failed to update service: " + error, "error");
-      console.error("Error updating service:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    ApiCaller(
+      `http://localhost:5001/api/services/${editingService.id}`,
+      'PATCH',
+      updatedServiceData,
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast("Service updated successfully!", "success");
+        handleCloseModal();
+      },
+      (error) => {
+        addToast("Failed to update service: " + error.message, "error");
+        console.error("Error updating service:", error);
+      },
+      setIsSubmitting
+    );
   };
 
   // ConfirmationModal
   const handleDeleteService = async (serviceId) => {
-    try {
-      const response = await fetch(
-        `http://localhost:5001/api/services/${serviceId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${userToken}`, // Include the token in the Authorization header
-          },
-        },
-      );
-      if (!response.ok) {
-        let errorText = await response.json();
-        throw new Error(errorText.statusText || "Failed to delete service");
-      }
-      addToast("Service deleted successfully!", "success");
-      setServices((prevServices) =>
-        prevServices.filter((service) => service.id !== serviceId),
-      );
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      addToast("Failed to delete service: " + error.message, "error");
-    }
+    ApiCaller(
+      `http://localhost:5001/api/services/${serviceId}`,
+      'DELETE',
+      null,
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast("Service deleted successfully!", "success");
+        setConfirmState(null); // Close the confirmation modal
+      },
+      (error) => {
+        addToast("Failed to delete service: " + error.message, "error");
+        console.error("Error deleting service:", error);
+      },
+      setIsConfirmLoading
+    );
   };
 
   // Toggles a service's status between Active/Inactive
   const handleDeactivateService = async (service) => {
-    const newStatus = service.status === "Active" ? "Inactive" : "Active";
-
-    try {
-      const response = await fetch(
-        `http://localhost:5001/api/services/${service.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${userToken}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        },
-      );
-      if (!response.ok) {
-        let errorText = await response.json();
-        throw new Error(
-          errorText.statusText || "Failed to update service status",
-        );
-      }
-      addToast(
-        `Service ${newStatus === "Active" ? "activated" : "deactivated"} successfully!`,
-        "success",
-      );
-    } catch (error) {
-      console.error("Error updating service status:", error);
-      addToast("Failed to update service status: " + error.message, "error");
-    }
+    const { updatedAt, createdAt, ...cleanedStatus } = service; //Exclude updatedAt and createdAt from the service object before sending to backend
+    ApiCaller(
+      `http://localhost:5001/api/services/${service.id}`,
+      'PATCH',
+      {...cleanedStatus, status: service.status === "Active" ? "Disabled" : "Active" },
+      { Authorization: `Bearer ${userToken}` },
+      (data) => {
+        addToast(`Service ${service.status === "Active" ? "disabled" : "enabled"} successfully!`, "success");
+        setConfirmState(null); // Close the confirmation modal
+      },
+      (error) => {
+        addToast(`Failed to ${service.status === "Active" ? "disable" : "enable"} service: ` + error.message, "error");
+        console.error(`Error ${service.status === "Active" ? "disabling" : "enabling"} service:`, error);
+      },
+      setIsConfirmLoading
+    );
   };
 
   // Runs whichever action the confirmation modal is currently open for
   const handleConfirm = async () => {
     if (!confirmState) return;
-    setIsConfirmLoading(true);
     try {
       if (confirmState.type === "delete") {
         await handleDeleteService(confirmState.service.id);
       } else if (confirmState.type === "deactivate") {
         await handleDeactivateService(confirmState.service);
       }
-      setConfirmState(null);
-    } finally {
-      setIsConfirmLoading(false);
+    } catch (error) {
+      console.error("Error handling confirmation action:", error);
+      addToast("An error occurred while processing your request.", "error");
     }
   };
 
-  if (loading) {
+  if (serviceLoading) {
     return (
       <div className="card services-page">
         <div className="services-header">
@@ -283,7 +242,7 @@ export default function AdminServices() {
                 <td>{service.processingTime}</td>
                 <td>
                   <span
-                    className={`service-badge ${service.status === "Inactive" ? "service-badge-inactive" : ""}`}>
+                    className={`service-badge ${service.status === "Disabled" ? "inactive" : ""}`}>
                     {service.status}
                   </span>
                 </td>

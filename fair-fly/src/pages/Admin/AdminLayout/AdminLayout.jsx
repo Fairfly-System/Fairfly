@@ -6,6 +6,7 @@ import StatCards from '../../../components/AdminComponents/StatCards/StatCards';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import AdminProvider from '../../../context/AdminContext';
 
 export default function MainLayout() {
 
@@ -89,7 +90,9 @@ export default function MainLayout() {
         <AdminSidebar />
         
         <main className="layout-content">
-          <Outlet />
+          <AdminProvider>
+            <Outlet /> {/* This will render the child routes of the AdminLayout, such as AdminDashboard, AdminOperators, etc. */}
+          </AdminProvider>
         </main>
 
       </div>

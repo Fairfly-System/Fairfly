@@ -16,7 +16,7 @@ export default function FranchiseCard({
   onDelete,
 }) {
   return (
-    <div className="franchise-card">
+    <div className={`franchise-card ${status.toLowerCase()}`}>
       <div className="franchise-card-header">
         <div className="franchisee-info">
           <img
@@ -27,16 +27,13 @@ export default function FranchiseCard({
           <div className="franchisee-details">
             <h3>{name}</h3>
             <p>
-              {email} <span className="franchisee-status">{status}</span>
+              {email} <span className={`franchisee-status ${status.toLowerCase()}`}>{status}</span>
             </p>
           </div>
         </div>
         <div className="franchise-card-actions">
           <button className="action-btn view" onClick={onView}>
             View Details
-          </button>
-          <button className="action-btn delete" onClick={onDelete}>
-            Delete
           </button>
         </div>
       </div>

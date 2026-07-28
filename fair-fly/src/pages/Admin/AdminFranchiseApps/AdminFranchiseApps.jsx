@@ -5,28 +5,40 @@ import {onSnapshot, collection} from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import Loader from '../../../components/AdminComponents/Loader/Loader';
 import ApplicationModal from '../../../components/AdminComponents/Modals/ApplicationModal/application-modal';
+import { useAdminContext } from '../../../context/AdminContext';
+import ApiCaller from '../../../utils/ApiCaller'; 
+import { useAuthContext } from '../../../context/AuthContext';
+import { useToast } from '../../../components/toast/ToastProvider';
 
 export default function AdminFranchiseApps() {
 
   //Get the franchise applications from the firestore listener and display them in the dashboard
-  const [franchiseApplications, setFranchiseApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const modalRef = useRef(null);
+  const { franchiseApplications, franchiseLoading } = useAdminContext();
+  const {isLoading, setIsLoading} = useState(false); //State to indicate if the API call is loading
 
-  useEffect(() => {
-    // Subscribe to the franchise applications collection in Firestore
-    const unsubscribe = onSnapshot(collection(firestore, 'franchiseApplications'), (snapshot) => {
-      const applications = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setFranchiseApplications(applications);
-      setLoading(false);
-    });
+  const modalRef = useRef(null); //Modal reference to open the modal when the view button is clicked
+  const { userToken } = useAuthContext();
+  const { addToast } = useToast();
 
-    // Clean up the subscription when the component unmounts
-    return () => unsubscribe();
-  }, []);
+  //Approve or reject the franchise application and update the status in the firestore
+  async function handleApplicationStatusChange(applicationId, isApproved) {
+    ApiCaller('http://localhost:5001/api/franchise/applications/' + applicationId + '/status', 
+    'PATCH', 
+    { status: isApproved ? 'approved' : 'rejected' },
+    { 'Authorization': `Bearer ${userToken}` },
+    (data) => {
+        //Success callback: Update the local state to reflect the change
+        addToast(`Application ${isApproved ? 'approved' : 'rejected'} successfully`, { appearance: 'success' });
+        console.log('Application status updated successfully:');
+    }, 
+    (error) => {
+        //Error callback: Show an error toast
+        addToast(`Failed to update application status: ${error.message}`, { appearance: 'error' });
+        console.error('Error updating application status:', error);
+    },
+    setIsLoading
+    )
+  }
 
   return (
     <>
@@ -40,13 +52,13 @@ export default function AdminFranchiseApps() {
         </div>
 
         <div className="franchise-cards-container">
-          {loading ? (
+          {franchiseLoading ? (
             <Loader text="Loading franchise applications..." />
-          ) : franchiseApplications.length === 0 ? (
+          ) : franchiseApplications.filter((app) => app.status === 'pending').length === 0 ? (
             <p>No franchise applications found.</p>
           ) : (
             <>
-              {franchiseApplications.map((application) => (
+              {franchiseApplications.filter((app) => app.status === 'pending').map((application) => (
                 <FranchiseCard key={application.id} 
                   avatar={`https://placehold.co/400x400/000000/FFFFFF?text=` + application.fullName.substring(0, 1).toUpperCase()} 
                   name={application.fullName}
@@ -65,7 +77,7 @@ export default function AdminFranchiseApps() {
           )}
         </div>
       </div>
-      <ApplicationModal ref={modalRef} />
+      <ApplicationModal ref={modalRef} isLoading={isLoading} handleApprove={handleApplicationStatusChange} handleReject={handleApplicationStatusChange} />
     </>
     
   );

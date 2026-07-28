@@ -2,7 +2,7 @@ import './application-modal.css';
 import {useState, useEffect, useImperativeHandle} from 'react';
 import { Briefcase, CircleX, UserRound, Phone, Mail, MapPin, Building, Calendar, MessageSquare } from 'lucide-react';
 
-export default function ApplicationModal({ ref, handleApprove, handleReject }) {
+export default function ApplicationModal({ ref, handleApprove, handleReject, isLoading, showButtons = true }) {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedApplication, setSelectedApplication] = useState(null);
@@ -18,16 +18,14 @@ export default function ApplicationModal({ ref, handleApprove, handleReject }) {
     }));
 
     return (
-
         <>
-
             {isModalOpen && (
                 <>
                     <div className="modal-overlay"/>
-                        <div className="modal-content">
+                        <div className={`modal-content ` + selectedApplication?.status?.toLowerCase()}>
                             <div className="modal-header">
                                 <div className="modal-title">
-                                    <span><Briefcase /></span>
+                                    <span><Briefcase color={selectedApplication?.status === 'pending' ? 'var(--orange)' : selectedApplication?.status === 'approved' ? 'var(--complete-green)' : 'var(--error-red)'} /></span>
                                     <h2>Application Details</h2>
                                 </div>
                                 <span className="modal-close" onClick={() => setIsModalOpen(false)}>
@@ -40,7 +38,7 @@ export default function ApplicationModal({ ref, handleApprove, handleReject }) {
                             <div className="modal-app-status">
                                 <div className="app-status">
                                     <h3>Application Status: </h3>
-                                    <p>{selectedApplication?.status?.toUpperCase()}</p>
+                                    <p className={selectedApplication?.status?.toLowerCase()}>{selectedApplication?.status?.toUpperCase()}</p>
                                 </div>
                                 <h3 className="app-submitted-date">
                                     Submitted: {selectedApplication?.preferredMeetingDate ? new Date(selectedApplication.preferredMeetingDate).toLocaleDateString() : 'N/A'}
@@ -148,14 +146,16 @@ export default function ApplicationModal({ ref, handleApprove, handleReject }) {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="button-group">
-                                        <button className="approve-button" onClick={handleApprove}>
-                                            ✓ Approve
-                                        </button>
-                                        <button className="reject-button" onClick={handleReject}>
-                                            ✗ Reject
-                                        </button>
-                                    </div>
+                                    {showButtons && (
+                                        <div className="button-group">
+                                            <button className="approve-button" onClick={() => handleApprove(selectedApplication.id, true)} disabled={isLoading}>
+                                                ✓ Approve
+                                            </button>
+                                            <button className="reject-button" onClick={() => handleReject(selectedApplication.id, false)} disabled={isLoading}>
+                                                ✗ Reject
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                 </>

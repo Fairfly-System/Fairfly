@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useContext } from 'react'; // Import React
-import { onAuthStateChanged, signOut, getAuth } from 'firebase/auth'; //Get the onAuthStateChanged function from the auth module
+import { onAuthStateChanged, signOut, getAuth, onIdTokenChanged } from 'firebase/auth'; //Get the onAuthStateChanged function from the auth module
 import { doc, onSnapshot } from 'firebase/firestore'; //Get the onSnapshot function from the firestore module
 import { getFromDatabase } from '../utils/firebaseutils'; //Get the fetcher function from the firebaseutils module
 import { auth, firestore } from '../firebase'; //get the auth and db objects from the firebase module
@@ -34,11 +34,11 @@ const AuthProvider = ({ children }) => {
 
             //Clean up the subscription from the previous user
             if (unsubscribeToUserDoc) {
-                unsubscribeToUserDoc();
+                unsubscribeToUserDoc(); // Unsubscribe from the previous user's document listener
                 unsubscribeToUserDoc = null;
             }
 
-            //If no user is present, set the user and userDetails to null and set the loading to false
+            //If no user is present (firebaseUser is null or undefined or "" or 0 or false or NaN or Expired), set the user and userDetails to null and set the loading to false
             if (!firebaseUser) {
                 console.log('No user is present');
                 setUser(null);
@@ -50,14 +50,21 @@ const AuthProvider = ({ children }) => {
 
             //Now Set the user object to the state and their token to the local storage for future use
             setUser(firebaseUser);
-            //Get the token and set it to the state context
-            firebaseUser.getIdToken().then((token) => {
-                setUserToken(token);
-            }).catch((error) => {
-                console.error('Error getting user token:', error);
-                addToast('Error getting user token.', 'error');
+
+            //Listen to token changes and set the token to the state context
+            const tokenUnsubscribe = onIdTokenChanged(auth, (user) => {
+                if (user) {
+                    user.getIdToken().then((token) => {
+                        setUserToken(token);
+                        console.log('User token refreshed:');
+                    }).catch((error) => {
+                        console.error('Error getting user token:', error);
+                        addToast('Error getting user token.', 'error');
+                    });
+                } else {
+                    setUserToken(null);
+                }
             });
-            console.log(firebaseUser.uid);
 
             //Now Listen to the user details, Assign unsubscribeToUserDoc to the unsubscribe function
             //Listen to users/UID in the firestore database
