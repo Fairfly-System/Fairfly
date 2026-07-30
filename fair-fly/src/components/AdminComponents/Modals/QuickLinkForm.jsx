@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 
-export default function QuickLinkForm({ onSubmit }) {
+export default function QuickLinkForm({ onSubmit, isLoading }) {
+  
   const [formData, setFormData] = useState({ title: '', url: '', category: '' });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (formData.title && formData.url && formData.category) {
+      onSubmit(formData);
+    }
   };
 
   return (
@@ -48,7 +51,7 @@ export default function QuickLinkForm({ onSubmit }) {
           <option value="other">Other</option>
         </select>
       </div>
-      <button type="submit" className="modalSubmitBtn btnBlue">Add Link</button>
+      <button type="submit" className="modalSubmitBtn btnBlue" disabled={isLoading}>Add Link</button>
     </form>
   );
 }

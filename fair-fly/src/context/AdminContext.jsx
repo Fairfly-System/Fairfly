@@ -1,66 +1,48 @@
 //Hook for getting necessary admin data like quick links, service stats, etc.
 import { createContext, useState, useEffect, useContext } from 'react';
 import { firestore } from '../firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, startAt, endAt } from 'firebase/firestore';
 
 const AdminContext = createContext();
 
-export default function AdminProvider({ children }) {
+export default function AdminProvider({
+    children,
+    targetCollection,
+    queryReq = null,
+}) {
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    //For Now, Services Data, Operators, and Franchise Applications
-    //TODO: Quick Links, Service Stats, and other admin data
-
-    //States to be consumed by the admin dashboard and other admin components
-    const [services, setServices] = useState([]);
-    const [serviceLoading, setServiceLoading] = useState(true);
-    const [operators, setOperators] = useState([]);
-    const [operatorLoading, setOperatorLoading] = useState(true);
-    const [franchiseApplications, setFranchiseApplications] = useState([]);
-    const [franchiseLoading, setFranchiseLoading] = useState(true);
-
-    //UseEffect to register the firestore listeners for services, operators, and franchise applications
     useEffect(() => {
+        if (!targetCollection) return;
 
-        // Subscribe to the services collection in Firestore
-        const unsubscribeServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
-            const servicesData = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setServices(servicesData);
-            setServiceLoading(false);
-        });
+        let collectionRef = collection(firestore, targetCollection);
 
-        // Subscribe to the operators collection in Firestore
-        const unsubscribeOperators = onSnapshot(query(collection(firestore, 'users'), where('role', '==', 'operator')), (snapshot) => {
-            const operatorsData = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setOperators(operatorsData);
-            setOperatorLoading(false);
-        });
+        if (queryReq) {
+            collectionRef = query(collectionRef, ...queryReq);
+        }
 
-        const unsubscribeFranchiseApplications = onSnapshot(collection(firestore, 'franchiseApplications'), (snapshot) => {
-            const applications = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setFranchiseApplications(applications);
-            setFranchiseLoading(false);
-        });
+        const unsubscribe = onSnapshot(
+            collectionRef,
+            (snapshot) => {
+                setData(
+                    snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }))
+                );
 
-        // Clean up the subscriptions when the component unmounts
-        return () => {
-            unsubscribeServices();
-            unsubscribeOperators();
-            unsubscribeFranchiseApplications();
-        };
+                setLoading(false);
+            }
+        );
 
-    }, []);
+        return unsubscribe;
+    }, [targetCollection]);
 
     return (
-        <AdminContext.Provider value={{ services, operators, franchiseApplications, serviceLoading, operatorLoading, franchiseLoading }}>
+        <AdminContext.Provider
+            value={{ data, loading }}
+        >
             {children}
         </AdminContext.Provider>
     );

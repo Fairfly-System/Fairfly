@@ -28,6 +28,7 @@ export default async function ApiCaller(apiPath, method, body = null, headers = 
         return null; // Return null to indicate failure (eg: if(!result) { ... handle error ... }) (Optional, depending on how you want to handle errors in the calling function)
     } finally {
         setIsLoading && setIsLoading(false); //If setIsLoading callback is provided, set loading state to false after the API call
+        console.log(`loading state set to false after API call to ${apiPath}`);
     }
 
 }

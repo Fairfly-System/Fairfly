@@ -15,6 +15,7 @@ export default function MainLayout() {
     const [activeServices, setActiveServices] = useState(0);
     const [clients, setClients] = useState(0);
     const [operators, setOperators] = useState(0);
+    const [currentPage, setCurrentPage] = useState('none'); // State to track the current page in the admin dashboard
   
     //For now, only the Total Active Services and Operators will be fetched from the firestore, the rest will be hardcoded for now
     useEffect(() => {
@@ -90,9 +91,7 @@ export default function MainLayout() {
         <AdminSidebar />
         
         <main className="layout-content">
-          <AdminProvider>
             <Outlet /> {/* This will render the child routes of the AdminLayout, such as AdminDashboard, AdminOperators, etc. */}
-          </AdminProvider>
         </main>
 
       </div>

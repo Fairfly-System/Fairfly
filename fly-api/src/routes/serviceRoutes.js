@@ -8,15 +8,15 @@ const {
   getQuickLinks,
   createQuickLink,
   updateQuickLink,
-  deleteQuickLink
+  deleteQuickLink,
 } = require('../controllers/serviceController');
 const { allowedFields } = require('../middleware/allowedFields');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
 // Services Routes
-router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime']), createService));
-router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime']), updateService));
+router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime', 'actions']), createService));
+router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime', 'actions', 'status', 'id']), updateService));
 router.delete('/:id', performanceProfiler('DELETE /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteService));
 
 // Quick Links Routes

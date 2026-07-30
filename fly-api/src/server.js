@@ -1,10 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+const express = require('express');// Import the Express framework
+const cors = require('cors');// Import the CORS middleware
+require('dotenv').config();// Load environment variables from a .env file
 
+//Require the centralized API routes (the ./routes folder, which contains all the individual route files, since only the folder is required, it will automatically look for an index.js file in that folder)
 const apiRoutes = require('./routes');
 
+//Instantiate the Express application
 const app = express();
+
+// Set the port from environment variables or default to 5001
 const PORT = process.env.PORT || 5001;
 
 // Set up middleware
@@ -23,7 +27,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Fallback 404 route
+// Fallback 404 route (No other route matched)
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });

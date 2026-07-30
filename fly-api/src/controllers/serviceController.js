@@ -67,6 +67,12 @@ const updateService = async (req, res) => {
       updatedAt: new Date().toISOString()
     });
 
+    //If Req has status modification, enable or disable the account in firebase auth as well
+    if (updates.status) {
+      const { getAuth } = require('firebase-admin/auth');
+      await getAuth().updateUser(id, { disabled: updates.status === 'Disabled' }); //If status is 'Disabled', disable the user, else enable the user
+    }
+
     // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.SERVICES);
 
@@ -129,8 +135,8 @@ const getQuickLinks = async (req, res) => {
 const createQuickLink = async (req, res) => {
   try {
     const linkData = req.body;
-    if (!linkData || !linkData.title || !linkData.url) {
-      return res.status(400).json({ error: 'Title and URL are required' });
+    if (!linkData || !linkData.title || !linkData.url || !linkData.category) {
+      return res.status(400).json({ error: 'Title, URL, and category are required' });
     }
 
     const docId = await addToDatabase(COLLECTIONS.QUICK_LINKS, {
