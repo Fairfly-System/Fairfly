@@ -64,12 +64,14 @@
   color: #6b7280;
   padding: 14px 20px; 
   border-bottom: 1px solid #e5e7eb;
+  text-align: center;
 }
 
 .services-page table td {
   padding: 18px 20px; 
   font-size: 14.5px;
   border-bottom: 1px solid #e5e7eb;
+  text-align: center;
 }
 
 .services-page table th:not(:first-child),

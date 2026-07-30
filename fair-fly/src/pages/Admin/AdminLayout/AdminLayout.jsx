@@ -6,44 +6,33 @@ import StatCards from '../../../components/AdminComponents/StatCards/StatCards';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
-import AdminProvider from '../../../context/AdminContext';
 
 export default function MainLayout() {
-
-  //Get the Statistics from the firestore listener and display them in the dashboard
-    const [totalRevenue, setTotalRevenue] = useState(0);
     const [activeServices, setActiveServices] = useState(0);
     const [clients, setClients] = useState(0);
     const [operators, setOperators] = useState(0);
-    const [currentPage, setCurrentPage] = useState('none'); // State to track the current page in the admin dashboard
-  
-    //For now, only the Total Active Services and Operators will be fetched from the firestore, the rest will be hardcoded for now
+
     useEffect(() => {
-      // Subscribe to the services collection in Firestore
       const unsubscribeServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
-        //Filter the services that are active and set the count to the state
-        const activeServices = snapshot.docs.filter(doc => doc.data().status === 'Active');
-        setActiveServices(activeServices.length); // Update active services count
+        const active = snapshot.docs.filter(doc => doc.data().status === 'Active');
+        setActiveServices(active.length);
       });
-  
-      // Subscribe to the operators collection in Firestore
-      const unsubscribeOperators = onSnapshot(collection(firestore, 'users'), (snapshot) => {
-        //Filter the operators that are active and set the count to the state
-        const activeOperators = snapshot.docs.filter(doc => doc.data().status === 'Active' && doc.data().role === 'operator');
-        setOperators(activeOperators.length); // Update operators count
+
+      const unsubscribeUsers = onSnapshot(collection(firestore, 'users'), (snapshot) => {
+        let opCount = 0;
+        let clientCount = 0;
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.role === 'operator' && data.status === 'Active') opCount++;
+          if (data.role === 'client') clientCount++;
+        });
+        setOperators(opCount);
+        setClients(clientCount);
       });
-  
-      //Get the Clients count from the users collection in Firestore 
-      const unsubscribeClients = onSnapshot(collection(firestore, 'users'), (snapshot) => {
-        const activeClients = snapshot.docs.filter(doc => doc.data().role === 'client');
-        setClients(activeClients.length); // Update clients count
-      });
-  
-      // Cleanup subscriptions on unmount
+
       return () => {
         unsubscribeServices();
-        unsubscribeOperators();
-        unsubscribeClients();
+        unsubscribeUsers();
       };
     }, []);
 
@@ -91,7 +80,7 @@ export default function MainLayout() {
         <AdminSidebar />
         
         <main className="layout-content">
-            <Outlet /> {/* This will render the child routes of the AdminLayout, such as AdminDashboard, AdminOperators, etc. */}
+            <Outlet />
         </main>
 
       </div>

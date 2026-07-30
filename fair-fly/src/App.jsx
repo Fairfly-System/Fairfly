@@ -22,6 +22,7 @@ import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
+import AdminWorkflowTemplates from './pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates';
 import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
 import OperatorDashboard from './pages/Operator/OperatorDashboard/OperatorDashboard';
 import OperatorAppointments from './pages/Operator/OperatorAppointments/OperatorAppointments';
@@ -51,6 +52,7 @@ function App() {
           <Route path="franchise-apps" element={<AdminFranchiseApps />} />
           <Route path="inquiry-history" element={<AdminInquiryHistory />} />
           <Route path="quick-links" element={<AdminQuickLinks />} />
+          <Route path="workflow-templates" element={<AdminWorkflowTemplates />} />
         </Route>
       </>
     ),

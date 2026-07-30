@@ -1,99 +1,138 @@
-import React, { useState } from 'react';
-import { useToast } from '../../../components/toast/ToastProvider';
+import React, { useState, useEffect } from 'react';
+import ModalWrapper from './ModalWrapper';
 
-export default function WorkflowForm({ onSubmit, templateData = null }) {
-  const [formData, setFormData] = useState({
-    name: templateData ? templateData.name : '',
-    description: templateData ? templateData.description : '',
-    type: templateData ? templateData.type : '',
-    steps: templateData && Array.isArray(templateData.steps) ? templateData.steps : [{ name: '', description: '' }]
-  });
-  const [editingStepIndex, setEditingStepIndex] = useState(null);
+function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps }) {
+  const [steps, setSteps] = useState(initialSteps);
   const [stepName, setStepName] = useState('');
   const [stepDescription, setStepDescription] = useState('');
 
-  // Initialize step editing if we're editing an existing template
-  // We'll handle this when the user clicks to edit a step
+  useEffect(() => {
+    setSteps(initialSteps);
+  }, [isOpen, initialSteps]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const handleAddStep = () => {
+    if (!stepName.trim() || !stepDescription.trim()) return;
 
-  const handleStepsChange = (index, field, value) => {
-    setFormData(prev => {
-      const newSteps = [...prev.steps];
-      if (index >= newSteps.length) return prev;
-      newSteps[index] = {
-        ...newSteps[index],
-        [field]: value
-      };
-      return { ...prev, steps: newSteps };
-    });
-  };
-
-  const addStep = () => {
-    setFormData(prev => ({
-      ...prev,
-      steps: [...prev.steps, { name: '', description: '' }]
-    }));
-  };
-
-  const removeStep = (index) => {
-    if (formData.steps.length <= 1) {
-      const { addToast } = useToast();
-      addToast('At least one step is required', 'error');
-      return;
-    }
-    setFormData(prev => {
-      const newSteps = [...prev.steps];
-      newSteps.splice(index, 1);
-      return { ...prev, steps: newSteps };
-    });
-  };
-
-  const updateStep = (index, name, description) => {
-    setFormData(prev => {
-      const newSteps = [...prev.steps];
-      newSteps[index] = { name, description };
-      return { ...prev, steps: newSteps };
-    });
-    setEditingStepIndex(null);
+    setSteps([...steps, { name: stepName.trim(), description: stepDescription.trim() }]);
     setStepName('');
     setStepDescription('');
   };
 
+  const handleDeleteStep = (index) => {
+    setSteps(steps.filter((_, i) => i !== index));
+  };
+
+  const handleSave = () => {
+    onSaveSteps(steps);
+    onClose();
+  };
+
+  return (
+    <ModalWrapper
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <i className="fa-solid fa-diagram-project" style={{ color: '#f97316' }}></i>
+          <span>Workflow Steps</span>
+        </div>
+      }
+      subtitle="Define the steps for this workflow template"
+    >
+      <div className="modalForm">
+        <div className="stepsContainer">
+          {steps.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9ca3af', margin: '20px 0' }}>
+              No steps added yet. Fill out the fields below to add one.
+            </p>
+          ) : (
+            steps.map((step, index) => (
+              <div key={index} className="stepCard">
+                <div className="stepBadge">{index + 1}</div>
+                <div className="stepContent">
+                  <h4>{step.name}</h4>
+                  <p>{step.description}</p>
+                </div>
+                <button
+                  type="button"
+                  className="deleteBtn"
+                  onClick={() => handleDeleteStep(index)}
+                  title="Delete Step"
+                >
+                  <i className="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="formGroup" style={{ marginTop: '12px', gap: '8px' }}>
+          <input
+            type="text"
+            className="modalInput"
+            placeholder="Step name *"
+            value={stepName}
+            onChange={(e) => setStepName(e.target.value)}
+          />
+          <input
+            type="text"
+            className="modalInput"
+            placeholder="Step description *"
+            value={stepDescription}
+            onChange={(e) => setStepDescription(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddStep())}
+          />
+        </div>
+
+        <button
+          type="button"
+          className="modalSubmitBtn btnBlue"
+          onClick={handleAddStep}
+          disabled={!stepName.trim() || !stepDescription.trim()}
+          style={{
+            opacity: (!stepName.trim() || !stepDescription.trim()) ? 0.6 : 1,
+            cursor: (!stepName.trim() || !stepDescription.trim()) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          <i className="fa-solid fa-plus" style={{ marginRight: '8px' }}></i>
+          Add Step
+        </button>
+
+        <hr className="modalDivider" />
+
+        <button
+          type="button"
+          className="modalSubmitBtn btnBlue"
+          onClick={handleSave}
+        >
+          <i className="fa-solid fa-floppy-disk" style={{ marginRight: '8px' }}></i>
+          Save Steps
+        </button>
+      </div>
+    </ModalWrapper>
+  );
+}
+
+export default function WorkflowForm({ onSubmit, onClose, templateData = null }) {
+  const [formData, setFormData] = useState({
+    name: templateData ? templateData.name : '',
+    description: templateData ? templateData.description : '',
+    type: templateData ? templateData.type : '',
+  });
+  const [steps, setSteps] = useState(
+    templateData && Array.isArray(templateData.steps) ? templateData.steps : []
+  );
+  const [isStepsModalOpen, setIsStepsModalOpen] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { addToast } = useToast();
-
-    // Validate
-    if (!formData.name.trim()) {
-      addToast('Workflow name is required', 'error');
-      return;
-    }
-
-    if (!formData.description.trim()) {
-      addToast('Workflow description is required', 'error');
-      return;
-    }
-
-    if (formData.steps.length === 0) {
-      addToast('At least one step is required', 'error');
-      return;
-    }
-
-    // Validate steps have names and descriptions
-    const invalidStep = formData.steps.find(step => !step.name.trim() || !step.description.trim());
-    if (invalidStep) {
-      addToast('All steps must have a name and description', 'error');
-      return;
-    }
-
-    onSubmit(formData);
+    if (!formData.name.trim() || !formData.description.trim()) return;
+    onSubmit({ ...formData, steps });
   };
 
   return (
@@ -102,6 +141,7 @@ export default function WorkflowForm({ onSubmit, templateData = null }) {
         <label>Workflow Name</label>
         <input
           type="text"
+          name="name"
           className="modalInput"
           placeholder="e.g., Customer Onboarding Process"
           value={formData.name}
@@ -112,6 +152,7 @@ export default function WorkflowForm({ onSubmit, templateData = null }) {
       <div className="formGroup">
         <label>Description</label>
         <textarea
+          name="description"
           className="modalInput"
           placeholder="Describe what this workflow accomplishes..."
           value={formData.description}
@@ -123,6 +164,7 @@ export default function WorkflowForm({ onSubmit, templateData = null }) {
         <label>Workflow Type (Optional)</label>
         <input
           type="text"
+          name="type"
           className="modalInput"
           placeholder="e.g., onboarding, approval, processing"
           value={formData.type}
@@ -132,89 +174,32 @@ export default function WorkflowForm({ onSubmit, templateData = null }) {
 
       <div className="formGroup">
         <label>Workflow Steps</label>
-        <div className="steps-container">
-          {formData.steps.map((step, index) => (
-            <div key={index} className="step-item">
-              {editingStepIndex === index ? (
-                <>
-                  <input
-                    type="text"
-                    className="step-input"
-                    placeholder="Step name"
-                    value={stepName || step.name}
-                    onChange={(e) => setStepName(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    className="step-input"
-                    placeholder="Step description"
-                    value={stepDescription || step.description}
-                    onChange={(e) => setStepDescription(e.target.value)}
-                  />
-                  <div className="step-actions">
-                    <button
-                      className="step-btn save-step"
-                      onClick={() => updateStep(index, stepName.trim(), stepDescription.trim())}
-                    >
-                      Save
-                    </button>
-                    <button
-                      className="step-btn cancel-step
-                        onClick={() => { Name('')}">
-Cancel
- </                </div>
-                </>
-              ) : (
-                <>
-                  <div className="step-content">
-                    <h4>Step {index + 1}</h4>
-                    <p><strong>Name:</strong> {step.name}</p>
-                    <p><strong>Description:</strong> {step.description}</p>
-                  </div>
-                  <div className="step-actions">
-                    <button
-                      className="step-btn edit-step"
-                      onClick={() => {
-                        setEditingStepIndex(index);
-                        setStepName(step.name);
-                        setStepDescription(step.description);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    {formData.steps.length > 1 && (
-                      <button
-                        className="step-btn remove-step"
-                        onClick={() => removeStep(index)}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-
-          <div className="step-item">
-            <button
-              className="step-btn add-step"
-              onClick={addStep}
-            >
-              Add Step
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          className="modalSubmitBtn btnLightBlue"
+          onClick={() => setIsStepsModalOpen(true)}
+        >
+          <span style={{ color: '#5865f2' }}>
+            {steps.length > 0 ? `Edit Steps (${steps.length})` : 'Add Step/s'}
+          </span>
+        </button>
       </div>
 
       <button type="submit" className="modalSubmitBtn btnGreen">
         {templateData ? 'Update Workflow' : 'Create Workflow'}
       </button>
-      <button type="button" className="modalSubmitBtn btnGray" onClick={() => {
-        // TODO: Implement cancel/close functionality via props
-      }}>
-        Cancel
-      </button>
+      {onClose && (
+        <button type="button" className="modalSubmitBtn" onClick={onClose} style={{ backgroundColor: '#6b7280', marginTop: 0 }}>
+          Cancel
+        </button>
+      )}
+
+      <WorkflowStepsModal
+        isOpen={isStepsModalOpen}
+        onClose={() => setIsStepsModalOpen(false)}
+        initialSteps={steps}
+        onSaveSteps={(updatedSteps) => setSteps(updatedSteps)}
+      />
     </form>
   );
 }

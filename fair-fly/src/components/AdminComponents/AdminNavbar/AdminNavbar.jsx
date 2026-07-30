@@ -8,7 +8,7 @@ import { useToast } from '../../toast/ToastProvider';
 import BaseModal from '../../ModalBase/BaseModal';
 
 
-export default function AdminNavbar({ onNavigate, currentPage }) {
+export default function AdminNavbar() {
   const navigate = useNavigate();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const logoutModalRef = useRef(null);

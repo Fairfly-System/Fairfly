@@ -1,6 +1,5 @@
 import './admin-sidebar.css';
 import { NavLink } from 'react-router';
-import {useState} from 'react';
 
 export default function AdminSidebar() {
 
@@ -35,6 +34,11 @@ export default function AdminSidebar() {
         <NavLink to="/admin/quick-links">
           <i className="fa-solid fa-link"></i>
           Quick Links
+        </NavLink>
+
+        <NavLink to="/admin/workflow-templates">
+          <i className="fa-solid fa-diagram-project"></i>
+          Workflows
         </NavLink>
       </div>
     </aside>

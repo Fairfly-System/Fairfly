@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./admin-services.css";
 import ModalWrapper from "../../../components/AdminComponents/Modals/ModalWrapper";
 import ServiceForm from "../../../components/AdminComponents/Modals/ServiceForm";
 import ConfirmationModal from "../../../components/AdminComponents/Modals/ConfirmationModal";
-import {
-  createService,
-  getServices,
-  deleteService,
-} from "../../../services/franchiseService";
 import { useAuthContext } from "../../../context/AuthContext";
 import { useToast } from "../../../components/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
+import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
 
 export default function ServiceContent() {
@@ -67,8 +63,10 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
   // Handle form submission logic (routes to add or edit)
   const handleFormSubmit = async (serviceData) => {
+    const { requirements, ...rest } = serviceData;
     const normalizedData = {
-      ...serviceData,
+      ...rest,
+      actions: requirements,
       processingTime: formatProcessingTime(serviceData.processingTime),
     };
     if (editingService) {
@@ -80,13 +78,13 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
   const handleAddServiceSubmit = async (newServiceData) => {
     ApiCaller(
-      'http://localhost:5001/api/services',
+      `${API_BASE_URL}/api/services`,
       'POST',
       newServiceData,
       { Authorization: `Bearer ${userToken}` },
       (data) => {
         addToast("Service added successfully!", "success");
-        handleCloseModal(); // Close modal on successful submission
+        handleCloseModal();
       },
       (error) => {
         addToast("Failed to add service: " + error.message, "error");
@@ -96,10 +94,9 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
     )
   };
 
-  // Handle edit form submission logic
   const handleEditServiceSubmit = async (updatedServiceData) => {
     ApiCaller(
-      `http://localhost:5001/api/services/${editingService.id}`,
+      `${API_BASE_URL}/api/services/${editingService.id}`,
       'PATCH',
       updatedServiceData,
       { Authorization: `Bearer ${userToken}` },
@@ -115,16 +112,15 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
     );
   };
 
-  // ConfirmationModal
   const handleDeleteService = async (serviceId) => {
     ApiCaller(
-      `http://localhost:5001/api/services/${serviceId}`,
+      `${API_BASE_URL}/api/services/${serviceId}`,
       'DELETE',
       null,
       { Authorization: `Bearer ${userToken}` },
       (data) => {
         addToast("Service deleted successfully!", "success");
-        setConfirmState(null); // Close the confirmation modal
+        setConfirmState(null);
       },
       (error) => {
         addToast("Failed to delete service: " + error.message, "error");
@@ -134,17 +130,16 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
     );
   };
 
-  // Toggles a service's status between Active/Inactive
   const handleDeactivateService = async (service) => {
-    const { updatedAt, createdAt, ...cleanedStatus } = service; //Exclude updatedAt and createdAt from the service object before sending to backend
+    const { updatedAt, createdAt, ...cleanedStatus } = service;
     ApiCaller(
-      `http://localhost:5001/api/services/${service.id}`,
+      `${API_BASE_URL}/api/services/${service.id}`,
       'PATCH',
       {...cleanedStatus, status: service.status === "Active" ? "Disabled" : "Active" },
       { Authorization: `Bearer ${userToken}` },
       (data) => {
         addToast(`Service ${service.status === "Active" ? "disabled" : "enabled"} successfully!`, "success");
-        setConfirmState(null); // Close the confirmation modal
+        setConfirmState(null);
       },
       (error) => {
         addToast(`Failed to ${service.status === "Active" ? "disable" : "enable"} service: ` + error.message, "error");
@@ -202,6 +197,7 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
             <th>Service Name</th>
             <th>Price</th>
             <th>Processing Time</th>
+            <th>Requirements</th>
             <th>Status</th>
             <th className="actions-col">Actions</th>
           </tr>
@@ -210,7 +206,7 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
         <tbody>
           {service.length === 0 ? (
             <tr>
-              <td colSpan="5">No services found</td>
+              <td colSpan="6">No services found</td>
             </tr>
           ) : (
             service.map((service) => (
@@ -218,6 +214,7 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
                 <td>{service.name}</td>
                 <td>PHP {service.price}</td>
                 <td>{service.processingTime}</td>
+                <td><span className="steps">{service.actions?.length || 0}</span></td>
                 <td>
                   <span
                     className={`service-badge ${service.status === "Disabled" ? "inactive" : ""}`}>

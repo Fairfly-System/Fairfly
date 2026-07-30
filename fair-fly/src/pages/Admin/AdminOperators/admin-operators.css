@@ -57,29 +57,42 @@
   color: #6b7280;
   padding: 14px 20px;
   border-bottom: 1px solid #e5e7eb;
+  text-align: center;
 }
 
 .operators-page table td {
   padding: 18px 20px;
   font-size: 14.5px;
   border-bottom: 1px solid #e5e7eb;
+  text-align: center;
 }
 
 .operators-page table tr:last-child td {
   border-bottom: none;
 }
 
-.operators-page table th:not(:first-child),
-.operators-page table td:not(:first-child) {
-  white-space: nowrap;
-  padding: 18px 50px;
-  width: 1%;
-  text-align: center;
-}
-
 .operators-page table th:first-child,
 .operators-page table td:first-child {
-  width: auto;
+  width: 18%;
+}
+
+.operators-page table th:nth-child(2),
+.operators-page table td:nth-child(2) {
+  width: 40%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.operators-page table th:nth-child(3),
+.operators-page table td:nth-child(3) {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.operators-page table th:nth-child(4),
+.operators-page table td:nth-child(4) {
+  width: 1%;
+  white-space: nowrap;
 }
 
 .actions-col {

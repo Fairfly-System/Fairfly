@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./admin-operators.css";
-import { firestore, storage } from "../../../firebase";
-import { onSnapshot, collection } from "firebase/firestore";
 import { useToast } from "../../../components/toast/ToastProvider";
 import { useAuthContext } from "../../../context/AuthContext";
 import ModalWrapper from "../../../components/AdminComponents/Modals/ModalWrapper";
 import OperatorForm from "../../../components/AdminComponents/Modals/OperatorForm";
 import ConfirmationModal from "../../../components/AdminComponents/Modals/ConfirmationModal";
-import {
-  createOperator,
-  getOperators,
-  deleteOperator,
-} from "../../../services/franchiseService";
 import ApiCaller from "../../../utils/ApiCaller";
+import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
 
 const TrashIcon = (props) => (
@@ -21,13 +15,13 @@ const TrashIcon = (props) => (
 const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
 export default function OperatorsContent() {
-  const {data: operators, loading: operatorLoading} = useAdminContext(); // Get operators and loading state from AdminContext
+  const {data: operators, loading: operatorLoading} = useAdminContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingOperator, setEditingOperator] = useState(null); // null = add mode, object = edit mode
+  const [editingOperator, setEditingOperator] = useState(null);
   const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Confirmation modal state: { type: 'delete' | 'deactivate', operator } | null
   const [confirmState, setConfirmState] = useState(null);
@@ -59,7 +53,7 @@ export default function OperatorsContent() {
 
   const handleCreateOperatorSubmit = async (newOperatorData) => {
     ApiCaller(
-      "http://localhost:5001/api/operators",
+      `${API_BASE_URL}/api/operators`,
       "POST",
       newOperatorData,
       { Authorization: `Bearer ${userToken}` },
@@ -79,7 +73,7 @@ export default function OperatorsContent() {
   const handleEditOperatorSubmit = async (updatedOperatorData) => {
     const { email, ...dataToUpdate } = updatedOperatorData; // Exclude email from the payload
     ApiCaller(
-      `http://localhost:5001/api/operators/${editingOperator.id}`,
+      `${API_BASE_URL}/api/operators/${editingOperator.id}`,
       "PATCH",
       dataToUpdate,
       { Authorization: `Bearer ${userToken}` },
@@ -98,7 +92,7 @@ export default function OperatorsContent() {
   // Actual delete call — now triggered from the ConfirmationModal instead of window.confirm
   const handleDeleteOperator = async (operatorId) => {
     ApiCaller(
-      `http://localhost:5001/api/operators/${operatorId}`,
+      `${API_BASE_URL}/api/operators/${operatorId}`,
       "DELETE",
       null,
       { Authorization: `Bearer ${userToken}` },
@@ -117,7 +111,7 @@ export default function OperatorsContent() {
   const handleDeactivateOperator = async (operator) => {
     const newStatus = operator.status === "Active" ? "Disabled" : "Active";
     ApiCaller(
-      `http://localhost:5001/api/operators/${operator.id}`,
+      `${API_BASE_URL}/api/operators/${operator.id}`,
       "PATCH",
       { status: newStatus },
       { Authorization: `Bearer ${userToken}` },
@@ -181,7 +175,6 @@ export default function OperatorsContent() {
           <tr>
             <th>Branch Name</th>
             <th>Email</th>
-            <th>Services Handled</th>
             <th>Status</th>
             <th className="actions-col">Actions</th>
           </tr>
@@ -190,14 +183,13 @@ export default function OperatorsContent() {
         <tbody>
           {operators.length === 0 ? (
             <tr>
-              <td colSpan="5">No operators found</td>
+              <td colSpan="4">No operators found</td>
             </tr>
           ) : (
             operators.map((op) => (
               <tr key={op.id}>
                 <td>{op.branchName || "N/A"}</td>
                 <td>{op.email || "N/A"}</td>
-                <td>{op.servicesHandled || 0} services</td>
                 <td>
                   <span
                     className={`operator-badge ${op.status === "Disabled" ? "operator-badge-inactive" : ""}`}>

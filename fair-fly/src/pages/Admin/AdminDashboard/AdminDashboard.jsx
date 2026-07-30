@@ -1,8 +1,4 @@
 import './admin-dashboard.css';
-import StatCards from '../../../components/AdminComponents/StatCards/StatCards';
-import { useEffect, useState } from 'react';
-import { firestore } from '../../../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
 import {
   ResponsiveContainer,
   BarChart,

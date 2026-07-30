@@ -1,6 +1,6 @@
 import { useAdminContext } from "../../../context/AdminContext";
 import { useState, useRef } from "react";
-import ApplicationModal from "../../../components/AdminComponents/Modals/ApplicationModal/application-modal";
+import ApplicationModal from "../../../components/AdminComponents/Modals/ApplicationModal/ApplicationModal";
 import FranchiseCard from "../../../components/AdminComponents/FranchiseeApplication/FranchiseeCard";
 
 export default function HistoryContent() {

@@ -1,20 +1,18 @@
 import './admin-franchise-apps.css';
 import FranchiseCard from '../../../components/AdminComponents/FranchiseeApplication/FranchiseeCard';
-import { useState, useEffect, useRef } from 'react';
-import {onSnapshot, collection} from 'firebase/firestore';
-import { firestore } from '../../../firebase';
+import { useState, useRef } from 'react';
 import Loader from '../../../components/AdminComponents/Loader/Loader';
-import ApplicationModal from '../../../components/AdminComponents/Modals/ApplicationModal/application-modal';
+import ApplicationModal from '../../../components/AdminComponents/Modals/ApplicationModal/ApplicationModal';
 import { useAdminContext } from '../../../context/AdminContext';
-import ApiCaller from '../../../utils/ApiCaller'; 
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/toast/ToastProvider';
-import AdminProvider from '../../../context/AdminContext';
 
 export default function FranchiseContent() {
     //Get the franchise applications from the firestore listener and display them in the dashboard
   const { data: franchiseApplications, loading: franchiseLoading } = useAdminContext();
-  const {isLoading, setIsLoading} = useState(false); //State to indicate if the API call is loading
+  const [isLoading, setIsLoading] = useState(false);
 
   const modalRef = useRef(null); //Modal reference to open the modal when the view button is clicked
   const { userToken } = useAuthContext();
@@ -22,7 +20,7 @@ export default function FranchiseContent() {
 
   //Approve or reject the franchise application and update the status in the firestore
   async function handleApplicationStatusChange(applicationId, isApproved) {
-    ApiCaller('http://localhost:5001/api/franchise/applications/' + applicationId + '/status', 
+    ApiCaller(`${API_BASE_URL}/api/franchise/applications/${applicationId}/status`, 
     'PATCH', 
     { status: isApproved ? 'approved' : 'rejected' },
     { 'Authorization': `Bearer ${userToken}` },

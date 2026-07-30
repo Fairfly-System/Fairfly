@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import ServiceStepsModal from "./ServiceStepsModal";
+import ServiceRequirementsModal from "./ServiceRequirementsModal";
 import {firestore} from "../../../firebase";
 
 // Maps the stored label back to the <select> value used in the unit dropdown
@@ -41,13 +41,12 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
     processingTime: parseProcessingTime(initialData?.processingTime)
   });
 
-  const [steps, setSteps] = useState(initialData?.actions || []);
-  const [isStepsModalOpen, setIsStepsModalOpen] = useState(false);
+  const [requirements, setRequirements] = useState(initialData?.actions || []);
+  const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    //Attach the steps to the formData before submitting in the actions field
-    onSubmit({ ...formData, actions: steps });
+    onSubmit({ ...formData, requirements });
   };
 
   return (
@@ -144,9 +143,9 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
         <button
           type="button"
           className="modalSubmitBtn btnLightBlue"
-          onClick={() => setIsStepsModalOpen(true)}>
+          onClick={() => setIsRequirementsModalOpen(true)}>
           <span style={{ color: "#5865f2" }}>
-            {steps.length > 0 ? `Edit Steps (${steps.length})` : "Add Step/s"}
+            {requirements.length > 0 ? `Edit Requirements (${requirements.length})` : "Add Requirement/s"}
           </span>
         </button>
 
@@ -164,11 +163,11 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
         </button>
 
       </form>
-      <ServiceStepsModal
-        isOpen={isStepsModalOpen}
-        onClose={() => setIsStepsModalOpen(false)}
-        initialSteps={steps}
-        onSaveSteps={(updatedSteps) => setSteps(updatedSteps)}
+      <ServiceRequirementsModal
+        isOpen={isRequirementsModalOpen}
+        onClose={() => setIsRequirementsModalOpen(false)}
+        initialRequirements={requirements}
+        onSaveRequirements={(updatedRequirements) => setRequirements(updatedRequirements)}
       />
     </>
   );
