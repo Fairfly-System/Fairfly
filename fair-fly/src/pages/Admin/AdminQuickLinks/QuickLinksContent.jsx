@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import './admin-quick-links.css';
-import ModalWrapper from '../../../components/Admin/Modals/ModalWrapper';
-import QuickLinkForm from '../../../components/Admin/Modals/QuickLinkForm';
-import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
+import QuickLinkModal from '../../../components/Admin/Modals/QuickLinkModal/QuickLinkModal';
+import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import { useAuthContext } from '../../../context/AuthContext';
 import ApiCaller from '../../../utils/ApiCaller';
@@ -60,7 +60,7 @@ export default function QuickLinksContent() {
       const matchesCategory =
         categoryFilter === 'all' ||
         (link.category || '').toLowerCase().replace(/\s+/g, '') ===
-          categoryFilter.toLowerCase().replace(/\s+/g, '');
+        categoryFilter.toLowerCase().replace(/\s+/g, '');
 
       return matchesSearch && matchesCategory;
     });
@@ -184,44 +184,21 @@ export default function QuickLinksContent() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${categoryFilter === 'all' ? 'active' : ''}`}
-            onClick={() => {
-              setCategoryFilter('all');
-              setCurrentPage(1);
-            }}
-          >
-            All ({quickLinksList.length})
-          </button>
-          <button
-            className={`filter-chip ${categoryFilter === 'airlines' ? 'active' : ''}`}
-            onClick={() => {
-              setCategoryFilter('airlines');
-              setCurrentPage(1);
-            }}
-          >
-            Airlines
-          </button>
-          <button
-            className={`filter-chip ${categoryFilter === 'hotels' ? 'active' : ''}`}
-            onClick={() => {
-              setCategoryFilter('hotels');
-              setCurrentPage(1);
-            }}
-          >
-            Hotels
-          </button>
-          <button
-            className={`filter-chip ${categoryFilter === 'government' ? 'active' : ''}`}
-            onClick={() => {
-              setCategoryFilter('government');
-              setCurrentPage(1);
-            }}
-          >
-            Government
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: 'all', label: `All (${quickLinksList.length})` },
+            { value: 'airlines', label: 'Airlines' },
+            { value: 'hotels', label: 'Hotels' },
+            { value: 'government', label: 'Government' },
+            { value: 'visaandembassy', label: 'Visa & Embassy' },
+            { value: 'other', label: 'Other' },
+          ]}
+          activeChip={categoryFilter}
+          onChipChange={(val) => {
+            setCategoryFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       <div className="table-responsive">
@@ -303,31 +280,13 @@ export default function QuickLinksContent() {
         onPageSizeChange={setPageSize}
       />
 
-      <ModalWrapper
+      <QuickLinkModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <i
-              className={`fa-solid ${editingLink ? 'fa-pen-to-square' : 'fa-plus'}`}
-              style={{ color: 'var(--purple)' }}
-            ></i>
-            <span>{editingLink ? 'Edit Quick Link' : 'Add Quick Link'}</span>
-          </div>
-        }
-        subtitle={
-          editingLink
-            ? 'Update the title, category, or URL of this link'
-            : 'Add a new shortcut link for operators'
-        }
-      >
-        <QuickLinkForm
-          key={editingLink?.id || 'new'}
-          onSubmit={handleFormSubmit}
-          isLoading={isLoading}
-          initialData={editingLink}
-        />
-      </ModalWrapper>
+        editingLink={editingLink}
+        onSubmit={handleFormSubmit}
+        isLoading={isLoading}
+      />
 
       <ConfirmationModal
         isOpen={!!deleteLinkTarget}

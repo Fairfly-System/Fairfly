@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import ModalWrapper from './ModalWrapper';
-import { firestore } from '../../../firebase';
+import BaseModal from '../../../UI/ModalBase/BaseModal';
+import { firestore } from '../../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 
 export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflowIds = [], onSaveWorkflows }) {
@@ -55,9 +55,10 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
   );
 
   return (
-    <ModalWrapper
+    <BaseModal
       isOpen={isOpen}
       onClose={onClose}
+      maxWidth="550px"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-diagram-project" style={{ color: 'var(--purple)' }}></i>
@@ -145,6 +146,6 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
           Save Attached Workflows
         </button>
       </div>
-    </ModalWrapper>
+    </BaseModal>
   );
 }

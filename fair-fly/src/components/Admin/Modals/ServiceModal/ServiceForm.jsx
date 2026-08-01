@@ -1,15 +1,13 @@
 import React, { useState } from "react";
-import ServiceRequirementsModal from "./ServiceRequirementsModal";
-import ServiceWorkflowsModal from "./ServiceWorkflowsModal";
+import ServiceRequirementsModal from "../ServiceRequirementsModal/ServiceRequirementsModal";
+import ServiceWorkflowsModal from "../ServiceWorkflowsModal/ServiceWorkflowsModal";
 
-// Maps the stored label back to the <select> value used in the unit dropdown
 const LABEL_TO_UNIT = {
   "day/s": "days",
   "week/s": "weeks",
   "month/s": "months",
 };
 
-// Parses "7-10 Day/s" or "3 Day/s" -> { min: '7', max: '10', unit: 'days' }
 function parseProcessingTime(processingTime) {
   const fallback = { min: "", max: "", unit: "days" };
 
@@ -144,7 +142,6 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
           </p>
         </div>
 
-        {/* Requirements & Workflows Selection Row */}
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             type="button"

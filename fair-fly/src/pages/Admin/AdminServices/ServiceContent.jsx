@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import "./admin-services.css";
-import ModalWrapper from "../../../components/Admin/Modals/ModalWrapper";
-import ServiceForm from "../../../components/Admin/Modals/ServiceForm";
-import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal";
+import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
+import ServiceModal from "../../../components/Admin/Modals/ServiceModal/ServiceModal";
+import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal";
 import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import { useAuthContext } from "../../../context/AuthContext";
@@ -80,7 +80,7 @@ export default function ServiceContent() {
         (statusFilter === "active" && item.status === "Active") ||
         (statusFilter === "disabled" && item.status === "Disabled");
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus; //Only returns the value to the filter when both are true
     });
   }, [service, searchTerm, statusFilter]);
 
@@ -186,7 +186,7 @@ export default function ServiceContent() {
 
   // ── AlertBar logic (must be before any early return — Rules of Hooks) ─────
   const alertBarProps = useMemo(() => {
-    const total    = service.length;
+    const total = service.length;
     const disabled = service.filter(s => s.status === 'Disabled').length;
 
     if (total === 0) {
@@ -259,35 +259,18 @@ export default function ServiceContent() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${statusFilter === "all" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("all");
-              setCurrentPage(1);
-            }}
-          >
-            All ({service.length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === "active" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("active");
-              setCurrentPage(1);
-            }}
-          >
-            Active ({service.filter((s) => s.status === "Active").length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === "disabled" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("disabled");
-              setCurrentPage(1);
-            }}
-          >
-            Disabled ({service.filter((s) => s.status === "Disabled").length})
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: "all", label: `All (${service.length})` },
+            { value: "active", label: `Active (${service.filter((s) => s.status === "Active").length})` },
+            { value: "disabled", label: `Disabled (${service.filter((s) => s.status === "Disabled").length})` },
+          ]}
+          activeChip={statusFilter}
+          onChipChange={(val) => {
+            setStatusFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       <div className="table-responsive">
@@ -346,11 +329,10 @@ export default function ServiceContent() {
                     <td>{item.price ? item.price : `PHP ${Number(item.baseFee || 0).toLocaleString()}`}</td>
                     <td>
                       <span
-                        className={`status-pill ${
-                          item.status === "Active"
+                        className={`status-pill ${item.status === "Active"
                             ? "status-pill-active"
                             : "status-pill-disabled"
-                        }`}
+                          }`}
                       >
                         {item.status || "Active"}
                       </span>
@@ -371,9 +353,8 @@ export default function ServiceContent() {
                         }
                       >
                         <i
-                          className={`fa-solid ${
-                            item.status === "Active" ? "fa-ban" : "fa-circle-check"
-                          }`}
+                          className={`fa-solid ${item.status === "Active" ? "fa-ban" : "fa-circle-check"
+                            }`}
                         ></i>
                       </button>
                       <button
@@ -403,31 +384,13 @@ export default function ServiceContent() {
         onPageSizeChange={setPageSize}
       />
 
-      <ModalWrapper
+      <ServiceModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <i
-              className={`fa-solid ${editingService ? "fa-pen-to-square" : "fa-plus"}`}
-              style={{ color: "var(--purple)" }}
-            ></i>
-            <span>{editingService ? "Edit Service" : "Create New Service"}</span>
-          </div>
-        }
-        subtitle={
-          editingService
-            ? "Update service details, requirements, and attached workflows"
-            : "Add a new service to the catalog"
-        }
-      >
-        <ServiceForm
-          key={editingService?.id || "new"}
-          onSubmit={handleFormSubmit}
-          isLoading={isSubmitting}
-          initialData={editingService}
-        />
-      </ModalWrapper>
+        editingService={editingService}
+        onSubmit={handleFormSubmit}
+        isLoading={isSubmitting}
+      />
 
       <ConfirmationModal
         isOpen={confirmState?.type === "delete"}

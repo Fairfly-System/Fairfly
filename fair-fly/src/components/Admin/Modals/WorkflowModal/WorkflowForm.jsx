@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ModalWrapper from './ModalWrapper';
+import BaseModal from '../../../UI/ModalBase/BaseModal';
 
 const EXECUTABLE_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.application', '.gadget', '.msp', '.hta', '.cpl', '.msc'];
 
@@ -68,7 +68,6 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
     setSteps(steps.filter((_, i) => i !== index));
   };
 
-  // Reorder steps up or down by delta (-1 or +1)
   const handleMoveStep = (index, delta) => {
     const newIndex = index + delta;
     if (newIndex < 0 || newIndex >= steps.length) return;
@@ -79,7 +78,6 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
     setSteps(updated);
   };
 
-  // Drag & Drop Handlers
   const handleDragStart = (e, index) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
@@ -122,9 +120,10 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
   };
 
   return (
-    <ModalWrapper
+    <BaseModal
       isOpen={isOpen}
       onClose={onClose}
+      maxWidth="550px"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-diagram-project" style={{ color: 'var(--orange)' }}></i>
@@ -164,7 +163,6 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    {/* Grip Vertical Reorder Handle */}
                     <div
                       title="Drag to reorder"
                       style={{
@@ -186,7 +184,6 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
                       <p>{step.description}</p>
                     </div>
 
-                    {/* Move Up / Move Down Arrow Buttons */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', marginRight: '0.375rem' }}>
                       <button
                         type="button"
@@ -228,7 +225,6 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
                     </button>
                   </div>
 
-                  {/* Render Attachments (Link AND File simultaneously if present) */}
                   {(step.link?.url || step.file?.url) && (
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                       {step.link?.url && (
@@ -301,13 +297,11 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
             onChange={(e) => setStepDescription(e.target.value)}
           />
 
-          {/* Optional Attachments Container (Link + File) */}
           <div style={{ marginTop: '0.25rem', background: 'var(--bg)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '0.0625rem solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-dark)' }}>
               Optional Step Attachments (Both link & document file can be attached):
             </span>
 
-            {/* Optional Web Link */}
             <div style={{ display: 'flex', gap: '0.375rem' }}>
               <input
                 type="url"
@@ -327,7 +321,6 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
               />
             </div>
 
-            {/* Optional Document File */}
             <div style={{ display: 'flex', gap: '0.375rem' }}>
               <input
                 type="url"
@@ -391,7 +384,7 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
           Save Steps
         </button>
       </div>
-    </ModalWrapper>
+    </BaseModal>
   );
 }
 

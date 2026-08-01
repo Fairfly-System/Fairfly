@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BaseModal from '../../UI/ModalBase/BaseModal';
 import './add-service-modal.css';
 
 const SERVICE_TYPES = ['PSA', 'Passport', 'VISA Assistance', 'Package Tour', 'Airline Tickets'];
@@ -24,18 +25,14 @@ export default function AddServiceModal({ onClose, onAdd }) {
   };
 
   return (
-    <div className="as-overlay" onClick={onClose}>
-      <div className="as-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="as-modal-top">
-          <div>
-            <h2>Add New Active Service</h2>
-            <p>Create a new service for walk-in clients or confirmed appointments</p>
-          </div>
-          <button className="as-close" onClick={onClose}>
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
+    <BaseModal
+      isOpen={true}
+      onClose={onClose}
+      maxWidth="480px"
+      title="Add New Active Service"
+      subtitle="Create a new service for walk-in clients or confirmed appointments"
+    >
+      <div className="as-modal-body-content">
         <div className="as-field">
           <label>Client Name <span>*</span></label>
           <input
@@ -96,6 +93,6 @@ export default function AddServiceModal({ onClose, onAdd }) {
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import ModalWrapper from './ModalWrapper';
+import BaseModal from '../../../UI/ModalBase/BaseModal';
 
 export default function ConfirmationModal({
   isOpen,
@@ -21,7 +21,7 @@ export default function ConfirmationModal({
   };
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose}>
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="420px">
       <div className="modalForm" style={{ textAlign: 'center', alignItems: 'center' }}>
         {Icon && (
           <div
@@ -52,7 +52,7 @@ export default function ConfirmationModal({
           </p>
         )}
 
-        <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '8px' }}>
+        <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '16px' }}>
           <button
             type="button"
             className="modalSubmitBtn"
@@ -75,6 +75,7 @@ export default function ConfirmationModal({
             disabled={isLoading}
             style={{
               backgroundColor: BtnColor,
+              color: '#ffffff',
               flex: 1,
               margin: 0,
               opacity: isLoading ? 0.7 : 1,
@@ -84,6 +85,6 @@ export default function ConfirmationModal({
           </button>
         </div>
       </div>
-    </ModalWrapper>
+    </BaseModal>
   );
 }

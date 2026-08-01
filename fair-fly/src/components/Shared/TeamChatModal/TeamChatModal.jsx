@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import BaseModal from '../../UI/ModalBase/BaseModal';
 import './team-chat-modal.css';
 import { sendMessage, listenToMessages, getRecentMessages } from '../../../services/chatService';
 
@@ -51,23 +51,20 @@ export default function TeamChatModal({ onClose }) {
     }
   };
 
-  const content = (
-    <div className="chat-modal-overlay" onClick={onClose}>
-      <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="chat-modal-header">
-          <div className="chat-modal-title">
-            <i className="fa-regular fa-message"></i>
-            <h2>Team Communication</h2>
-          </div>
-          <button className="chat-modal-close" onClick={onClose} aria-label="Close chat">
-            <i className="fa-solid fa-xmark"></i>
-          </button>
+  return (
+    <BaseModal
+      isOpen={true}
+      onClose={onClose}
+      maxWidth="520px"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <i className="fa-regular fa-message" style={{ color: 'var(--purple)' }}></i>
+          <span>Team Communication</span>
         </div>
-
-        <p className="chat-modal-subtitle">
-          Communicate with all operators about system issues and services
-        </p>
-
+      }
+      subtitle="Communicate with all operators about system issues and services"
+    >
+      <div className="team-chat-modal-body">
         <div className="chat-modal-messages">
           {loading && !chatId ? (
             <div className="chat-empty-state">
@@ -115,8 +112,6 @@ export default function TeamChatModal({ onClose }) {
           </button>
         </form>
       </div>
-    </div>
+    </BaseModal>
   );
-
-  return createPortal(content, document.body);
 }

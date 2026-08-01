@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import ModalWrapper from './ModalWrapper';
-import Pagination from '../../UI/Pagination/Pagination';
+import FilterChipGroup from '../../../UI/FilterChipGroup/FilterChipGroup';
+import BaseModal from '../../../UI/ModalBase/BaseModal';
+import Pagination from '../../../UI/Pagination/Pagination';
 import {
   ACTION_META,
   humanResourceType,
-} from '../../../pages/Admin/AdminDashboard/dashboardUtils';
+} from '../../../../pages/Admin/AdminDashboard/dashboardUtils';
 
 export default function AdminLogsModal({
   isOpen,
@@ -54,7 +55,7 @@ export default function AdminLogsModal({
   };
 
   return (
-    <ModalWrapper
+    <BaseModal
       isOpen={isOpen}
       onClose={handleClose}
       maxWidth="750px"
@@ -93,20 +94,17 @@ export default function AdminLogsModal({
             )}
           </div>
 
-          <div className="filter-chips">
-            {['all', 'CREATE', 'UPDATE', 'DELETE'].map((f) => (
-              <button
-                key={f}
-                className={`filter-chip ${modalActionFilter === f ? 'active' : ''}`}
-                onClick={() => {
-                  setModalActionFilter(f);
-                  setModalPage(1);
-                }}
-              >
-                {f === 'all' ? `All (${allLogs.length})` : f}
-              </button>
-            ))}
-          </div>
+          <FilterChipGroup
+            chips={['all', 'CREATE', 'UPDATE', 'DELETE'].map((f) => ({
+              value: f,
+              label: f === 'all' ? `All (${allLogs.length})` : f,
+            }))}
+            activeChip={modalActionFilter}
+            onChipChange={(val) => {
+              setModalActionFilter(val);
+              setModalPage(1);
+            }}
+          />
 
           <button
             className="activity-export-btn"
@@ -186,6 +184,6 @@ export default function AdminLogsModal({
           onPageSizeChange={setModalPageSize}
         />
       </div>
-    </ModalWrapper>
+    </BaseModal>
   );
 }

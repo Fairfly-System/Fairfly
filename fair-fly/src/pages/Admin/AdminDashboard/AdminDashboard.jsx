@@ -15,7 +15,7 @@ import {
   Legend,
 } from 'recharts';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
-import AdminLogsModal from '../../../components/Admin/Modals/AdminLogsModal';
+import AdminLogsModal from '../../../components/Admin/Modals/AdminLogsModal/AdminLogsModal';
 import {
   ACTION_META,
   relativeTime,

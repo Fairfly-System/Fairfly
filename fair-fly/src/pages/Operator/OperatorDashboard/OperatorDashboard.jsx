@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import AddServiceModal from '../../../components/Operator/AddServiceModal/AddServiceModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import './operator-dashboard.css';
@@ -103,35 +104,18 @@ export default function OperatorDashboard() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${priorityFilter === 'all' ? 'active' : ''}`}
-            onClick={() => {
-              setPriorityFilter('all');
-              setCurrentPage(1);
-            }}
-          >
-            All ({services.length})
-          </button>
-          <button
-            className={`filter-chip ${priorityFilter === 'high' ? 'active' : ''}`}
-            onClick={() => {
-              setPriorityFilter('high');
-              setCurrentPage(1);
-            }}
-          >
-            High Priority ({services.filter((s) => s.priorityType === 'high').length})
-          </button>
-          <button
-            className={`filter-chip ${priorityFilter === 'normal' ? 'active' : ''}`}
-            onClick={() => {
-              setPriorityFilter('normal');
-              setCurrentPage(1);
-            }}
-          >
-            Normal Priority ({services.filter((s) => s.priorityType === 'normal').length})
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: 'all', label: `All (${services.length})` },
+            { value: 'high', label: `High Priority (${services.filter((s) => s.priorityType === 'high').length})` },
+            { value: 'normal', label: `Normal Priority (${services.filter((s) => s.priorityType === 'normal').length})` },
+          ]}
+          activeChip={priorityFilter}
+          onChipChange={(val) => {
+            setPriorityFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}

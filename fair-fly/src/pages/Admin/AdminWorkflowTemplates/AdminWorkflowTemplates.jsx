@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import './admin-workflow-templates.css';
-import ModalWrapper from '../../../components/Admin/Modals/ModalWrapper';
-import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal';
-import WorkflowForm from '../../../components/Admin/Modals/WorkflowForm';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
+import WorkflowModal from '../../../components/Admin/Modals/WorkflowModal/WorkflowModal';
+import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import { useAdminContext } from '../../../context/AdminContext';
@@ -223,32 +223,19 @@ export default function AdminWorkflowTemplates() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${serviceTypeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => { setServiceTypeFilter('all'); setCurrentPage(1); }}
-          >
-            All ({templates.length})
-          </button>
-          <button
-            className={`filter-chip ${serviceTypeFilter === 'psa' ? 'active' : ''}`}
-            onClick={() => { setServiceTypeFilter('psa'); setCurrentPage(1); }}
-          >
-            PSA
-          </button>
-          <button
-            className={`filter-chip ${serviceTypeFilter === 'passport' ? 'active' : ''}`}
-            onClick={() => { setServiceTypeFilter('passport'); setCurrentPage(1); }}
-          >
-            Passport
-          </button>
-          <button
-            className={`filter-chip ${serviceTypeFilter === 'visa' ? 'active' : ''}`}
-            onClick={() => { setServiceTypeFilter('visa'); setCurrentPage(1); }}
-          >
-            Visa
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: 'all', label: `All (${templates.length})` },
+            { value: 'psa', label: 'PSA' },
+            { value: 'passport', label: 'Passport' },
+            { value: 'visa', label: 'Visa' },
+          ]}
+          activeChip={serviceTypeFilter}
+          onChipChange={(val) => {
+            setServiceTypeFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       <div className="table-responsive">
@@ -330,33 +317,13 @@ export default function AdminWorkflowTemplates() {
       />
 
       {/* Create / Edit Modal */}
-      <ModalWrapper
+      <WorkflowModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <i
-              className={`fa-solid ${editingTemplate ? 'fa-pen-to-square' : 'fa-plus'}`}
-              style={{ color: 'var(--purple)' }}
-            ></i>
-            <span>
-              {editingTemplate ? 'Edit Workflow Template' : 'Create Workflow Template'}
-            </span>
-          </div>
-        }
-        subtitle={
-          editingTemplate
-            ? 'Modify step definitions and configuration'
-            : 'Configure a new multi-step workflow template'
-        }
-      >
-        <WorkflowForm
-          key={editingTemplate?.id || 'new'}
-          onSubmit={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
-          initialData={editingTemplate}
-          onCancel={handleCloseModal}
-        />
-      </ModalWrapper>
+        editingTemplate={editingTemplate}
+        onSubmit={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
+        isLoading={isSubmitting}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

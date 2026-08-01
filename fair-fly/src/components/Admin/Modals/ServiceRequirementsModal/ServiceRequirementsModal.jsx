@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ModalWrapper from './ModalWrapper';
+import BaseModal from '../../../UI/ModalBase/BaseModal';
 
 export default function ServiceRequirementsModal({ isOpen, onClose, initialRequirements = [], onSaveRequirements }) {
   const [requirements, setRequirements] = useState(initialRequirements);
@@ -50,9 +50,10 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
   };
 
   return (
-    <ModalWrapper
+    <BaseModal
       isOpen={isOpen}
       onClose={onClose}
+      maxWidth="550px"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-regular fa-clipboard" style={{ color: 'var(--purple)' }}></i>
@@ -107,7 +108,7 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
                     borderRadius: 'var(--radius-sm)',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     fontSize: '0.8125rem'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--purple-dark)', fontWeight: 600 }}>
@@ -229,6 +230,6 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
           Save Requirements
         </button>
       </div>
-    </ModalWrapper>
+    </BaseModal>
   );
 }

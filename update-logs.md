@@ -1,5 +1,68 @@
 # Update Logs
 
+## [2026-08-01] Extracted Standalone Reusable FilterChipGroup & SearchBar Components
+
+### Files Created/Modified
+- `fair-fly/src/components/UI/FilterChipGroup/FilterChipGroup.jsx` *(new)*
+- `fair-fly/src/components/UI/FilterChipGroup/filter-chip-group.css` *(new)*
+- `fair-fly/src/components/UI/SearchBar/SearchBar.jsx`
+- `fair-fly/src/components/UI/SearchBar/search-bar.css`
+- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx`
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx`
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx`
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx`
+- `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx`
+- `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx`
+- `fair-fly/src/components/Admin/Modals/AdminLogsModal/AdminLogsModal.jsx`
+- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx`
+- `fair-fly/src/pages/Operator/OperatorAppointments/OperatorAppointments.jsx`
+
+### Summary of Changes
+- Extracted inline filter chip button lists into a standalone, reusable `FilterChipGroup` component (`src/components/UI/FilterChipGroup/FilterChipGroup.jsx`).
+- Enhanced `SearchBar` component with icon, clear search button, and flexible placeholder/debounce props.
+- Replaced inline filter chip rendering across all Admin and Operator pages and modal dialogs with `<FilterChipGroup />`.
+
+### Reason
+- Eliminate code duplication, improve UI modularity, and standardize filter chip button behavior and styling across the system.
+
+### Breaking Changes
+- None.
+
+## [2026-08-01] Standardized System Modals with BaseModal & Folder Organization
+
+### Files Created/Modified
+- `fair-fly/src/components/UI/ModalBase/BaseModal.jsx`
+- `fair-fly/src/components/UI/ModalBase/base-modal.css`
+- `fair-fly/src/components/Admin/Modals/ApplicationModal/ApplicationModal.jsx`
+- `fair-fly/src/components/Admin/Modals/AdminLogsModal/AdminLogsModal.jsx`
+- `fair-fly/src/components/Admin/Modals/ConfirmationModal/ConfirmationModal.jsx`
+- `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorModal.jsx` & `OperatorForm.jsx`
+- `fair-fly/src/components/Admin/Modals/QuickLinkModal/QuickLinkModal.jsx` & `QuickLinkForm.jsx`
+- `fair-fly/src/components/Admin/Modals/ServiceModal/ServiceModal.jsx` & `ServiceForm.jsx`
+- `fair-fly/src/components/Admin/Modals/ServiceRequirementsModal/ServiceRequirementsModal.jsx`
+- `fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx`
+- `fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowModal.jsx` & `WorkflowForm.jsx`
+- `fair-fly/src/components/Operator/AddServiceModal/AddServiceModal.jsx`
+- `fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx`
+- `fair-fly/src/components/Shared/TeamChatModal/TeamChatModal.jsx`
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx`
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx`
+- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx`
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx`
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx`
+
+### Summary of Changes
+- Enhanced `BaseModal` to support both controlled (`isOpen` prop) and uncontrolled (`ref`) operational modes seamlessly, subtitle rendering, render function children, custom max-widths, and backdrop animations.
+- Refactored `ApplicationModal` and all Admin, Operator, and Shared modals across the system to use `BaseModal`.
+- Restructured all modals in `src/components/Admin/Modals/` into dedicated component subfolders (`ComponentName/ComponentName.jsx`), matching `ApplicationModal` folder conventions.
+- Updated import references in all Admin pages and cleaned up deprecated flat modal files.
+
+### Reason
+- Standardize modal visual design, backdrop behavior, overlay styling, and animation system-wide, while improving maintainability and clean code practices.
+
+### Breaking Changes
+- None (API contracts and props preserved).
+
 ## [2026-08-01] Added Customizable `maxWidth` & `width` Props to `ModalWrapper`
 
 ### Files Modified

@@ -1,5 +1,6 @@
 import { useAdminContext } from "../../../context/AdminContext";
 import { useState, useRef, useMemo } from "react";
+import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
 import ApplicationModal from "../../../components/Admin/Modals/ApplicationModal/ApplicationModal";
 import FranchiseCard from "../../../components/Admin/FranchiseeApplication/FranchiseeCard";
 import Pagination from "../../../components/UI/Pagination/Pagination";
@@ -106,35 +107,18 @@ export default function HistoryContent() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${statusFilter === "all" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("all");
-              setCurrentPage(1);
-            }}
-          >
-            All History ({historyApplications.length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === "approved" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("approved");
-              setCurrentPage(1);
-            }}
-          >
-            Approved ({historyApplications.filter((a) => a.status === "approved").length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === "rejected" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("rejected");
-              setCurrentPage(1);
-            }}
-          >
-            Rejected ({historyApplications.filter((a) => a.status === "rejected").length})
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: "all", label: `All History (${historyApplications.length})` },
+            { value: "approved", label: `Approved (${historyApplications.filter((a) => a.status === "approved").length})` },
+            { value: "rejected", label: `Rejected (${historyApplications.filter((a) => a.status === "rejected").length})` },
+          ]}
+          activeChip={statusFilter}
+          onChipChange={(val) => {
+            setStatusFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       <div className="franchise-cards-container">

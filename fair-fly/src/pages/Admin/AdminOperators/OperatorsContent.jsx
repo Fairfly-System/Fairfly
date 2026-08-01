@@ -2,9 +2,9 @@ import React, { useState, useMemo } from "react";
 import "./admin-operators.css";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import { useAuthContext } from "../../../context/AuthContext";
-import ModalWrapper from "../../../components/Admin/Modals/ModalWrapper";
-import OperatorForm from "../../../components/Admin/Modals/OperatorForm";
-import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal";
+import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
+import OperatorModal from "../../../components/Admin/Modals/OperatorModal/OperatorModal";
+import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal";
 import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import ApiCaller from "../../../utils/ApiCaller";
@@ -247,35 +247,18 @@ export default function OperatorsContent() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${statusFilter === "all" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("all");
-              setCurrentPage(1);
-            }}
-          >
-            All ({operators.length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === "active" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("active");
-              setCurrentPage(1);
-            }}
-          >
-            Active ({operators.filter((o) => o.status === "Active").length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === "disabled" ? "active" : ""}`}
-            onClick={() => {
-              setStatusFilter("disabled");
-              setCurrentPage(1);
-            }}
-          >
-            Disabled ({operators.filter((o) => o.status === "Disabled").length})
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: "all", label: `All (${operators.length})` },
+            { value: "active", label: `Active (${operators.filter((o) => o.status === "Active").length})` },
+            { value: "disabled", label: `Disabled (${operators.filter((o) => o.status === "Disabled").length})` },
+          ]}
+          activeChip={statusFilter}
+          onChipChange={(val) => {
+            setStatusFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       {/* Table Container */}
@@ -370,37 +353,13 @@ export default function OperatorsContent() {
       />
 
       {/* Render the Operator Modal */}
-      <ModalWrapper
+      <OperatorModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <i
-              className={`fa-solid ${
-                editingOperator ? "fa-pen-to-square" : "fa-user-plus"
-              }`}
-              style={{ color: "var(--purple)" }}
-            ></i>
-            <span>
-              {editingOperator
-                ? "Edit Operator Account"
-                : "Create Operator Account"}
-            </span>
-          </div>
-        }
-        subtitle={
-          editingOperator
-            ? "Update this operator's details"
-            : "Add a new franchise operator account"
-        }
-      >
-        <OperatorForm
-          key={editingOperator?.id || "new"}
-          onSubmit={handleFormSubmit}
-          isLoading={isSubmitting}
-          initialData={editingOperator}
-        />
-      </ModalWrapper>
+        editingOperator={editingOperator}
+        onSubmit={handleFormSubmit}
+        isLoading={isSubmitting}
+      />
 
       {/* Delete confirmation */}
       <ConfirmationModal

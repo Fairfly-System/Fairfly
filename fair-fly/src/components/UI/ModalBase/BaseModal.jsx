@@ -2,33 +2,95 @@ import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import './base-modal.css';
 
-const BaseModal = forwardRef(({ children, title, onClose }, ref) => {
-  const [isOpen, setIsOpen] = useState(false);
+const BaseModal = forwardRef(({
+  children,
+  title,
+  subtitle,
+  onClose,
+  onOpen,
+  isOpen: controlledIsOpen,
+  maxWidth,
+  width,
+  className = '',
+}, ref) => {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const [modalData, setModalData] = useState(null);
 
-  const openModal = () => setIsOpen(true);
+  const isControlled = controlledIsOpen !== undefined;
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+
+  const openModal = (data) => {
+    setModalData(data || null);
+    setInternalIsOpen(true);
+    if (onOpen) onOpen(data);
+  };
+
   const closeModal = () => {
-    setIsOpen(false);
+    setInternalIsOpen(false);
+    setModalData(null);
     if (onClose) onClose();
   };
 
   useImperativeHandle(ref, () => ({
     openModal,
     closeModal,
+    isOpen,
+    data: modalData,
   }));
 
   if (!isOpen) return null;
 
+  const containerStyle = {};
+  if (maxWidth) containerStyle.maxWidth = maxWidth;
+  if (width) containerStyle.width = width;
+
   return createPortal(
     <div className="base-modal-overlay" onClick={closeModal}>
-      <div className="base-modal-container" onClick={(e) => e.stopPropagation()}>
-        <div className="base-modal-header">
-          {title && <h3 className="base-modal-title">{title}</h3>}
-          <button className="base-modal-close-btn" onClick={closeModal} aria-label="Close modal">
+      <div
+        className={`base-modal-container ${className}`.trim()}
+        style={containerStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {(title || subtitle) && (
+          <div className="base-modal-header">
+            <div>
+              {title && (
+                typeof title === 'string' ? (
+                  <h3 className="base-modal-title">{title}</h3>
+                ) : (
+                  title
+                )
+              )}
+              {subtitle && (
+                typeof subtitle === 'string' ? (
+                  <p className="base-modal-subtitle">{subtitle}</p>
+                ) : (
+                  subtitle
+                )
+              )}
+            </div>
+            <button
+              className="base-modal-close-btn"
+              onClick={closeModal}
+              aria-label="Close modal"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        )}
+        {!title && !subtitle && (
+          <button
+            className="base-modal-close-btn base-modal-close-btn-absolute"
+            onClick={closeModal}
+            aria-label="Close modal"
+          >
             <i className="fa-solid fa-xmark"></i>
           </button>
-        </div>
+        )}
         <div className="base-modal-body">
-          {children}
+          {typeof children === 'function'
+            ? children({ closeModal, close: closeModal, data: modalData })
+            : children}
         </div>
       </div>
     </div>,

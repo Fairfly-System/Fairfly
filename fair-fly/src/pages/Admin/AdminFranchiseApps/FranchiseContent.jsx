@@ -1,4 +1,5 @@
 import './admin-franchise-apps.css';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import FranchiseCard from '../../../components/Admin/FranchiseeApplication/FranchiseeCard';
 import { useState, useRef, useMemo } from 'react';
 import Loader from '../../../components/Admin/Loader/Loader';
@@ -131,44 +132,19 @@ export default function FranchiseContent() {
             )}
           </div>
 
-          <div className="filter-chips">
-            <button
-              className={`filter-chip ${statusFilter === 'pending' ? 'active' : ''}`}
-              onClick={() => {
-                setStatusFilter('pending');
-                setCurrentPage(1);
-              }}
-            >
-              Pending ({franchiseApplications.filter((a) => a.status === 'pending').length})
-            </button>
-            <button
-              className={`filter-chip ${statusFilter === 'approved' ? 'active' : ''}`}
-              onClick={() => {
-                setStatusFilter('approved');
-                setCurrentPage(1);
-              }}
-            >
-              Approved ({franchiseApplications.filter((a) => a.status === 'approved').length})
-            </button>
-            <button
-              className={`filter-chip ${statusFilter === 'rejected' ? 'active' : ''}`}
-              onClick={() => {
-                setStatusFilter('rejected');
-                setCurrentPage(1);
-              }}
-            >
-              Rejected ({franchiseApplications.filter((a) => a.status === 'rejected').length})
-            </button>
-            <button
-              className={`filter-chip ${statusFilter === 'all' ? 'active' : ''}`}
-              onClick={() => {
-                setStatusFilter('all');
-                setCurrentPage(1);
-              }}
-            >
-              All ({franchiseApplications.length})
-            </button>
-          </div>
+          <FilterChipGroup
+            chips={[
+              { value: 'pending', label: `Pending (${franchiseApplications.filter((a) => a.status === 'pending').length})` },
+              { value: 'approved', label: `Approved (${franchiseApplications.filter((a) => a.status === 'approved').length})` },
+              { value: 'rejected', label: `Rejected (${franchiseApplications.filter((a) => a.status === 'rejected').length})` },
+              { value: 'all', label: `All (${franchiseApplications.length})` },
+            ]}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Cards / Content Container */}

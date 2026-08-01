@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../modal.css'
 
 export default function OperatorForm({ onSubmit, isLoading, initialData }) {
   const isEditMode = Boolean(initialData);
@@ -20,22 +21,22 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
     <form className="modalForm" onSubmit={handleSubmit}>
       <div className="formGroup">
         <label>Branch Name</label>
-        <input 
-          type="text" 
-          className="modalInput" 
+        <input
+          type="text"
+          className="modalInput"
           placeholder="e.g., Manila Branch"
           value={formData.branchName}
-          onChange={(e) => setFormData({...formData, branchName: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
         />
       </div>
       <div className="formGroup">
         <label>Address</label>
-        <input 
-          type="text" 
-          className="modalInput" 
+        <input
+          type="text"
+          className="modalInput"
           placeholder="e.g., 123 Main St, Manila"
           value={formData.address}
-          onChange={(e) => setFormData({...formData, address: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
         />
       </div>
       <div className="formGroup">
@@ -45,33 +46,32 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
           className="modalInput"
           placeholder="e.g., +63 912 345 6789"
           value={formData.contactNumber}
-          onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
         />
       </div>
       <div className="formGroup">
         <label>Email</label>
-        <input 
-          type="email" 
-          className="modalInput" 
+        <input
+          type="email"
+          className="modalInput"
           placeholder="e.g., manila_operator@example.com"
           value={formData.email}
-          onChange={(e) => setFormData({...formData, email: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           disabled={isEditMode}
           title={isEditMode ? "Email can't be changed" : undefined}
           style={isEditMode ? { backgroundColor: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' } : undefined}
         />
       </div>
 
-      {/* Password is only collected when creating a new account */}
       {!isEditMode && (
         <div className="formGroup">
           <label>Password</label>
-          <input 
-            type="text" 
-            className="modalInput" 
+          <input
+            type="text"
+            className="modalInput"
             placeholder="Create a password"
             value={formData.password}
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
         </div>
       )}

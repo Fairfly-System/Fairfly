@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import './operator-appointments.css';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 
 const INITIAL_APPOINTMENTS = [
@@ -117,35 +118,18 @@ export default function OperatorAppointments() {
           )}
         </div>
 
-        <div className="filter-chips">
-          <button
-            className={`filter-chip ${statusFilter === 'all' ? 'active' : ''}`}
-            onClick={() => {
-              setStatusFilter('all');
-              setCurrentPage(1);
-            }}
-          >
-            All ({appointments.length})
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === 'pending' ? 'active' : ''}`}
-            onClick={() => {
-              setStatusFilter('pending');
-              setCurrentPage(1);
-            }}
-          >
-            Pending
-          </button>
-          <button
-            className={`filter-chip ${statusFilter === 'confirmed' ? 'active' : ''}`}
-            onClick={() => {
-              setStatusFilter('confirmed');
-              setCurrentPage(1);
-            }}
-          >
-            Confirmed
-          </button>
-        </div>
+        <FilterChipGroup
+          chips={[
+            { value: 'all', label: `All (${appointments.length})` },
+            { value: 'pending', label: 'Pending' },
+            { value: 'confirmed', label: 'Confirmed' },
+          ]}
+          activeChip={statusFilter}
+          onChipChange={(val) => {
+            setStatusFilter(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       <div className="op-appt-list">
