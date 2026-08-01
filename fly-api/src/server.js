@@ -19,6 +19,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Admin action audit logger — fires post-response via res.on('finish')
+const { adminLogger } = require('./middleware/adminLogger');
+app.use(adminLogger);
+
 // Mount the centralized API router
 app.use('/api', apiRoutes);
 

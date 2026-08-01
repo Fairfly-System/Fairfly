@@ -1,146 +1,42 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import './admin-workflow-templates.css';
 import ModalWrapper from '../../../components/Admin/Modals/ModalWrapper';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal';
 import WorkflowForm from '../../../components/Admin/Modals/WorkflowForm';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
-import {
-  createWorkflowTemplate,
-  getWorkflowTemplates,
-  updateWorkflowTemplate,
-  deleteWorkflowTemplate,
-  duplicateWorkflowTemplate
-} from '../../../services/workflowService';
+import { useAdminContext } from '../../../context/AdminContext';
+import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
 
 const TrashIcon = (props) => (
   <i className="fa-solid fa-trash-can" {...props}></i>
 );
-const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
 export default function AdminWorkflowTemplates() {
+  // ── Data from onSnapshot (AdminContext) ─────────────────────────────────
+  const { data: templates, loading } = useAdminContext();
+  const { userToken } = useAuthContext();
+  const { addToast } = useToast();
+
+  // ── Modal & editing state ─────────────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
-  const { addToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Search & Filter State
+  // ── Search / Filter state ─────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
 
-  // Pagination State
+  // ── Pagination state ──────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
 
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const loadTemplates = async () => {
-    try {
-      setLoading(true);
-      const tmpls = await getWorkflowTemplates();
-      setTemplates(tmpls);
-    } catch (error) {
-      console.error('Error loading workflow templates:', error);
-      addToast('Failed to load workflow templates', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtered templates
-  const filteredTemplates = useMemo(() => {
-    return templates.filter((tmpl) => {
-      const matchesSearch =
-        (tmpl.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (tmpl.serviceType || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesType =
-        serviceTypeFilter === 'all' ||
-        (tmpl.serviceType || '').toLowerCase() === serviceTypeFilter.toLowerCase();
-
-      return matchesSearch && matchesType;
-    });
-  }, [templates, searchTerm, serviceTypeFilter]);
-
-  // Paginated slice
-  const paginatedTemplates = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredTemplates.slice(start, start + pageSize);
-  }, [filteredTemplates, currentPage, pageSize]);
-
-  const handleCreateTemplate = async (templateData) => {
-    try {
-      await createWorkflowTemplate(templateData);
-      await loadTemplates();
-      setIsModalOpen(false);
-      addToast('Workflow template created successfully', 'success');
-    } catch (error) {
-      console.error('Error creating workflow template:', error);
-      addToast('Failed to create workflow template: ' + error.message, 'error');
-    }
-  };
-
-  const handleUpdateTemplate = async (templateData) => {
-    try {
-      await updateWorkflowTemplate(editingTemplate.id, templateData);
-      await loadTemplates();
-      setIsModalOpen(false);
-      setEditingTemplate(null);
-      addToast('Workflow template updated successfully', 'success');
-    } catch (error) {
-      console.error('Error updating workflow template:', error);
-      addToast('Failed to update workflow template: ' + error.message, 'error');
-    }
-  };
-
-  const handleDuplicate = async (tmpl) => {
-    try {
-      await duplicateWorkflowTemplate(tmpl.id);
-      await loadTemplates();
-      addToast(`Duplicated "${tmpl.name}" successfully`, 'success');
-    } catch (error) {
-      console.error('Error duplicating workflow template:', error);
-      addToast('Failed to duplicate template: ' + error.message, 'error');
-    }
-  };
-
-  const handleDelete = async (templateId) => {
-    try {
-      setIsConfirmLoading(true);
-      await deleteWorkflowTemplate(templateId);
-      await loadTemplates();
-      addToast('Workflow template deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workflow template:', error);
-      addToast('Failed to delete template: ' + error.message, 'error');
-    } finally {
-      setIsConfirmLoading(false);
-      setConfirmState(null);
-    }
-  };
-
-  const handleOpenAddModal = () => {
-    setEditingTemplate(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (tmpl) => {
-    setEditingTemplate(tmpl);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingTemplate(null);
-  };
-
-  // ── AlertBar logic (must be before any early return — Rules of Hooks) ─────
+  // ── AlertBar (must be before any early return — Rules of Hooks) ───────
   const alertBarProps = useMemo(() => {
     const total      = templates.length;
     const emptySteps = templates.filter(t => !t.steps || t.steps.length === 0).length;
@@ -161,6 +57,27 @@ export default function AdminWorkflowTemplates() {
     };
   }, [templates]);
 
+  // ── Filtered + paginated slices ───────────────────────────────────────
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((tmpl) => {
+      const matchesSearch =
+        (tmpl.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (tmpl.serviceType || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesType =
+        serviceTypeFilter === 'all' ||
+        (tmpl.serviceType || '').toLowerCase() === serviceTypeFilter.toLowerCase();
+
+      return matchesSearch && matchesType;
+    });
+  }, [templates, searchTerm, serviceTypeFilter]);
+
+  const paginatedTemplates = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTemplates.slice(start, start + pageSize);
+  }, [filteredTemplates, currentPage, pageSize]);
+
+  // ── Early loading return (all hooks above this point) ─────────────────
   if (loading) {
     return (
       <div className="card workflow-template-page page-fade-in">
@@ -174,6 +91,94 @@ export default function AdminWorkflowTemplates() {
     );
   }
 
+  // ── Auth header helper ─────────────────────────────────────────────────
+  const authHeaders = { Authorization: `Bearer ${userToken}` };
+
+  // ── Mutations via fly-api ──────────────────────────────────────────────
+  const handleCreateTemplate = async (templateData) => {
+    const result = await ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates`,
+      'POST',
+      templateData,
+      authHeaders,
+      null,
+      (err) => addToast('Failed to create template: ' + err.message, 'error'),
+      setIsSubmitting
+    );
+    if (result) {
+      setIsModalOpen(false);
+      addToast('Workflow template created successfully', 'success');
+    }
+  };
+
+  const handleUpdateTemplate = async (templateData) => {
+    const result = await ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates/${editingTemplate.id}`,
+      'PATCH',
+      templateData,
+      authHeaders,
+      null,
+      (err) => addToast('Failed to update template: ' + err.message, 'error'),
+      setIsSubmitting
+    );
+    if (result) {
+      setIsModalOpen(false);
+      setEditingTemplate(null);
+      addToast('Workflow template updated successfully', 'success');
+    }
+  };
+
+  const handleDelete = async (templateId) => {
+    setIsConfirmLoading(true);
+    const result = await ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates/${templateId}`,
+      'DELETE',
+      null,
+      authHeaders,
+      null,
+      (err) => addToast('Failed to delete template: ' + err.message, 'error')
+    );
+    if (result) {
+      addToast('Workflow template deleted successfully', 'success');
+    }
+    setIsConfirmLoading(false);
+    setConfirmState(null);
+  };
+
+  // Duplicate: read existing from already-loaded templates array, then POST a new one
+  const handleDuplicate = async (tmpl) => {
+    const { id, createdAt, updatedAt, version, status, ...rest } = tmpl;
+    const result = await ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates`,
+      'POST',
+      { ...rest, name: `${tmpl.name} (Copy)` },
+      authHeaders,
+      null,
+      (err) => addToast('Failed to duplicate template: ' + err.message, 'error'),
+      setIsSubmitting
+    );
+    if (result) {
+      addToast(`Duplicated "${tmpl.name}" successfully`, 'success');
+    }
+  };
+
+  // ── Modal helpers ─────────────────────────────────────────────────────
+  const handleOpenAddModal = () => {
+    setEditingTemplate(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (tmpl) => {
+    setEditingTemplate(tmpl);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTemplate(null);
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="card workflow-template-page page-fade-in">
       <div className="workflow-template-header">
@@ -221,37 +226,25 @@ export default function AdminWorkflowTemplates() {
         <div className="filter-chips">
           <button
             className={`filter-chip ${serviceTypeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => {
-              setServiceTypeFilter('all');
-              setCurrentPage(1);
-            }}
+            onClick={() => { setServiceTypeFilter('all'); setCurrentPage(1); }}
           >
             All ({templates.length})
           </button>
           <button
             className={`filter-chip ${serviceTypeFilter === 'psa' ? 'active' : ''}`}
-            onClick={() => {
-              setServiceTypeFilter('psa');
-              setCurrentPage(1);
-            }}
+            onClick={() => { setServiceTypeFilter('psa'); setCurrentPage(1); }}
           >
             PSA
           </button>
           <button
             className={`filter-chip ${serviceTypeFilter === 'passport' ? 'active' : ''}`}
-            onClick={() => {
-              setServiceTypeFilter('passport');
-              setCurrentPage(1);
-            }}
+            onClick={() => { setServiceTypeFilter('passport'); setCurrentPage(1); }}
           >
             Passport
           </button>
           <button
             className={`filter-chip ${serviceTypeFilter === 'visa' ? 'active' : ''}`}
-            onClick={() => {
-              setServiceTypeFilter('visa');
-              setCurrentPage(1);
-            }}
+            onClick={() => { setServiceTypeFilter('visa'); setCurrentPage(1); }}
           >
             Visa
           </button>
@@ -290,7 +283,7 @@ export default function AdminWorkflowTemplates() {
                   </td>
                   <td>
                     <span className="steps-count-pill">
-                      <i className="fa-solid fa-[#6B6FF5] fa-bars-staggered"></i>
+                      <i className="fa-solid fa-bars-staggered"></i>
                       {tmpl.steps?.length || 0} Steps
                     </span>
                   </td>
@@ -307,6 +300,7 @@ export default function AdminWorkflowTemplates() {
                         className="icon-btn duplicate"
                         title="Duplicate Template"
                         onClick={() => handleDuplicate(tmpl)}
+                        disabled={isSubmitting}
                       >
                         <i className="fa-solid fa-copy"></i>
                       </button>

@@ -22,7 +22,7 @@ import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
-import AdminWorkflowTemplates from './pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates';
+import AdminWorkflowTemplates from './pages/Admin/AdminWorkflowTemplates/index';
 import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
 import OperatorDashboard from './pages/Operator/OperatorDashboard/OperatorDashboard';
 import OperatorAppointments from './pages/Operator/OperatorAppointments/OperatorAppointments';

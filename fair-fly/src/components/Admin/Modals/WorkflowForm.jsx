@@ -181,7 +181,7 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
 
                     <div className="stepBadge">{index + 1}</div>
 
-                    <div className="stepContent" style={{ flex: 1 }}>
+                    <div className="stepContent" style={{ flex: 1, marginLeft: '12px' }}>
                       <h4>{step.name}</h4>
                       <p>{step.description}</p>
                     </div>
@@ -395,14 +395,14 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
   );
 }
 
-export default function WorkflowForm({ onSubmit, onClose, templateData = null }) {
+export default function WorkflowForm({ onSubmit, onCancel, initialData = null }) {
   const [formData, setFormData] = useState({
-    name: templateData ? templateData.name : '',
-    description: templateData ? templateData.description : '',
-    type: templateData ? templateData.type : '',
+    name: initialData?.name || '',
+    description: initialData?.description || '',
+    type: initialData?.type || '',
   });
   const [steps, setSteps] = useState(
-    templateData && Array.isArray(templateData.steps) ? templateData.steps : []
+    initialData && Array.isArray(initialData.steps) ? initialData.steps : []
   );
   const [isStepsModalOpen, setIsStepsModalOpen] = useState(false);
 
@@ -471,10 +471,10 @@ export default function WorkflowForm({ onSubmit, onClose, templateData = null })
       </div>
 
       <button type="submit" className="modalSubmitBtn btnGreen">
-        {templateData ? 'Update Workflow' : 'Create Workflow'}
+        {initialData ? 'Update Workflow' : 'Create Workflow'}
       </button>
-      {onClose && (
-        <button type="button" className="modalSubmitBtn" onClick={onClose} style={{ backgroundColor: 'var(--text-mid)', marginTop: 0 }}>
+      {onCancel && (
+        <button type="button" className="modalSubmitBtn" onClick={onCancel} style={{ backgroundColor: 'var(--text-mid)', marginTop: 0 }}>
           Cancel
         </button>
       )}

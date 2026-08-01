@@ -14,9 +14,21 @@ const { allowedFields } = require('../middleware/allowedFields');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
+const SERVICE_ALLOWED_FIELDS = [
+  'id',
+  'name',
+  'price',
+  'processingTime',
+  'requirements',
+  'workflowIds',
+  'actions',
+  'status'
+];
+
 // Services Routes
-router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime', 'actions']), createService));
-router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(['name', 'price', 'processingTime', 'actions', 'status', 'id']), updateService));
+router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), createService));
+router.put('/:id', performanceProfiler('PUT /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), updateService));
+router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), updateService));
 router.delete('/:id', performanceProfiler('DELETE /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteService));
 
 // Quick Links Routes

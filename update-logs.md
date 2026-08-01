@@ -1,5 +1,96 @@
 # Update Logs
 
+## [2026-08-01] Backend Service Routes `allowedFields` Middleware Update
+
+### Files Modified
+- `fly-api/src/routes/serviceRoutes.js`
+
+### Summary of Changes
+- Updated the `allowedFields` middleware list in `serviceRoutes.js` to include:
+  - `requirements` (array of service requirements with optional link & file attachments)
+  - `workflowIds` (array of attached workflow template IDs)
+  - `id`, `name`, `price`, `processingTime`, `actions`, `status`
+- Added support for `PUT /services/:id` alongside `PATCH /services/:id` so both update methods pass validation.
+
+### Reason
+- The frontend `ServiceForm` submits `requirements` and `workflowIds` arrays when creating or updating services. Previously, `allowedFields` rejected requests containing these fields with a `400 Bad Request` error.
+
+### Breaking Changes
+- None.
+
+
+
+## [2026-08-01] Admin Action Audit Logs & Recent Activity Dashboard Component
+
+### Files Modified
+- `fly-api/src/middleware/adminLogger.js` *(new)*
+- `fly-api/src/server.js`
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx`
+- `fair-fly/src/pages/Admin/AdminDashboard/admin-dashboard.css`
+
+### Summary of Changes
+
+**1. Backend `adminLogger` Middleware (`fly-api`)**
+- Created `adminLogger.js` middleware utilizing Express `res.on('finish')` event listener.
+- Logs all successful (2xx status) mutating HTTP actions (`POST`, `PATCH`, `PUT`, `DELETE`) initiated by authenticated admins into the Firestore `admin-logs` collection.
+- Records `adminUid`, `adminEmail`, `method`, `path`, `resourceType`, `resourceId`, `statusCode`, `actionType`, and ISO `timestamp`.
+- Non-blocking fire-and-forget execution ensuring zero delay to client API responses.
+- Registered globally in `server.js` before route mounting.
+
+**2. Frontend Recent Activity Card & Modal (`fair-fly`)**
+- Updated `AdminDashboard.jsx` to render a real-time "Recent Activity" card backed by a Firestore `onSnapshot` listener on `admin-logs` showing the 15 most recent operations.
+- Added color-coded badges and icons per action type (`CREATE` = green, `UPDATE` = blue, `DELETE` = red).
+- Implemented a "View All" modal supporting real-time search (by email, UID, path, or resource type), action filter chips, and pagination.
+- Added an "Export Logs" feature to download current or filtered logs as a formatted `.txt` report file.
+- Styled using glassmorphism design standards (`backdrop-filter: blur(12px)`), staggered entrance animations, and responsive layout scaling in `admin-dashboard.css`.
+
+### Reason
+- User requested admin activity auditing logged on successful API responses to Firestore (`admin-logs/`) and displayed on the Admin Dashboard with search, pagination, and export capabilities.
+
+### Breaking Changes
+- None.
+
+
+
+## [2026-08-01] Workflow Page — AdminContext + fly-api + Edit Modal Fix
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/index.jsx` *(new)*
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx`
+- `fair-fly/src/components/Admin/Modals/WorkflowForm.jsx`
+- `fair-fly/src/App.jsx`
+
+### Summary of Changes
+
+**1. AdminProvider wrapper (`index.jsx`)**
+- Created a thin wrapper (`index.jsx`) that wraps `AdminWorkflowTemplates` with `<AdminProvider targetCollection="workflowTemplates">`.
+- Matches the exact pattern used by `AdminServices`, `AdminOperators`, `AdminFranchiseApps`, etc.
+- Updated `App.jsx` import to point to `index.jsx`.
+
+**2. `AdminWorkflowTemplates.jsx` — switched to AdminContext + fly-api**
+- Replaced `workflowService.js` (direct Firestore) with:
+  - **Reads**: `useAdminContext()` — live `onSnapshot` stream provided by the wrapper.
+  - **Create / Update / Delete / Duplicate**: `ApiCaller` → `fly-api` endpoints:
+    - `POST /api/workflow/templates` (create & duplicate)
+    - `PATCH /api/workflow/templates/:id` (update)
+    - `DELETE /api/workflow/templates/:id` (delete)
+  - All mutations send `Authorization: Bearer <userToken>` via `useAuthContext`.
+- Removed all `useState`+`useEffect` loading logic (now handled by context).
+- All `useMemo` hooks remain before any early return (Rules of Hooks compliant).
+
+**3. `WorkflowForm.jsx` — fix edit modal pre-population**
+- **Root cause**: parent passed `initialData` prop, but component destructured `templateData` — they never matched, so all edit fields were empty.
+- **Fix**: renamed prop from `templateData` to `initialData`; renamed `onClose` to `onCancel` to match the calling convention in the parent.
+- Form fields now correctly initialize from `initialData?.name`, `initialData?.description`, `initialData?.type`, and `initialData?.steps`.
+
+### Reason
+- User reported workflow page was not using the fly-api for mutations, was not wrapped in AdminProvider, and the edit modal always opened empty.
+
+### Breaking Changes
+- None. The `workflowService.js` file is not deleted — it is still used by any other potential consumers (workflow instances, etc.). The workflow templates page simply no longer imports it.
+
+
+
 ## [2026-08-01] Enhanced Stat Cards & Page-Level AlertBars
 
 ### Files Modified
