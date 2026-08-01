@@ -1,31 +1,69 @@
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
 
 :root {
+  font-size: 100%; /* 1rem = 16px */
+
+  /* Primary Brand Palette */
   --purple: #6B6FF5;
   --purple-dark: #5558E3;
   --purple-light: #8B8FFF;
-  --purple-light-2: #e8e4f3;
+  --purple-light-2: #E8E4F3;
+  --purple-glow: rgba(107, 111, 245, 0.15);
+
   --orange: #F97316;
   --orange-light: #FB923C;
-  --text-dark: #1a1a2e;
-  --text-mid: #4a4a6a;
-  --text-light: #8888aa;
-  --text-light-2: #c4c4d8;
-  --complete-green: #2ebb4c;
-  --complete-green-dark: #259b3d;
-  --error-red: #e74c3c;
-  --error-red-dark: #c0392b;
-  --warning-yellow: #f1c40f;
-  --bg: #F9FBFF;
-  --card-bg: #ffffff;
+  --orange-glow: rgba(249, 115, 22, 0.15);
+
+  --text-dark: #1A1A2E;
+  --text-mid: #4A4A6A;
+  --text-light: #8888AA;
+  --text-light-2: #C4C4D8;
+
+  --complete-green: #2EBB4C;
+  --complete-green-dark: #259B3D;
+  --complete-green-light: #E6F7EC;
+  --error-red: #E74C3C;
+  --error-red-dark: #C0392B;
+  --error-red-light: #FCEBEA;
+  --warning-yellow: #F1C40F;
+  --warning-yellow-light: #FEF9E7;
+
+  --bg: #F4F7FE;
+  --card-bg: #FFFFFF;
+  --border-color: #E2E8F0;
+  --border-hover: #CBD5E1;
+
   --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* Rem-based Elevation Shadows */
+  --shadow-sm: 0 0.125rem 0.25rem rgba(26, 26, 46, 0.04);
+  --shadow-md: 0 0.25rem 0.75rem rgba(26, 26, 46, 0.06), 0 0.0625rem 0.1875rem rgba(26, 26, 46, 0.04);
+  --shadow-lg: 0 0.75rem 1.75rem rgba(26, 26, 46, 0.08), 0 0.25rem 0.625rem rgba(26, 26, 46, 0.04);
+  --shadow-purple: 0 0.5rem 1.25rem rgba(107, 111, 245, 0.22);
+
+  /* Glassmorphism Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --backdrop-blur: blur(0.75rem);
+
+  /* Rem-based Border Radii */
+  --radius-xs: 0.25rem;  /* 4px */
+  --radius-sm: 0.5rem;   /* 8px */
+  --radius-md: 0.875rem; /* 14px */
+  --radius-lg: 1.25rem;  /* 20px */
+  --radius-full: 9999rem;
+
+  /* Smooth Transitions */
+  --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html { 
-  
   scroll-behavior: smooth; 
-
 }
 
 body {
@@ -34,10 +72,20 @@ body {
   color: var(--text-dark);
   line-height: 1.6;
   overflow-x: hidden;
+  font-size: 1rem;
 }
 
 textarea {
   resize: none;
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+  transition: var(--transition-fast);
 }
 
 button:disabled {
@@ -45,52 +93,164 @@ button:disabled {
   opacity: 0.5;
 }
 
-/* --- Utility Classes Lang --- */
+a {
+  text-decoration: none;
+  color: inherit;
+}
 
-.flex-container{
+/* Base Page Animation */
+.page-fade-in {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -20rem 0;
+  }
+  100% {
+    background-position: 20rem 0;
+  }
+}
+
+/* Card Primitive */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 0.0625rem solid var(--border-color);
+  transition: var(--transition-smooth);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
+}
+
+/* Standard Table Styling */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th {
+  padding: 1rem 1.125rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-mid);
+  background: rgba(244, 247, 254, 0.7);
+  border-bottom: 0.0625rem solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+td {
+  padding: 1rem 1.125rem;
+  text-align: left;
+  font-size: 0.9375rem;
+  color: var(--text-dark);
+  border-bottom: 0.0625rem solid var(--border-color);
+  transition: var(--transition-fast);
+}
+
+tr {
+  transition: var(--transition-fast);
+}
+
+tbody tr:hover td {
+  background-color: rgba(107, 111, 245, 0.03);
+}
+
+/* Standard Status Badge Pills */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.status-pill::before {
+  content: '';
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.status-pill-active,
+.status-pill-completed,
+.status-pill-success {
+  background-color: var(--complete-green-light);
+  color: var(--complete-green-dark);
+}
+
+.status-pill-pending,
+.status-pill-warning {
+  background-color: var(--warning-yellow-light);
+  color: #B78103;
+}
+
+.status-pill-disabled,
+.status-pill-inactive,
+.status-pill-error {
+  background-color: var(--error-red-light);
+  color: var(--error-red-dark);
+}
+
+.status-pill-info {
+  background-color: var(--purple-light-2);
+  color: var(--purple-dark);
+}
+
+/* Utility Classes */
+.flex-container {
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.flex-container-column{
+.flex-container-column {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
 
-.full-width{
+.full-width {
   width: 100%;
 }
 
-.full-height{
+.full-height {
   height: 100%;
-}
-
-button {
-  cursor: pointer;
-}
-
-a {
-  text-decoration: none;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 18px 10px;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.card {
-  background: white;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 1px 2px rgba(0,0,0,.05);
 }

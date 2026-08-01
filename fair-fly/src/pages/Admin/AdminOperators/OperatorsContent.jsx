@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import "./admin-operators.css";
-import { useToast } from "../../../components/toast/ToastProvider";
+import { useToast } from "../../../components/UI/toast/ToastProvider";
 import { useAuthContext } from "../../../context/AuthContext";
-import ModalWrapper from "../../../components/AdminComponents/Modals/ModalWrapper";
-import OperatorForm from "../../../components/AdminComponents/Modals/OperatorForm";
-import ConfirmationModal from "../../../components/AdminComponents/Modals/ConfirmationModal";
+import ModalWrapper from "../../../components/Admin/Modals/ModalWrapper";
+import OperatorForm from "../../../components/Admin/Modals/OperatorForm";
+import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal";
+import Pagination from "../../../components/UI/Pagination/Pagination";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
@@ -15,13 +16,20 @@ const TrashIcon = (props) => (
 const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
 export default function OperatorsContent() {
-  const {data: operators, loading: operatorLoading} = useAdminContext();
+  const { data: operators, loading: operatorLoading } = useAdminContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
-  const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Search & Filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   // Confirmation modal state: { type: 'delete' | 'deactivate', operator } | null
   const [confirmState, setConfirmState] = useState(null);
@@ -42,7 +50,30 @@ export default function OperatorsContent() {
     setEditingOperator(null);
   };
 
-  // Routes to create or edit depending on mode
+  // Filtered operators
+  const filteredOperators = useMemo(() => {
+    if (!operators) return [];
+    return operators.filter((op) => {
+      const matchesSearch =
+        (op.branchName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (op.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && op.status === "Active") ||
+        (statusFilter === "disabled" && op.status === "Disabled");
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [operators, searchTerm, statusFilter]);
+
+  // Paginated operators slice
+  const paginatedOperators = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredOperators.slice(start, start + pageSize);
+  }, [filteredOperators, currentPage, pageSize]);
+
+  // Submit forms (Create/Edit)
   const handleFormSubmit = async (operatorData) => {
     if (editingOperator) {
       await handleEditOperatorSubmit(operatorData);
@@ -57,7 +88,7 @@ export default function OperatorsContent() {
       "POST",
       newOperatorData,
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
+      () => {
         addToast("Operator created successfully!", "success");
         handleCloseModal();
       },
@@ -65,19 +96,18 @@ export default function OperatorsContent() {
         console.error("Error creating operator:", error);
         addToast("Failed to create operator: " + error.message, "error");
       },
-      setIsSubmitting,
+      setIsSubmitting
     );
   };
 
-  // Handle edit form submission logic (email is intentionally excluded from the payload)
   const handleEditOperatorSubmit = async (updatedOperatorData) => {
-    const { email, ...dataToUpdate } = updatedOperatorData; // Exclude email from the payload
+    const { email, ...dataToUpdate } = updatedOperatorData;
     ApiCaller(
       `${API_BASE_URL}/api/operators/${editingOperator.id}`,
       "PATCH",
       dataToUpdate,
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
+      () => {
         addToast("Operator updated successfully!", "success");
         handleCloseModal();
       },
@@ -85,29 +115,27 @@ export default function OperatorsContent() {
         console.error("Error updating operator:", error);
         addToast("Failed to update operator: " + error.message, "error");
       },
-      setIsSubmitting,
+      setIsSubmitting
     );
   };
 
-  // Actual delete call — now triggered from the ConfirmationModal instead of window.confirm
   const handleDeleteOperator = async (operatorId) => {
     ApiCaller(
       `${API_BASE_URL}/api/operators/${operatorId}`,
       "DELETE",
       null,
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
+      () => {
         addToast("Operator deleted successfully!", "success");
       },
       (error) => {
         console.error("Error deleting operator:", error);
         addToast("Failed to delete operator: " + error.message, "error");
       },
-      setIsConfirmLoading,
+      setIsConfirmLoading
     );
   };
 
-  // Toggles an operator's status between Active/Disabled
   const handleDeactivateOperator = async (operator) => {
     const newStatus = operator.status === "Active" ? "Disabled" : "Active";
     ApiCaller(
@@ -115,18 +143,17 @@ export default function OperatorsContent() {
       "PATCH",
       { status: newStatus },
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
+      () => {
         addToast(`Operator ${newStatus === "Active" ? "enabled" : "disabled"} successfully!`, "success");
       },
       (error) => {
         console.error("Error updating operator status:", error);
         addToast("Failed to update operator status: " + error.message, "error");
       },
-      setIsConfirmLoading,
+      setIsConfirmLoading
     );
   };
 
-  // Runs whichever action the confirmation modal is currently open for
   const handleConfirm = async () => {
     if (!confirmState) return;
     setIsConfirmLoading(true);
@@ -144,11 +171,11 @@ export default function OperatorsContent() {
 
   if (operatorLoading) {
     return (
-      <div className="card operators-page">
+      <div className="card operators-page page-fade-in">
         <div className="operators-header">
           <div>
-            <h2>Page Management</h2>
-            <p>Loading operator accounts...</p>
+            <h2>Operator Accounts</h2>
+            <p>Loading operator records...</p>
           </div>
         </div>
       </div>
@@ -156,87 +183,180 @@ export default function OperatorsContent() {
   }
 
   return (
-    <div className="card operators-page">
+    <div className="card operators-page page-fade-in">
+      {/* Page Header */}
       <div className="operators-header">
         <div>
-          <h2>Page Management</h2>
-          <p>Create and manage franchise operator accounts</p>
+          <h2>Operator Management</h2>
+          <p>Create, configure, and monitor franchise operator accounts</p>
         </div>
 
-        {/* Trigger button */}
         <button className="operator-btn" onClick={handleOpenAddModal}>
           <i className="fa-solid fa-user-plus"></i>
           Add Operator
         </button>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Branch Name</th>
-            <th>Email</th>
-            <th>Status</th>
-            <th className="actions-col">Actions</th>
-          </tr>
-        </thead>
+      {/* Toolbar Filter Row */}
+      <div className="table-toolbar">
+        <div className="search-box">
+          <i className="fa-solid fa-magnifying-glass search-icon"></i>
+          <input
+            type="text"
+            placeholder="Search by branch or email..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {searchTerm && (
+            <button
+              className="clear-search-btn"
+              onClick={() => {
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
 
-        <tbody>
-          {operators.length === 0 ? (
+        <div className="filter-chips">
+          <button
+            className={`filter-chip ${statusFilter === "all" ? "active" : ""}`}
+            onClick={() => {
+              setStatusFilter("all");
+              setCurrentPage(1);
+            }}
+          >
+            All ({operators.length})
+          </button>
+          <button
+            className={`filter-chip ${statusFilter === "active" ? "active" : ""}`}
+            onClick={() => {
+              setStatusFilter("active");
+              setCurrentPage(1);
+            }}
+          >
+            Active ({operators.filter((o) => o.status === "Active").length})
+          </button>
+          <button
+            className={`filter-chip ${statusFilter === "disabled" ? "active" : ""}`}
+            onClick={() => {
+              setStatusFilter("disabled");
+              setCurrentPage(1);
+            }}
+          >
+            Disabled ({operators.filter((o) => o.status === "Disabled").length})
+          </button>
+        </div>
+      </div>
+
+      {/* Table Container */}
+      <div className="table-responsive">
+        <table>
+          <thead>
             <tr>
-              <td colSpan="4">No operators found</td>
+              <th>Branch Name</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th className="actions-col">Actions</th>
             </tr>
-          ) : (
-            operators.map((op) => (
-              <tr key={op.id}>
-                <td>{op.branchName || "N/A"}</td>
-                <td>{op.email || "N/A"}</td>
-                <td>
-                  <span
-                    className={`operator-badge ${op.status === "Disabled" ? "operator-badge-inactive" : ""}`}>
-                    {op.status}
-                  </span>
-                </td>
-                <td className="actions-col">
-                  <button
-                    className="icon-btn edit"
-                    title="Edit"
-                    onClick={() => handleOpenEditModal(op)}>
-                    <i className="fa-solid fa-pen-to-square edit"></i>
-                  </button>
+          </thead>
 
-                  <button
-                    className="icon-btn ban"
-                    title={op.status === "Active" ? "Disable" : "Enable"}
-                    onClick={() =>
-                      setConfirmState({ type: "deactivate", operator: op })
-                    }>
-                    <i
-                      className={`fa-solid ${op.status === "Active" ? "fa-ban" : "fa-circle-check"}`}></i>
-                  </button>
-                  <button
-                    className="icon-btn delete"
-                    title="Delete"
-                    onClick={() =>
-                      setConfirmState({ type: "delete", operator: op })
-                    }>
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
+          <tbody>
+            {paginatedOperators.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="empty-table-cell">
+                  <i className="fa-solid fa-user-slash empty-icon"></i>
+                  <p>No operators match your criteria</p>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              paginatedOperators.map((op) => (
+                <tr key={op.id}>
+                  <td className="branch-col">
+                    <div className="branch-info">
+                      <div className="branch-avatar">
+                        <i className="fa-solid fa-building-user"></i>
+                      </div>
+                      <span>{op.branchName || "N/A"}</span>
+                    </div>
+                  </td>
+                  <td>{op.email || "N/A"}</td>
+                  <td>
+                    <span
+                      className={`status-pill ${
+                        op.status === "Active"
+                          ? "status-pill-active"
+                          : "status-pill-disabled"
+                      }`}
+                    >
+                      {op.status || "Active"}
+                    </span>
+                  </td>
+                  <td className="actions-col">
+                    <button
+                      className="icon-btn edit"
+                      title="Edit Operator"
+                      onClick={() => handleOpenEditModal(op)}
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i>
+                    </button>
+
+                    <button
+                      className="icon-btn ban"
+                      title={op.status === "Active" ? "Disable" : "Enable"}
+                      onClick={() =>
+                        setConfirmState({ type: "deactivate", operator: op })
+                      }
+                    >
+                      <i
+                        className={`fa-solid ${
+                          op.status === "Active" ? "fa-ban" : "fa-circle-check"
+                        }`}
+                      ></i>
+                    </button>
+                    <button
+                      className="icon-btn delete"
+                      title="Delete"
+                      onClick={() =>
+                        setConfirmState({ type: "delete", operator: op })
+                      }
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Component */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredOperators.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* Render the Operator Modal */}
       <ModalWrapper
         isOpen={isModalOpen}
-        onClose={handleCloseModal} //Pass the close handler to the modal (Can be called by handlers in this component)
+        onClose={handleCloseModal}
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <i
-              className={`fa-solid ${editingOperator ? "fa-pen-to-square" : "fa-user-plus"}`}
-              style={{ color: "#16a34a" }}></i>
+              className={`fa-solid ${
+                editingOperator ? "fa-pen-to-square" : "fa-user-plus"
+              }`}
+              style={{ color: "var(--purple)" }}
+            ></i>
             <span>
               {editingOperator
                 ? "Edit Operator Account"
@@ -248,7 +368,8 @@ export default function OperatorsContent() {
           editingOperator
             ? "Update this operator's details"
             : "Add a new franchise operator account"
-        }>
+        }
+      >
         <OperatorForm
           key={editingOperator?.id || "new"}
           onSubmit={handleFormSubmit}
@@ -264,7 +385,7 @@ export default function OperatorsContent() {
         Icon={TrashIcon}
         Title="Delete this operator?"
         Desc={`"${confirmState?.operator?.branchName}" will be permanently removed. This action can't be undone.`}
-        BtnColor="#ef4444"
+        BtnColor="var(--error-red)"
         confirmText="Delete"
         isLoading={isConfirmLoading}
         OnConfirm={handleConfirm}
@@ -285,7 +406,7 @@ export default function OperatorsContent() {
             ? `"${confirmState?.operator?.branchName}" will lose access until re-enabled.`
             : `"${confirmState?.operator?.branchName}" will regain access.`
         }
-        BtnColor="#f97316"
+        BtnColor="var(--orange)"
         confirmText={
           confirmState?.operator?.status === "Active" ? "Disable" : "Enable"
         }

@@ -1,8 +1,8 @@
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, getDocs } from 'firebase/firestore';
-import Chatbot from './components/Chatbot/Chatbot'
-import Footer from './components/Footer/Footer'
-import Navbar from './components/Navbar/Navbar'
+import Chatbot from './components/Shared/Chatbot/Chatbot'
+import Footer from './components/Shared/Footer/Footer'
+import Navbar from './components/Shared/Navbar/Navbar'
 import About from './pages/Index/About/About';
 import Landing from './pages/Index/Landing/Landing'
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router";
@@ -11,8 +11,8 @@ import { auth } from './firebase';
 import { getFromDatabase } from './utils/firebaseutils';
 import Login from './pages/Index/Login/login';
 import Register from './pages/Index/Register/Register';
-import ScrollToTop from './components/ScrollToTop/ScrollToTop';
-import Loading from './components/Loading/Loading';
+import ScrollToTop from './components/UI/ScrollToTop/ScrollToTop';
+import Loading from './components/UI/Loading/Loading';
 import Index from './pages/Index/Index';
 import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
 import AdminLayout from './pages/Admin/AdminLayout/AdminLayout';

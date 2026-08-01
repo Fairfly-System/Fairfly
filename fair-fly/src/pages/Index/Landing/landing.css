@@ -1,55 +1,56 @@
 .hero {
   position: relative;
-  min-height: 540px;
+  min-height: 33.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 5rem 2rem 6rem;
-
+  padding: 5rem 2rem 5rem;
+  background: radial-gradient(circle at 50% 20%, var(--purple-light-2) 0%, transparent 60%);
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  background: rgba(200, 205, 255, 0.55);
-  border: 1px solid rgba(107, 111, 245, 0.2);
-  color: #5558E3;
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  margin-bottom: 2rem;
-  backdrop-filter: blur(6px);
+  gap: 0.5rem;
+  background: var(--purple-light-2);
+  border: 0.0625rem solid var(--purple-light);
+  color: var(--purple-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4375rem 1rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 1.75rem;
+  backdrop-filter: var(--backdrop-blur);
   position: relative;
   z-index: 1;
   animation: fadeDown 0.6s ease forwards;
 }
 
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
-  background: #6B6FF5;
+  background: var(--purple);
   display: inline-block;
+  animation: pulseDot 2s infinite ease-in-out;
 }
 
 .heading {
   position: relative;
   z-index: 1;
-  font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
   font-weight: 800;
-  color: #0f0f23;
-  line-height: 1.1;
-  margin-bottom: 1.4rem;
-  letter-spacing: -0.02em;
+  color: var(--text-dark);
+  line-height: 1.15;
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.025em;
   animation: fadeUp 0.7s 0.1s ease both;
 }
 
 .headingGradient {
-  background: linear-gradient(90deg, #7B7FFF 0%, #FF9746 100%);
+  background: linear-gradient(90deg, var(--purple) 0%, var(--orange) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -58,11 +59,11 @@
 .sub {
   position: relative;
   z-index: 1;
-  font-size: 1.02rem;
-  color: #5a5a7a;
-  max-width: 500px;
-  line-height: 1.7;
-  margin-bottom: 2.4rem;
+  font-size: 1.0625rem;
+  color: var(--text-mid);
+  max-width: 34.375rem;
+  line-height: 1.65;
+  margin-bottom: 2.25rem;
   font-weight: 400;
   animation: fadeUp 0.7s 0.2s ease both;
 }
@@ -78,48 +79,57 @@
 }
 
 .btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   text-decoration: none;
-  background: #6B6FF5;
-  color: white;
-  padding: 0.75rem 1.8rem;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  background: var(--purple);
+  color: #FFFFFF;
+  padding: 0.75rem 1.875rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
   font-weight: 600;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(107, 111, 245, 0.35);
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-purple);
 }
 
 .btnPrimary:hover {
-  background: #5558E3;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(107, 111, 245, 0.45);
+  background: var(--purple-dark);
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.5rem 1.75rem rgba(107, 111, 245, 0.45);
 }
 
 .btnSecondary {
   text-decoration: none;
-  background: white;
-  color: #1a1a2e;
-  padding: 0.75rem 1.8rem;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  background: #FFFFFF;
+  color: var(--text-dark);
+  padding: 0.75rem 1.875rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
   font-weight: 600;
-  border: 1.5px solid rgba(0,0,0,0.12);
-  transition: border-color 0.2s, transform 0.2s;
+  border: 0.0625rem solid var(--border-color);
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .btnSecondary:hover {
-  border-color: #6B6FF5;
-  color: #6B6FF5;
-  transform: translateY(-2px);
+  border-color: var(--purple);
+  color: var(--purple);
+  transform: translateY(-0.125rem);
 }
 
-
 @keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-12px); }
+  from { opacity: 0; transform: translateY(-0.75rem); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(1.25rem); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 48rem) {
+  .hero {
+    padding: 3rem 1rem 3.5rem;
+  }
 }

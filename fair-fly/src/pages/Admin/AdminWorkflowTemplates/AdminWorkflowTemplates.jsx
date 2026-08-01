@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './admin-workflow-templates.css';
-import ModalWrapper from '../../../components/AdminComponents/Modals/ModalWrapper';
-import ConfirmationModal from '../../../components/AdminComponents/Modals/ConfirmationModal';
-import WorkflowForm from '../../../components/AdminComponents/Modals/WorkflowForm';
+import ModalWrapper from '../../../components/Admin/Modals/ModalWrapper';
+import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal';
+import WorkflowForm from '../../../components/Admin/Modals/WorkflowForm';
+import Pagination from '../../../components/UI/Pagination/Pagination';
 import {
   createWorkflowTemplate,
   getWorkflowTemplates,
@@ -10,7 +11,7 @@ import {
   deleteWorkflowTemplate,
   duplicateWorkflowTemplate
 } from '../../../services/workflowService';
-import { useToast } from '../../../components/toast/ToastProvider';
+import { useToast } from '../../../components/UI/toast/ToastProvider';
 
 const TrashIcon = (props) => (
   <i className="fa-solid fa-trash-can" {...props}></i>
@@ -19,16 +20,20 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
 export default function AdminWorkflowTemplates() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(null);
   const [editingTemplate, setEditingTemplate] = useState(null);
-  const [templateToDuplicate, setTemplateToDuplicate] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const { addToast } = useToast();
+
+  // Search & Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   useEffect(() => {
     loadTemplates();
@@ -47,6 +52,27 @@ export default function AdminWorkflowTemplates() {
     }
   };
 
+  // Filtered templates
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((tmpl) => {
+      const matchesSearch =
+        (tmpl.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (tmpl.serviceType || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesType =
+        serviceTypeFilter === 'all' ||
+        (tmpl.serviceType || '').toLowerCase() === serviceTypeFilter.toLowerCase();
+
+      return matchesSearch && matchesType;
+    });
+  }, [templates, searchTerm, serviceTypeFilter]);
+
+  // Paginated slice
+  const paginatedTemplates = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTemplates.slice(start, start + pageSize);
+  }, [filteredTemplates, currentPage, pageSize]);
+
   const handleCreateTemplate = async (templateData) => {
     try {
       await createWorkflowTemplate(templateData);
@@ -61,10 +87,9 @@ export default function AdminWorkflowTemplates() {
 
   const handleUpdateTemplate = async (templateData) => {
     try {
-      if (!editingTemplate) throw new Error('No template selected for update');
       await updateWorkflowTemplate(editingTemplate.id, templateData);
       await loadTemplates();
-      setIsEditModalOpen(false);
+      setIsModalOpen(false);
       setEditingTemplate(null);
       addToast('Workflow template updated successfully', 'success');
     } catch (error) {
@@ -73,67 +98,54 @@ export default function AdminWorkflowTemplates() {
     }
   };
 
-  const handleDeleteTemplate = async () => {
-    if (!deleteTarget) return;
+  const handleDuplicate = async (tmpl) => {
     try {
-      setDeleting(deleteTarget);
-      setDeleteTarget(null);
-      await deleteWorkflowTemplate(deleteTarget);
+      await duplicateWorkflowTemplate(tmpl.id);
+      await loadTemplates();
+      addToast(`Duplicated "${tmpl.name}" successfully`, 'success');
+    } catch (error) {
+      console.error('Error duplicating workflow template:', error);
+      addToast('Failed to duplicate template: ' + error.message, 'error');
+    }
+  };
+
+  const handleDelete = async (templateId) => {
+    try {
+      setIsConfirmLoading(true);
+      await deleteWorkflowTemplate(templateId);
       await loadTemplates();
       addToast('Workflow template deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting workflow template:', error);
-      addToast('Failed to delete workflow template: ' + error.message, 'error');
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  const handleToggleStatus = async (template) => {
-    const newStatus = template.status === 'active' ? 'disabled' : 'active';
-    try {
-      setIsConfirmLoading(true);
-      await updateWorkflowTemplate(template.id, { status: newStatus });
-      await loadTemplates();
-      addToast(`Workflow template ${newStatus === 'active' ? 'enabled' : 'disabled'} successfully`, 'success');
-      setConfirmState(null);
-    } catch (error) {
-      addToast(`Failed to ${newStatus === 'active' ? 'enable' : 'disable'} template: ` + error.message, 'error');
-      console.error(`Error ${newStatus === 'active' ? 'enabling' : 'disabling'} template:`, error);
+      addToast('Failed to delete template: ' + error.message, 'error');
     } finally {
       setIsConfirmLoading(false);
+      setConfirmState(null);
     }
   };
 
-  const handleConfirm = async () => {
-    if (!confirmState) return;
-    if (confirmState.type === 'toggle') {
-      await handleToggleStatus(confirmState.template);
-    }
+  const handleOpenAddModal = () => {
+    setEditingTemplate(null);
+    setIsModalOpen(true);
   };
 
-  const handleDuplicateTemplate = async (templateId) => {
-    try {
-      setTemplateToDuplicate(templateId);
-      await duplicateWorkflowTemplate(templateId, {
-        name: 'Copy of Template'
-      });
-      await loadTemplates();
-      setTemplateToDuplicate(null);
-      addToast('Workflow template duplicated successfully', 'success');
-    } catch (error) {
-      console.error('Error duplicating workflow template:', error);
-      addToast('Failed to duplicate workflow template: ' + error.message, 'error');
-    }
+  const handleOpenEditModal = (tmpl) => {
+    setEditingTemplate(tmpl);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTemplate(null);
   };
 
   if (loading) {
     return (
-      <div className="card workflow-template-page">
+      <div className="card workflow-template-page page-fade-in">
         <div className="workflow-template-header">
           <div>
             <h2>Workflow Templates</h2>
-            <p>Create and manage workflow templates for business processes</p>
+            <p>Loading template configurations...</p>
           </div>
         </div>
       </div>
@@ -141,149 +153,204 @@ export default function AdminWorkflowTemplates() {
   }
 
   return (
-    <div className="card workflow-template-page">
+    <div className="card workflow-template-page page-fade-in">
       <div className="workflow-template-header">
         <div>
-          <h2>Workflow Templates</h2>
-          <p>Create and manage workflow templates for business processes</p>
+          <h2>Workflow Templates Management</h2>
+          <p>Define standard multi-step workflow processes for service fulfillment</p>
         </div>
 
         <div className="header-actions">
-          <button className="workflow-btn" onClick={() => setIsModalOpen(true)}>
+          <button className="workflow-btn" onClick={handleOpenAddModal}>
             <i className="fa-solid fa-plus"></i>
-            New Workflow Template
+            Create Template
           </button>
         </div>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Workflow Name</th>
-            <th>Description</th>
-            <th>Type</th>
-            <th>Steps</th>
-            <th>Status</th>
-            <th className="actions-col">Actions</th>
-          </tr>
-        </thead>
+      {/* Toolbar Search & Filters */}
+      <div className="table-toolbar">
+        <div className="search-box">
+          <i className="fa-solid fa-magnifying-glass search-icon"></i>
+          <input
+            type="text"
+            placeholder="Search template name or service type..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {searchTerm && (
+            <button
+              className="clear-search-btn"
+              onClick={() => {
+                setSearchTerm('');
+                setCurrentPage(1);
+              }}
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
 
-        <tbody>
-          {templates.length === 0 ? (
+        <div className="filter-chips">
+          <button
+            className={`filter-chip ${serviceTypeFilter === 'all' ? 'active' : ''}`}
+            onClick={() => {
+              setServiceTypeFilter('all');
+              setCurrentPage(1);
+            }}
+          >
+            All ({templates.length})
+          </button>
+          <button
+            className={`filter-chip ${serviceTypeFilter === 'psa' ? 'active' : ''}`}
+            onClick={() => {
+              setServiceTypeFilter('psa');
+              setCurrentPage(1);
+            }}
+          >
+            PSA
+          </button>
+          <button
+            className={`filter-chip ${serviceTypeFilter === 'passport' ? 'active' : ''}`}
+            onClick={() => {
+              setServiceTypeFilter('passport');
+              setCurrentPage(1);
+            }}
+          >
+            Passport
+          </button>
+          <button
+            className={`filter-chip ${serviceTypeFilter === 'visa' ? 'active' : ''}`}
+            onClick={() => {
+              setServiceTypeFilter('visa');
+              setCurrentPage(1);
+            }}
+          >
+            Visa
+          </button>
+        </div>
+      </div>
+
+      <div className="table-responsive">
+        <table>
+          <thead>
             <tr>
-              <td colSpan="6">No workflow templates found</td>
+              <th>Service Type</th>
+              <th>Template Name</th>
+              <th>Steps Count</th>
+              <th className="actions-col">Actions</th>
             </tr>
-          ) : (
-            templates.map((template) => (
-              <tr key={template.id}>
-                <td>{template.name}</td>
-                <td>{template.description.substring(0, 100)}{template.description.length > 100 ? '...' : ''}</td>
-                <td>{template.type || 'N/A'}</td>
-                <td><span className="steps">{template.steps?.length || 0}</span></td>
-                <td><span className={`workflow-badge ${template.status === 'disabled' ? 'inactive' : ''}`}>{template.status}</span></td>
-                <td className="actions-col">
-                  <div className="action-buttons">
-                    <button
-                      className="icon-btn edit"
-                      title="Edit"
-                      onClick={() => {
-                        setEditingTemplate(template);
-                        setIsEditModalOpen(true);
-                      }}
-                    >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button
-                      className="icon-btn duplicate"
-                      title="Duplicate"
-                      onClick={() => handleDuplicateTemplate(template.id)}
-                      disabled={deleting === template.id || templateToDuplicate === template.id}
-                    >
-                      {templateToDuplicate === template.id ? 'Duplicating...' : <i className="fa-solid fa-copy"></i>}
-                    </button>
-                    <button
-                      className="icon-btn ban"
-                      title={template.status === 'active' ? 'Disable' : 'Enable'}
-                      onClick={() => setConfirmState({ type: 'toggle', template })}
-                    >
-                      <i className={`fa-solid ${template.status === 'active' ? 'fa-ban' : 'fa-circle-check'}`}></i>
-                    </button>
-                    <button
-                      className="icon-btn delete"
-                      title="Delete"
-                      onClick={() => setDeleteTarget(template.id)}
-                      disabled={deleting === template.id}
-                    >
-                      {deleting === template.id ? 'Deleting...' : <i className="fa-solid fa-trash"></i>}
-                    </button>
-                  </div>
+          </thead>
+
+          <tbody>
+            {paginatedTemplates.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="empty-table-cell">
+                  <i className="fa-solid fa-diagram-project empty-icon"></i>
+                  <p>No workflow templates match your filter</p>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              paginatedTemplates.map((tmpl) => (
+                <tr key={tmpl.id}>
+                  <td>
+                    <span className="workflow-badge">
+                      {tmpl.serviceType || 'General'}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>{tmpl.name}</strong>
+                  </td>
+                  <td>
+                    <span className="steps-count-pill">
+                      <i className="fa-solid fa-[#6B6FF5] fa-bars-staggered"></i>
+                      {tmpl.steps?.length || 0} Steps
+                    </span>
+                  </td>
+                  <td className="actions-col">
+                    <div className="action-buttons">
+                      <button
+                        className="icon-btn edit"
+                        title="Edit Template"
+                        onClick={() => handleOpenEditModal(tmpl)}
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                      </button>
+                      <button
+                        className="icon-btn duplicate"
+                        title="Duplicate Template"
+                        onClick={() => handleDuplicate(tmpl)}
+                      >
+                        <i className="fa-solid fa-copy"></i>
+                      </button>
+                      <button
+                        className="icon-btn delete"
+                        title="Delete Template"
+                        onClick={() => setConfirmState({ type: 'delete', template: tmpl })}
+                      >
+                        <i className="fa-solid fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredTemplates.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
+
+      {/* Create / Edit Modal */}
       <ModalWrapper
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Create Workflow Template"
-        subtitle="Define a new workflow template"
-      >
-        <WorkflowForm onSubmit={handleCreateTemplate} onClose={() => setIsModalOpen(false)} />
-      </ModalWrapper>
-
-      <ModalWrapper
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingTemplate(null);
-        }}
-        title="Edit Workflow Template"
-        subtitle="Modify an existing workflow template"
+        onClose={handleCloseModal}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <i
+              className={`fa-solid ${editingTemplate ? 'fa-pen-to-square' : 'fa-plus'}`}
+              style={{ color: 'var(--purple)' }}
+            ></i>
+            <span>
+              {editingTemplate ? 'Edit Workflow Template' : 'Create Workflow Template'}
+            </span>
+          </div>
+        }
+        subtitle={
+          editingTemplate
+            ? 'Modify step definitions and configuration'
+            : 'Configure a new multi-step workflow template'
+        }
       >
         <WorkflowForm
-          templateData={editingTemplate}
-          onSubmit={handleUpdateTemplate}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingTemplate(null);
-          }}
+          key={editingTemplate?.id || 'new'}
+          onSubmit={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
+          initialData={editingTemplate}
+          onCancel={handleCloseModal}
         />
       </ModalWrapper>
 
+      {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        isOpen={Boolean(deleteTarget)}
-        onClose={() => setDeleteTarget(null)}
-        Icon={TrashIcon}
-        Title="Delete this workflow template?"
-        Desc="This workflow template will be permanently removed. This action can't be undone."
-        BtnColor="#ef4444"
-        confirmText="Delete"
-        isLoading={deleting === deleteTarget}
-        OnConfirm={handleDeleteTemplate}
-      />
-
-      <ConfirmationModal
-        isOpen={confirmState?.type === 'toggle'}
+        isOpen={confirmState?.type === 'delete'}
         onClose={() => setConfirmState(null)}
-        Icon={BanIcon}
-        Title={
-          confirmState?.template?.status === 'active'
-            ? 'Disable this workflow template?'
-            : 'Enable this workflow template?'
-        }
-        Desc={
-          confirmState?.template?.status === 'active'
-            ? `"${confirmState?.template?.name}" will not be available for new instances until re-enabled.`
-            : `"${confirmState?.template?.name}" will become available for new instances again.`
-        }
-        BtnColor="#f97316"
-        confirmText={
-          confirmState?.template?.status === 'active' ? 'Disable' : 'Enable'
-        }
+        Icon={TrashIcon}
+        Title="Delete Workflow Template?"
+        Desc={`"${confirmState?.template?.name}" will be permanently deleted.`}
+        BtnColor="var(--error-red)"
+        confirmText="Delete"
         isLoading={isConfirmLoading}
-        OnConfirm={handleConfirm}
+        OnConfirm={() => handleDelete(confirmState.template.id)}
       />
     </div>
   );

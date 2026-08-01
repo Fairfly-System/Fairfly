@@ -1,0 +1,46 @@
+.alert-bar {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  margin: 0.5rem 0;
+  border-radius: var(--radius-md);
+  gap: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+}
+
+.alert-bar.info {
+  background-color: var(--purple-light-2);
+  color: var(--purple-dark);
+  border: 0.0625rem solid var(--purple-light);
+}
+
+.alert-bar.success {
+  background-color: var(--complete-green-light);
+  color: var(--complete-green-dark);
+  border: 0.0625rem solid #A3E635;
+}
+
+.alert-bar.warning {
+  background-color: var(--warning-yellow-light);
+  color: #8A6D3B;
+  border: 0.0625rem solid var(--warning-yellow);
+}
+
+.alert-bar.error {
+  background-color: var(--error-red-light);
+  color: var(--error-red-dark);
+  border: 0.0625rem solid #FCA5A5;
+}
+
+.alert-bar i {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.alert-message {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  overflow-wrap: break-word;
+}

@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut, getAuth, onIdTokenChanged } from 'firebase
 import { doc, onSnapshot } from 'firebase/firestore'; //Get the onSnapshot function from the firestore module
 import { getFromDatabase } from '../utils/firebaseutils'; //Get the fetcher function from the firebaseutils module
 import { auth, firestore } from '../firebase'; //get the auth and db objects from the firebase module
-import { useToast } from '../components/toast/ToastProvider';
+import { useToast } from '../components/UI/toast/ToastProvider';
 
 //create a context object (Will be used to share data between components) with the createContext function
 const AuthContext = createContext();

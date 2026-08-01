@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import AlertBar from '../../../components/AlertBar/AlertBar';
+import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 
 // Placeholder data — replace with real Firestore aggregates later
 const revenueData = [

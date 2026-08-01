@@ -1,8 +1,8 @@
 import './admin-layout.css';
 import { Outlet } from 'react-router';
-import AdminNavbar from '../../../components/AdminComponents/AdminNavbar/AdminNavbar';
-import AdminSidebar from '../../../components/AdminComponents/AdminSidebar/AdminSidebar';
-import StatCards from '../../../components/AdminComponents/StatCards/StatCards';
+import AdminNavbar from '../../../components/Admin/AdminNavbar/AdminNavbar';
+import AdminSidebar from '../../../components/Admin/AdminSidebar/AdminSidebar';
+import StatCards from '../../../components/Admin/StatCards/StatCards';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
