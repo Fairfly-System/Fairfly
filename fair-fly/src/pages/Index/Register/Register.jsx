@@ -6,7 +6,7 @@ import logo from "/FairflyLogo.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../../firebase";
 import { setToDatabase } from "../../../utils/firebaseutils";
-import { useToast } from "../../../components/toast/ToastProvider";
+import { useToast } from "../../../components/UI/toast/ToastProvider";
 
 export default function Register() {
   const navigate = useNavigate();

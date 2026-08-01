@@ -1,53 +1,59 @@
 .page {
   min-height: 100vh;
-  background: #F9FBFF;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--bg);
+  font-family: inherit;
 }
 
 .main {
-  max-width: 1200px;
+  max-width: 75rem; /* 1200px */
   margin: 0 auto;
-  padding: 36px 24px 60px;
+  padding: 2.25rem 1.5rem 3.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .pageTitle {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #0f0f23;
+  color: var(--text-dark);
   letter-spacing: -0.02em;
-  margin-bottom: 6px;
 }
 
 .pageSub {
-  font-size: 14px;
-  color: #6a6a8a;
-  margin-bottom: 28px;
+  font-size: 0.9375rem;
+  color: var(--text-mid);
+  margin-top: -0.875rem;
 }
 
-
 .appointmentCard {
-  border: 1px solid #e8e8f0;
-  border-radius: 14px;
-  padding: 22px 24px;
-  margin-bottom: 24px;
-  background: #fff;
-  box-shadow: 0 1px 8px rgba(107,111,245,0.05);
+  border: 0.0625rem solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  background: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-smooth);
+}
+
+.appointmentCard:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 .appointmentHeader {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 0.875rem;
+  margin-bottom: 1rem;
 }
 
 .appointmentIconWrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  color: #6B6FF5;
-  font-size: 25px;
-  background: rgba(107, 111, 245, 0.1);
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  color: var(--purple);
+  font-size: 1.25rem;
+  background: var(--purple-light-2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,83 +61,91 @@
 }
 
 .appointmentTitle {
-  font-size: 15px;
+  font-size: 1.125rem;
   font-weight: 700;
-  color: #0f0f23;
-  margin-bottom: 3px;
+  color: var(--text-dark);
+  margin-bottom: 0.1875rem;
 }
 
 .appointmentSub {
-  font-size: 13px;
-  color: #6a6a8a;
+  font-size: 0.84375rem;
+  color: var(--text-mid);
 }
 
 .appointmentBody {
-  background: #f8f8fc;
-  border-radius: 10px;
-  padding: 18px 20px;
+  background: var(--bg);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.375rem;
+  border: 0.0625rem solid var(--border-color);
 }
 
 .appointmentDesc {
-  font-size: 13.5px;
-  color: #3a3a5a;
-  line-height: 1.65;
-  margin-bottom: 16px;
+  font-size: 0.875rem;
+  color: var(--text-dark);
+  line-height: 1.6;
+  margin-bottom: 1rem;
 }
 
 .scheduleBtn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: #6B6FF5;
-  color: white;
+  gap: 0.5rem;
+  background: var(--purple);
+  color: #FFFFFF;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 13.5px;
+  padding: 0.6875rem 1.375rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.2s, transform 0.2s;
-  box-shadow: 0 3px 12px rgba(107,111,245,0.3);
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-purple);
 }
 
 .scheduleBtn:hover {
-  background: #5558E3;
-  transform: translateY(-1px);
+  background: var(--purple-dark);
+  transform: translateY(-0.0625rem);
 }
 
-
 .servicesCard {
-  border: 1px solid #e8e8f0;
-  border-radius: 14px;
-  padding: 22px 24px;
-  background: #fff;
-  box-shadow: 0 1px 8px rgba(107,111,245,0.05);
+  border: 0.0625rem solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  background: #FFFFFF;
+  box-shadow: var(--shadow-sm);
 }
 
 .servicesTitle {
-  font-size: 15px;
+  font-size: 1.125rem;
   font-weight: 700;
-  color: #0f0f23;
-  margin-bottom: 3px;
+  color: var(--text-dark);
+  margin-bottom: 0.1875rem;
 }
 
 .servicesSub {
-  font-size: 13px;
-  color: #6a6a8a;
-  margin-bottom: 20px;
+  font-size: 0.84375rem;
+  color: var(--text-mid);
+  margin-bottom: 1.25rem;
 }
 
 .servicesList {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
 }
 
-@media (max-width: 600px) {
-  .nav { padding: 12px 16px; }
-  .welcome { display: none; }
-  .main { padding: 24px 14px 40px; }
-  .pageTitle { font-size: 1.4rem; }
+@media (max-width: 48rem) {
+  .main {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  .pageTitle {
+    font-size: 1.375rem;
+  }
+
+  .appointmentCard,
+  .servicesCard {
+    padding: 1rem;
+  }
 }

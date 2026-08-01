@@ -1,73 +1,94 @@
 .op-layout-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  padding: 24px 32px 0;
-  background: #f7f8fb;
+  gap: 1.25rem;
+  padding: 1.5rem 2rem 0.5rem 2rem;
+  max-width: 90rem;
+  margin: 0 auto;
+  background: var(--bg);
 }
 
 .op-stat {
-  padding: 22px 24px;
+  padding: 1.375rem 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 0.0625rem solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-smooth);
 }
 
 .op-stat:hover {
-  transform: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  cursor: default;
+  transform: translateY(-0.125rem);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 .op-stat-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 14px;
+  color: var(--text-mid);
+  margin-bottom: 0.875rem;
 }
 
 .op-stat-top i {
-  font-size: 18px;
+  font-size: 1.125rem;
+  color: var(--purple);
 }
 
 .op-stat h2 {
   font-size: 2rem;
   font-weight: 800;
-  color: #1a1a2e;
-  margin-bottom: 4px;
+  color: var(--text-dark);
+  margin-bottom: 0.25rem;
 }
 
 .op-stat p {
-  font-size: 13.5px;
-  color: #6b7280;
+  font-size: 0.84375rem;
+  color: var(--text-light);
 }
 
 .op-layout-body {
   display: flex;
-  gap: 24px;
-  padding: 20px 32px 32px;
-  background: #f7f8fb;
-  min-height: calc(100vh - 72px - 120px);
+  gap: 1.5rem;
+  padding: 1.25rem 2rem 2rem 2rem;
+  max-width: 90rem;
+  margin: 0 auto;
+  background: var(--bg);
+  min-height: calc(100vh - 12rem);
   align-items: flex-start;
 }
 
 .op-layout-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-@media (max-width: 900px) {
+/* Tablet & Mobile Responsiveness */
+@media (max-width: 64rem) {
+  .op-layout-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 48rem) {
   .op-layout-stats {
     grid-template-columns: 1fr;
-    padding: 16px 18px 0;
+    padding: 1rem 1rem 0 1rem;
   }
 
   .op-layout-body {
     flex-direction: column;
-    padding: 16px 18px 24px;
+    padding: 1rem;
   }
 
   .op-sidebar {
     width: 100%;
+    position: relative;
+    top: 0;
   }
 }

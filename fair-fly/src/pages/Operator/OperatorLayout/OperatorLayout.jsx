@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router';
-import OperatorNavbar from '../../../components/OperatorComponents/OperatorNavbar/OperatorNavbar';
-import OperatorSidebar from '../../../components/OperatorComponents/OperatorSidebar/OperatorSidebar';
+import OperatorNavbar from '../../../components/Operator/OperatorNavbar/OperatorNavbar';
+import OperatorSidebar from '../../../components/Operator/OperatorSidebar/OperatorSidebar';
 import './operator-layout.css';
 
 export default function OperatorLayout() {

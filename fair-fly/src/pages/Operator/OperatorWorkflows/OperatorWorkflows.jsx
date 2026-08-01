@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import './operator-workflows.css';
+import Pagination from '../../../components/UI/Pagination/Pagination';
 
 const WORKFLOWS = {
   PSA: [
@@ -61,12 +62,24 @@ const TABS = ['PSA', 'Passport', 'VISA', 'Tour', 'Tickets'];
 
 export default function OperatorWorkflows() {
   const [active, setActive] = useState('PSA');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const activeSteps = WORKFLOWS[active] || [];
+
+  const paginatedSteps = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return activeSteps.slice(start, start + pageSize).map((text, i) => ({
+      stepNum: start + i + 1,
+      text,
+    }));
+  }, [activeSteps, currentPage, pageSize]);
 
   return (
-    <div className="card op-workflows">
+    <div className="card op-workflows page-fade-in">
       <div className="op-workflows-header">
-        <h2>Workflow Templates</h2>
-        <p>Standard processes for each service type</p>
+        <h2>Workflow Steps Reference</h2>
+        <p>Standardized operational procedures for service processing</p>
       </div>
 
       <div className="op-tab-strip">
@@ -74,21 +87,33 @@ export default function OperatorWorkflows() {
           <button
             key={tab}
             className={`op-tab ${active === tab ? 'active' : ''}`}
-            onClick={() => setActive(tab)}
+            onClick={() => {
+              setActive(tab);
+              setCurrentPage(1);
+            }}
           >
-            {tab}
+            {tab} ({WORKFLOWS[tab].length} Steps)
           </button>
         ))}
       </div>
 
       <div className="op-step-list">
-        {WORKFLOWS[active].map((step, i) => (
-          <div key={i} className="op-step">
-            <span className="op-step-num">{i + 1}</span>
-            <span className="op-step-text">{step}</span>
+        {paginatedSteps.map((s) => (
+          <div key={s.stepNum} className="op-step">
+            <span className="op-step-num">{s.stepNum}</span>
+            <span className="op-step-text">{s.text}</span>
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={activeSteps.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

@@ -1,48 +1,53 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import "./admin-services.css";
-import ModalWrapper from "../../../components/AdminComponents/Modals/ModalWrapper";
-import ServiceForm from "../../../components/AdminComponents/Modals/ServiceForm";
-import ConfirmationModal from "../../../components/AdminComponents/Modals/ConfirmationModal";
+import ModalWrapper from "../../../components/Admin/Modals/ModalWrapper";
+import ServiceForm from "../../../components/Admin/Modals/ServiceForm";
+import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal";
+import Pagination from "../../../components/UI/Pagination/Pagination";
 import { useAuthContext } from "../../../context/AuthContext";
-import { useToast } from "../../../components/toast/ToastProvider";
+import { useToast } from "../../../components/UI/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
 
 export default function ServiceContent() {
-// Unit labels used when converting the form's { min, max, unit } object into a string
-const UNIT_LABELS = {
-  days: "Day/s",
-  weeks: "Week/s",
-  months: "Month/s",
-};
+  const UNIT_LABELS = {
+    days: "Day/s",
+    weeks: "Week/s",
+    months: "Month/s",
+  };
 
-// Converts { min, max, unit } -> "7-10 Day/s" (or "7 Day/s" if min === max)
-function formatProcessingTime(processingTime) {
-  if (!processingTime || typeof processingTime !== "object") {
-    return processingTime; // already a string (or empty) - leave as-is
+  function formatProcessingTime(processingTime) {
+    if (!processingTime || typeof processingTime !== "object") {
+      return processingTime;
+    }
+    const { min, max, unit } = processingTime;
+    const label = UNIT_LABELS[unit] || unit;
+    if (!min && !max) return "";
+    if (min === max || !max) return `${min} ${label}`;
+    return `${min}-${max} ${label}`;
   }
-  const { min, max, unit } = processingTime;
-  const label = UNIT_LABELS[unit] || unit;
-  if (!min && !max) return "";
-  if (min === max || !max) return `${min} ${label}`;
-  return `${min}-${max} ${label}`;
-}
 
-// Wrappers so ConfirmationModal's `Icon` prop (expects a component)
-const TrashIcon = (props) => (
-  <i className="fa-solid fa-trash-can" {...props}></i>
-);
-const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
+  const TrashIcon = (props) => (
+    <i className="fa-solid fa-trash-can" {...props}></i>
+  );
+  const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
   const { userToken } = useAuthContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState(null); // null = add mode, object = edit mode
-  const {data: service, loading: serviceLoading} = useAdminContext(); // Fetch services from AdminContext
-  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
+  const [editingService, setEditingService] = useState(null);
+  const { data: service, loading: serviceLoading } = useAdminContext();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToast();
 
-  // Confirmation modal state: { type: 'delete' | 'deactivate', service } | null
+  // Search & Filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
@@ -51,8 +56,8 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (service) => {
-    setEditingService(service);
+  const handleOpenEditModal = (serviceItem) => {
+    setEditingService(serviceItem);
     setIsModalOpen(true);
   };
 
@@ -61,52 +66,68 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
     setEditingService(null);
   };
 
-  // Handle form submission logic (routes to add or edit)
+  // Filtered services
+  const filteredServices = useMemo(() => {
+    if (!service) return [];
+    return service.filter((item) => {
+      const matchesSearch =
+        (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.category || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && item.status === "Active") ||
+        (statusFilter === "disabled" && item.status === "Disabled");
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [service, searchTerm, statusFilter]);
+
+  // Paginated slice
+  const paginatedServices = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredServices.slice(start, start + pageSize);
+  }, [filteredServices, currentPage, pageSize]);
+
   const handleFormSubmit = async (serviceData) => {
-    const { requirements, ...rest } = serviceData;
-    const normalizedData = {
-      ...rest,
-      actions: requirements,
-      processingTime: formatProcessingTime(serviceData.processingTime),
-    };
     if (editingService) {
-      await handleEditServiceSubmit(normalizedData);
+      await handleEditServiceSubmit(serviceData);
     } else {
-      await handleAddServiceSubmit(normalizedData);
+      await handleCreateServiceSubmit(serviceData);
     }
   };
 
-  const handleAddServiceSubmit = async (newServiceData) => {
+  const handleCreateServiceSubmit = async (newServiceData) => {
     ApiCaller(
       `${API_BASE_URL}/api/services`,
-      'POST',
+      "POST",
       newServiceData,
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
-        addToast("Service added successfully!", "success");
+      () => {
+        addToast("Service created successfully!", "success");
         handleCloseModal();
       },
       (error) => {
-        addToast("Failed to add service: " + error.message, "error");
-        console.error("Error adding service:", error);
+        console.error("Error creating service:", error);
+        addToast("Failed to create service: " + error.message, "error");
       },
       setIsSubmitting
-    )
+    );
   };
 
   const handleEditServiceSubmit = async (updatedServiceData) => {
     ApiCaller(
       `${API_BASE_URL}/api/services/${editingService.id}`,
-      'PATCH',
+      "PUT",
       updatedServiceData,
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
+      () => {
         addToast("Service updated successfully!", "success");
         handleCloseModal();
       },
       (error) => {
-        addToast("Failed to update service: " + error.message, "error");
         console.error("Error updating service:", error);
+        addToast("Failed to update service: " + error.message, "error");
       },
       setIsSubmitting
     );
@@ -115,62 +136,60 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
   const handleDeleteService = async (serviceId) => {
     ApiCaller(
       `${API_BASE_URL}/api/services/${serviceId}`,
-      'DELETE',
+      "DELETE",
       null,
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
+      () => {
         addToast("Service deleted successfully!", "success");
-        setConfirmState(null);
       },
       (error) => {
-        addToast("Failed to delete service: " + error.message, "error");
         console.error("Error deleting service:", error);
+        addToast("Failed to delete service: " + error.message, "error");
       },
       setIsConfirmLoading
     );
   };
 
-  const handleDeactivateService = async (service) => {
-    const { updatedAt, createdAt, ...cleanedStatus } = service;
+  const handleDeactivateService = async (serviceItem) => {
+    const newStatus = serviceItem.status === "Active" ? "Disabled" : "Active";
     ApiCaller(
-      `${API_BASE_URL}/api/services/${service.id}`,
-      'PATCH',
-      {...cleanedStatus, status: service.status === "Active" ? "Disabled" : "Active" },
+      `${API_BASE_URL}/api/services/${serviceItem.id}`,
+      "PATCH",
+      { status: newStatus },
       { Authorization: `Bearer ${userToken}` },
-      (data) => {
-        addToast(`Service ${service.status === "Active" ? "disabled" : "enabled"} successfully!`, "success");
-        setConfirmState(null);
+      () => {
+        addToast(`Service ${newStatus === "Active" ? "enabled" : "disabled"} successfully!`, "success");
       },
       (error) => {
-        addToast(`Failed to ${service.status === "Active" ? "disable" : "enable"} service: ` + error.message, "error");
-        console.error(`Error ${service.status === "Active" ? "disabling" : "enabling"} service:`, error);
+        console.error("Error updating service status:", error);
+        addToast("Failed to update service status: " + error.message, "error");
       },
       setIsConfirmLoading
     );
   };
 
-  // Runs whichever action the confirmation modal is currently open for
   const handleConfirm = async () => {
     if (!confirmState) return;
+    setIsConfirmLoading(true);
     try {
       if (confirmState.type === "delete") {
         await handleDeleteService(confirmState.service.id);
       } else if (confirmState.type === "deactivate") {
         await handleDeactivateService(confirmState.service);
       }
-    } catch (error) {
-      console.error("Error handling confirmation action:", error);
-      addToast("An error occurred while processing your request.", "error");
+      setConfirmState(null);
+    } finally {
+      setIsConfirmLoading(false);
     }
   };
 
   if (serviceLoading) {
     return (
-      <div className="card services-page">
+      <div className="card services-page page-fade-in">
         <div className="services-header">
           <div>
-            <h2>Service Management</h2>
-            <p>Loading services...</p>
+            <h2>Services Management</h2>
+            <p>Loading services catalog...</p>
           </div>
         </div>
       </div>
@@ -178,11 +197,11 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
   }
 
   return (
-    <div className="card services-page">
+    <div className="card services-page page-fade-in">
       <div className="services-header">
         <div>
-          <h2>Service Management</h2>
-          <p>Create, update, or delete services</p>
+          <h2>Services Catalog Management</h2>
+          <p>Configure available franchise services, fees, and requirements</p>
         </div>
 
         <button className="service-btn" onClick={handleOpenAddModal}>
@@ -191,83 +210,169 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
         </button>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Service Name</th>
-            <th>Price</th>
-            <th>Processing Time</th>
-            <th>Requirements</th>
-            <th>Status</th>
-            <th className="actions-col">Actions</th>
-          </tr>
-        </thead>
+      {/* Toolbar Search & Filter */}
+      <div className="table-toolbar">
+        <div className="search-box">
+          <i className="fa-solid fa-magnifying-glass search-icon"></i>
+          <input
+            type="text"
+            placeholder="Search service name or category..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {searchTerm && (
+            <button
+              className="clear-search-btn"
+              onClick={() => {
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
 
-        <tbody>
-          {service.length === 0 ? (
+        <div className="filter-chips">
+          <button
+            className={`filter-chip ${statusFilter === "all" ? "active" : ""}`}
+            onClick={() => {
+              setStatusFilter("all");
+              setCurrentPage(1);
+            }}
+          >
+            All ({service.length})
+          </button>
+          <button
+            className={`filter-chip ${statusFilter === "active" ? "active" : ""}`}
+            onClick={() => {
+              setStatusFilter("active");
+              setCurrentPage(1);
+            }}
+          >
+            Active ({service.filter((s) => s.status === "Active").length})
+          </button>
+          <button
+            className={`filter-chip ${statusFilter === "disabled" ? "active" : ""}`}
+            onClick={() => {
+              setStatusFilter("disabled");
+              setCurrentPage(1);
+            }}
+          >
+            Disabled ({service.filter((s) => s.status === "Disabled").length})
+          </button>
+        </div>
+      </div>
+
+      <div className="table-responsive">
+        <table>
+          <thead>
             <tr>
-              <td colSpan="6">No services found</td>
+              <th>Service Name</th>
+              <th>Category</th>
+              <th>Processing Time</th>
+              <th>Base Fee</th>
+              <th>Status</th>
+              <th className="actions-col">Actions</th>
             </tr>
-          ) : (
-            service.map((service) => (
-              <tr key={service.id}>
-                <td>{service.name}</td>
-                <td>PHP {service.price}</td>
-                <td>{service.processingTime}</td>
-                <td><span className="steps">{service.actions?.length || 0}</span></td>
-                <td>
-                  <span
-                    className={`service-badge ${service.status === "Disabled" ? "inactive" : ""}`}>
-                    {service.status}
-                  </span>
-                </td>
-                <td className="actions-col">
-                  <button
-                    className="icon-btn edit"
-                    title="Edit"
-                    onClick={() => handleOpenEditModal(service)}>
-                    <i className="fa-solid fa-pen-to-square edit"></i>
-                  </button>
-                  <button
-                    className="icon-btn ban"
-                    title={service.status === "Active" ? "Disable" : "Enable"}
-                    onClick={() =>
-                      setConfirmState({ type: "deactivate", service })
-                    }>
-                    <i
-                      className={`fa-solid ${service.status === "Active" ? "fa-ban" : "fa-circle-check"}`}></i>
-                  </button>
-                  <button
-                    className="icon-btn delete"
-                    title="Delete"
-                    onClick={() =>
-                      setConfirmState({ type: "delete", service })
-                    }>
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
+          </thead>
+
+          <tbody>
+            {paginatedServices.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="empty-table-cell">
+                  <i className="fa-solid fa-layer-group empty-icon"></i>
+                  <p>No services match your search criteria</p>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              paginatedServices.map((item) => (
+                <tr key={item.id}>
+                  <td className="service-name-cell">
+                    <strong>{item.name || "N/A"}</strong>
+                  </td>
+                  <td>{item.category || "General"}</td>
+                  <td>{formatProcessingTime(item.processingTime) || "N/A"}</td>
+                  <td>PHP {Number(item.baseFee || 0).toLocaleString()}</td>
+                  <td>
+                    <span
+                      className={`status-pill ${
+                        item.status === "Active"
+                          ? "status-pill-active"
+                          : "status-pill-disabled"
+                      }`}
+                    >
+                      {item.status || "Active"}
+                    </span>
+                  </td>
+                  <td className="actions-col">
+                    <button
+                      className="icon-btn edit"
+                      title="Edit Service"
+                      onClick={() => handleOpenEditModal(item)}
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button
+                      className="icon-btn ban"
+                      title={item.status === "Active" ? "Disable" : "Enable"}
+                      onClick={() =>
+                        setConfirmState({ type: "deactivate", service: item })
+                      }
+                    >
+                      <i
+                        className={`fa-solid ${
+                          item.status === "Active" ? "fa-ban" : "fa-circle-check"
+                        }`}
+                      ></i>
+                    </button>
+                    <button
+                      className="icon-btn delete"
+                      title="Delete"
+                      onClick={() =>
+                        setConfirmState({ type: "delete", service: item })
+                      }
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredServices.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       <ModalWrapper
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <i
               className={`fa-solid ${editingService ? "fa-pen-to-square" : "fa-plus"}`}
-              style={{ color: "#5865f2" }}></i>
-            <span>{editingService ? "Edit Service" : "Add New Service"}</span>
+              style={{ color: "var(--purple)" }}
+            ></i>
+            <span>{editingService ? "Edit Service" : "Create New Service"}</span>
           </div>
         }
         subtitle={
           editingService
-            ? "Update this service's details"
-            : "Create a new service offering"
-        }>
+            ? "Update service details and requirements"
+            : "Add a new service to the catalog"
+        }
+      >
         <ServiceForm
           key={editingService?.id || "new"}
           onSubmit={handleFormSubmit}
@@ -276,20 +381,18 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
         />
       </ModalWrapper>
 
-      {/* Delete confirmation */}
       <ConfirmationModal
         isOpen={confirmState?.type === "delete"}
         onClose={() => setConfirmState(null)}
         Icon={TrashIcon}
         Title="Delete this service?"
         Desc={`"${confirmState?.service?.name}" will be permanently removed. This action can't be undone.`}
-        BtnColor="#ef4444"
+        BtnColor="var(--error-red)"
         confirmText="Delete"
         isLoading={isConfirmLoading}
         OnConfirm={handleConfirm}
       />
 
-      {/* Deactivate/Activate confirmation */}
       <ConfirmationModal
         isOpen={confirmState?.type === "deactivate"}
         onClose={() => setConfirmState(null)}
@@ -301,10 +404,10 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
         }
         Desc={
           confirmState?.service?.status === "Active"
-            ? `"${confirmState?.service?.name}" will be hidden from operator/s until re-enabled.`
-            : `"${confirmState?.service?.name}" will become visible to operator/s again.`
+            ? `"${confirmState?.service?.name}" will be hidden from operators until re-enabled.`
+            : `"${confirmState?.service?.name}" will be enabled.`
         }
-        BtnColor="#f97316"
+        BtnColor="var(--orange)"
         confirmText={
           confirmState?.service?.status === "Active" ? "Disable" : "Enable"
         }

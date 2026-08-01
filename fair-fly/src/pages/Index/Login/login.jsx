@@ -5,7 +5,7 @@ import "./login.css";
 import logo from "/FairflyLogo.png";
 import {auth} from "../../../firebase";
 import {signInWithEmailAndPassword} from "firebase/auth";
-import { useToast } from '../../../components/toast/ToastProvider';
+import { useToast } from '../../../components/UI/toast/ToastProvider';
 
 export default function Login() {
   const navigate = useNavigate();
