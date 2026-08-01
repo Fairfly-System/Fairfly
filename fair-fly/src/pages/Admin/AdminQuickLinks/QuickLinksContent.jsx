@@ -13,7 +13,7 @@ import { useAdminContext } from '../../../context/AdminContext';
 export default function QuickLinksContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
-  const { data: AdminData, loading: isAdminDataLoading } = useAdminContext();
+  const { data: quickLinks, loading: isQuickLinksLoading } = useAdminContext();
   const [isLoading, setIsLoading] = useState(false);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -47,8 +47,8 @@ export default function QuickLinksContent() {
   };
 
   const quickLinksList = useMemo(() => {
-    return AdminData?.quickLinks || [];
-  }, [AdminData]);
+    return Array.isArray(quickLinks) ? quickLinks : [];
+  }, [quickLinks]);
 
   // Filtered links
   const filteredLinks = useMemo(() => {
@@ -131,7 +131,7 @@ export default function QuickLinksContent() {
     );
   };
 
-  if (isAdminDataLoading) {
+  if (isQuickLinksLoading) {
     return (
       <div className="card quicklinks-page page-fade-in">
         <div className="quicklinks-header">

@@ -1,5 +1,49 @@
 # Update Logs
 
+## [2026-08-01] Enhanced Stat Cards & Page-Level AlertBars
+
+### Files Modified
+- `fair-fly/src/components/Admin/StatCards/StatCards.jsx`
+- `fair-fly/src/components/Admin/StatCards/stat-cards.css`
+- `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx`
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx`
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx`
+- `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx`
+- `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx`
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx`
+
+### Summary of Changes
+
+**StatCards Component Redesign**
+- Added `detail` prop — secondary descriptor label below the primary metric value.
+- Added `badge` + `badgeType` props — small semantic pill (variants: `ok`, `warn`, `error`, `info`, `neutral`) showing contextual sub-metric (e.g. "3 Disabled", "2 Pending").
+- Added `trend` prop — optional `{ label, direction: 'up'|'down'|'neutral' }` row separated by a top border, using `↑ / ↓ / —` characters. No SVG, no emoji.
+- Replaced bare icon with a **soft icon bubble** (rounded square, color-tinted background matching `iconColor`).
+- Added `stat-cards.css`: hover lift (`translateY(-2px)` + shadow), staggered entrance animations (4 cards delay by 0.05s increments), `prefers-reduced-motion` override.
+- All sizing in `rem`; no expensive continuous animations.
+
+**AdminLayout.jsx Data Extension**
+- Extended existing `onSnapshot` calls on `services` and `users` to also count `disabledServices`, `disabledOperators`, `activeOperators`.
+- Added new `onSnapshot` on `franchiseApplications` to track `pendingApps` count.
+- Wired `badge`, `badgeType`, and `detail` props to all four `StatCards` instances with real Firestore-driven counts.
+
+**Page AlertBars (5 pages)**
+All messages are computed via `useMemo` from data already available through `useAdminContext()`:
+
+| Page | Warning Condition | Success Condition |
+|------|-------------------|-------------------|
+| Services | Any `Disabled` services | All services `Active` |
+| Operators | Any `Disabled` operators | All operators `Active` |
+| Franchise Apps | `pending > 0` | All reviewed |
+| Inquiry History | Any rejected | All approved |
+| Workflows | Any template with 0 steps | All templates have steps |
+
+### Reason
+- User requested richer Stat Cards with insight-oriented details and contextual AlertBars on admin pages.
+
+### Breaking Changes
+- None. Existing `StatCards` usage without new props degrades gracefully (badge, trend, and detail are all optional).
+
 ## [2026-07-13] Syntax Fixes in App.jsx
 
 ### Files Modified
@@ -122,73 +166,19 @@
 
 ---
 
-## [2026-08-01] UI Redesign, Rem-Based Sizing, & Table Pagination
-
-### Files Created
-- `fair-fly/src/components/UI/Pagination/Pagination.jsx`
-- `fair-fly/src/components/UI/Pagination/pagination.css`
+## [2026-08-01] Workflow Step Simultaneous Link & File Attachments with Executable File Security
 
 ### Files Modified
-- `fair-fly/src/index.css`
-- `fair-fly/src/components/UI/ModalBase/base-modal.css`
-- `fair-fly/src/components/UI/Loading/Loading.css`
-- `fair-fly/src/components/UI/AlertBar/alert-bar.css`
-- `fair-fly/src/pages/Admin/AdminLayout/admin-layout.css`
-- `fair-fly/src/components/Admin/AdminNavbar/admin-navbar.css`
-- `fair-fly/src/components/Admin/AdminSidebar/admin-sidebar.css`
-- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` & `admin-operators.css`
-- `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx` & `admin-franchise-apps.css`
-- `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx` & `admin-inquiry-history.css`
-- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` & `admin-services.css`
-- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx` & `admin-quick-links.css`
-- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx` & `admin-workflow-templates.css`
-- `fair-fly/src/pages/Operator/OperatorLayout/operator-layout.css`
-- `fair-fly/src/components/Operator/OperatorNavbar/operator-navbar.css`
-- `fair-fly/src/components/Operator/OperatorSidebar/operator-sidebar.css`
-- `fair-fly/src/pages/Operator/OperatorAppointments/OperatorAppointments.jsx` & `operator-appointments.css`
-- `fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx` & `operator-history.css`
-- `fair-fly/src/pages/Operator/OperatorWorkflows/OperatorWorkflows.jsx` & `operator-workflows.css`
-- `fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx` & `operator-inquiry-forms.css`
-- `fair-fly/src/pages/Operator/OperatorQuickLinks/OperatorQuickLinks.jsx` & `operator-quick-links.css`
-- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` & `operator-dashboard.css`
-- `fair-fly/src/components/Client/ClientNavbar/client-navbar.css`
-- `fair-fly/src/pages/ClientSide/ClientDashboard/client-dashboard.css`
-- `fair-fly/src/pages/Index/Landing/landing.css`
+- `fair-fly/src/components/Admin/Modals/WorkflowForm.jsx`
+- `fly-api/src/controllers/workflowController.js`
 
 ### Summary of Changes
-- Established global design tokens, CSS variables, HSL colors, shadow tokens, glassmorphic backdrop filters, `.status-pill`, and keyframe micro-animations in `index.css`.
-- Converted layout sizing across all pages, navigation bars, sidebars, cards, and tables to a `rem`-based scale (`1rem = 16px`), maintaining layout consistency up to mobile breakpoints (`48rem` / 768px).
-- Built and integrated a reusable `Pagination` component across all data tables and card containers (Operators, Franchise Applications, Inquiry History, Services, Quick Links, Workflow Templates, Operator Appointments, History, Workflows, Inquiry Forms, Quick Links, and Dashboard) to eliminate lag when managing large record sets.
-- Enhanced layout density with search inputs, interactive filter chips, status badges, avatar icons, and empty state indicators following `/design-taste-frontend` and `/frontend-design` design principles.
+- **Dual Step Attachments**: Updated `WorkflowForm.jsx` (`WorkflowStepsModal`) so that each step can optionally have both a **Web Link** (`step.link: { url, title }`) AND a **Document File** (`step.file: { url, name }`) attached simultaneously.
+- **Non-Executable Security Validation**: Enforced non-executable file restriction (`.pdf`, `.docx`, `.xlsx`, `.png`, etc.) on both frontend and backend (`workflowController.js`). Blocked executable extensions (`.exe`, `.bat`, `.cmd`, `.sh`, `.ps1`, `.msi`, `.jar`, etc.) with security error feedback.
+- **Visual Attachment Chips**: Rendered purple Web Link chips and orange Document File chips on step cards.
 
 ### Reason
-- Fulfill user request for rem-based responsive UI redesign, non-generic modern visual aesthetics, and pagination controls for high-volume record tables.
-
-### Breaking Changes
-- None.
-
----
-
-## [2026-08-01] Layout Fixes: Team Chat Portal & Layout Restoration
-
-### Files Modified
-- `fair-fly/src/components/Shared/TeamChatModal/TeamChatModal.jsx` & `team-chat-modal.css`
-- `fair-fly/src/components/UI/ModalBase/BaseModal.jsx`
-- `fair-fly/src/components/Admin/Modals/ModalWrapper.jsx`
-- `fair-fly/src/pages/Admin/AdminLayout/admin-layout.css`
-- `fair-fly/src/pages/Operator/OperatorLayout/operator-layout.css`
-- `fair-fly/src/components/Admin/AdminSidebar/admin-sidebar.css`
-- `fair-fly/src/components/Operator/OperatorSidebar/operator-sidebar.css`
-- `fair-fly/src/index.css`
-
-### Summary of Changes
-- Converted `TeamChatModal.jsx`, `BaseModal.jsx`, and `ModalWrapper.jsx` to render modal overlays using React `createPortal(..., document.body)` so overlays escape sticky navbar `backdrop-filter` stacking contexts.
-- Removed global `min-height: 100vh` from `.card` in `index.css` which was causing stat cards to stretch across the full viewport and push content off-screen.
-- Restored `.sidebar` and `.op-sidebar` to `height: fit-content` with `position: sticky; top: 5.5rem;` so sidebars sit naturally next to page content without layout breakage.
-- Added `2rem` (32px) side paddings and `max-width: 90rem` centering to `.dashboard-stats` (Admin) and `.op-layout-stats` (Operator) so stat cards have clean margins and align with content containers.
-
-### Reason
-- Fix stat card height stretching bug identified via browser subagent inspection and restore clean, proportional dashboard layout.
+- Fulfill user request for simultaneous Web Link and Document File attachments per workflow step, with non-executable file security enforcement.
 
 ### Breaking Changes
 - None.

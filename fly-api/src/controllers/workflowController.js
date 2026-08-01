@@ -53,6 +53,22 @@ const getTemplateById = async (req, res) => {
   }
 };
 
+const EXECUTABLE_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.application', '.gadget', '.msp', '.hta', '.cpl', '.msc'];
+
+function hasExecutableAttachment(steps) {
+  if (!Array.isArray(steps)) return false;
+  for (const step of steps) {
+    if (step.file && step.file.url) {
+      const cleanUrl = step.file.url.split('?')[0].toLowerCase();
+      const cleanName = (step.file.name || '').toLowerCase();
+      if (EXECUTABLE_EXTENSIONS.some(ext => cleanUrl.endsWith(ext) || cleanName.endsWith(ext))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 const createTemplate = async (req, res) => {
   try {
     const templateData = req.body;
@@ -62,6 +78,10 @@ const createTemplate = async (req, res) => {
 
     if (!Array.isArray(templateData.steps) || templateData.steps.length === 0) {
       return res.status(400).json({ error: 'Steps must be a non-empty array' });
+    }
+
+    if (hasExecutableAttachment(templateData.steps)) {
+      return res.status(400).json({ error: 'Executable files (.exe, .bat, .sh, etc.) are prohibited for security.' });
     }
 
     const sanitizedData = {
@@ -86,6 +106,10 @@ const updateTemplate = async (req, res) => {
     const updates = req.body;
 
     if (!id) return res.status(400).json({ error: 'Template ID is required' });
+
+    if (updates.steps && hasExecutableAttachment(updates.steps)) {
+      return res.status(400).json({ error: 'Executable files (.exe, .bat, .sh, etc.) are prohibited for security.' });
+    }
 
     const dbPath = `${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`;
     const existing = await getFromDatabase(dbPath);

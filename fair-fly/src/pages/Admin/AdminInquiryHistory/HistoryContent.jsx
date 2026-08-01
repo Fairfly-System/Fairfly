@@ -3,6 +3,7 @@ import { useState, useRef, useMemo } from "react";
 import ApplicationModal from "../../../components/Admin/Modals/ApplicationModal/ApplicationModal";
 import FranchiseCard from "../../../components/Admin/FranchiseeApplication/FranchiseeCard";
 import Pagination from "../../../components/UI/Pagination/Pagination";
+import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import "./admin-inquiry-history.css";
 
 export default function HistoryContent() {
@@ -44,6 +45,27 @@ export default function HistoryContent() {
     return filteredHistory.slice(start, start + pageSize);
   }, [filteredHistory, currentPage, pageSize]);
 
+  // ── AlertBar logic ────────────────────────────────────────────────────────
+  const alertBarProps = useMemo(() => {
+    const total    = historyApplications.length;
+    const approved = historyApplications.filter(a => a.status === 'approved').length;
+    const rejected = historyApplications.filter(a => a.status === 'rejected').length;
+
+    if (total === 0) {
+      return { message: 'No processed applications yet. History will appear here after franchise applications are reviewed.', type: 'info' };
+    }
+    if (rejected === 0) {
+      return {
+        message: `All ${total} processed application${total !== 1 ? 's' : ''} were approved.`,
+        type: 'success',
+      };
+    }
+    return {
+      message: `${approved} approved and ${rejected} rejected out of ${total} total processed application${total !== 1 ? 's' : ''}.`,
+      type: 'info',
+    };
+  }, [historyApplications]);
+
   return (
     <div className="card inquiry-page page-fade-in">
       <div className="inquiry-header">
@@ -55,6 +77,8 @@ export default function HistoryContent() {
           <p>Complete record of processed (approved and rejected) franchise applications</p>
         </div>
       </div>
+
+      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
       {/* Toolbar Search & Filter */}
       <div className="table-toolbar">

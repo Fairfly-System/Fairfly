@@ -4,6 +4,7 @@ import ModalWrapper from "../../../components/Admin/Modals/ModalWrapper";
 import ServiceForm from "../../../components/Admin/Modals/ServiceForm";
 import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal";
 import Pagination from "../../../components/UI/Pagination/Pagination";
+import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import { useAuthContext } from "../../../context/AuthContext";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
@@ -183,6 +184,26 @@ export default function ServiceContent() {
     }
   };
 
+  // ── AlertBar logic (must be before any early return — Rules of Hooks) ─────
+  const alertBarProps = useMemo(() => {
+    const total    = service.length;
+    const disabled = service.filter(s => s.status === 'Disabled').length;
+
+    if (total === 0) {
+      return { message: 'No services found. Add your first service to begin offering franchise options.', type: 'error' };
+    }
+    if (disabled > 0) {
+      return {
+        message: `${disabled} of ${total} service${total !== 1 ? 's' : ''} ${disabled !== 1 ? 'are' : 'is'} currently disabled and hidden from operators.`,
+        type: 'warning',
+      };
+    }
+    return {
+      message: `All ${total} service${total !== 1 ? 's' : ''} are active and visible to operators.`,
+      type: 'success',
+    };
+  }, [service]);
+
   if (serviceLoading) {
     return (
       <div className="card services-page page-fade-in">
@@ -201,7 +222,7 @@ export default function ServiceContent() {
       <div className="services-header">
         <div>
           <h2>Services Catalog Management</h2>
-          <p>Configure available franchise services, fees, and requirements</p>
+          <p>Configure available franchise services, fees, requirements, and workflows</p>
         </div>
 
         <button className="service-btn" onClick={handleOpenAddModal}>
@@ -209,6 +230,8 @@ export default function ServiceContent() {
           Add Service
         </button>
       </div>
+
+      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
       {/* Toolbar Search & Filter */}
       <div className="table-toolbar">
@@ -272,9 +295,10 @@ export default function ServiceContent() {
           <thead>
             <tr>
               <th>Service Name</th>
-              <th>Category</th>
+              <th>Requirements & Attachments</th>
+              <th>Attached Workflows</th>
               <th>Processing Time</th>
-              <th>Base Fee</th>
+              <th>Price</th>
               <th>Status</th>
               <th className="actions-col">Actions</th>
             </tr>
@@ -283,64 +307,88 @@ export default function ServiceContent() {
           <tbody>
             {paginatedServices.length === 0 ? (
               <tr>
-                <td colSpan="6" className="empty-table-cell">
+                <td colSpan="7" className="empty-table-cell">
                   <i className="fa-solid fa-layer-group empty-icon"></i>
                   <p>No services match your search criteria</p>
                 </td>
               </tr>
             ) : (
-              paginatedServices.map((item) => (
-                <tr key={item.id}>
-                  <td className="service-name-cell">
-                    <strong>{item.name || "N/A"}</strong>
-                  </td>
-                  <td>{item.category || "General"}</td>
-                  <td>{formatProcessingTime(item.processingTime) || "N/A"}</td>
-                  <td>PHP {Number(item.baseFee || 0).toLocaleString()}</td>
-                  <td>
-                    <span
-                      className={`status-pill ${
-                        item.status === "Active"
-                          ? "status-pill-active"
-                          : "status-pill-disabled"
-                      }`}
-                    >
-                      {item.status || "Active"}
-                    </span>
-                  </td>
-                  <td className="actions-col">
-                    <button
-                      className="icon-btn edit"
-                      title="Edit Service"
-                      onClick={() => handleOpenEditModal(item)}
-                    >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button
-                      className="icon-btn ban"
-                      title={item.status === "Active" ? "Disable" : "Enable"}
-                      onClick={() =>
-                        setConfirmState({ type: "deactivate", service: item })
-                      }
-                    >
-                      <i
-                        className={`fa-solid ${
-                          item.status === "Active" ? "fa-ban" : "fa-circle-check"
+              paginatedServices.map((item) => {
+                const reqsList = item.requirements || item.actions || [];
+                const reqsCount = Array.isArray(reqsList) ? reqsList.length : 0;
+                const hasAttachment = Array.isArray(reqsList) && reqsList.some(r => r.attachment && r.attachment.url);
+                const workflowsCount = Array.isArray(item.workflowIds) ? item.workflowIds.length : 0;
+
+                return (
+                  <tr key={item.id}>
+                    <td className="service-name-cell">
+                      <strong>{item.name || "N/A"}</strong>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
+                          {reqsCount} Requirement{reqsCount !== 1 ? 's' : ''}
+                        </span>
+                        {hasAttachment && (
+                          <span className="status-pill" style={{ background: 'var(--purple-light-2)', color: 'var(--purple-dark)', fontSize: '0.6875rem' }}>
+                            <i className="fa-solid fa-paperclip" style={{ marginRight: '0.25rem' }}></i> Attachment
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="status-pill" style={{ background: 'var(--purple-light-2)', color: 'var(--purple)', fontSize: '0.75rem', fontWeight: 600 }}>
+                        <i className="fa-solid fa-diagram-project" style={{ marginRight: '0.25rem' }}></i>
+                        {workflowsCount} Workflow{workflowsCount !== 1 ? 's' : ''}
+                      </span>
+                    </td>
+                    <td>{formatProcessingTime(item.processingTime) || "N/A"}</td>
+                    <td>{item.price ? item.price : `PHP ${Number(item.baseFee || 0).toLocaleString()}`}</td>
+                    <td>
+                      <span
+                        className={`status-pill ${
+                          item.status === "Active"
+                            ? "status-pill-active"
+                            : "status-pill-disabled"
                         }`}
-                      ></i>
-                    </button>
-                    <button
-                      className="icon-btn delete"
-                      title="Delete"
-                      onClick={() =>
-                        setConfirmState({ type: "delete", service: item })
-                      }
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              ))
+                      >
+                        {item.status || "Active"}
+                      </span>
+                    </td>
+                    <td className="actions-col">
+                      <button
+                        className="icon-btn edit"
+                        title="Edit Service"
+                        onClick={() => handleOpenEditModal(item)}
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                      </button>
+                      <button
+                        className="icon-btn ban"
+                        title={item.status === "Active" ? "Disable" : "Enable"}
+                        onClick={() =>
+                          setConfirmState({ type: "deactivate", service: item })
+                        }
+                      >
+                        <i
+                          className={`fa-solid ${
+                            item.status === "Active" ? "fa-ban" : "fa-circle-check"
+                          }`}
+                        ></i>
+                      </button>
+                      <button
+                        className="icon-btn delete"
+                        title="Delete"
+                        onClick={() =>
+                          setConfirmState({ type: "delete", service: item })
+                        }
+                      >
+                        <i className="fa-solid fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -369,7 +417,7 @@ export default function ServiceContent() {
         }
         subtitle={
           editingService
-            ? "Update service details and requirements"
+            ? "Update service details, requirements, and attached workflows"
             : "Add a new service to the catalog"
         }
       >

@@ -4,6 +4,7 @@ import ModalWrapper from '../../../components/Admin/Modals/ModalWrapper';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal';
 import WorkflowForm from '../../../components/Admin/Modals/WorkflowForm';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import {
   createWorkflowTemplate,
   getWorkflowTemplates,
@@ -139,6 +140,27 @@ export default function AdminWorkflowTemplates() {
     setEditingTemplate(null);
   };
 
+  // ── AlertBar logic (must be before any early return — Rules of Hooks) ─────
+  const alertBarProps = useMemo(() => {
+    const total      = templates.length;
+    const emptySteps = templates.filter(t => !t.steps || t.steps.length === 0).length;
+    const totalSteps = templates.reduce((acc, t) => acc + (t.steps?.length || 0), 0);
+
+    if (total === 0) {
+      return { message: 'No workflow templates yet. Create one to start defining reusable service processes.', type: 'info' };
+    }
+    if (emptySteps > 0) {
+      return {
+        message: `${emptySteps} template${emptySteps !== 1 ? 's have' : ' has'} no steps defined yet. Add steps before assigning them to services.`,
+        type: 'warning',
+      };
+    }
+    return {
+      message: `${total} template${total !== 1 ? 's' : ''} ready — ${totalSteps} total step${totalSteps !== 1 ? 's' : ''} across all workflows.`,
+      type: 'success',
+    };
+  }, [templates]);
+
   if (loading) {
     return (
       <div className="card workflow-template-page page-fade-in">
@@ -167,6 +189,8 @@ export default function AdminWorkflowTemplates() {
           </button>
         </div>
       </div>
+
+      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
       {/* Toolbar Search & Filters */}
       <div className="table-toolbar">

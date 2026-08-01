@@ -4,6 +4,7 @@ import { useState, useRef, useMemo } from 'react';
 import Loader from '../../../components/Admin/Loader/Loader';
 import ApplicationModal from '../../../components/Admin/Modals/ApplicationModal/ApplicationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import { useAdminContext } from '../../../context/AdminContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
@@ -66,6 +67,28 @@ export default function FranchiseContent() {
     return filteredApplications.slice(start, start + pageSize);
   }, [filteredApplications, currentPage, pageSize]);
 
+  // ── AlertBar logic ────────────────────────────────────────────────────────
+  const alertBarProps = useMemo(() => {
+    const total    = franchiseApplications.length;
+    const pending  = franchiseApplications.filter(a => a.status === 'pending').length;
+    const approved = franchiseApplications.filter(a => a.status === 'approved').length;
+    const rejected = franchiseApplications.filter(a => a.status === 'rejected').length;
+
+    if (total === 0) {
+      return { message: 'No franchise applications have been submitted yet.', type: 'info' };
+    }
+    if (pending > 0) {
+      return {
+        message: `${pending} application${pending !== 1 ? 's' : ''} awaiting review. ${approved} approved, ${rejected} rejected out of ${total} total.`,
+        type: 'warning',
+      };
+    }
+    return {
+      message: `All ${total} application${total !== 1 ? 's' : ''} have been reviewed. ${approved} approved, ${rejected} rejected.`,
+      type: 'success',
+    };
+  }, [franchiseApplications]);
+
   return (
     <>
       <div className="card franchise-page page-fade-in">
@@ -79,6 +102,8 @@ export default function FranchiseContent() {
             <p>Review, approve, and manage submitted franchise partner applications</p>
           </div>
         </div>
+
+        <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Toolbar Filter Row */}
         <div className="table-toolbar">

@@ -6,6 +6,7 @@ import ModalWrapper from "../../../components/Admin/Modals/ModalWrapper";
 import OperatorForm from "../../../components/Admin/Modals/OperatorForm";
 import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal";
 import Pagination from "../../../components/UI/Pagination/Pagination";
+import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
@@ -169,6 +170,27 @@ export default function OperatorsContent() {
     }
   };
 
+  // ── AlertBar logic (must be before any early return — Rules of Hooks) ─────
+  const alertBarProps = useMemo(() => {
+    const total    = operators.length;
+    const active   = operators.filter(o => o.status === 'Active').length;
+    const disabled = operators.filter(o => o.status === 'Disabled').length;
+
+    if (total === 0) {
+      return { message: 'No operator accounts yet. Create the first franchise branch to get started.', type: 'info' };
+    }
+    if (disabled > 0) {
+      return {
+        message: `${disabled} operator account${disabled !== 1 ? 's' : ''} ${disabled !== 1 ? 'are' : 'is'} currently disabled. ${active} of ${total} branch${total !== 1 ? 'es are' : ' is'} active.`,
+        type: 'warning',
+      };
+    }
+    return {
+      message: `All ${total} operator account${total !== 1 ? 's' : ''} are active across ${total} franchise branch${total !== 1 ? 'es' : ''}.`,
+      type: 'success',
+    };
+  }, [operators]);
+
   if (operatorLoading) {
     return (
       <div className="card operators-page page-fade-in">
@@ -196,6 +218,8 @@ export default function OperatorsContent() {
           Add Operator
         </button>
       </div>
+
+      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
       {/* Toolbar Filter Row */}
       <div className="table-toolbar">

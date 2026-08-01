@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ServiceRequirementsModal from "./ServiceRequirementsModal";
-import {firestore} from "../../../firebase";
+import ServiceWorkflowsModal from "./ServiceWorkflowsModal";
 
 // Maps the stored label back to the <select> value used in the unit dropdown
 const LABEL_TO_UNIT = {
@@ -10,20 +10,17 @@ const LABEL_TO_UNIT = {
 };
 
 // Parses "7-10 Day/s" or "3 Day/s" -> { min: '7', max: '10', unit: 'days' }
-// Falls back to a blank object if the string doesn't match the expected shape (or if it's already an object/empty)
 function parseProcessingTime(processingTime) {
   const fallback = { min: "", max: "", unit: "days" };
 
   if (!processingTime) return fallback;
-  if (typeof processingTime === "object") return processingTime; // already in the right shape
+  if (typeof processingTime === "object") return processingTime;
 
-  // Match patterns like "7-10 Day/s" or "3 Day/s"
   const match = processingTime.match(/^(\d+)(?:-(\d+))?\s+(.+)$/);
-  if (!match) return fallback; // If it doesn't match the expected pattern, return fallback
+  if (!match) return fallback;
 
-  // Destructure the match results
   const [ ,min, max, labelRaw] = match;
-  const unit = LABEL_TO_UNIT[labelRaw.trim().toLowerCase()] || "days"; // Default to "days" if the label isn't recognized
+  const unit = LABEL_TO_UNIT[labelRaw.trim().toLowerCase()] || "days";
 
   return {
     min: min || "",
@@ -41,12 +38,19 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
     processingTime: parseProcessingTime(initialData?.processingTime)
   });
 
-  const [requirements, setRequirements] = useState(initialData?.actions || []);
+  const [requirements, setRequirements] = useState(
+    initialData?.requirements || initialData?.actions || []
+  );
+  const [workflowIds, setWorkflowIds] = useState(
+    initialData?.workflowIds || []
+  );
+
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false);
+  const [isWorkflowsModalOpen, setIsWorkflowsModalOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ ...formData, requirements });
+    onSubmit({ ...formData, requirements, workflowIds });
   };
 
   return (
@@ -80,7 +84,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
 
         <div className="formGroup">
           <label>Processing Time</label>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <input
               type="number"
               min="0"
@@ -96,7 +100,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                   },
                 })
               }
-              style={{ width: "70px" }}
+              style={{ width: "4.375rem" }}
               required
             />
             <span>-</span>
@@ -104,7 +108,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
               type="number"
               min="0"
               className="modalInput"
-              placeholder="Max (optional)"
+              placeholder="Max"
               value={formData.processingTime.max}
               onChange={(e) =>
                 setFormData({
@@ -115,7 +119,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                   },
                 })
               }
-              style={{ width: "70px" }}
+              style={{ width: "4.375rem" }}
             />
             <select
               className="modalSelect"
@@ -135,19 +139,35 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
               <option value="months">Month/s</option>
             </select>
           </div>
-          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9ca3af" }}>
-            Leave Max empty for a single value (e.g. just enter 3 for "3 Days").
+          <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "var(--text-light)" }}>
+            Leave Max empty for a single value (e.g. 3 Days).
           </p>
         </div>
 
-        <button
-          type="button"
-          className="modalSubmitBtn btnLightBlue"
-          onClick={() => setIsRequirementsModalOpen(true)}>
-          <span style={{ color: "#5865f2" }}>
-            {requirements.length > 0 ? `Edit Requirements (${requirements.length})` : "Add Requirement/s"}
-          </span>
-        </button>
+        {/* Requirements & Workflows Selection Row */}
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            type="button"
+            className="modalSubmitBtn btnLightBlue"
+            style={{ flex: 1 }}
+            onClick={() => setIsRequirementsModalOpen(true)}>
+            <span style={{ color: "var(--purple)" }}>
+              <i className="fa-regular fa-clipboard" style={{ marginRight: "0.375rem" }}></i>
+              {requirements.length > 0 ? `Requirements (${requirements.length})` : "Add Requirements"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="modalSubmitBtn btnLightBlue"
+            style={{ flex: 1 }}
+            onClick={() => setIsWorkflowsModalOpen(true)}>
+            <span style={{ color: "var(--orange)" }}>
+              <i className="fa-solid fa-diagram-project" style={{ marginRight: "0.375rem" }}></i>
+              {workflowIds.length > 0 ? `Workflows (${workflowIds.length})` : "Attach Workflow"}
+            </span>
+          </button>
+        </div>
 
         <button
           type="submit"
@@ -161,13 +181,20 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
               ? "Update Service"
               : "Add Service"}
         </button>
-
       </form>
+
       <ServiceRequirementsModal
         isOpen={isRequirementsModalOpen}
         onClose={() => setIsRequirementsModalOpen(false)}
         initialRequirements={requirements}
         onSaveRequirements={(updatedRequirements) => setRequirements(updatedRequirements)}
+      />
+
+      <ServiceWorkflowsModal
+        isOpen={isWorkflowsModalOpen}
+        onClose={() => setIsWorkflowsModalOpen(false)}
+        initialWorkflowIds={workflowIds}
+        onSaveWorkflows={(updatedWorkflowIds) => setWorkflowIds(updatedWorkflowIds)}
       />
     </>
   );

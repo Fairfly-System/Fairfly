@@ -27,12 +27,14 @@ const createService = async (req, res) => {
   try {
     const serviceData = req.body;
     if(!serviceData || !serviceData.name || !serviceData.price || !serviceData.processingTime) {
-            return res.status(400).json({ error: 'Invalid service data' });
+      return res.status(400).json({ error: 'Invalid service data' });
     }
 
     const docId = await addToDatabase(COLLECTIONS.SERVICES, {
       ...serviceData,
-      status: serviceData.status || 'Active', // Default to 'active' if not provided
+      requirements: Array.isArray(serviceData.requirements) ? serviceData.requirements : (serviceData.actions || []),
+      workflowIds: Array.isArray(serviceData.workflowIds) ? serviceData.workflowIds : [],
+      status: serviceData.status || 'Active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -62,16 +64,20 @@ const updateService = async (req, res) => {
       return res.status(404).json({ error: 'Service not found' });
     }
 
-    await updateToDatabase(dbPath, {
+    const sanitizedUpdates = {
       ...updates,
       updatedAt: new Date().toISOString()
-    });
+    };
 
-    //If Req has status modification, enable or disable the account in firebase auth as well
-    if (updates.status) {
-      const { getAuth } = require('firebase-admin/auth');
-      await getAuth().updateUser(id, { disabled: updates.status === 'Disabled' }); //If status is 'Disabled', disable the user, else enable the user
+    if (updates.requirements) {
+      sanitizedUpdates.requirements = updates.requirements;
     }
+
+    if (updates.workflowIds) {
+      sanitizedUpdates.workflowIds = updates.workflowIds;
+    }
+
+    await updateToDatabase(dbPath, sanitizedUpdates);
 
     // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.SERVICES);
