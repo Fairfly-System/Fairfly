@@ -1,5 +1,67 @@
 # Update Logs
 
+## [2026-08-01] Added Customizable `maxWidth` & `width` Props to `ModalWrapper`
+
+### Files Modified
+- `fair-fly/src/components/Admin/Modals/ModalWrapper.jsx`
+- `fair-fly/src/components/Admin/Modals/AdminLogsModal.jsx`
+
+### Summary of Changes
+- Updated `ModalWrapper.jsx` to accept `maxWidth` (defaulting to `'480px'`) and optional `width` props to allow custom sizing per modal instance.
+- Applied `maxWidth="750px"` on `AdminLogsModal.jsx` to provide a wider, more spacious view for the admin action logs table.
+
+### Reason
+- User requested customizable width on `ModalWrapper` to fix the logs modal being too narrow.
+
+### Breaking Changes
+- None (existing modals retain their default `480px` max-width).
+
+
+
+## [2026-08-01] Extracted Standalone `AdminLogsModal` Component
+
+### Files Modified
+- `fair-fly/src/components/Admin/Modals/AdminLogsModal.jsx` *(new)*
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx`
+
+### Summary of Changes
+- Created a standalone modal component `AdminLogsModal.jsx` in `src/components/Admin/Modals/`.
+- Encapsulated `ModalWrapper`, log search filtering, action type filters, pagination, and log row rendering inside `AdminLogsModal`.
+- Updated `AdminDashboard.jsx` to render `<AdminLogsModal>` instead of defining the modal structure inline.
+
+### Reason
+- User requested that all modals using `ModalWrapper` be structured as standalone component files in `components/Admin/Modals/` rather than inline page layouts.
+
+### Breaking Changes
+- None.
+
+
+
+## [2026-08-01] Refactored Admin Dashboard Helpers & Utils (Separation of Concerns)
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminDashboard/dashboardUtils.js` *(new)*
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx`
+
+### Summary of Changes
+- Separated helper functions, action metadata definitions, formatters, and chart data out of `AdminDashboard.jsx` into `dashboardUtils.js`.
+- Moved constants & functions:
+  - `ACTION_META`
+  - `relativeTime`
+  - `humanResourceType`
+  - `formatLogLine`
+  - `revenueData`
+  - `servicesCompletedData`
+- Imported all helpers into `AdminDashboard.jsx`, resulting in a cleaner and more maintainable component.
+
+### Reason
+- User requested separation of concerns to keep `AdminDashboard.jsx` modular and focused on rendering components and managing state.
+
+### Breaking Changes
+- None.
+
+
+
 ## [2026-08-01] Backend Service Routes `allowedFields` Middleware Update
 
 ### Files Modified
