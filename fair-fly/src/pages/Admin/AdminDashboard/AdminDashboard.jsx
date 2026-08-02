@@ -40,7 +40,7 @@ export default function Dashboard() {
     const q = query(
       collection(firestore, 'admin-logs'),
       orderBy('timestamp', 'desc'),
-      limit(15)
+      limit(5)
     );
     const unsubscribe = onSnapshot(
       q,

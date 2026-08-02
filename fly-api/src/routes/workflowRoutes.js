@@ -6,6 +6,7 @@ const {
   createTemplate, 
   updateTemplate, 
   deleteTemplate,
+  bulkDeleteTemplates,
   getInstances,
   getInstanceById,
   createInstance,
@@ -19,6 +20,7 @@ const { apiRateLimiter } = require('../middleware/rateLimiter');
 router.get('/templates', performanceProfiler('GET /workflow/templates', verifyFirebaseToken, apiRateLimiter, getTemplates));
 router.get('/templates/:id', performanceProfiler('GET /workflow/templates/:id', verifyFirebaseToken, apiRateLimiter, getTemplateById));
 router.post('/templates', performanceProfiler('POST /workflow/templates', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, createTemplate));
+router.post('/templates/bulk-delete', performanceProfiler('POST /workflow/templates/bulk-delete', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkDeleteTemplates));
 router.patch('/templates/:id', performanceProfiler('PATCH /workflow/templates/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateTemplate));
 router.delete('/templates/:id', performanceProfiler('DELETE /workflow/templates/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteTemplate));
 

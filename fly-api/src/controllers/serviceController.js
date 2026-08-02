@@ -114,6 +114,49 @@ const deleteService = async (req, res) => {
   }
 };
 
+const bulkStatusServices = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !status) {
+      return res.status(400).json({ error: 'ids array and status are required' });
+    }
+
+    await Promise.all(
+      ids.map((id) =>
+        updateToDatabase(`${COLLECTIONS.SERVICES}/${id}`, {
+          status,
+          updatedAt: new Date().toISOString()
+        })
+      )
+    );
+
+    staticDataCache.delete(CACHE_KEYS.SERVICES);
+    return res.status(200).json({ message: `${ids.length} services updated successfully`, count: ids.length });
+  } catch (error) {
+    console.error('Error bulk updating services:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const bulkDeleteServices = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    await Promise.all(
+      ids.map((id) => deleteFromDatabase(`${COLLECTIONS.SERVICES}/${id}`))
+    );
+
+    staticDataCache.delete(CACHE_KEYS.SERVICES);
+    return res.status(200).json({ message: `${ids.length} services deleted successfully`, count: ids.length });
+  } catch (error) {
+    console.error('Error bulk deleting services:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 /**
  * ============================================================================
  * Quick Links CRUD
@@ -122,36 +165,40 @@ const deleteService = async (req, res) => {
 
 const getQuickLinks = async (req, res) => {
   try {
-    let quickLinks = staticDataCache.get(CACHE_KEYS.QUICK_LINKS);
-    if (quickLinks) {
-      console.log('Serving quick links list from cache.');
-      return res.status(200).json(quickLinks);
+    const cachedData = staticDataCache.get(CACHE_KEYS.QUICK_LINKS);
+    if (cachedData) {
+      return res.status(200).json(cachedData);
     }
 
-    console.log('Cache miss for quick links list. Fetching from Firestore.');
-    quickLinks = await getAllFromDatabase(COLLECTIONS.QUICK_LINKS);
-    staticDataCache.set(CACHE_KEYS.QUICK_LINKS, quickLinks);
-    return res.status(200).json(quickLinks);
+    const rawData = await getAllFromDatabase(COLLECTIONS.QUICK_LINKS);
+    const linksList = rawData 
+      ? Object.entries(rawData).map(([id, val]) => ({ id, ...val }))
+      : [];
+
+    staticDataCache.set(CACHE_KEYS.QUICK_LINKS, linksList, 300);
+
+    return res.status(200).json(linksList);
   } catch (error) {
-    console.error('Error getting quick links:', error);
+    console.error('Error fetching quick links:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 const createQuickLink = async (req, res) => {
   try {
-    const linkData = req.body;
-    if (!linkData || !linkData.title || !linkData.url || !linkData.category) {
-      return res.status(400).json({ error: 'Title, URL, and category are required' });
+    const { title, url, category } = req.body;
+    if (!title || !url) {
+      return res.status(400).json({ error: 'Title and URL are required' });
     }
 
     const docId = await addToDatabase(COLLECTIONS.QUICK_LINKS, {
-      ...linkData,
+      title,
+      url,
+      category: category || 'Other',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
 
-    // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.QUICK_LINKS);
 
     return res.status(201).json({ id: docId, message: 'Quick link created successfully' });
@@ -181,7 +228,6 @@ const updateQuickLink = async (req, res) => {
       updatedAt: new Date().toISOString()
     });
 
-    // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.QUICK_LINKS);
 
     return res.status(200).json({ message: 'Quick link updated successfully' });
@@ -206,7 +252,6 @@ const deleteQuickLink = async (req, res) => {
 
     await deleteFromDatabase(dbPath);
 
-    // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.QUICK_LINKS);
 
     return res.status(200).json({ message: 'Quick link deleted successfully' });
@@ -216,12 +261,34 @@ const deleteQuickLink = async (req, res) => {
   }
 };
 
+const bulkDeleteQuickLinks = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    await Promise.all(
+      ids.map((id) => deleteFromDatabase(`${COLLECTIONS.QUICK_LINKS}/${id}`))
+    );
+
+    staticDataCache.delete(CACHE_KEYS.QUICK_LINKS);
+    return res.status(200).json({ message: `${ids.length} quick links deleted successfully`, count: ids.length });
+  } catch (error) {
+    console.error('Error bulk deleting quick links:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   createService,
   updateService,
   deleteService,
+  bulkStatusServices,
+  bulkDeleteServices,
   getQuickLinks,
   createQuickLink,
   updateQuickLink,
-  deleteQuickLink
+  deleteQuickLink,
+  bulkDeleteQuickLinks
 };

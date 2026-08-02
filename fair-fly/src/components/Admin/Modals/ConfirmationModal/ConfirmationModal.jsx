@@ -21,7 +21,7 @@ export default function ConfirmationModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="420px">
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="420px" isLoading={isLoading}>
       <div className="modalForm" style={{ textAlign: 'center', alignItems: 'center' }}>
         {Icon && (
           <div
@@ -29,7 +29,7 @@ export default function ConfirmationModal({
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              backgroundColor: `${BtnColor}1a`, // ~10% opacity tint of BtnColor
+              backgroundColor: typeof BtnColor === 'string' && BtnColor.startsWith('var(') ? 'rgba(124, 58, 237, 0.1)' : `${BtnColor}1a`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

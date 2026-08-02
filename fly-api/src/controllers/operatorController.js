@@ -16,12 +16,10 @@ const COLLECTIONS = {
  * Create a new operator (Admin only)
  */
 const createOperator = async (req, res) => {
-
-  let uid;// Variable to hold the UID of the newly created operator, We input this later when we add the operator to the database, we set the docID to the UID of the operator so that we can easily reference it later. This is important because we want to ensure that each operator has a unique identifier in our database, and using the UID from Firebase Authentication allows us to maintain consistency between our authentication system and our database records.
+  let uid;
 
   try {
     const operatorData = req.body;
-    //Make an Account for the operator using Firebase Authentication
     try {
       const userRecord = await admin.auth().createUser({
         email: operatorData.email,
@@ -29,19 +27,17 @@ const createOperator = async (req, res) => {
         displayName: operatorData.branchName
       });
       console.log('Successfully created new user:', userRecord.uid);
-      // Store the UID for later use
       uid = userRecord.uid;
     } catch (error) {
       console.error('Error creating new user:', error);
       return res.status(500).json({ error: 'Failed to create operator account on Firebase: ' + error.message });
     }
 
-    //Add the new operator to the database
-    try{
-      const docId = await addToDocumentWithId(COLLECTIONS.USERS, uid, {
+    try {
+      await addToDocumentWithId(COLLECTIONS.USERS, uid, {
         ...operatorData,
         role: 'operator',
-        status: operatorData.status || 'Active', // Default to 'Active' if not provided
+        status: operatorData.status || 'Active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
@@ -98,7 +94,6 @@ const deleteOperator = async (req, res) => {
       return res.status(400).json({ error: 'Operator ID is required' });
     }
 
-    //delete the operator from Firebase Authentication
     try {
       await admin.auth().deleteUser(id);
       console.log('Successfully deleted user:', id);
@@ -122,8 +117,64 @@ const deleteOperator = async (req, res) => {
   }
 };
 
+/**
+ * Bulk update operator status (Admin only)
+ */
+const bulkStatusOperators = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !status) {
+      return res.status(400).json({ error: 'ids array and status are required' });
+    }
+
+    await Promise.all(
+      ids.map((id) =>
+        updateToDatabase(`${COLLECTIONS.USERS}/${id}`, {
+          status,
+          updatedAt: new Date().toISOString()
+        })
+      )
+    );
+
+    return res.status(200).json({ message: `${ids.length} operators updated successfully`, count: ids.length });
+  } catch (error) {
+    console.error('Error bulk updating operators:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Bulk delete operators (Admin only)
+ */
+const bulkDeleteOperators = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          await admin.auth().deleteUser(id);
+        } catch (err) {
+          console.error(`Error deleting Firebase Auth user ${id}:`, err);
+        }
+        await deleteFromDatabase(`${COLLECTIONS.USERS}/${id}`);
+      })
+    );
+
+    return res.status(200).json({ message: `${ids.length} operators deleted successfully`, count: ids.length });
+  } catch (error) {
+    console.error('Error bulk deleting operators:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   createOperator,
   updateOperator,
-  deleteOperator
+  deleteOperator,
+  bulkStatusOperators,
+  bulkDeleteOperators
 };

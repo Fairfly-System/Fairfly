@@ -11,6 +11,7 @@ const ServiceModal = forwardRef(({ isOpen, onClose, editingService: propEditingS
     <BaseModal
       ref={ref}
       isOpen={isOpen}
+      isLoading={isLoading}
       onClose={() => {
         setInternalService(null);
         if (onClose) onClose();

@@ -11,6 +11,7 @@ const OperatorModal = forwardRef(({ isOpen, onClose, editingOperator: propEditin
     <BaseModal
       ref={ref}
       isOpen={isOpen}
+      isLoading={isLoading}
       onClose={() => {
         setInternalOperator(null);
         if (onClose) onClose();

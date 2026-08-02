@@ -144,6 +144,24 @@ const deleteTemplate = async (req, res) => {
   }
 };
 
+const bulkDeleteTemplates = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    await Promise.all(
+      ids.map((id) => deleteFromDatabase(`${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`))
+    );
+
+    return res.status(200).json({ message: `${ids.length} workflow templates deleted successfully`, count: ids.length });
+  } catch (error) {
+    console.error('Error bulk deleting workflow templates:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 /**
  * ============================================================================
  * Workflow Instances
@@ -284,6 +302,7 @@ module.exports = {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  bulkDeleteTemplates,
   getInstances,
   getInstanceById,
   createInstance,

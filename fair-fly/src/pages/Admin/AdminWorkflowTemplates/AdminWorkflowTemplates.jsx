@@ -5,6 +5,7 @@ import WorkflowModal from '../../../components/Admin/Modals/WorkflowModal/Workfl
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
+import DataTable from '../../../components/UI/DataTable/DataTable';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -16,28 +17,29 @@ const TrashIcon = (props) => (
 );
 
 export default function AdminWorkflowTemplates() {
-  // ── Data from onSnapshot (AdminContext) ─────────────────────────────────
   const { data: templates, loading } = useAdminContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
-  // ── Modal & editing state ─────────────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ── Search / Filter state ─────────────────────────────────────────────
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Search / Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
 
-  // ── Pagination state ──────────────────────────────────────────────────
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
 
-  // ── AlertBar (must be before any early return — Rules of Hooks) ───────
   const alertBarProps = useMemo(() => {
+    if (!templates) return { message: 'Loading...', type: 'info' };
     const total      = templates.length;
     const emptySteps = templates.filter(t => !t.steps || t.steps.length === 0).length;
     const totalSteps = templates.reduce((acc, t) => acc + (t.steps?.length || 0), 0);
@@ -57,8 +59,8 @@ export default function AdminWorkflowTemplates() {
     };
   }, [templates]);
 
-  // ── Filtered + paginated slices ───────────────────────────────────────
   const filteredTemplates = useMemo(() => {
+    if (!templates) return [];
     return templates.filter((tmpl) => {
       const matchesSearch =
         (tmpl.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,7 +79,174 @@ export default function AdminWorkflowTemplates() {
     return filteredTemplates.slice(start, start + pageSize);
   }, [filteredTemplates, currentPage, pageSize]);
 
-  // ── Early loading return (all hooks above this point) ─────────────────
+  const handleOpenAddModal = () => {
+    setEditingTemplate(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (tmpl) => {
+    setEditingTemplate(tmpl);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    if (isSubmitting) return;
+    setIsModalOpen(false);
+    setEditingTemplate(null);
+  };
+
+  // Column definitions for DataTable
+  const columns = useMemo(
+    () => [
+      {
+        key: 'serviceType',
+        header: 'Service Type',
+        render: (tmpl) => (
+          <span className="workflow-badge">
+            {tmpl.serviceType || 'General'}
+          </span>
+        ),
+      },
+      {
+        key: 'name',
+        header: 'Template Name',
+        render: (tmpl) => <strong>{tmpl.name}</strong>,
+      },
+      {
+        key: 'steps',
+        header: 'Steps Count',
+        render: (tmpl) => (
+          <span className="steps-count-pill">
+            <i className="fa-solid fa-bars-staggered"></i>
+            {tmpl.steps?.length || 0} Steps
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        className: 'actions-col',
+        render: (tmpl) => (
+          <div className="action-buttons">
+            <button
+              className="icon-btn edit"
+              title="Edit Template"
+              disabled={isSubmitting || isConfirmLoading}
+              onClick={() => handleOpenEditModal(tmpl)}
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button
+              className="icon-btn duplicate"
+              title="Duplicate Template"
+              disabled={isSubmitting || isConfirmLoading}
+              onClick={() => handleDuplicate(tmpl)}
+            >
+              <i className="fa-solid fa-copy"></i>
+            </button>
+            <button
+              className="icon-btn delete"
+              title="Delete Template"
+              disabled={isSubmitting || isConfirmLoading}
+              onClick={() => setConfirmState({ type: 'delete', template: tmpl })}
+            >
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [isSubmitting, isConfirmLoading]
+  );
+
+  const authHeaders = { Authorization: `Bearer ${userToken}` };
+
+  const handleCreateTemplate = async (templateData) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates`,
+      'POST',
+      templateData,
+      authHeaders,
+      () => {
+        setIsModalOpen(false);
+        setEditingTemplate(null);
+        addToast('Workflow template created successfully', 'success');
+      },
+      (err) => addToast('Failed to create template: ' + err.message, 'error'),
+      setIsSubmitting
+    );
+  };
+
+  const handleUpdateTemplate = async (templateData) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates/${editingTemplate.id}`,
+      'PATCH',
+      templateData,
+      authHeaders,
+      () => {
+        setIsModalOpen(false);
+        setEditingTemplate(null);
+        addToast('Workflow template updated successfully', 'success');
+      },
+      (err) => addToast('Failed to update template: ' + err.message, 'error'),
+      setIsSubmitting
+    );
+  };
+
+  const handleDelete = async (templateId) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates/${templateId}`,
+      'DELETE',
+      null,
+      authHeaders,
+      () => {
+        addToast('Workflow template deleted successfully', 'success');
+        setConfirmState(null);
+      },
+      (err) => addToast('Failed to delete template: ' + err.message, 'error'),
+      setIsConfirmLoading
+    );
+  };
+
+  const handleBulkDelete = async (ids) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates/bulk-delete`,
+      'POST',
+      { ids },
+      authHeaders,
+      () => {
+        addToast(`${ids.length} template(s) deleted successfully`, 'success');
+        setSelectedIds([]);
+        setConfirmState(null);
+      },
+      (err) => addToast('Failed to delete templates: ' + err.message, 'error'),
+      setIsConfirmLoading
+    );
+  };
+
+  const handleDuplicate = async (tmpl) => {
+    const { id, createdAt, updatedAt, version, status, ...rest } = tmpl;
+    return ApiCaller(
+      `${API_BASE_URL}/api/workflow/templates`,
+      'POST',
+      { ...rest, name: `${tmpl.name} (Copy)` },
+      authHeaders,
+      () => {
+        addToast(`Duplicated "${tmpl.name}" successfully`, 'success');
+      },
+      (err) => addToast('Failed to duplicate template: ' + err.message, 'error'),
+      setIsSubmitting
+    );
+  };
+
+  const handleFormSubmit = async (formData) => {
+    if (editingTemplate) {
+      await handleUpdateTemplate(formData);
+    } else {
+      await handleCreateTemplate(formData);
+    }
+  };
+
   if (loading) {
     return (
       <div className="card workflow-template-page page-fade-in">
@@ -91,119 +260,29 @@ export default function AdminWorkflowTemplates() {
     );
   }
 
-  // ── Auth header helper ─────────────────────────────────────────────────
-  const authHeaders = { Authorization: `Bearer ${userToken}` };
-
-  // ── Mutations via fly-api ──────────────────────────────────────────────
-  const handleCreateTemplate = async (templateData) => {
-    const result = await ApiCaller(
-      `${API_BASE_URL}/api/workflow/templates`,
-      'POST',
-      templateData,
-      authHeaders,
-      null,
-      (err) => addToast('Failed to create template: ' + err.message, 'error'),
-      setIsSubmitting
-    );
-    if (result) {
-      setIsModalOpen(false);
-      addToast('Workflow template created successfully', 'success');
-    }
-  };
-
-  const handleUpdateTemplate = async (templateData) => {
-    const result = await ApiCaller(
-      `${API_BASE_URL}/api/workflow/templates/${editingTemplate.id}`,
-      'PATCH',
-      templateData,
-      authHeaders,
-      null,
-      (err) => addToast('Failed to update template: ' + err.message, 'error'),
-      setIsSubmitting
-    );
-    if (result) {
-      setIsModalOpen(false);
-      setEditingTemplate(null);
-      addToast('Workflow template updated successfully', 'success');
-    }
-  };
-
-  const handleDelete = async (templateId) => {
-    setIsConfirmLoading(true);
-    const result = await ApiCaller(
-      `${API_BASE_URL}/api/workflow/templates/${templateId}`,
-      'DELETE',
-      null,
-      authHeaders,
-      null,
-      (err) => addToast('Failed to delete template: ' + err.message, 'error')
-    );
-    if (result) {
-      addToast('Workflow template deleted successfully', 'success');
-    }
-    setIsConfirmLoading(false);
-    setConfirmState(null);
-  };
-
-  // Duplicate: read existing from already-loaded templates array, then POST a new one
-  const handleDuplicate = async (tmpl) => {
-    const { id, createdAt, updatedAt, version, status, ...rest } = tmpl;
-    const result = await ApiCaller(
-      `${API_BASE_URL}/api/workflow/templates`,
-      'POST',
-      { ...rest, name: `${tmpl.name} (Copy)` },
-      authHeaders,
-      null,
-      (err) => addToast('Failed to duplicate template: ' + err.message, 'error'),
-      setIsSubmitting
-    );
-    if (result) {
-      addToast(`Duplicated "${tmpl.name}" successfully`, 'success');
-    }
-  };
-
-  // ── Modal helpers ─────────────────────────────────────────────────────
-  const handleOpenAddModal = () => {
-    setEditingTemplate(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (tmpl) => {
-    setEditingTemplate(tmpl);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingTemplate(null);
-  };
-
-  // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="card workflow-template-page page-fade-in">
       <div className="workflow-template-header">
         <div>
-          <h2>Workflow Templates Management</h2>
-          <p>Define standard multi-step workflow processes for service fulfillment</p>
+          <h2>Workflow Templates</h2>
+          <p>Create and manage step-by-step workflow templates for service automation</p>
         </div>
 
-        <div className="header-actions">
-          <button className="workflow-btn" onClick={handleOpenAddModal}>
-            <i className="fa-solid fa-plus"></i>
-            Create Template
-          </button>
-        </div>
+        <button className="workflow-template-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
+          <i className="fa-solid fa-plus"></i>
+          New Template
+        </button>
       </div>
 
       <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
-      {/* Toolbar Search & Filters */}
+      {/* Search & Filter Toolbar */}
       <div className="table-toolbar">
         <div className="search-box">
           <i className="fa-solid fa-magnifying-glass search-icon"></i>
           <input
             type="text"
-            placeholder="Search template name or service type..."
+            placeholder="Search by template name or type..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -238,74 +317,21 @@ export default function AdminWorkflowTemplates() {
         />
       </div>
 
-      <div className="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Service Type</th>
-              <th>Template Name</th>
-              <th>Steps Count</th>
-              <th className="actions-col">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {paginatedTemplates.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="empty-table-cell">
-                  <i className="fa-solid fa-diagram-project empty-icon"></i>
-                  <p>No workflow templates match your filter</p>
-                </td>
-              </tr>
-            ) : (
-              paginatedTemplates.map((tmpl) => (
-                <tr key={tmpl.id}>
-                  <td>
-                    <span className="workflow-badge">
-                      {tmpl.serviceType || 'General'}
-                    </span>
-                  </td>
-                  <td>
-                    <strong>{tmpl.name}</strong>
-                  </td>
-                  <td>
-                    <span className="steps-count-pill">
-                      <i className="fa-solid fa-bars-staggered"></i>
-                      {tmpl.steps?.length || 0} Steps
-                    </span>
-                  </td>
-                  <td className="actions-col">
-                    <div className="action-buttons">
-                      <button
-                        className="icon-btn edit"
-                        title="Edit Template"
-                        onClick={() => handleOpenEditModal(tmpl)}
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
-                      <button
-                        className="icon-btn duplicate"
-                        title="Duplicate Template"
-                        onClick={() => handleDuplicate(tmpl)}
-                        disabled={isSubmitting}
-                      >
-                        <i className="fa-solid fa-copy"></i>
-                      </button>
-                      <button
-                        className="icon-btn delete"
-                        title="Delete Template"
-                        onClick={() => setConfirmState({ type: 'delete', template: tmpl })}
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Reusable DataTable */}
+      <DataTable
+        columns={columns}
+        data={paginatedTemplates}
+        keyField="id"
+        selectable={true}
+        selectedIds={selectedIds}
+        disabled={isConfirmLoading || isSubmitting}
+        onSelectionChange={setSelectedIds}
+        onBulkDelete={(ids) => setConfirmState({ type: 'bulk-delete', ids })}
+        emptyState={{
+          icon: 'fa-solid fa-diagram-project',
+          message: 'No workflow templates match your filter',
+        }}
+      />
 
       {/* Pagination */}
       <Pagination
@@ -316,26 +342,39 @@ export default function AdminWorkflowTemplates() {
         onPageSizeChange={setPageSize}
       />
 
-      {/* Create / Edit Modal */}
+      {/* Modal */}
       <WorkflowModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        editingTemplate={editingTemplate}
-        onSubmit={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
+        onSubmit={handleFormSubmit}
+        initialData={editingTemplate}
         isLoading={isSubmitting}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Single Delete Confirmation */}
       <ConfirmationModal
         isOpen={confirmState?.type === 'delete'}
-        onClose={() => setConfirmState(null)}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
         Icon={TrashIcon}
         Title="Delete Workflow Template?"
-        Desc={`"${confirmState?.template?.name}" will be permanently deleted.`}
+        Desc={`"${confirmState?.template?.name}" will be permanently deleted. Continue?`}
         BtnColor="var(--error-red)"
         confirmText="Delete"
         isLoading={isConfirmLoading}
-        OnConfirm={() => handleDelete(confirmState.template.id)}
+        OnConfirm={() => handleDelete(confirmState?.template?.id)}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationModal
+        isOpen={confirmState?.type === 'bulk-delete'}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
+        Icon={TrashIcon}
+        Title={`Delete ${confirmState?.ids?.length || 0} selected templates?`}
+        Desc={`${confirmState?.ids?.length || 0} workflow templates will be permanently deleted. Continue?`}
+        BtnColor="var(--error-red)"
+        confirmText="Delete Selected"
+        isLoading={isConfirmLoading}
+        OnConfirm={() => handleBulkDelete(confirmState?.ids)}
       />
     </div>
   );

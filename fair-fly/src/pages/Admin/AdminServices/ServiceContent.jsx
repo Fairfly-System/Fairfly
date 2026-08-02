@@ -5,6 +5,7 @@ import ServiceModal from "../../../components/Admin/Modals/ServiceModal/ServiceM
 import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal";
 import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
+import DataTable from "../../../components/UI/DataTable/DataTable";
 import { useAuthContext } from "../../../context/AuthContext";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
@@ -33,6 +34,7 @@ export default function ServiceContent() {
     <i className="fa-solid fa-trash-can" {...props}></i>
   );
   const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
+  const CheckIcon = (props) => <i className="fa-solid fa-circle-check" {...props}></i>;
 
   const { userToken } = useAuthContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,6 +46,9 @@ export default function ServiceContent() {
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -63,6 +68,7 @@ export default function ServiceContent() {
   };
 
   const handleCloseModal = () => {
+    if (isSubmitting) return;
     setIsModalOpen(false);
     setEditingService(null);
   };
@@ -80,7 +86,7 @@ export default function ServiceContent() {
         (statusFilter === "active" && item.status === "Active") ||
         (statusFilter === "disabled" && item.status === "Disabled");
 
-      return matchesSearch && matchesStatus; //Only returns the value to the filter when both are true
+      return matchesSearch && matchesStatus;
     });
   }, [service, searchTerm, statusFilter]);
 
@@ -90,102 +96,123 @@ export default function ServiceContent() {
     return filteredServices.slice(start, start + pageSize);
   }, [filteredServices, currentPage, pageSize]);
 
-  const handleFormSubmit = async (serviceData) => {
-    if (editingService) {
-      await handleEditServiceSubmit(serviceData);
-    } else {
-      await handleCreateServiceSubmit(serviceData);
-    }
-  };
+  // Column definitions for DataTable (declared BEFORE any early return)
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Service Name",
+        className: "service-name-cell",
+        render: (item) => <strong>{item.name || "N/A"}</strong>,
+      },
+      {
+        key: "requirements",
+        header: "Requirements & Attachments",
+        render: (item) => {
+          const reqsList = item.requirements || item.actions || [];
+          const reqsCount = Array.isArray(reqsList) ? reqsList.length : 0;
+          const hasAttachment = Array.isArray(reqsList) && reqsList.some(r => r.attachment && r.attachment.url);
 
-  const handleCreateServiceSubmit = async (newServiceData) => {
-    ApiCaller(
-      `${API_BASE_URL}/api/services`,
-      "POST",
-      newServiceData,
-      { Authorization: `Bearer ${userToken}` },
-      () => {
-        addToast("Service created successfully!", "success");
-        handleCloseModal();
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+              <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
+                {reqsCount} Requirement{reqsCount !== 1 ? 's' : ''}
+              </span>
+              {hasAttachment && (
+                <span className="status-pill" style={{ background: 'var(--purple-light-2)', color: 'var(--purple-dark)', fontSize: '0.6875rem' }}>
+                  <i className="fa-solid fa-paperclip" style={{ marginRight: '0.25rem' }}></i> Attachment
+                </span>
+              )}
+            </div>
+          );
+        },
       },
-      (error) => {
-        console.error("Error creating service:", error);
-        addToast("Failed to create service: " + error.message, "error");
+      {
+        key: "workflows",
+        header: "Attached Workflows",
+        render: (item) => {
+          const workflowsCount = Array.isArray(item.workflowIds) ? item.workflowIds.length : 0;
+          return (
+            <span className="status-pill" style={{ background: 'var(--purple-light-2)', color: 'var(--purple)', fontSize: '0.75rem', fontWeight: 600 }}>
+              <i className="fa-solid fa-diagram-project" style={{ marginRight: '0.25rem' }}></i>
+              {workflowsCount} Workflow{workflowsCount !== 1 ? 's' : ''}
+            </span>
+          );
+        },
       },
-      setIsSubmitting
-    );
-  };
+      {
+        key: "processingTime",
+        header: "Processing Time",
+        render: (item) => formatProcessingTime(item.processingTime) || "N/A",
+      },
+      {
+        key: "price",
+        header: "Price",
+        render: (item) => item.price ? item.price : `PHP ${Number(item.baseFee || 0).toLocaleString()}`,
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (item) => (
+          <span
+            className={`status-pill ${
+              item.status === "Active"
+                ? "status-pill-active"
+                : "status-pill-disabled"
+            }`}
+          >
+            {item.status || "Active"}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        className: "actions-col",
+        render: (item) => (
+          <>
+            <button
+              className="icon-btn edit"
+              title="Edit Service"
+              disabled={isSubmitting || isConfirmLoading}
+              onClick={() => handleOpenEditModal(item)}
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button
+              className="icon-btn ban"
+              title={item.status === "Active" ? "Disable" : "Enable"}
+              disabled={isSubmitting || isConfirmLoading}
+              onClick={() =>
+                setConfirmState({ type: "deactivate", service: item })
+              }
+            >
+              <i
+                className={`fa-solid ${
+                  item.status === "Active" ? "fa-ban" : "fa-circle-check"
+                }`}
+              ></i>
+            </button>
+            <button
+              className="icon-btn delete"
+              title="Delete Service"
+              disabled={isSubmitting || isConfirmLoading}
+              onClick={() =>
+                setConfirmState({ type: "delete", service: item })
+              }
+            >
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </>
+        ),
+      },
+    ],
+    [isSubmitting, isConfirmLoading]
+  );
 
-  const handleEditServiceSubmit = async (updatedServiceData) => {
-    ApiCaller(
-      `${API_BASE_URL}/api/services/${editingService.id}`,
-      "PUT",
-      updatedServiceData,
-      { Authorization: `Bearer ${userToken}` },
-      () => {
-        addToast("Service updated successfully!", "success");
-        handleCloseModal();
-      },
-      (error) => {
-        console.error("Error updating service:", error);
-        addToast("Failed to update service: " + error.message, "error");
-      },
-      setIsSubmitting
-    );
-  };
-
-  const handleDeleteService = async (serviceId) => {
-    ApiCaller(
-      `${API_BASE_URL}/api/services/${serviceId}`,
-      "DELETE",
-      null,
-      { Authorization: `Bearer ${userToken}` },
-      () => {
-        addToast("Service deleted successfully!", "success");
-      },
-      (error) => {
-        console.error("Error deleting service:", error);
-        addToast("Failed to delete service: " + error.message, "error");
-      },
-      setIsConfirmLoading
-    );
-  };
-
-  const handleDeactivateService = async (serviceItem) => {
-    const newStatus = serviceItem.status === "Active" ? "Disabled" : "Active";
-    ApiCaller(
-      `${API_BASE_URL}/api/services/${serviceItem.id}`,
-      "PATCH",
-      { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
-      () => {
-        addToast(`Service ${newStatus === "Active" ? "enabled" : "disabled"} successfully!`, "success");
-      },
-      (error) => {
-        console.error("Error updating service status:", error);
-        addToast("Failed to update service status: " + error.message, "error");
-      },
-      setIsConfirmLoading
-    );
-  };
-
-  const handleConfirm = async () => {
-    if (!confirmState) return;
-    setIsConfirmLoading(true);
-    try {
-      if (confirmState.type === "delete") {
-        await handleDeleteService(confirmState.service.id);
-      } else if (confirmState.type === "deactivate") {
-        await handleDeactivateService(confirmState.service);
-      }
-      setConfirmState(null);
-    } finally {
-      setIsConfirmLoading(false);
-    }
-  };
-
-  // ── AlertBar logic (must be before any early return — Rules of Hooks) ─────
+  // AlertBar logic
   const alertBarProps = useMemo(() => {
+    if (!service) return { message: 'Loading...', type: 'info' };
     const total = service.length;
     const disabled = service.filter(s => s.status === 'Disabled').length;
 
@@ -204,6 +231,143 @@ export default function ServiceContent() {
     };
   }, [service]);
 
+  const handleFormSubmit = async (serviceData) => {
+    if (editingService) {
+      await handleEditServiceSubmit(serviceData);
+    } else {
+      await handleCreateServiceSubmit(serviceData);
+    }
+  };
+
+  const handleCreateServiceSubmit = async (newServiceData) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/services`,
+      "POST",
+      newServiceData,
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast("Service created successfully!", "success");
+        setIsModalOpen(false);
+        setEditingService(null);
+      },
+      (error) => {
+        console.error("Error creating service:", error);
+        addToast("Failed to create service: " + error.message, "error");
+      },
+      setIsSubmitting
+    );
+  };
+
+  const handleEditServiceSubmit = async (updatedServiceData) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/services/${editingService.id}`,
+      "PUT",
+      updatedServiceData,
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast("Service updated successfully!", "success");
+        setIsModalOpen(false);
+        setEditingService(null);
+      },
+      (error) => {
+        console.error("Error updating service:", error);
+        addToast("Failed to update service: " + error.message, "error");
+      },
+      setIsSubmitting
+    );
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/services/${serviceId}`,
+      "DELETE",
+      null,
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast("Service deleted successfully!", "success");
+        setConfirmState(null);
+      },
+      (error) => {
+        console.error("Error deleting service:", error);
+        addToast("Failed to delete service: " + error.message, "error");
+      },
+      setIsConfirmLoading
+    );
+  };
+
+  const handleDeactivateService = async (serviceItem) => {
+    const newStatus = serviceItem.status === "Active" ? "Disabled" : "Active";
+    return ApiCaller(
+      `${API_BASE_URL}/api/services/${serviceItem.id}`,
+      "PATCH",
+      { status: newStatus },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast(`Service ${newStatus === "Active" ? "enabled" : "disabled"} successfully!`, "success");
+        setConfirmState(null);
+      },
+      (error) => {
+        console.error("Error updating service status:", error);
+        addToast("Failed to update service status: " + error.message, "error");
+      },
+      setIsConfirmLoading
+    );
+  };
+
+  const handleBulkStatusChange = async (ids, newStatus) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/services/bulk-status`,
+      "POST",
+      { ids, status: newStatus },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast(`${ids.length} service(s) ${newStatus === 'Active' ? 'enabled' : 'disabled'} successfully!`, "success");
+        setSelectedIds([]);
+        setConfirmState(null);
+      },
+      (error) => {
+        console.error("Error bulk updating services:", error);
+        addToast(`Failed to update services: ${error.message}`, "error");
+      },
+      setIsConfirmLoading
+    );
+  };
+
+  const handleBulkDelete = async (ids) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/services/bulk-delete`,
+      "POST",
+      { ids },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast(`${ids.length} service(s) deleted successfully!`, "success");
+        setSelectedIds([]);
+        setConfirmState(null);
+      },
+      (error) => {
+        console.error("Error bulk deleting services:", error);
+        addToast(`Failed to delete services: ${error.message}`, "error");
+      },
+      setIsConfirmLoading
+    );
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmState) return;
+    if (confirmState.type === "delete") {
+      await handleDeleteService(confirmState.service.id);
+    } else if (confirmState.type === "deactivate") {
+      await handleDeactivateService(confirmState.service);
+    } else if (confirmState.type === "bulk-enable") {
+      await handleBulkStatusChange(confirmState.ids, "Active");
+    } else if (confirmState.type === "bulk-disable") {
+      await handleBulkStatusChange(confirmState.ids, "Disabled");
+    } else if (confirmState.type === "bulk-delete") {
+      await handleBulkDelete(confirmState.ids);
+    }
+  };
+
+  // Early loading return AFTER all hooks are declared
   if (serviceLoading) {
     return (
       <div className="card services-page page-fade-in">
@@ -225,7 +389,7 @@ export default function ServiceContent() {
           <p>Configure available franchise services, fees, requirements, and workflows</p>
         </div>
 
-        <button className="service-btn" onClick={handleOpenAddModal}>
+        <button className="service-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
           <i className="fa-solid fa-plus"></i>
           Add Service
         </button>
@@ -273,107 +437,23 @@ export default function ServiceContent() {
         />
       </div>
 
-      <div className="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Service Name</th>
-              <th>Requirements & Attachments</th>
-              <th>Attached Workflows</th>
-              <th>Processing Time</th>
-              <th>Price</th>
-              <th>Status</th>
-              <th className="actions-col">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {paginatedServices.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="empty-table-cell">
-                  <i className="fa-solid fa-layer-group empty-icon"></i>
-                  <p>No services match your search criteria</p>
-                </td>
-              </tr>
-            ) : (
-              paginatedServices.map((item) => {
-                const reqsList = item.requirements || item.actions || [];
-                const reqsCount = Array.isArray(reqsList) ? reqsList.length : 0;
-                const hasAttachment = Array.isArray(reqsList) && reqsList.some(r => r.attachment && r.attachment.url);
-                const workflowsCount = Array.isArray(item.workflowIds) ? item.workflowIds.length : 0;
-
-                return (
-                  <tr key={item.id}>
-                    <td className="service-name-cell">
-                      <strong>{item.name || "N/A"}</strong>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-                        <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
-                          {reqsCount} Requirement{reqsCount !== 1 ? 's' : ''}
-                        </span>
-                        {hasAttachment && (
-                          <span className="status-pill" style={{ background: 'var(--purple-light-2)', color: 'var(--purple-dark)', fontSize: '0.6875rem' }}>
-                            <i className="fa-solid fa-paperclip" style={{ marginRight: '0.25rem' }}></i> Attachment
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="status-pill" style={{ background: 'var(--purple-light-2)', color: 'var(--purple)', fontSize: '0.75rem', fontWeight: 600 }}>
-                        <i className="fa-solid fa-diagram-project" style={{ marginRight: '0.25rem' }}></i>
-                        {workflowsCount} Workflow{workflowsCount !== 1 ? 's' : ''}
-                      </span>
-                    </td>
-                    <td>{formatProcessingTime(item.processingTime) || "N/A"}</td>
-                    <td>{item.price ? item.price : `PHP ${Number(item.baseFee || 0).toLocaleString()}`}</td>
-                    <td>
-                      <span
-                        className={`status-pill ${item.status === "Active"
-                            ? "status-pill-active"
-                            : "status-pill-disabled"
-                          }`}
-                      >
-                        {item.status || "Active"}
-                      </span>
-                    </td>
-                    <td className="actions-col">
-                      <button
-                        className="icon-btn edit"
-                        title="Edit Service"
-                        onClick={() => handleOpenEditModal(item)}
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
-                      <button
-                        className="icon-btn ban"
-                        title={item.status === "Active" ? "Disable" : "Enable"}
-                        onClick={() =>
-                          setConfirmState({ type: "deactivate", service: item })
-                        }
-                      >
-                        <i
-                          className={`fa-solid ${item.status === "Active" ? "fa-ban" : "fa-circle-check"
-                            }`}
-                        ></i>
-                      </button>
-                      <button
-                        className="icon-btn delete"
-                        title="Delete"
-                        onClick={() =>
-                          setConfirmState({ type: "delete", service: item })
-                        }
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Standardized Reusable DataTable */}
+      <DataTable
+        columns={columns}
+        data={paginatedServices}
+        keyField="id"
+        selectable={true}
+        selectedIds={selectedIds}
+        disabled={isConfirmLoading || isSubmitting}
+        onSelectionChange={setSelectedIds}
+        onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}
+        onBulkDisable={(ids) => setConfirmState({ type: "bulk-disable", ids })}
+        onBulkDelete={(ids) => setConfirmState({ type: "bulk-delete", ids })}
+        emptyState={{
+          icon: "fa-solid fa-layer-group",
+          message: "No services match your search criteria",
+        }}
+      />
 
       {/* Pagination */}
       <Pagination
@@ -384,6 +464,7 @@ export default function ServiceContent() {
         onPageSizeChange={setPageSize}
       />
 
+      {/* Render Service Modal */}
       <ServiceModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -392,9 +473,10 @@ export default function ServiceContent() {
         isLoading={isSubmitting}
       />
 
+      {/* Single Delete Confirmation */}
       <ConfirmationModal
         isOpen={confirmState?.type === "delete"}
-        onClose={() => setConfirmState(null)}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
         Icon={TrashIcon}
         Title="Delete this service?"
         Desc={`"${confirmState?.service?.name}" will be permanently removed. This action can't be undone.`}
@@ -404,9 +486,10 @@ export default function ServiceContent() {
         OnConfirm={handleConfirm}
       />
 
+      {/* Single Deactivate/Activate Confirmation */}
       <ConfirmationModal
         isOpen={confirmState?.type === "deactivate"}
-        onClose={() => setConfirmState(null)}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
         Icon={BanIcon}
         Title={
           confirmState?.service?.status === "Active"
@@ -415,13 +498,52 @@ export default function ServiceContent() {
         }
         Desc={
           confirmState?.service?.status === "Active"
-            ? `"${confirmState?.service?.name}" will be hidden from operators until re-enabled.`
-            : `"${confirmState?.service?.name}" will be enabled.`
+            ? `"${confirmState?.service?.name}" will be disabled and hidden from operators.`
+            : `"${confirmState?.service?.name}" will become active and available.`
         }
         BtnColor="var(--orange)"
         confirmText={
           confirmState?.service?.status === "Active" ? "Disable" : "Enable"
         }
+        isLoading={isConfirmLoading}
+        OnConfirm={handleConfirm}
+      />
+
+      {/* Bulk Delete confirmation */}
+      <ConfirmationModal
+        isOpen={confirmState?.type === "bulk-delete"}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
+        Icon={TrashIcon}
+        Title={`Delete ${confirmState?.ids?.length || 0} selected services?`}
+        Desc={`${confirmState?.ids?.length || 0} services will be permanently removed. This action can't be undone.`}
+        BtnColor="var(--error-red)"
+        confirmText="Delete Selected"
+        isLoading={isConfirmLoading}
+        OnConfirm={handleConfirm}
+      />
+
+      {/* Bulk Enable confirmation */}
+      <ConfirmationModal
+        isOpen={confirmState?.type === "bulk-enable"}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
+        Icon={CheckIcon}
+        Title={`Enable ${confirmState?.ids?.length || 0} selected services?`}
+        Desc={`${confirmState?.ids?.length || 0} services will become active and available to operators.`}
+        BtnColor="var(--purple)"
+        confirmText="Enable Selected"
+        isLoading={isConfirmLoading}
+        OnConfirm={handleConfirm}
+      />
+
+      {/* Bulk Disable confirmation */}
+      <ConfirmationModal
+        isOpen={confirmState?.type === "bulk-disable"}
+        onClose={() => !isConfirmLoading && setConfirmState(null)}
+        Icon={BanIcon}
+        Title={`Disable ${confirmState?.ids?.length || 0} selected services?`}
+        Desc={`${confirmState?.ids?.length || 0} services will be disabled and hidden from operators.`}
+        BtnColor="var(--orange)"
+        confirmText="Disable Selected"
         isLoading={isConfirmLoading}
         OnConfirm={handleConfirm}
       />

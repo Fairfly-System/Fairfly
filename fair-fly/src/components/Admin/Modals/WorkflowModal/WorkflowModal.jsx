@@ -11,6 +11,7 @@ const WorkflowModal = forwardRef(({ isOpen, onClose, editingTemplate: propEditin
     <BaseModal
       ref={ref}
       isOpen={isOpen}
+      isLoading={isLoading}
       onClose={() => {
         setInternalTemplate(null);
         if (onClose) onClose();

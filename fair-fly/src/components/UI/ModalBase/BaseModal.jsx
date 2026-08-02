@@ -12,6 +12,7 @@ const BaseModal = forwardRef(({
   maxWidth,
   width,
   className = '',
+  isLoading = false,
 }, ref) => {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -26,6 +27,7 @@ const BaseModal = forwardRef(({
   };
 
   const closeModal = () => {
+    if (isLoading) return; // Prevent closing while processing
     setInternalIsOpen(false);
     setModalData(null);
     if (onClose) onClose();
@@ -72,6 +74,7 @@ const BaseModal = forwardRef(({
             <button
               className="base-modal-close-btn"
               onClick={closeModal}
+              disabled={isLoading}
               aria-label="Close modal"
             >
               <i className="fa-solid fa-xmark"></i>
@@ -82,6 +85,7 @@ const BaseModal = forwardRef(({
           <button
             className="base-modal-close-btn base-modal-close-btn-absolute"
             onClick={closeModal}
+            disabled={isLoading}
             aria-label="Close modal"
           >
             <i className="fa-solid fa-xmark"></i>

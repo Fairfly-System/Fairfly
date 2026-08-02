@@ -26,6 +26,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
           className="modalInput"
           placeholder="e.g., Manila Branch"
           value={formData.branchName}
+          disabled={isLoading}
           onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
         />
       </div>
@@ -36,6 +37,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
           className="modalInput"
           placeholder="e.g., 123 Main St, Manila"
           value={formData.address}
+          disabled={isLoading}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
         />
       </div>
@@ -46,6 +48,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
           className="modalInput"
           placeholder="e.g., +63 912 345 6789"
           value={formData.contactNumber}
+          disabled={isLoading}
           onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
         />
       </div>
@@ -57,7 +60,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
           placeholder="e.g., manila_operator@example.com"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          disabled={isEditMode}
+          disabled={isEditMode || isLoading}
           title={isEditMode ? "Email can't be changed" : undefined}
           style={isEditMode ? { backgroundColor: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' } : undefined}
         />
@@ -71,6 +74,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
             className="modalInput"
             placeholder="Create a password"
             value={formData.password}
+            disabled={isLoading}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
         </div>

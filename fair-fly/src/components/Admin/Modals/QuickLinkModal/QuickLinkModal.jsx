@@ -11,6 +11,7 @@ const QuickLinkModal = forwardRef(({ isOpen, onClose, editingLink: propEditingLi
     <BaseModal
       ref={ref}
       isOpen={isOpen}
+      isLoading={isLoading}
       onClose={() => {
         setInternalLink(null);
         if (onClose) onClose();

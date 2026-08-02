@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import './operator-history.css';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import DataTable from '../../../components/UI/DataTable/DataTable';
 
 const MOCK_APPT_HISTORY = [
   { id: 1, name: 'Juan Dela Cruz', service: 'Passport Processing', date: 'March 20, 2026', status: 'Completed' },
@@ -24,6 +25,41 @@ export default function OperatorHistory() {
     const start = (currentPage - 1) * pageSize;
     return activeData.slice(start, start + pageSize);
   }, [activeData, currentPage, pageSize]);
+
+  // Column definitions for DataTable
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Name / Client',
+        render: (item) => <strong>{item.name || item.client}</strong>,
+      },
+      {
+        key: 'service',
+        header: 'Service Type',
+      },
+      {
+        key: 'date',
+        header: 'Date Completed',
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: (item) => (
+          <span
+            className={`status-pill ${
+              item.status === 'Completed'
+                ? 'status-pill-completed'
+                : 'status-pill-disabled'
+            }`}
+          >
+            {item.status}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className="card op-history page-fade-in">
@@ -56,48 +92,17 @@ export default function OperatorHistory() {
         </button>
       </div>
 
-      {activeData.length === 0 ? (
-        <div className="op-history-empty">
-          <i className="fa-regular fa-clock"></i>
-          <h3>No records found</h3>
-          <p>Completed and processed items will appear here</p>
-        </div>
-      ) : (
-        <div className="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>Name / Client</th>
-                <th>Service Type</th>
-                <th>Date Completed</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <strong>{item.name || item.client}</strong>
-                  </td>
-                  <td>{item.service}</td>
-                  <td>{item.date}</td>
-                  <td>
-                    <span
-                      className={`status-pill ${
-                        item.status === 'Completed'
-                          ? 'status-pill-completed'
-                          : 'status-pill-disabled'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Reusable DataTable */}
+      <DataTable
+        columns={columns}
+        data={paginatedData}
+        keyField="id"
+        selectable={false}
+        emptyState={{
+          icon: 'fa-regular fa-clock',
+          message: 'No history records found',
+        }}
+      />
 
       {/* Pagination */}
       <Pagination

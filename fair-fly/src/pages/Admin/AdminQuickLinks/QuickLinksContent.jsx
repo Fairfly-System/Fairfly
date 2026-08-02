@@ -4,6 +4,7 @@ import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGr
 import QuickLinkModal from '../../../components/Admin/Modals/QuickLinkModal/QuickLinkModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import DataTable from '../../../components/UI/DataTable/DataTable';
 import { useAuthContext } from '../../../context/AuthContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -22,11 +23,15 @@ export default function QuickLinksContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  // Selection State
+  const [selectedIds, setSelectedIds] = useState([]);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
 
   const [deleteLinkTarget, setDeleteLinkTarget] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -42,6 +47,7 @@ export default function QuickLinksContent() {
   };
 
   const handleCloseModal = () => {
+    if (isLoading) return;
     setIsModalOpen(false);
     setEditingLink(null);
   };
@@ -72,22 +78,89 @@ export default function QuickLinksContent() {
     return filteredLinks.slice(start, start + pageSize);
   }, [filteredLinks, currentPage, pageSize]);
 
-  const handleFormSubmit = (formData) => {
+  // Column definitions for DataTable
+  const columns = useMemo(
+    () => [
+      {
+        key: 'category',
+        header: 'Category',
+        render: (link) => {
+          const categoryClass = `category-${(link.category || 'other')
+            .toLowerCase()
+            .replace(/\s+/g, '')}`;
+          return (
+            <span className={`quicklink-badge ${categoryClass}`}>
+              {link.category || 'Other'}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'title',
+        header: 'Title',
+        render: (link) => <strong>{link.title}</strong>,
+      },
+      {
+        key: 'url',
+        header: 'Link URL',
+        render: (link) => (
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="quicklink-url"
+          >
+            <span>{link.url}</span>
+            <i className="fa-solid fa-arrow-up-right-from-square"></i>
+          </a>
+        ),
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        className: 'actions-col',
+        render: (link) => (
+          <>
+            <button
+              className="icon-btn edit"
+              title="Edit Quick Link"
+              disabled={isLoading || isDeleting}
+              onClick={() => handleOpenEditModal(link)}
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button
+              className="icon-btn delete"
+              title="Delete Quick Link"
+              disabled={isLoading || isDeleting}
+              onClick={() => setDeleteLinkTarget(link)}
+            >
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </>
+        ),
+      },
+    ],
+    [isLoading, isDeleting]
+  );
+
+  const handleFormSubmit = async (formData) => {
     if (editingLink) {
-      handleEditLinkSubmit(formData);
+      await handleEditLinkSubmit(formData);
     } else {
-      handleAddLinkSubmit(formData);
+      await handleAddLinkSubmit(formData);
     }
   };
 
-  const handleAddLinkSubmit = (newLinkData) => {
-    ApiCaller(
+  const handleAddLinkSubmit = async (newLinkData) => {
+    return ApiCaller(
       `${API_BASE_URL}/api/services/quicklinks`,
       'POST',
       newLinkData,
       { Authorization: `Bearer ${userToken}` },
       () => {
-        handleCloseModal();
+        setIsModalOpen(false);
+        setEditingLink(null);
         addToast('Quick link added successfully', 'success');
       },
       (error) => {
@@ -97,14 +170,15 @@ export default function QuickLinksContent() {
     );
   };
 
-  const handleEditLinkSubmit = (updatedLinkData) => {
-    ApiCaller(
+  const handleEditLinkSubmit = async (updatedLinkData) => {
+    return ApiCaller(
       `${API_BASE_URL}/api/services/quicklinks/${editingLink.id}`,
       'PATCH',
       updatedLinkData,
       { Authorization: `Bearer ${userToken}` },
       () => {
-        handleCloseModal();
+        setIsModalOpen(false);
+        setEditingLink(null);
         addToast('Quick link updated successfully', 'success');
       },
       (error) => {
@@ -114,8 +188,8 @@ export default function QuickLinksContent() {
     );
   };
 
-  const handleDeleteLink = (linkId) => {
-    ApiCaller(
+  const handleDeleteLink = async (linkId) => {
+    return ApiCaller(
       `${API_BASE_URL}/api/services/quicklinks/${linkId}`,
       'DELETE',
       null,
@@ -131,6 +205,26 @@ export default function QuickLinksContent() {
     );
   };
 
+  const handleBulkDelete = async (ids) => {
+    return ApiCaller(
+      `${API_BASE_URL}/api/services/quicklinks/bulk-delete`,
+      'POST',
+      { ids },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast(`${ids.length} quick link(s) deleted successfully`, 'success');
+        setSelectedIds([]);
+        setBulkDeleteIds(null);
+      },
+      (error) => {
+        console.error('Error bulk deleting quick links:', error);
+        addToast(`Failed to delete quick links: ${error.message}`, 'error');
+      },
+      setIsDeleting
+    );
+  };
+
+  // Early loading return AFTER all hooks are declared
   if (isQuickLinksLoading) {
     return (
       <div className="card quicklinks-page page-fade-in">
@@ -152,7 +246,7 @@ export default function QuickLinksContent() {
           <p>Manage external resource portals and shortcuts for operators</p>
         </div>
 
-        <button className="quicklinks-btn" onClick={handleOpenAddModal}>
+        <button className="quicklinks-btn" onClick={handleOpenAddModal} disabled={isLoading || isDeleting}>
           <i className="fa-solid fa-plus"></i>
           Add Quick Link
         </button>
@@ -201,75 +295,21 @@ export default function QuickLinksContent() {
         />
       </div>
 
-      <div className="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Title</th>
-              <th>Link URL</th>
-              <th className="actions-col">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {paginatedLinks.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="empty-table-cell">
-                  <i className="fa-solid fa-link-slash empty-icon"></i>
-                  <p>No quick links match your search</p>
-                </td>
-              </tr>
-            ) : (
-              paginatedLinks.map((link) => {
-                const categoryClass = `category-${(link.category || 'other')
-                  .toLowerCase()
-                  .replace(/\s+/g, '')}`;
-
-                return (
-                  <tr key={link.id}>
-                    <td>
-                      <span className={`quicklink-badge ${categoryClass}`}>
-                        {link.category || 'Other'}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{link.title}</strong>
-                    </td>
-                    <td>
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="quicklink-url"
-                      >
-                        <span>{link.url}</span>
-                        <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                      </a>
-                    </td>
-                    <td className="actions-col">
-                      <button
-                        className="icon-btn edit"
-                        title="Edit Quick Link"
-                        onClick={() => handleOpenEditModal(link)}
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
-                      <button
-                        className="icon-btn delete"
-                        title="Delete Quick Link"
-                        onClick={() => setDeleteLinkTarget(link)}
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Reusable DataTable */}
+      <DataTable
+        columns={columns}
+        data={paginatedLinks}
+        keyField="id"
+        selectable={true}
+        selectedIds={selectedIds}
+        disabled={isLoading || isDeleting}
+        onSelectionChange={setSelectedIds}
+        onBulkDelete={(ids) => setBulkDeleteIds(ids)}
+        emptyState={{
+          icon: 'fa-solid fa-link-slash',
+          message: 'No quick links match your search',
+        }}
+      />
 
       {/* Pagination Component */}
       <Pagination
@@ -280,24 +320,39 @@ export default function QuickLinksContent() {
         onPageSizeChange={setPageSize}
       />
 
+      {/* Modal for Add / Edit */}
       <QuickLinkModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        editingLink={editingLink}
         onSubmit={handleFormSubmit}
+        initialData={editingLink}
         isLoading={isLoading}
       />
 
+      {/* Single Delete Confirmation */}
       <ConfirmationModal
         isOpen={!!deleteLinkTarget}
-        onClose={() => setDeleteLinkTarget(null)}
+        onClose={() => !isDeleting && setDeleteLinkTarget(null)}
         Icon={TrashIcon}
-        Title="Delete this quick link?"
-        Desc={`"${deleteLinkTarget?.title}" will be removed from quick links.`}
+        Title="Delete Quick Link?"
+        Desc={`"${deleteLinkTarget?.title}" will be permanently removed. Continue?`}
         BtnColor="var(--error-red)"
         confirmText="Delete"
         isLoading={isDeleting}
-        OnConfirm={() => handleDeleteLink(deleteLinkTarget.id)}
+        OnConfirm={() => handleDeleteLink(deleteLinkTarget?.id)}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmationModal
+        isOpen={!!bulkDeleteIds}
+        onClose={() => !isDeleting && setBulkDeleteIds(null)}
+        Icon={TrashIcon}
+        Title={`Delete ${bulkDeleteIds?.length || 0} selected quick links?`}
+        Desc={`${bulkDeleteIds?.length || 0} quick links will be permanently removed. Continue?`}
+        BtnColor="var(--error-red)"
+        confirmText="Delete Selected"
+        isLoading={isDeleting}
+        OnConfirm={() => handleBulkDelete(bulkDeleteIds)}
       />
     </div>
   );

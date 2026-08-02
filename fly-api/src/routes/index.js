@@ -11,6 +11,7 @@ router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
 router.use('/operators', operatorRoutes);
 router.use('/workflows', workflowRoutes);
+router.use('/workflow', workflowRoutes); // Support both /workflow and /workflows
 router.use('/chats', chatRoutes);
 
 module.exports = router;

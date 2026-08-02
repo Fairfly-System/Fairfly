@@ -1,5 +1,90 @@
 # Update Logs
 
+## [2026-08-03] Permanent Bulk Action Bar Design to Eliminate Layout Shifts
+
+### Files Modified
+- `fair-fly/src/components/UI/DataTable/DataTable.jsx`
+- `fair-fly/src/components/UI/DataTable/data-table.css`
+
+### Summary of Changes
+- **Permanent Container & Zero Layout Shift**: Updated `<DataTable />` so that the bulk action bar is permanently mounted at a fixed height (`min-height: 48px`) whenever `selectable={true}`, completely eliminating vertical content jumping/layout shifts when checking or unchecking table rows.
+- **Neutral State (`0 selected items`)**: Styled the bar in a clean neutral gray (`#f8fafc` background with slate `#64748b` text and `#cbd5e1` count badge). Bulk action buttons (Enable, Disable, Delete) are disabled and visually grayed out (`opacity: 0.4`, `filter: grayscale(80%)`).
+- **Active State (`1+ items selected`)**: Smoothly transitions (`0.2s ease`) to a light purple background (`#f5f3ff`), vibrant purple badge (`#7c3aed`), and active interactive bulk action buttons with clear selection count (`"N items selected"`).
+
+### Reason
+- Fulfill user request under `/frontend-design` to make the bulk bar permanently visible with a neutral state to prevent disruptive UX layout shifts.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-08-03] Enforced ApiCaller Loading States & Modal Close Prevention
+
+### Files Modified
+- `fair-fly/src/components/UI/ModalBase/BaseModal.jsx`
+- `fair-fly/src/components/UI/DataTable/DataTable.jsx`
+- `fair-fly/src/components/Admin/Modals/ConfirmationModal/ConfirmationModal.jsx`
+- `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorModal.jsx`
+- `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx`
+- `fair-fly/src/components/Admin/Modals/ServiceModal/ServiceModal.jsx`
+- `fair-fly/src/components/Admin/Modals/QuickLinkModal/QuickLinkModal.jsx`
+- `fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowModal.jsx`
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx`
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx`
+- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx`
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx`
+
+### Summary of Changes
+- **Modal Close Prevention During API Processing**: Updated `BaseModal` to accept an `isLoading` prop that blocks backdrop overlay clicks and close button actions while API calls are executing via `ApiCaller`. Modals now only close inside `ApiCaller`'s `successCallback`.
+- **Disabled Buttons Across UI**: Passed `disabled` prop to `DataTable` (disabling all header/row checkboxes, bulk action buttons, and clear buttons) and all form inputs/submit/cancel/row action buttons during `isSubmitting` / `isConfirmLoading` / `isDeleting` states to prevent click spamming.
+- **Awaited ApiCaller Calls**: Updated handler functions (`handleConfirm`, `handleCreate*`, `handleEdit*`, `handleDelete*`, `handleBulk*`) across admin pages to return and await `ApiCaller` Promises properly.
+
+### Reason
+- Fulfill user request to utilize `ApiCaller`'s `setIsLoading` state to disable all buttons and keep modals open until API responses complete, preventing double-submits and user click spamming.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-08-03] Fixed Hook Ordering & Added RESTful Backend Bulk Action Endpoints
+
+### Files Created/Modified
+- `fair-fly/src/components/UI/DataTable/DataTable.jsx`
+- `fair-fly/src/components/UI/DataTable/data-table.css`
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx`
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx`
+- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx`
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx`
+- `fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx`
+- `fair-fly/src/components/Admin/Modals/ConfirmationModal/ConfirmationModal.jsx`
+- `fly-api/src/controllers/operatorController.js`
+- `fly-api/src/controllers/serviceController.js`
+- `fly-api/src/controllers/workflowController.js`
+- `fly-api/src/routes/operatorRoutes.js`
+- `fly-api/src/routes/serviceRoutes.js`
+- `fly-api/src/routes/workflowRoutes.js`
+- `fly-api/src/routes/index.js`
+
+### Summary of Changes
+- **Fixed React Hook Ordering Bug**: Moved all `useMemo` hooks (including `columns` definitions) above early `if (loading) return` statements across `AdminWorkflowTemplates`, `OperatorsContent`, `ServiceContent`, and `QuickLinksContent`, resolving the conditional hook execution error (`Rendered more hooks than during the previous render`).
+- **Added RESTful Backend Bulk Action Endpoints (`fly-api`)**:
+  - `POST /api/operators/bulk-status` & `POST /api/operators/bulk-delete`
+  - `POST /api/services/bulk-status` & `POST /api/services/bulk-delete`
+  - `POST /api/services/quicklinks/bulk-delete`
+  - `POST /api/workflow/templates/bulk-delete`
+- **Updated Frontend Bulk Operations**: Updated frontend pages to execute single bulk API calls via `ApiCaller` instead of issuing repetitive per-item API loops.
+- **ConfirmationModal Fix**: Fixed CSS interpolation when `BtnColor` uses CSS variable names (e.g. `var(--orange)`).
+
+### Reason
+- Eliminate React runtime crashes during data loading and streamline bulk row actions into single REST API calls following standard API design principles.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [2026-08-02] Combined AdminLayout Users Listener with `where('role', 'in', [...])`
 
 ### Files Modified
