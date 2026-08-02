@@ -1,60 +1,46 @@
-.layout-container {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-  padding: 1.25rem 2rem 2rem 2rem;
-  max-width: 90rem;
-  margin: 0 auto;
-  background: var(--bg);
-  min-height: calc(100vh - 12rem);
+/* ── Sidebar offset variable ─────────────────────────────────── */
+:root {
+  --sidebar-width: 15.625rem;
+  /* 250px — must match admin-sidebar.css */
 }
 
+/* ── Stat Cards Row ──────────────────────────────────────────── */
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
   padding: 1.5rem 2rem 0.5rem 2rem;
-  max-width: 90rem;
   margin: 0 auto;
+  margin-left: var(--sidebar-width);
 }
 
-.layout-container .sidebar {
-  width: 16.25rem; /* 260px */
-  flex-shrink: 0;
-  position: sticky;
-  top: 5.5rem;
-}
-
+/* ── Main Content Container ──────────────────────────────────── */
 .layout-content {
-  flex: 1;
-  min-width: 0;
+  margin-left: var(--sidebar-width);
+  padding: 1.25rem 2rem 2rem 2rem;
+  min-height: calc(100vh - 12rem);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-/* Tablet & Mobile Breakpoint (max-width: 64rem / 1024px) */
+/* ── Tablet Breakpoint (≤ 1024px) ────────────────────────────── */
 @media (max-width: 64rem) {
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
+/* ── Mobile Breakpoint (≤ 768px) ─────────────────────────────── */
 @media (max-width: 48rem) {
-  .layout-container {
-    flex-direction: column;
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .layout-container .sidebar {
-    width: 100%;
-    position: relative;
-    top: 0;
-  }
-
   .dashboard-stats {
     grid-template-columns: 1fr;
-    padding: 1rem 1rem 0 1rem;
+    padding: 1rem;
+    margin-left: 0;
+  }
+
+  .layout-content {
+    margin-left: 0;
+    padding: 1rem;
   }
 }

@@ -8,7 +8,7 @@ import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 
 
-export default function AdminNavbar() {
+export default function AdminNavbar({ onMenuToggle }) {
   const navigate = useNavigate();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const logoutModalRef = useRef(null);
@@ -31,25 +31,31 @@ export default function AdminNavbar() {
 
   return (
     <nav className="admin-nav">
-      
-        <div className="admin-logoIcon">
+      <div className="admin-nav-left">
+        {/* Hamburger — mobile only */}
+        <button
+          className="admin-hamburger"
+          onClick={onMenuToggle}
+          aria-label="Toggle navigation menu"
+        >
+          <i className="fa-solid fa-bars"></i>
+        </button>
 
-                <NavLink to="/home">
-                  <div className="client-logoIcon">
-                    <img src="/FairflyLogo.png" alt="Fairfly Logo" />
-                  </div>
-                </NavLink>
+        <NavLink to="/home" className="admin-logoIcon">
+          <div className="client-logoIcon">
+            <img src="/FairflyLogo.png" alt="Fairfly Logo" />
+          </div>
+        </NavLink>
 
-            <div className='admin-right'>
-            <p id='top-title'>Fairfly Admin</p>
-            <p id='down-title'>Management Portal</p>
-            </div>
-
+        <div className='admin-right'>
+          <p id='top-title'>Fairfly Admin</p>
+          <p id='down-title'>Management Portal</p>
         </div>
+      </div>
 
       <div className="admin-navRight">
           <button className="admin-welcome" onClick={() => setIsChatOpen(true)}>
-          <i class="fa-regular fa-message"></i> Team Chat
+          <i className="fa-regular fa-message"></i> Team Chat
           </button>
 
         <a

@@ -1,5 +1,47 @@
 # Update Logs
 
+## [2026-08-02] Combined AdminLayout Users Listener with `where('role', 'in', [...])`
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx`
+
+### Summary of Changes
+- Combined separate operator and client user listeners into a single query: `query(collection(firestore, 'users'), where('role', 'in', ['operator', 'client']))`.
+- Categorizes operators (active vs disabled) and counts clients within the single listener snapshot callback.
+
+### Reason
+- Reduces the active snapshot listener count from 4 down to 3 while still avoiding unnecessary non-operator/non-client user document fetches.
+
+---
+
+## [2026-08-02] Admin Sidebar Redesign — Fixed Panel with Mobile Drawer
+
+### Files Modified
+- `fair-fly/src/components/Admin/AdminSidebar/AdminSidebar.jsx`
+- `fair-fly/src/components/Admin/AdminSidebar/admin-sidebar.css`
+- `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx`
+- `fair-fly/src/pages/Admin/AdminLayout/admin-layout.css`
+- `fair-fly/src/components/Admin/AdminNavbar/AdminNavbar.jsx`
+- `fair-fly/src/components/Admin/AdminNavbar/admin-navbar.css`
+
+### Summary of Changes
+- Transformed the admin sidebar from an in-flow `.card` grid element to a **fixed left panel** spanning the full viewport height.
+- Sidebar now includes a **brand section** (logo + "Fairfly Admin / Management Portal") at the top and a **user profile section** (avatar initials, email, role) at the bottom.
+- Active link uses a left accent bar + tinted background instead of the previous purple filled pill.
+- On **mobile** (≤ 768px), the sidebar is hidden off-screen and slides in as a **drawer overlay** with a backdrop, toggled by a hamburger button in the navbar.
+- AdminLayout restructured: removed the flex-based `layout-container` wrapper; content areas now use `margin-left` offset to account for the fixed sidebar.
+- Navbar hides its redundant brand section on desktop (sidebar handles it); shows brand on mobile where the sidebar is collapsed.
+- Added resize handler that auto-closes the mobile drawer when viewport exceeds mobile breakpoint.
+
+### Reason
+- The sidebar looked like a content card rather than a navigation panel. The fixed panel approach gives it a distinct visual identity and improves space utilization.
+- Mobile needed a proper toggle mechanism instead of the horizontal scroll strip.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [2026-08-01] Extracted Standalone Reusable FilterChipGroup & SearchBar Components
 
 ### Files Created/Modified

@@ -5,9 +5,12 @@ import AdminSidebar from '../../../components/Admin/AdminSidebar/AdminSidebar';
 import StatCards from '../../../components/Admin/StatCards/StatCards';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 export default function MainLayout() {
+  // ── Sidebar toggle (mobile drawer) ──
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   // Services
   const [activeServices, setActiveServices] = useState(0);
   const [disabledServices, setDisabledServices] = useState(0);
@@ -21,42 +24,51 @@ export default function MainLayout() {
   const [pendingApps, setPendingApps] = useState(0);
 
   useEffect(() => {
+    // ── Services ──
     const unsubServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
       let active = 0;
       let disabled = 0;
-      snapshot.docs.forEach(doc => {
-        const s = doc.data().status;
-        if (s === 'Active') active++;
+      snapshot.docs.forEach((doc) => {
+        if (doc.data().status === 'Active') active++;
         else disabled++;
       });
       setActiveServices(active);
       setDisabledServices(disabled);
     });
 
-    const unsubUsers = onSnapshot(collection(firestore, 'users'), (snapshot) => {
+    // ── Users (Operators & Clients) ──
+    const qUsers = query(
+      collection(firestore, 'users'),
+      where('role', 'in', ['operator', 'client'])
+    );
+    const unsubUsers = onSnapshot(qUsers, (snapshot) => {
       let activeOp = 0;
       let disabledOp = 0;
       let clientCount = 0;
-      snapshot.docs.forEach(doc => {
+
+      snapshot.docs.forEach((doc) => {
         const data = doc.data();
         if (data.role === 'operator') {
           if (data.status === 'Active') activeOp++;
           else disabledOp++;
+        } else if (data.role === 'client') {
+          clientCount++;
         }
-        if (data.role === 'client') clientCount++;
       });
+
       setActiveOperators(activeOp);
       setDisabledOperators(disabledOp);
       setClients(clientCount);
     });
 
-    const unsubFranchise = onSnapshot(
+    // ── Franchise Applications (pending) ──
+    const qFranchise = query(
       collection(firestore, 'franchiseApplications'),
-      (snapshot) => {
-        const pending = snapshot.docs.filter(d => d.data().status === 'pending').length;
-        setPendingApps(pending);
-      }
+      where('status', '==', 'pending')
     );
+    const unsubFranchise = onSnapshot(qFranchise, (snapshot) => {
+      setPendingApps(snapshot.size);
+    });
 
     return () => {
       unsubServices();
@@ -65,12 +77,28 @@ export default function MainLayout() {
     };
   }, []);
 
+  /** Close sidebar when window resizes past mobile breakpoint */
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen]);
+
   const totalOperators = activeOperators + disabledOperators;
-  const totalServices  = activeServices + disabledServices;
+  const totalServices = activeServices + disabledServices;
 
   return (
     <>
-      <AdminNavbar />
+      <AdminSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+
+      <AdminNavbar onMenuToggle={() => setIsSidebarOpen((prev) => !prev)} />
 
       <div className="dashboard-stats">
         {/* ── Revenue ── */}
@@ -114,28 +142,22 @@ export default function MainLayout() {
           icon="fa-solid fa-people-group"
           iconColor="#f0653e"
           badge={
-            pendingApps > 0
-              ? `${pendingApps} App${pendingApps !== 1 ? 's' : ''} Pending`
-              : disabledOperators > 0
-              ? `${disabledOperators} Inactive`
-              : 'All Active'
+            pendingApps > 0 ? `${pendingApps} App${pendingApps !== 1 ? 's' : ''} Pending`
+              : disabledOperators > 0 ? `${disabledOperators} Inactive` : 'All Active'
           }
           badgeType={
             pendingApps > 0
               ? 'warn'
               : disabledOperators > 0
-              ? 'warn'
-              : 'ok'
+                ? 'warn'
+                : 'ok'
           }
         />
       </div>
 
-      <div className="layout-container">
-        <AdminSidebar />
-        <main className="layout-content">
-          <Outlet />
-        </main>
-      </div>
+      <main className="layout-content">
+        <Outlet />
+      </main>
     </>
   );
 }
