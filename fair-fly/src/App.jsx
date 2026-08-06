@@ -30,6 +30,9 @@ import OperatorWorkflows from './pages/Operator/OperatorWorkflows/OperatorWorkfl
 import OperatorHistory from './pages/Operator/OperatorHistory/OperatorHistory';
 import OperatorQuickLinks from './pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
 import OperatorInquiryForms from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
+import OperatorTickets from './pages/Operator/OperatorTickets/OperatorTickets';
+import OperatorQuotations from './pages/Operator/OperatorQuotations/OperatorQuotations';
+import OperatorServiceProcedure from './pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure';
 import { useAuthContext } from './context/AuthContext';
 
 function App() {
@@ -62,8 +65,11 @@ function App() {
       <>
         <Route path="/operator" element={<OperatorLayout />}>
           <Route index element={<OperatorDashboard />} />
+          <Route path="services/:id/procedure" element={<OperatorServiceProcedure />} />
           <Route path="appointments" element={<OperatorAppointments />} />
-          <Route path="workflows" element={<OperatorWorkflows />} />
+          <Route path="workflows" element={<Navigate to="/operator" replace />} />
+          <Route path="tickets" element={<OperatorTickets />} />
+          <Route path="quotations" element={<OperatorQuotations />} />
           <Route path="history" element={<OperatorHistory />} />
           <Route path="quick-links" element={<OperatorQuickLinks />} />
           <Route path="inquiry-forms" element={<OperatorInquiryForms />} />

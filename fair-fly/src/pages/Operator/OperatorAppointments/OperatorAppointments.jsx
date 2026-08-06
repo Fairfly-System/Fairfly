@@ -1,49 +1,19 @@
 import { useState, useMemo } from 'react';
-import './operator-appointments.css';
+import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { useAuthContext } from '../../../context/AuthContext';
+import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
+import './operator-appointments.css';
 
-const INITIAL_APPOINTMENTS = [
-  {
-    id: 1,
-    name: 'Carlos Mendoza',
-    email: 'carlos.mendoza@email.com',
-    phone: '+63 917 555 1234',
-    service: 'Passport Processing',
-    date: 'March 28, 2026',
-    time: '10:00 AM',
-    purpose: 'Need to renew passport for upcoming business trip to Singapore',
-    requested: 'March 26, 2026 - 8:30 AM',
-    status: 'Pending',
-  },
-  {
-    id: 2,
-    name: 'Elena Torres',
-    email: 'elena.torres@email.com',
-    phone: '+63 918 555 5678',
-    service: 'VISA Assistance',
-    date: 'March 29, 2026',
-    time: '2:00 PM',
-    purpose: 'Applying for US tourist visa, need consultation on requirements',
-    requested: 'March 26, 2026 - 9:15 AM',
-    status: 'Pending',
-  },
-  {
-    id: 3,
-    name: 'Roberto Lim',
-    email: 'roberto.lim@email.com',
-    phone: '+63 919 555 9012',
-    service: 'Package Tour',
-    date: 'March 30, 2026',
-    time: '11:00 AM',
-    purpose: 'Interested in Boracay tour package for family vacation',
-    requested: 'March 26, 2026 - 10:00 AM',
-    status: 'Pending',
-  },
-];
+function AppointmentContent() {
+  const { data: appointments, loading } = useOperatorContext();
+  const { userToken } = useAuthContext();
+  const { addToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-export default function OperatorAppointments() {
-  const [appointments, setAppointments] = useState(INITIAL_APPOINTMENTS);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -52,15 +22,21 @@ export default function OperatorAppointments() {
   const [pageSize, setPageSize] = useState(5);
 
   const filteredAppointments = useMemo(() => {
+    if (!appointments) return [];
     return appointments.filter((appt) => {
-      const matchesSearch =
-        appt.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appt.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appt.service.toLowerCase().includes(searchTerm.toLowerCase());
+      const nameStr = (appt.clientName || appt.name || '').toLowerCase();
+      const emailStr = (appt.clientEmail || appt.email || '').toLowerCase();
+      const serviceStr = (appt.serviceType || appt.service || '').toLowerCase();
+      const search = searchTerm.toLowerCase();
 
+      const matchesSearch =
+        nameStr.includes(search) ||
+        emailStr.includes(search) ||
+        serviceStr.includes(search);
+
+      const apptStatus = (appt.status || 'Pending').toLowerCase();
       const matchesStatus =
-        statusFilter === 'all' ||
-        appt.status.toLowerCase() === statusFilter.toLowerCase();
+        statusFilter === 'all' || apptStatus === statusFilter.toLowerCase();
 
       return matchesSearch && matchesStatus;
     });
@@ -72,10 +48,22 @@ export default function OperatorAppointments() {
   }, [filteredAppointments, currentPage, pageSize]);
 
   const handleStatusChange = (id, newStatus) => {
-    setAppointments((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+    ApiCaller(
+      `${API_BASE_URL}/api/appointments/${id}/status`,
+      'PATCH',
+      { status: newStatus },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast(`Appointment status updated to ${newStatus}`, 'success');
+      },
+      (error) => {
+        addToast(`Failed to update appointment: ${error.message}`, 'error');
+      },
+      setIsSubmitting
     );
   };
+
+  const pendingCount = (appointments || []).filter((a) => (a.status || '').toLowerCase() === 'pending').length;
 
   return (
     <div className="card op-appointments page-fade-in">
@@ -88,7 +76,7 @@ export default function OperatorAppointments() {
           </div>
         </div>
         <span className="op-appointments-badge">
-          {appointments.filter((a) => a.status === 'Pending').length} Pending
+          {pendingCount} Pending
         </span>
       </div>
 
@@ -120,9 +108,10 @@ export default function OperatorAppointments() {
 
         <FilterChipGroup
           chips={[
-            { value: 'all', label: `All (${appointments.length})` },
-            { value: 'pending', label: 'Pending' },
+            { value: 'all', label: `All (${(appointments || []).length})` },
+            { value: 'pending', label: `Pending (${pendingCount})` },
             { value: 'confirmed', label: 'Confirmed' },
+            { value: 'cancelled', label: 'Cancelled' },
           ]}
           activeChip={statusFilter}
           onChipChange={(val) => {
@@ -133,82 +122,100 @@ export default function OperatorAppointments() {
       </div>
 
       <div className="op-appt-list">
-        {paginatedAppointments.length === 0 ? (
+        {loading ? (
+          <div className="empty-state-box">
+            <p>Loading appointments...</p>
+          </div>
+        ) : paginatedAppointments.length === 0 ? (
           <div className="empty-state-box">
             <i className="fa-regular fa-calendar-xmark empty-icon"></i>
             <p>No appointment requests match your filters</p>
           </div>
         ) : (
-          paginatedAppointments.map((a) => (
-            <div key={a.id} className="op-appt-card">
-              <div className="op-appt-top">
-                <div className="op-appt-left">
-                  <div className="op-avatar">{a.name[0]}</div>
-                  <div>
-                    <p className="op-appt-name">{a.name}</p>
-                    <p className="op-appt-email">
-                      <i className="fa-regular fa-envelope"></i> {a.email}
-                    </p>
+          paginatedAppointments.map((a) => {
+            const name = a.clientName || a.name || 'Client';
+            const email = a.clientEmail || a.email || 'N/A';
+            const phone = a.clientPhone || a.phone || 'N/A';
+            const service = a.serviceType || a.service || 'General Inquiry';
+            const date = a.preferredDate || a.date || 'N/A';
+            const time = a.preferredTime || a.time || 'N/A';
+            const purpose = a.purpose || 'Face-to-face consultation';
+
+            return (
+              <div key={a.id} className="op-appt-card">
+                <div className="op-appt-top">
+                  <div className="op-appt-left">
+                    <div className="op-avatar">{name[0]?.toUpperCase() || 'C'}</div>
+                    <div>
+                      <p className="op-appt-name">{name}</p>
+                      <p className="op-appt-email">
+                        <i className="fa-regular fa-envelope"></i> {email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="op-appt-actions">
+                    <span
+                      className={`status-pill ${
+                        (a.status || '').toLowerCase() === 'confirmed'
+                          ? 'status-pill-active'
+                          : (a.status || '').toLowerCase() === 'cancelled'
+                          ? 'status-pill-disabled'
+                          : 'status-pill-pending'
+                      }`}
+                    >
+                      {a.status || 'Pending'}
+                    </span>
+                    <div className="op-appt-btn-group">
+                      {(a.status || 'Pending').toLowerCase() === 'pending' && (
+                        <>
+                          <button
+                            className="op-appt-btn confirm"
+                            disabled={isSubmitting}
+                            onClick={() => handleStatusChange(a.id, 'Confirmed')}
+                          >
+                            <i className="fa-solid fa-circle-check"></i> Confirm
+                          </button>
+                          <button
+                            className="op-appt-btn cancel"
+                            disabled={isSubmitting}
+                            onClick={() => handleStatusChange(a.id, 'Cancelled')}
+                          >
+                            <i className="fa-solid fa-xmark"></i> Cancel
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="op-appt-actions">
-                  <span
-                    className={`status-pill ${
-                      a.status === 'Confirmed'
-                        ? 'status-pill-active'
-                        : a.status === 'Cancelled'
-                        ? 'status-pill-disabled'
-                        : 'status-pill-pending'
-                    }`}
-                  >
-                    {a.status}
+
+                <div className="op-appt-grid">
+                  <span>
+                    <i className="fa-solid fa-phone" style={{ color: 'var(--purple)' }}></i>{' '}
+                    {phone}
                   </span>
-                  <div className="op-appt-btn-group">
-                    {a.status === 'Pending' && (
-                      <>
-                        <button
-                          className="op-appt-btn confirm"
-                          onClick={() => handleStatusChange(a.id, 'Confirmed')}
-                        >
-                          <i className="fa-solid fa-circle-check"></i> Confirm
-                        </button>
-                        <button
-                          className="op-appt-btn cancel"
-                          onClick={() => handleStatusChange(a.id, 'Cancelled')}
-                        >
-                          <i className="fa-solid fa-xmark"></i> Cancel
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  <span>
+                    <i className="fa-regular fa-file-lines" style={{ color: '#3B82F6' }}></i>{' '}
+                    {service}
+                  </span>
+                  <span>
+                    <i className="fa-regular fa-calendar" style={{ color: 'var(--orange)' }}></i>{' '}
+                    {date}
+                  </span>
+                  <span>
+                    <i className="fa-regular fa-clock" style={{ color: 'var(--orange)' }}></i>{' '}
+                    {time}
+                  </span>
                 </div>
-              </div>
 
-              <div className="op-appt-grid">
-                <span>
-                  <i className="fa-solid fa-phone" style={{ color: 'var(--purple)' }}></i>{' '}
-                  {a.phone}
-                </span>
-                <span>
-                  <i className="fa-regular fa-file-lines" style={{ color: '#3B82F6' }}></i>{' '}
-                  {a.service}
-                </span>
-                <span>
-                  <i className="fa-regular fa-calendar" style={{ color: 'var(--orange)' }}></i>{' '}
-                  {a.date}
-                </span>
-                <span>
-                  <i className="fa-regular fa-clock" style={{ color: 'var(--orange)' }}></i>{' '}
-                  {a.time}
-                </span>
+                <p className="op-appt-purpose">
+                  <strong>Purpose:</strong> {purpose}
+                </p>
+                <p className="op-appt-requested">
+                  Requested: {a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Recently'}
+                </p>
               </div>
-
-              <p className="op-appt-purpose">
-                <strong>Purpose:</strong> {a.purpose}
-              </p>
-              <p className="op-appt-requested">Requested: {a.requested}</p>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -221,5 +228,13 @@ export default function OperatorAppointments() {
         onPageSizeChange={setPageSize}
       />
     </div>
+  );
+}
+
+export default function OperatorAppointments() {
+  return (
+    <OperatorProvider targetCollection="appointments">
+      <AppointmentContent />
+    </OperatorProvider>
   );
 }

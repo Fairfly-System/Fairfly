@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import './operator-quick-links.css';
+import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import './operator-quick-links.css';
 
-const LINKS = {
+const DEFAULT_LINKS = {
   Airlines: [
     { label: 'Cebu Pacific', url: 'https://www.cebupacificair.com', color: '#D97706' },
     { label: 'Philippine Airlines', url: 'https://www.philippineairlines.com', color: '#1D4ED8' },
@@ -29,22 +30,33 @@ const LINKS = {
     { label: 'BLS International', url: 'https://www.blsinternational.com', color: '#DC2626' },
     { label: 'Japan Visa', url: 'https://www.ph.emb-japan.go.jp', color: '#B45309' },
   ],
-  'Admin Links': [
-    { label: 'Fairfly Admin Portal', url: '/admin', color: '#6B6FF5' },
-    { label: 'Training Materials', url: '#', color: '#0369A1' },
-    { label: 'Support Desk', url: '#', color: '#15803D' },
-    { label: 'Internal Reports', url: '#', color: '#374151' },
-  ],
 };
 
-const TABS = Object.keys(LINKS);
+const TABS = ['Airlines', 'Hotels', 'Government', 'Visa'];
 
-export default function OperatorQuickLinks() {
+function QuickLinksContent() {
+  const { data: dbQuickLinks, loading } = useOperatorContext();
   const [active, setActive] = useState('Airlines');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
 
-  const activeCategoryLinks = LINKS[active] || [];
+  const activeCategoryLinks = useMemo(() => {
+    if (dbQuickLinks && dbQuickLinks.length > 0) {
+      const filtered = dbQuickLinks.filter((l) => {
+        const cat = (l.category || '').toLowerCase().replace(/\s+/g, '');
+        const activeCat = active.toLowerCase().replace(/\s+/g, '');
+        return cat === activeCat || (activeCat === 'visa' && cat.includes('visa'));
+      });
+      if (filtered.length > 0) {
+        return filtered.map((l) => ({
+          label: l.title,
+          url: l.url,
+          color: l.color || '#4f46e5',
+        }));
+      }
+    }
+    return DEFAULT_LINKS[active] || [];
+  }, [dbQuickLinks, active]);
 
   const paginatedLinks = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -73,28 +85,33 @@ export default function OperatorQuickLinks() {
               setCurrentPage(1);
             }}
           >
-            {tab} ({LINKS[tab].length})
+            {tab} ({activeCategoryLinks.length})
           </button>
         ))}
       </div>
 
       <div className="op-links-grid">
-        {paginatedLinks.map((link) => (
-          <a
-            key={link.label}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="op-link-btn"
-            style={{ background: link.color }}
-          >
-            <span>{link.label}</span>
-            <i className="fa-solid fa-arrow-up-right-from-square"></i>
-          </a>
-        ))}
+        {loading ? (
+          <div className="empty-state-box"><p>Loading quick links...</p></div>
+        ) : paginatedLinks.length === 0 ? (
+          <div className="empty-state-box"><p>No quick links available in this category</p></div>
+        ) : (
+          paginatedLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="op-link-btn"
+              style={{ background: link.color }}
+            >
+              <span>{link.label}</span>
+              <i className="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+          ))
+        )}
       </div>
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalItems={activeCategoryLinks.length}
@@ -103,5 +120,13 @@ export default function OperatorQuickLinks() {
         onPageSizeChange={setPageSize}
       />
     </div>
+  );
+}
+
+export default function OperatorQuickLinks() {
+  return (
+    <OperatorProvider targetCollection="quickLinks">
+      <QuickLinksContent />
+    </OperatorProvider>
   );
 }

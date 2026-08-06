@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
+import { useAuthContext } from '../../../context/AuthContext';
+import { useToast } from '../../UI/toast/ToastProvider';
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
 import './create-inquiry-form-modal.css';
 
 const SERVICES_OFFERED = ['PSA', 'Passport', 'VISA Assistance', 'Package Tour', 'Ticket', 'Others'];
@@ -42,8 +46,44 @@ export default function CreateInquiryFormModal({ onClose }) {
     }));
   };
 
+  const { userToken } = useAuthContext();
+  const { addToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = () => {
-    onClose();
+    if (!form.clientName || !form.cellphone) {
+      addToast('Client name and cellphone number are required', 'error');
+      return;
+    }
+
+    const payload = {
+      fullName: form.clientName,
+      phoneNumber: form.cellphone,
+      email: form.email,
+      serviceType: form.servicesOffered.join(', ') || 'General Inquiry',
+      notes: form.requirements + (form.remarks ? ` | Remarks: ${form.remarks}` : ''),
+      formNo: form.formNo,
+      controlNo: form.controlNo,
+      address: form.address,
+      contactPerson: form.contactPerson,
+      agentName: form.agentName,
+      acknowledgedBy: form.acknowledgedBy
+    };
+
+    ApiCaller(
+      `${API_BASE_URL}/api/inquiries`,
+      'POST',
+      payload,
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast('Inquiry form created successfully', 'success');
+        onClose();
+      },
+      (error) => {
+        addToast(`Failed to create inquiry: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   return (

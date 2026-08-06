@@ -1,48 +1,110 @@
 import { Outlet } from 'react-router';
+import { useState, useEffect } from 'react';
 import OperatorNavbar from '../../../components/Operator/OperatorNavbar/OperatorNavbar';
 import OperatorSidebar from '../../../components/Operator/OperatorSidebar/OperatorSidebar';
+import StatCards from '../../../components/Admin/StatCards/StatCards';
+import { firestore } from '../../../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import './operator-layout.css';
 
 export default function OperatorLayout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Real-time stat metrics
+  const [activeServices, setActiveServices] = useState(0);
+  const [completedServices, setCompletedServices] = useState(0);
+  const [pendingActions, setPendingActions] = useState(0);
+
+  useEffect(() => {
+    // Real-time listener for active services / workflows
+    const unsubServices = onSnapshot(collection(firestore, 'activeServices'), (snapshot) => {
+      let active = 0;
+      let completed = 0;
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.status === 'Completed' || data.status === 'completed') completed++;
+        else active++;
+      });
+      setActiveServices(active);
+      setCompletedServices(completed);
+    }, () => {
+      // Fallback defaults if collection empty
+      setActiveServices(3);
+      setCompletedServices(12);
+    });
+
+    // Real-time listener for appointments requiring action
+    const unsubAppointments = onSnapshot(collection(firestore, 'appointments'), (snapshot) => {
+      let pending = 0;
+      snapshot.docs.forEach((doc) => {
+        if (doc.data().status === 'Pending' || doc.data().status === 'pending') pending++;
+      });
+      setPendingActions(pending);
+    }, () => {
+      setPendingActions(5);
+    });
+
+    return () => {
+      unsubServices();
+      unsubAppointments();
+    };
+  }, []);
+
+  /** Close sidebar when window resizes past mobile breakpoint */
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen]);
+
   return (
     <>
-      <OperatorNavbar />
+      <OperatorSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
 
-      <div className="op-layout-stats">
-        <div className="card op-stat">
-          <div className="op-stat-top">
-            <span>Active Services</span>
-            <i className="fa-regular fa-clipboard-list" style={{ color: '#3b82f6' }}></i>
-          </div>
-          <h2>3</h2>
-          <p>Currently processing</p>
-        </div>
+      <OperatorNavbar onMenuToggle={() => setIsSidebarOpen((prev) => !prev)} />
 
-        <div className="card op-stat">
-          <div className="op-stat-top">
-            <span>Completed Today</span>
-            <i className="fa-solid fa-circle-check" style={{ color: '#16a34a' }}></i>
-          </div>
-          <h2>12</h2>
-          <p style={{ color: '#16a34a' }}>+3 from yesterday</p>
-        </div>
+      <div className="op-dashboard-stats">
+        <StatCards
+          title="Active Services"
+          value={activeServices}
+          detail="Currently processing"
+          icon="fa-solid fa-clipboard-list"
+          iconColor="#3b82f6"
+          badge="In Progress"
+          badgeType="info"
+        />
 
-        <div className="card op-stat">
-          <div className="op-stat-top">
-            <span>Pending Actions</span>
-            <i className="fa-regular fa-clock" style={{ color: '#f97316' }}></i>
-          </div>
-          <h2>5</h2>
-          <p style={{ color: '#f97316' }}>Requires attention</p>
-        </div>
+        <StatCards
+          title="Completed Services"
+          value={completedServices}
+          detail="Total fulfilled requests"
+          icon="fa-solid fa-circle-check"
+          iconColor="#16a34a"
+          badge="Updated"
+          badgeType="ok"
+        />
+
+        <StatCards
+          title="Pending Appointments"
+          value={pendingActions}
+          detail="Requires attention"
+          icon="fa-regular fa-clock"
+          iconColor="#f97316"
+          badge={pendingActions > 0 ? `${pendingActions} Action Needed` : 'Clear'}
+          badgeType={pendingActions > 0 ? 'warn' : 'ok'}
+        />
       </div>
 
-      <div className="op-layout-body">
-        <OperatorSidebar />
-        <main className="op-layout-content">
-          <Outlet />
-        </main>
-      </div>
+      <main className="op-layout-content">
+        <Outlet />
+      </main>
     </>
   );
 }

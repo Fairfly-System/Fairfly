@@ -1,45 +1,14 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
+import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import AddServiceModal from '../../../components/Operator/AddServiceModal/AddServiceModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import './operator-dashboard.css';
 
-const INITIAL_SERVICES = [
-  {
-    id: 1,
-    name: 'Maria Santos',
-    type: 'PSA Certificate',
-    priority: 'Normal Priority',
-    priorityType: 'normal',
-    started: 'March 20, 2026',
-    step: 4,
-    total: 8,
-  },
-  {
-    id: 2,
-    name: 'Juan Dela Cruz',
-    type: 'Passport Renewal',
-    priority: 'High Priority',
-    priorityType: 'high',
-    started: 'March 18, 2026',
-    step: 6,
-    total: 8,
-  },
-  {
-    id: 3,
-    name: 'Anna Reyes',
-    type: 'VISA Assistance',
-    priority: 'Normal Priority',
-    priorityType: 'normal',
-    started: 'March 22, 2026',
-    step: 2,
-    total: 9,
-  },
-];
-
-export default function OperatorDashboard() {
+function DashboardContent() {
+  const { data: dbServices, loading } = useOperatorContext();
   const [showAddService, setShowAddService] = useState(false);
-  const [services, setServices] = useState(INITIAL_SERVICES);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
@@ -48,17 +17,19 @@ export default function OperatorDashboard() {
   const [pageSize, setPageSize] = useState(5);
 
   const filteredServices = useMemo(() => {
-    return services.filter((s) => {
-      const matchesSearch =
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.type.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!dbServices) return [];
+    return dbServices.filter((s) => {
+      const nameStr = (s.clientName || s.name || '').toLowerCase();
+      const typeStr = (s.serviceType || s.type || '').toLowerCase();
+      const search = searchTerm.toLowerCase();
 
+      const matchesSearch = nameStr.includes(search) || typeStr.includes(search);
       const matchesPriority =
-        priorityFilter === 'all' || s.priorityType === priorityFilter;
+        priorityFilter === 'all' || (s.priorityType || '').toLowerCase() === priorityFilter.toLowerCase();
 
       return matchesSearch && matchesPriority;
     });
-  }, [services, searchTerm, priorityFilter]);
+  }, [dbServices, searchTerm, priorityFilter]);
 
   const paginatedServices = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -70,7 +41,7 @@ export default function OperatorDashboard() {
       <div className="op-dashboard-header">
         <div>
           <h2>Active Services Fulfillment</h2>
-          <p>Real-time processing status of client service workflows</p>
+          <p>Real-time processing status & step-by-step guided procedures for client services</p>
         </div>
         <button className="op-dashboard-btn" onClick={() => setShowAddService(true)}>
           <i className="fa-solid fa-plus"></i>
@@ -106,9 +77,9 @@ export default function OperatorDashboard() {
 
         <FilterChipGroup
           chips={[
-            { value: 'all', label: `All (${services.length})` },
-            { value: 'high', label: `High Priority (${services.filter((s) => s.priorityType === 'high').length})` },
-            { value: 'normal', label: `Normal Priority (${services.filter((s) => s.priorityType === 'normal').length})` },
+            { value: 'all', label: `All (${(dbServices || []).length})` },
+            { value: 'high', label: `High Priority (${(dbServices || []).filter((s) => s.priorityType === 'high').length})` },
+            { value: 'normal', label: `Normal Priority (${(dbServices || []).filter((s) => s.priorityType === 'normal').length})` },
           ]}
           activeChip={priorityFilter}
           onChipChange={(val) => {
@@ -121,34 +92,46 @@ export default function OperatorDashboard() {
       {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
 
       <div className="op-service-list">
-        {paginatedServices.length === 0 ? (
+        {loading ? (
+          <div className="empty-state-box"><p>Loading active services...</p></div>
+        ) : paginatedServices.length === 0 ? (
           <div className="empty-state-box">
             <i className="fa-solid fa-list-check empty-icon"></i>
             <p>No active services match your criteria</p>
           </div>
         ) : (
           paginatedServices.map((s) => {
-            const pct = Math.round((s.step / s.total) * 100);
+            const steps = s.steps || [];
+            const completedCount = steps.filter((step) => step.status === 'Completed').length;
+            const totalSteps = steps.length || s.total || 5;
+            const pct = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
+            const clientName = s.clientName || s.name || 'Client Service';
+            const serviceType = s.serviceType || s.type || 'General Service';
+            const priority = s.priority || 'Normal Priority';
+            const priorityType = s.priorityType || 'normal';
+
             return (
               <div key={s.id} className="op-service-card">
                 <div className="op-service-card-top">
                   <div className="op-service-meta">
-                    <span className="op-service-name">{s.name}</span>
-                    <span className="op-service-type">{s.type}</span>
-                    <span className={`op-priority ${s.priorityType}`}>{s.priority}</span>
+                    <span className="op-service-name">{clientName}</span>
+                    <span className="op-service-type">{serviceType}</span>
+                    <span className={`op-priority ${priorityType}`}>{priority}</span>
                   </div>
-                  <button className="op-view-btn">
+                  <Link to={`/operator/services/${s.id}/procedure`} className="op-view-btn">
                     <i className="fa-regular fa-file-lines"></i>
-                    View Workflow
-                  </button>
+                    Perform Workflow Procedure
+                  </Link>
                 </div>
 
-                <p className="op-service-started">Started: {s.started}</p>
+                <p className="op-service-started">
+                  Started: {s.startedAt ? new Date(s.startedAt).toLocaleDateString() : s.started || 'Recently'}
+                </p>
 
                 <div className="op-progress-row">
                   <span className="op-progress-label">Fulfillment Progress</span>
                   <span className="op-progress-step">
-                    Step {s.step} of {s.total} ({pct}%)
+                    {completedCount} of {totalSteps} Steps ({pct}%)
                   </span>
                 </div>
                 <div className="op-progress-track">
@@ -160,7 +143,6 @@ export default function OperatorDashboard() {
         )}
       </div>
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalItems={filteredServices.length}
@@ -169,5 +151,13 @@ export default function OperatorDashboard() {
         onPageSizeChange={setPageSize}
       />
     </div>
+  );
+}
+
+export default function OperatorDashboard() {
+  return (
+    <OperatorProvider targetCollection="activeServices">
+      <DashboardContent />
+    </OperatorProvider>
   );
 }

@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
-import './operator-workflows.css';
+import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import './operator-workflows.css';
 
-const WORKFLOWS = {
+const DEFAULT_WORKFLOWS = {
   PSA: [
     'Receive client inquiry and requirements',
     'Verify client documents and IDs',
-    'Submit request to PSA office',
+    'Submit request to PSA office portal',
     'Track application status',
     'Receive PSA certificate',
     'Quality check and verification',
@@ -60,12 +61,23 @@ const WORKFLOWS = {
 
 const TABS = ['PSA', 'Passport', 'VISA', 'Tour', 'Tickets'];
 
-export default function OperatorWorkflows() {
+function WorkflowContent() {
+  const { data: dbTemplates, loading } = useOperatorContext();
   const [active, setActive] = useState('PSA');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  const activeSteps = WORKFLOWS[active] || [];
+  const activeSteps = useMemo(() => {
+    if (dbTemplates && dbTemplates.length > 0) {
+      const match = dbTemplates.find(
+        (t) => (t.type || t.serviceType || t.name || '').toLowerCase() === active.toLowerCase()
+      );
+      if (match && Array.isArray(match.steps) && match.steps.length > 0) {
+        return match.steps.map((s) => (typeof s === 'string' ? s : s.title || s.name || 'Workflow Step'));
+      }
+    }
+    return DEFAULT_WORKFLOWS[active] || [];
+  }, [dbTemplates, active]);
 
   const paginatedSteps = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -78,8 +90,10 @@ export default function OperatorWorkflows() {
   return (
     <div className="card op-workflows page-fade-in">
       <div className="op-workflows-header">
-        <h2>Workflow Steps Reference</h2>
-        <p>Standardized operational procedures for service processing</p>
+        <div>
+          <h2>Template-Driven Booking Workflows</h2>
+          <p>Admin-standardized step-by-step operational procedures for service processing</p>
+        </div>
       </div>
 
       <div className="op-tab-strip">
@@ -92,21 +106,26 @@ export default function OperatorWorkflows() {
               setCurrentPage(1);
             }}
           >
-            {tab} ({WORKFLOWS[tab].length} Steps)
+            {tab} ({activeSteps.length} Steps)
           </button>
         ))}
       </div>
 
       <div className="op-step-list">
-        {paginatedSteps.map((s) => (
-          <div key={s.stepNum} className="op-step">
-            <span className="op-step-num">{s.stepNum}</span>
-            <span className="op-step-text">{s.text}</span>
-          </div>
-        ))}
+        {loading ? (
+          <div className="empty-state-box"><p>Loading workflow templates...</p></div>
+        ) : paginatedSteps.length === 0 ? (
+          <div className="empty-state-box"><p>No steps defined for this workflow</p></div>
+        ) : (
+          paginatedSteps.map((s) => (
+            <div key={s.stepNum} className="op-step">
+              <span className="op-step-num">{s.stepNum}</span>
+              <span className="op-step-text">{s.text}</span>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalItems={activeSteps.length}
@@ -115,5 +134,13 @@ export default function OperatorWorkflows() {
         onPageSizeChange={setPageSize}
       />
     </div>
+  );
+}
+
+export default function OperatorWorkflows() {
+  return (
+    <OperatorProvider targetCollection="workflowTemplates">
+      <WorkflowContent />
+    </OperatorProvider>
   );
 }

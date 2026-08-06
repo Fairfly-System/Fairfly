@@ -1,0 +1,125 @@
+.op-quotations-page {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.op-quotations-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.op-quotations-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.op-quotations-title h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-dark, #0f172a);
+}
+
+.op-quotations-title p {
+  color: var(--text-mid, #64748b);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.op-quotation-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+  transition: all 0.2s ease;
+}
+
+.op-quotation-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.op-quotations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.op-quotation-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.op-quotation-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.op-quotation-client-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.op-quotation-number {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.op-quotation-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding: 0.85rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.op-quotation-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.op-quotation-meta-item label {
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.op-quotation-meta-item span {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+@media (max-width: 48rem) {
+  .op-quotation-details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

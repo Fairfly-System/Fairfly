@@ -1,0 +1,259 @@
+.op-procedure-page {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.op-procedure-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.op-procedure-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.op-procedure-back-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.op-procedure-header-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.op-procedure-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.15rem;
+}
+
+.op-procedure-header-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.op-procedure-header-info h1 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.op-procedure-header-info p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 0.35rem;
+}
+
+.op-procedure-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.op-procedure-header-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.op-procedure-grid {
+  display: grid;
+  grid-template-columns: 20rem 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.op-procedure-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.op-procedure-panel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.op-procedure-panel-card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.op-procedure-progress-bar-bg {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.op-procedure-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #22c55e 100%);
+  transition: width 0.3s ease;
+}
+
+.op-procedure-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.op-procedure-req-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+}
+
+.op-procedure-timeline-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.op-procedure-step-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.35rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.op-procedure-step-card.completed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.op-procedure-step-card.active {
+  background: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+}
+
+.op-procedure-step-card.locked {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  opacity: 0.7;
+}
+
+.op-procedure-step-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.op-procedure-step-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.op-procedure-step-badge {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  font-weight: 800;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.op-procedure-step-card.completed .op-procedure-step-badge {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.op-procedure-step-card.active .op-procedure-step-badge {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.op-procedure-step-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.op-procedure-step-desc {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.35rem;
+  line-height: 1.5;
+}
+
+.op-procedure-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+@media (max-width: 64rem) {
+  .op-procedure-grid {
+    grid-template-columns: 1fr;
+  }
+}

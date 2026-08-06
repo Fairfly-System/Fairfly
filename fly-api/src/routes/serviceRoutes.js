@@ -28,6 +28,11 @@ const SERVICE_ALLOWED_FIELDS = [
   'status'
 ];
 
+const activeServiceRoutes = require('./activeServiceRoutes');
+
+// Active Services Routes
+router.use('/active', activeServiceRoutes);
+
 // Services Routes
 router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), createService));
 router.post('/bulk-status', performanceProfiler('POST /services/bulk-status', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkStatusServices));
