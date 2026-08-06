@@ -7,12 +7,22 @@ export default function QuickLinkForm({ onSubmit, isLoading, initialData = null 
     category: '',
   });
 
+  const normalizeCategory = (cat) => {
+    if (!cat) return '';
+    const lower = String(cat).toLowerCase().replace(/\s+/g, '');
+    if (lower === 'government') return 'government';
+    if (lower === 'airlines') return 'airlines';
+    if (lower === 'hotels') return 'hotels';
+    if (lower.includes('visa') || lower.includes('embassy')) return 'visaAndEmbassy';
+    return cat;
+  };
+
   useEffect(() => {
     if (initialData) {
       setFormData({
         title: initialData.title || '',
         url: initialData.url || '',
-        category: initialData.category || '',
+        category: normalizeCategory(initialData.category),
       });
     } else {
       setFormData({ title: '', url: '', category: '' });

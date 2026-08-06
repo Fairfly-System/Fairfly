@@ -2,10 +2,10 @@ import React, { useState, forwardRef } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
 import QuickLinkForm from './QuickLinkForm';
 
-const QuickLinkModal = forwardRef(({ isOpen, onClose, editingLink: propEditingLink, onSubmit, isLoading }, ref) => {
+const QuickLinkModal = forwardRef(({ isOpen, onClose, editingLink: propEditingLink, initialData, onSubmit, isLoading }, ref) => {
   const [internalLink, setInternalLink] = useState(null);
 
-  const activeLink = propEditingLink !== undefined ? propEditingLink : internalLink;
+  const activeLink = initialData !== undefined ? initialData : (propEditingLink !== undefined ? propEditingLink : internalLink);
 
   return (
     <BaseModal
