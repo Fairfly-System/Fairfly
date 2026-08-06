@@ -1,7 +1,8 @@
 import './franchise-application-form.css';
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { submitFranchiseApplication } from '../../../services/franchiseService';
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
 import { useToast } from '../../UI/toast/ToastProvider';
 
 export default function FranchiseApplicationForm({ isOpen, onClose }) {
@@ -32,30 +33,32 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Submit to Firestore using franchise service
-    submitFranchiseApplication({
-      ...formData,
-    }).then(() => {
-      setIsLoading(false);
-      onClose();
-      setFormData({
-        fullName: '',
-        phoneNumber: '',
-        email: '',
-        preferredBranchLocation: '',
-        businessExperience: '',
-        investmentCapacity: '',
-        preferredMeetingDate: '',
-        preferredMeetingTime: '',
-        additionalInformation: '',
-      });
-      addToast('Application submitted successfully!', 'success');
-    }).catch((error) => {
-      setIsLoading(false);
-      addToast('Error submitting application: ' + error.message, 'error');
-      console.error('Application submission error:', error);
-    });
+    ApiCaller(
+      `${API_BASE_URL}/api/franchise/applications`,
+      'POST',
+      formData,
+      {},
+      () => {
+        onClose();
+        setFormData({
+          fullName: '',
+          phoneNumber: '',
+          email: '',
+          preferredBranchLocation: '',
+          businessExperience: '',
+          investmentCapacity: '',
+          preferredMeetingDate: '',
+          preferredMeetingTime: '',
+          additionalInformation: '',
+        });
+        addToast('Application submitted successfully!', 'success');
+      },
+      (error) => {
+        addToast('Error submitting application: ' + error.message, 'error');
+        console.error('Application submission error:', error);
+      },
+      setIsLoading
+    );
   };
 
   const validateName = (name) => {

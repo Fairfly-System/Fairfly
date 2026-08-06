@@ -1,6 +1,6 @@
 import { collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../firebase';
-import { uploadAndGetDownloadURLFromFirebase } from '../utils/firebaseutils';
+import { uploadFileToBackend } from '../utils/fileUploadApi';
 
 /**
  * Chat Service for Real-Time Messaging using Firestore
@@ -123,9 +123,8 @@ export const sendFileMessage = async (chatId, file, senderId, messageType = 'fil
       throw new Error('File size exceeds 5MB limit');
     }
 
-    // Upload file to Firebase Storage
-    const storagePath = `chat_files/${chatId}/${Date.now()}_${file.name}`;
-    const { URL } = await uploadAndGetDownloadURLFromFirebase(file, storagePath);
+    // Upload file via Backend API
+    const { url: URL } = await uploadFileToBackend(file, `chat_files/${chatId}`);
 
     // Create message with file URL
     const messageData = {

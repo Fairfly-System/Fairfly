@@ -1,9 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_SYSTEM_INSTRUCTION } from "./botPersona";
 import "./chatbot.css"; 
 
 export default function Chatbot() {
+  const location = useLocation();
+  const isHiddenRoute =
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/operator");
+
+  if (isHiddenRoute) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {

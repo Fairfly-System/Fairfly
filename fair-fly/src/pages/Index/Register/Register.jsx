@@ -4,8 +4,8 @@ import { Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
 import "./register.css";
 import logo from "/FairflyLogo.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../../firebase";
-import { setToDatabase } from "../../../utils/firebaseutils";
+import { setDoc, doc } from "firebase/firestore";
+import { auth, firestore } from "../../../firebase";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 
 export default function Register() {
@@ -142,10 +142,10 @@ export default function Register() {
     if (disabled) return;
 
     createUserWithEmailAndPassword(auth, formData.email, formData.password)
-      .then(() => {
+      .then(async () => {
         const { password, confirmPassword, ...userWithoutPassword } = formData;
 
-        setToDatabase("users/" + auth.currentUser.uid, {
+        await setDoc(doc(firestore, "users", auth.currentUser.uid), {
           ...userWithoutPassword,
           createdAt: new Date().toISOString(),
           role: "client",

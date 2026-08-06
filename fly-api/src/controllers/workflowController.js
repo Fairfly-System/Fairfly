@@ -1,3 +1,4 @@
+const { db } = require('../config/firebase');
 const { 
   addToDatabase, 
   getFromDatabase, 
@@ -5,11 +6,43 @@ const {
   updateToDatabase, 
   deleteFromDatabase 
 } = require('../services/firebaseService');
+const { deleteRecordStorageFiles } = require('../services/storageService');
 
 const COLLECTIONS = {
   WORKFLOW_TEMPLATES: 'workflowTemplates',
-  WORKFLOW_INSTANCES: 'workflowInstances'
+  WORKFLOW_INSTANCES: 'workflowInstances',
+  SERVICES: 'services'
 };
+
+/**
+ * Cascade helper: Removes deleted workflow IDs from all services referencing them
+ * @param {string[]} workflowIds Array of deleted workflow template IDs
+ */
+async function cascadeRemoveWorkflowFromServices(workflowIds) {
+  if (!Array.isArray(workflowIds) || workflowIds.length === 0) return;
+
+  try {
+    const servicesRef = db.collection(COLLECTIONS.SERVICES);
+
+    for (const workflowId of workflowIds) {
+      const snapshot = await servicesRef.where('workflowIds', 'array-contains', workflowId).get();
+      if (!snapshot.empty) {
+        const batch = db.batch();
+        snapshot.docs.forEach((doc) => {
+          const serviceData = doc.data();
+          const updatedWorkflowIds = (serviceData.workflowIds || []).filter(id => id !== workflowId);
+          batch.update(doc.ref, {
+            workflowIds: updatedWorkflowIds,
+            updatedAt: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+    }
+  } catch (error) {
+    console.error('Error cascading workflow deletion to services:', error);
+  }
+}
 
 /**
  * ============================================================================
@@ -137,6 +170,13 @@ const deleteTemplate = async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Template not found' });
 
     await deleteFromDatabase(dbPath);
+
+    // Clean up attached files from Firebase Storage
+    await deleteRecordStorageFiles(existing);
+
+    // Cascade remove deleted workflow ID from all services
+    await cascadeRemoveWorkflowFromServices([id]);
+
     return res.status(200).json({ message: 'Template deleted successfully' });
   } catch (error) {
     console.error('Error deleting workflow template:', error);
@@ -151,9 +191,19 @@ const bulkDeleteTemplates = async (req, res) => {
       return res.status(400).json({ error: 'ids array is required' });
     }
 
+    const existingRecords = await Promise.all(
+      ids.map(id => getFromDatabase(`${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`))
+    );
+
     await Promise.all(
       ids.map((id) => deleteFromDatabase(`${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`))
     );
+
+    // Clean up attached files from Firebase Storage for all deleted templates
+    await deleteRecordStorageFiles(existingRecords);
+
+    // Cascade remove all deleted workflow IDs from all services
+    await cascadeRemoveWorkflowFromServices(ids);
 
     return res.status(200).json({ message: `${ids.length} workflow templates deleted successfully`, count: ids.length });
   } catch (error) {

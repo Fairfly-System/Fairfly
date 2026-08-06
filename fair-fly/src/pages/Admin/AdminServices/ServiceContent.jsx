@@ -11,6 +11,7 @@ import { useToast } from "../../../components/UI/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
+import { uploadFileToBackend } from "../../../utils/fileUploadApi";
 
 export default function ServiceContent() {
   const UNIT_LABELS = {
@@ -96,7 +97,7 @@ export default function ServiceContent() {
     return filteredServices.slice(start, start + pageSize);
   }, [filteredServices, currentPage, pageSize]);
 
-  // Column definitions for DataTable (declared BEFORE any early return)
+  // Column definitions for DataTable
   const columns = useMemo(
     () => [
       {
@@ -111,7 +112,7 @@ export default function ServiceContent() {
         render: (item) => {
           const reqsList = item.requirements || item.actions || [];
           const reqsCount = Array.isArray(reqsList) ? reqsList.length : 0;
-          const hasAttachment = Array.isArray(reqsList) && reqsList.some(r => r.attachment && r.attachment.url);
+          const hasAttachment = Array.isArray(reqsList) && reqsList.some(r => r.attachment && (r.attachment.url || r.attachment.pendingFile));
 
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
@@ -231,6 +232,36 @@ export default function ServiceContent() {
     };
   }, [service]);
 
+  const processPendingFilesForService = async (serviceData) => {
+    if (!serviceData || !Array.isArray(serviceData.requirements)) {
+      return serviceData;
+    }
+
+    const updatedRequirements = await Promise.all(
+      serviceData.requirements.map(async (req) => {
+        if (req.attachment && req.attachment.pendingFile) {
+          const file = req.attachment.pendingFile;
+          const { url: downloadUrl } = await uploadFileToBackend(file, 'service_requirements', userToken);
+
+          const { pendingFile, ...restAttachment } = req.attachment;
+          return {
+            ...req,
+            attachment: {
+              ...restAttachment,
+              url: downloadUrl,
+            },
+          };
+        }
+        return req;
+      })
+    );
+
+    return {
+      ...serviceData,
+      requirements: updatedRequirements,
+    };
+  };
+
   const handleFormSubmit = async (serviceData) => {
     if (editingService) {
       await handleEditServiceSubmit(serviceData);
@@ -240,41 +271,57 @@ export default function ServiceContent() {
   };
 
   const handleCreateServiceSubmit = async (newServiceData) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/services`,
-      "POST",
-      newServiceData,
-      { Authorization: `Bearer ${userToken}` },
-      () => {
-        addToast("Service created successfully!", "success");
-        setIsModalOpen(false);
-        setEditingService(null);
-      },
-      (error) => {
-        console.error("Error creating service:", error);
-        addToast("Failed to create service: " + error.message, "error");
-      },
-      setIsSubmitting
-    );
+    setIsSubmitting(true);
+    try {
+      const processedData = await processPendingFilesForService(newServiceData);
+      return await ApiCaller(
+        `${API_BASE_URL}/api/services`,
+        "POST",
+        processedData,
+        { Authorization: `Bearer ${userToken}` },
+        () => {
+          addToast("Service created successfully!", "success");
+          setIsModalOpen(false);
+          setEditingService(null);
+        },
+        (error) => {
+          console.error("Error creating service:", error);
+          addToast("Failed to create service: " + error.message, "error");
+        },
+        setIsSubmitting
+      );
+    } catch (err) {
+      console.error("Error uploading requirement attachment:", err);
+      addToast("Failed to upload requirement attachment: " + err.message, "error");
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditServiceSubmit = async (updatedServiceData) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/services/${editingService.id}`,
-      "PUT",
-      updatedServiceData,
-      { Authorization: `Bearer ${userToken}` },
-      () => {
-        addToast("Service updated successfully!", "success");
-        setIsModalOpen(false);
-        setEditingService(null);
-      },
-      (error) => {
-        console.error("Error updating service:", error);
-        addToast("Failed to update service: " + error.message, "error");
-      },
-      setIsSubmitting
-    );
+    setIsSubmitting(true);
+    try {
+      const processedData = await processPendingFilesForService(updatedServiceData);
+      return await ApiCaller(
+        `${API_BASE_URL}/api/services/${editingService.id}`,
+        "PUT",
+        processedData,
+        { Authorization: `Bearer ${userToken}` },
+        () => {
+          addToast("Service updated successfully!", "success");
+          setIsModalOpen(false);
+          setEditingService(null);
+        },
+        (error) => {
+          console.error("Error updating service:", error);
+          addToast("Failed to update service: " + error.message, "error");
+        },
+        setIsSubmitting
+      );
+    } catch (err) {
+      console.error("Error uploading requirement attachment:", err);
+      addToast("Failed to upload requirement attachment: " + err.message, "error");
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteService = async (serviceId) => {

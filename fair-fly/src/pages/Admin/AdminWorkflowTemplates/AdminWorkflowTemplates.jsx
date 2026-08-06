@@ -11,6 +11,7 @@ import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 
 const TrashIcon = (props) => (
   <i className="fa-solid fa-trash-can" {...props}></i>
@@ -161,36 +162,82 @@ export default function AdminWorkflowTemplates() {
 
   const authHeaders = { Authorization: `Bearer ${userToken}` };
 
-  const handleCreateTemplate = async (templateData) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/workflow/templates`,
-      'POST',
-      templateData,
-      authHeaders,
-      () => {
-        setIsModalOpen(false);
-        setEditingTemplate(null);
-        addToast('Workflow template created successfully', 'success');
-      },
-      (err) => addToast('Failed to create template: ' + err.message, 'error'),
-      setIsSubmitting
+  const processPendingFilesForWorkflow = async (templateData) => {
+    if (!templateData || !Array.isArray(templateData.steps)) {
+      return templateData;
+    }
+
+    const updatedSteps = await Promise.all(
+      templateData.steps.map(async (step) => {
+        if (step.file && step.file.pendingFile) {
+          const file = step.file.pendingFile;
+          const { url: downloadUrl } = await uploadFileToBackend(file, 'workflow_documents', userToken);
+
+          const { pendingFile, ...restFile } = step.file;
+          return {
+            ...step,
+            file: {
+              ...restFile,
+              url: downloadUrl,
+            },
+          };
+        }
+        return step;
+      })
     );
+
+    return {
+      ...templateData,
+      steps: updatedSteps,
+    };
+  };
+
+  const handleCreateTemplate = async (templateData) => {
+    setIsSubmitting(true);
+    try {
+      const processedData = await processPendingFilesForWorkflow(templateData);
+      return await ApiCaller(
+        `${API_BASE_URL}/api/workflow/templates`,
+        'POST',
+        processedData,
+        authHeaders,
+        () => {
+          setIsModalOpen(false);
+          setEditingTemplate(null);
+          addToast('Workflow template created successfully', 'success');
+        },
+        (err) => addToast('Failed to create template: ' + err.message, 'error'),
+        setIsSubmitting
+      );
+    } catch (err) {
+      console.error('Error uploading step document attachments:', err);
+      addToast('Failed to upload step document attachment: ' + err.message, 'error');
+      setIsSubmitting(false);
+    }
   };
 
   const handleUpdateTemplate = async (templateData) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/workflow/templates/${editingTemplate.id}`,
-      'PATCH',
-      templateData,
-      authHeaders,
-      () => {
-        setIsModalOpen(false);
-        setEditingTemplate(null);
-        addToast('Workflow template updated successfully', 'success');
-      },
-      (err) => addToast('Failed to update template: ' + err.message, 'error'),
-      setIsSubmitting
-    );
+    setIsSubmitting(true);
+    try {
+      const processedData = await processPendingFilesForWorkflow(templateData);
+      return await ApiCaller(
+        `${API_BASE_URL}/api/workflow/templates/${editingTemplate.id}`,
+        'PATCH',
+        processedData,
+        authHeaders,
+        () => {
+          setIsModalOpen(false);
+          setEditingTemplate(null);
+          addToast('Workflow template updated successfully', 'success');
+        },
+        (err) => addToast('Failed to update template: ' + err.message, 'error'),
+        setIsSubmitting
+      );
+    } catch (err) {
+      console.error('Error uploading step document attachments:', err);
+      addToast('Failed to upload step document attachment: ' + err.message, 'error');
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async (templateId) => {
@@ -268,7 +315,7 @@ export default function AdminWorkflowTemplates() {
           <p>Create and manage step-by-step workflow templates for service automation</p>
         </div>
 
-        <button className="workflow-template-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
+        <button className="workflow-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
           <i className="fa-solid fa-plus"></i>
           New Template
         </button>

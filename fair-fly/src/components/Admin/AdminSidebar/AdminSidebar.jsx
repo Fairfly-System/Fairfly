@@ -77,6 +77,11 @@ export default function AdminSidebar({ isOpen, onClose }) {
             Franchise Application
           </NavLink>
 
+          <NavLink to="/admin/tickets" onClick={onClose}>
+            <i className="fa-solid fa-ticket"></i>
+            Tickets
+          </NavLink>
+
           <NavLink to="/admin/inquiry-history" onClick={onClose}>
             <i className="fa-solid fa-clipboard-list"></i>
             Inquiry History

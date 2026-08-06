@@ -2,10 +2,10 @@ import React, { useState, forwardRef } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
 import WorkflowForm from './WorkflowForm';
 
-const WorkflowModal = forwardRef(({ isOpen, onClose, editingTemplate: propEditingTemplate, onSubmit, isLoading }, ref) => {
+const WorkflowModal = forwardRef(({ isOpen, onClose, editingTemplate: propEditingTemplate, initialData, onSubmit, isLoading }, ref) => {
   const [internalTemplate, setInternalTemplate] = useState(null);
 
-  const activeTemplate = propEditingTemplate !== undefined ? propEditingTemplate : internalTemplate;
+  const activeTemplate = propEditingTemplate !== undefined ? propEditingTemplate : (initialData !== undefined ? initialData : internalTemplate);
 
   return (
     <BaseModal

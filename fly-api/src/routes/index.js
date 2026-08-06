@@ -6,6 +6,8 @@ const serviceRoutes = require('./serviceRoutes');
 const operatorRoutes = require('./operatorRoutes');
 const workflowRoutes = require('./workflowRoutes');
 const chatRoutes = require('./chatRoutes');
+const uploadRoutes = require('./uploadRoutes');
+const ticketRoutes = require('./ticketRoutes');
 
 router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
@@ -13,5 +15,7 @@ router.use('/operators', operatorRoutes);
 router.use('/workflows', workflowRoutes);
 router.use('/workflow', workflowRoutes); // Support both /workflow and /workflows
 router.use('/chats', chatRoutes);
+router.use('/upload', uploadRoutes);
+router.use('/tickets', ticketRoutes);
 
 module.exports = router;

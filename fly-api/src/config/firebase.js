@@ -1,10 +1,11 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config(); //Import the dotenv module to use environment variables
+require('dotenv').config();
 
 let db;
 let auth;
+let bucket;
 
 const normalizeServiceAccount = (serviceAccount) => {
   if (!serviceAccount || !serviceAccount.private_key) {
@@ -53,21 +54,30 @@ const loadServiceAccountFromFile = () => {
 
 try {
   const serviceAccount = loadServiceAccountFromEnv() || loadServiceAccountFromFile();
+  let rawBucket = process.env.FIREBASE_STORAGE_BUCKET || 'fairfly-1e83b.firebasestorage.app';
+  if (rawBucket.startsWith('gs://')) {
+    rawBucket = rawBucket.replace('gs://', '');
+  }
+  const defaultBucket = rawBucket;
 
   if (admin.apps.length > 0) {
     console.log('Firebase Admin SDK already initialized; reusing existing app.');
   } else if (serviceAccount) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: defaultBucket
     });
   } else {
     console.warn('WARNING: No service account configuration found. Initializing Firebase Admin SDK with default application credentials.');
-    admin.initializeApp();
+    admin.initializeApp({
+      storageBucket: defaultBucket
+    });
   }
 
   db = admin.firestore();
   auth = admin.auth();
-  console.log('Firebase Admin SDK successfully initialized.');
+  bucket = admin.storage().bucket();
+  console.log(`Firebase Admin SDK successfully initialized with storage bucket: ${defaultBucket}`);
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);
   throw error;
@@ -76,5 +86,6 @@ try {
 module.exports = {
   admin,
   db,
-  auth
+  auth,
+  bucket
 };

@@ -6,6 +6,7 @@ const {
   deleteFromDatabase 
 } = require('../services/firebaseService');
 const { staticDataCache } = require('../services/cacheService');
+const { deleteRecordStorageFiles } = require('../services/storageService');
 
 const COLLECTIONS = {
   SERVICES: 'services',
@@ -104,6 +105,9 @@ const deleteService = async (req, res) => {
 
     await deleteFromDatabase(dbPath);
 
+    // Clean up attached files from Firebase Storage
+    await deleteRecordStorageFiles(existing);
+
     // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.SERVICES);
 
@@ -145,9 +149,16 @@ const bulkDeleteServices = async (req, res) => {
       return res.status(400).json({ error: 'ids array is required' });
     }
 
+    const existingRecords = await Promise.all(
+      ids.map(id => getFromDatabase(`${COLLECTIONS.SERVICES}/${id}`))
+    );
+
     await Promise.all(
       ids.map((id) => deleteFromDatabase(`${COLLECTIONS.SERVICES}/${id}`))
     );
+
+    // Clean up attached files from Firebase Storage for all deleted services
+    await deleteRecordStorageFiles(existingRecords);
 
     staticDataCache.delete(CACHE_KEYS.SERVICES);
     return res.status(200).json({ message: `${ids.length} services deleted successfully`, count: ids.length });
