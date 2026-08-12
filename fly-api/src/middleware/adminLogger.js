@@ -18,35 +18,59 @@ const METHOD_ACTION_MAP = {
  */
 const RESOURCE_PATTERNS = [
   { pattern: '/api/services/quicklinks', type: 'quicklink' },
+  { pattern: '/api/services/active', type: 'activeService' },
   { pattern: '/api/services', type: 'service' },
   { pattern: '/api/operators', type: 'operator' },
   { pattern: '/api/workflow/templates', type: 'workflowTemplate' },
+  { pattern: '/api/workflows/templates', type: 'workflowTemplate' },
   { pattern: '/api/workflow/instances', type: 'workflowInstance' },
+  { pattern: '/api/workflows/instances', type: 'workflowInstance' },
+  { pattern: '/api/workflows', type: 'workflowTemplate' },
+  { pattern: '/api/workflow', type: 'workflowTemplate' },
   { pattern: '/api/franchise', type: 'franchiseApplication' },
+  { pattern: '/api/tickets', type: 'ticket' },
+  { pattern: '/api/inquiries', type: 'inquiry' },
+  { pattern: '/api/quotations', type: 'quotation' },
+  { pattern: '/api/appointments', type: 'appointment' },
   { pattern: '/api/chats', type: 'chat' },
+  { pattern: '/api/upload', type: 'upload' },
 ];
 
 /**
  * Parse the resource type and resource ID from the request URL.
- * @param {string} url - req.originalUrl (e.g. "/api/services/abc123")
+ * @param {string} url - req.originalUrl (e.g. "/api/services/abc123" or "/api/services")
  * @returns {{ resourceType: string, resourceId: string|null }}
  */
 function parseResource(url) {
   // Strip query string
-  const path = url.split('?')[0];
+  const path = url.split('?')[0]; // Gets the url path without the query string, e.g "/api/services/abc123?limit=10" -> "/api/services/abc123"
 
+  // 1. Early return for exact pattern match (e.g. POST /api/services) — no slicing or segment parsing required
   for (const { pattern, type } of RESOURCE_PATTERNS) {
-    if (path.startsWith(pattern)) {
-      // Everything after the pattern prefix, split by "/"
-      const remainder = path.slice(pattern.length).replace(/^\//, '');
-      const segments = remainder ? remainder.split('/') : [];
-      // First segment is likely the resource ID (if it exists and isn't a sub-action keyword)
-      const resourceId = segments[0] || null;
-      return { resourceType: type, resourceId };
+    if (path === pattern) {
+      return { resourceType: type, resourceId: null };
     }
   }
 
-  return { resourceType: 'unknown', resourceId: null };
+  // 2. Return when resource ID is provided or sub-action/bulk endpoint (e.g. PATCH /api/services/abc123 or POST /api/services/bulk-delete)
+  for (const { pattern, type } of RESOURCE_PATTERNS) {
+    if (path.startsWith(pattern + '/')) {
+      const remainder = path.slice(pattern.length + 1); // Everything after pattern and trailing slash
+      const segments = remainder ? remainder.split('/') : []; // Splits remainder by "/"
+
+      const SUB_ACTION_KEYWORDS = ['bulk-delete', 'bulk-status', 'messages', 'status', 'step'];
+      let resourceId = segments[0] || null; // Gets the first segment (e.g. "abc123")
+
+      if (resourceId && SUB_ACTION_KEYWORDS.includes(resourceId)) { // Checks if the first segment is a sub-action keyword
+        resourceId = null; // Sets resource ID to null if it is a sub-action keyword
+      }
+
+      return { resourceType: type, resourceId }; // Returns resource type and resource ID (or null for bulk actions)
+    }
+  }
+
+  // 3. Fallback return if no pattern matches
+  return { resourceType: 'unknown', resourceId: null }; // Returns "unknown" if no pattern matches
 }
 
 /**
@@ -69,6 +93,7 @@ function adminLogger(req, res, next) {
     return next();
   }
 
+  //On finish of the request (Will be added/executed on the last middleware automatically after all other middleware finishes (or the controller finishes))
   res.on('finish', () => {
     try {
       // Only log successful responses (2xx)
@@ -107,7 +132,7 @@ function adminLogger(req, res, next) {
     }
   });
 
-  next();
+  next(); //Calls next middleware function (or the controller if this is the last middleware)
 }
 
 module.exports = { adminLogger };

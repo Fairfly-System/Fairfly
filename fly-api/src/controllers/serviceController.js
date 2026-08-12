@@ -291,7 +291,29 @@ const bulkDeleteQuickLinks = async (req, res) => {
   }
 };
 
+const getServices = async (req, res) => {
+  try {
+    const cachedData = staticDataCache.get(CACHE_KEYS.SERVICES);
+    if (cachedData) {
+      return res.status(200).json(cachedData);
+    }
+
+    const rawData = await getAllFromDatabase(COLLECTIONS.SERVICES);
+    const servicesList = rawData 
+      ? Object.entries(rawData).map(([id, val]) => ({ id, ...val }))
+      : [];
+
+    staticDataCache.set(CACHE_KEYS.SERVICES, servicesList, 300);
+
+    return res.status(200).json(servicesList);
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
+  getServices,
   createService,
   updateService,
   deleteService,

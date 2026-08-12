@@ -171,7 +171,35 @@ const bulkDeleteOperators = async (req, res) => {
   }
 };
 
+/**
+ * Get active branches/operators list (Specifically for Form dropdown selection)
+ */
+const getBranches = async (req, res) => {
+  try {
+    const { queryDatabaseAdvanced } = require('../services/firebaseService');
+    const operators = await queryDatabaseAdvanced(COLLECTIONS.USERS, {
+      filters: [{ field: 'role', operator: '==', value: 'operator' }]
+    });
+
+    const activeBranches = operators
+      .filter((op) => op.status !== 'Inactive')
+      .map((op) => ({
+        uid: op.id,
+        branchName: op.branchName || op.name || 'Branch Operator',
+        address: op.address || '',
+        email: op.email || '',
+        contactNumber: op.contactNumber || ''
+      }));
+
+    return res.status(200).json(activeBranches);
+  } catch (error) {
+    console.error('Error fetching branches:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
+  getBranches,
   createOperator,
   updateOperator,
   deleteOperator,

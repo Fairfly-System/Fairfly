@@ -15,7 +15,18 @@
 - `fair-fly/src/components/Admin/Tickets/TicketThread.jsx` **[NEW]** (Forum-style thread component displaying discussion timeline with role badges [Admin / Operator], reply form, and Close Forum button)
 - `fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx` **[NEW]** (Modal component for Admin ticket creation)
 - `fair-fly/src/components/Admin/Tickets/tickets.css` **[NEW]** (Component styles for TicketTable, TicketThread, badges, and forum timeline)
-- `fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx` & `operator-service-procedure.css` **[NEW PAGE]** (Created dedicated full-screen page for Operator Service Procedure execution `/operator/services/:id/procedure` with a 2-column spacious layout, top client header, sidebar completion metrics, Admin requirements checklist, and step timeline)
+- `fair-fly/src/pages/Operator/OperatorServiceProcedure/operator-service-procedure.css` (Added missing CSS rules for `.swm-btn-complete`, `.swm-btn-portal`, `.swm-btn-file-attach`, `.swm-overall-badge`, `.swm-step-status-pill`, and `.op-priority` badge styling on the Operator Procedure view)
+
+### Summary of Changes
+- **Operator Procedure UI Styling Fix**: Added complete CSS definitions for step action buttons (**Mark Step Completed**, **Toggle Ongoing**, **Open Portal Link**, **Attached Reference File**), overall status pill, and individual step status badges on the Operator Service Procedure page.
+
+### Reason
+- Fix missing styles for step action buttons and status pills on the Operator Service Procedure execution page.
+
+### Breaking Changes
+- None.
+
+---
 - `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Updated "Perform Workflow Procedure" action buttons to navigate directly to the new dedicated `/operator/services/:id/procedure` page)
 - `fair-fly/src/App.jsx` (Registered `/operator/services/:id/procedure` route under Operator routes)
 

@@ -130,7 +130,21 @@ const getActiveServices = async (req, res) => {
  */
 const createActiveService = async (req, res) => {
   try {
-    const { clientName, clientEmail, clientPhone, serviceId, serviceType, priority, workflowIds } = req.body;
+    const { 
+      clientName, 
+      clientEmail, 
+      clientPhone, 
+      serviceId, 
+      serviceType, 
+      priority, 
+      workflowIds,
+      branchUid,
+      operatorId,
+      branchName,
+      additionalNotes,
+      status
+    } = req.body;
+
     if (!clientName || (!serviceType && !serviceId)) {
       return res.status(400).json({ error: 'Client name and service type are required' });
     }
@@ -151,27 +165,42 @@ const createActiveService = async (req, res) => {
     const compiledSteps = await compileWorkflowStepsForService(serviceId, finalServiceTitle, workflowIds);
     const now = new Date().toISOString();
 
+    const targetBranchUid = operatorId || branchUid || req.user?.uid || 'OP-ACCOUNT';
+    let resolvedBranchName = branchName || '';
+
+    if (!resolvedBranchName && targetBranchUid !== 'OP-ACCOUNT') {
+      const branchUser = await getFromDatabase(`users/${targetBranchUid}`);
+      if (branchUser) {
+        resolvedBranchName = branchUser.branchName || branchUser.name || '';
+      }
+    }
+
     const newService = {
+      clientUid: req.user?.uid || req.body.clientUid || null,
       clientName: clientName.trim(),
       clientEmail: clientEmail ? clientEmail.trim() : '',
       clientPhone: clientPhone ? clientPhone.trim() : '',
       serviceId: serviceId || null,
+      serviceUID: serviceId || null,
       serviceType: finalServiceTitle,
       price,
       requirements: serviceRequirements,
       priority: priority || 'Normal Priority',
       priorityType: (priority || '').toLowerCase().includes('high') ? 'high' : 'normal',
-      status: 'Processing',
+      status: status || 'Pending',
       currentStepIndex: 0,
       totalSteps: compiledSteps.length,
       startedAt: now,
       completedAt: null,
       steps: compiledSteps,
-      operatorId: req.user?.uid || 'OP-ACCOUNT'
+      operatorId: targetBranchUid,
+      branchUid: targetBranchUid,
+      branchName: resolvedBranchName || 'Branch Operator',
+      additionalNotes: additionalNotes ? additionalNotes.trim() : ''
     };
 
     const docId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, newService);
-    return res.status(201).json({ id: docId, ...newService, message: 'Active service record initialized with Admin workflows' });
+    return res.status(201).json({ id: docId, ...newService, message: 'Active service record created successfully' });
   } catch (error) {
     console.error('Error creating active service:', error);
     return res.status(500).json({ error: 'Internal Server Error' });

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { useAuthContext } from '../../../context/AuthContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import AddServiceModal from '../../../components/Operator/AddServiceModal/AddServiceModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
@@ -8,6 +9,7 @@ import './operator-dashboard.css';
 
 function DashboardContent() {
   const { data: dbServices, loading } = useOperatorContext();
+  const { user, userDetails } = useAuthContext();
   const [showAddService, setShowAddService] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -18,18 +20,31 @@ function DashboardContent() {
 
   const filteredServices = useMemo(() => {
     if (!dbServices) return [];
-    return dbServices.filter((s) => {
+    
+    // Filter by branch operator if role is operator
+    let list = dbServices;
+    if (user?.uid && userDetails?.role === 'operator') {
+      const assigned = dbServices.filter(
+        (s) => s.operatorId === user.uid || s.branchUid === user.uid
+      );
+      if (assigned.length > 0) {
+        list = assigned;
+      }
+    }
+
+    return list.filter((s) => {
       const nameStr = (s.clientName || s.name || '').toLowerCase();
       const typeStr = (s.serviceType || s.type || '').toLowerCase();
+      const branchStr = (s.branchName || '').toLowerCase();
       const search = searchTerm.toLowerCase();
 
-      const matchesSearch = nameStr.includes(search) || typeStr.includes(search);
+      const matchesSearch = nameStr.includes(search) || typeStr.includes(search) || branchStr.includes(search);
       const matchesPriority =
         priorityFilter === 'all' || (s.priorityType || '').toLowerCase() === priorityFilter.toLowerCase();
 
       return matchesSearch && matchesPriority;
     });
-  }, [dbServices, searchTerm, priorityFilter]);
+  }, [dbServices, user, userDetails, searchTerm, priorityFilter]);
 
   const paginatedServices = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -116,6 +131,12 @@ function DashboardContent() {
                   <div className="op-service-meta">
                     <span className="op-service-name">{clientName}</span>
                     <span className="op-service-type">{serviceType}</span>
+                    {s.branchName && (
+                      <span className="op-service-type" style={{ background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe' }}>
+                        <i className="fa-solid fa-building" style={{ marginRight: '0.3rem' }}></i>
+                        {s.branchName}
+                      </span>
+                    )}
                     <span className={`op-priority ${priorityType}`}>{priority}</span>
                   </div>
                   <Link to={`/operator/services/${s.id}/procedure`} className="op-view-btn">

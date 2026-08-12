@@ -35,6 +35,31 @@
   border-color: #94a3b8;
 }
 
+/* Overall Status Badge */
+.swm-overall-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.swm-overall-badge.completed {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.swm-overall-badge.processing,
+.swm-overall-badge.pending {
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #a5b4fc;
+}
+
 .op-procedure-header-card {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
@@ -95,6 +120,37 @@
   gap: 0.4rem;
 }
 
+/* Priority Badges */
+.op-priority {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.op-priority.urgent,
+.op-priority.high {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.op-priority.normal {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.op-priority.low {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
 .op-procedure-grid {
   display: grid;
   grid-template-columns: 20rem 1fr;
@@ -143,19 +199,136 @@
 .op-procedure-req-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.85rem;
+  margin-top: 0.85rem;
 }
 
 .op-procedure-req-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.825rem;
+  gap: 0.6rem;
+  font-size: 0.875rem;
   color: #334155;
+  line-height: 1.4;
+}
+
+/* Submitted Requirements Verification Cards */
+.op-submitted-req-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.op-submitted-req-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.op-submitted-req-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.op-submitted-req-type {
+  font-size: 0.725rem;
+  font-weight: 600;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.op-submitted-img-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+.op-submitted-img-preview {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.op-submitted-img-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.op-file-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.op-submitted-doc-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
+  gap: 0.5rem;
+}
+
+.op-req-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  background: #4f46e5;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.op-req-view-btn:hover {
+  background: #4338ca;
+  color: #ffffff;
+}
+
+.op-submitted-text-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.op-text-label {
+  font-size: 0.725rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.op-text-value {
+  font-size: 0.85rem;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .op-procedure-timeline-panel {
@@ -243,13 +416,119 @@
   line-height: 1.5;
 }
 
+/* Step Status Pill */
+.swm-step-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.775rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.swm-step-status-pill.completed {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.swm-step-status-pill.currently-processing,
+.swm-step-status-pill.ongoing {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.swm-step-status-pill.pending {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
 .op-procedure-step-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
-  padding-top: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px dashed #e2e8f0;
+}
+
+/* Step Action Buttons */
+.swm-btn-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+  transition: all 0.2s ease;
+}
+
+.swm-btn-complete:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.swm-btn-complete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.swm-btn-portal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  background: #ffffff;
+  color: #4f46e5;
+  border: 1px solid #6366f1;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.swm-btn-portal:hover:not(:disabled) {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #4f46e5;
+}
+
+.swm-btn-portal:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.swm-btn-file-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.swm-btn-file-attach:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
 @media (max-width: 64rem) {

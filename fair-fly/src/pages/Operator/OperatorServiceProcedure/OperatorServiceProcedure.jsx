@@ -171,19 +171,93 @@ function ServiceProcedureContent() {
             </p>
           </div>
 
-          {requirements.length > 0 && (
+          {/* Client Submitted Requirements & Documents Verification Panel */}
+          {((serviceRecord.submittedRequirements && serviceRecord.submittedRequirements.length > 0) || requirements.length > 0) && (
             <div className="op-procedure-panel-card">
               <h3>
-                <i className="fa-regular fa-clipboard" style={{ color: 'var(--purple)' }}></i>
-                Admin Service Requirements ({requirements.length})
+                <i className="fa-solid fa-file-circle-check" style={{ color: '#6366f1' }}></i>
+                Client Submitted Requirements ({((serviceRecord.submittedRequirements || requirements).length)})
               </h3>
+
               <div className="op-procedure-req-list">
-                {requirements.map((req, rIdx) => (
-                  <div key={rIdx} className="op-procedure-req-item">
-                    <i className="fa-solid fa-square-check" style={{ color: '#16a34a', marginTop: '0.15rem' }}></i>
-                    <span>{typeof req === 'string' ? req : req.title || req.name || 'Requirement Item'}</span>
-                  </div>
-                ))}
+                {(serviceRecord.submittedRequirements || requirements).map((req, rIdx) => {
+                  const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
+                  const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
+                  const fileMeta = typeof req === 'object' ? req.file : null;
+                  const valueStr = typeof req === 'object' ? req.value : '';
+
+                  const isImage = inputType === 'image' || (fileMeta?.url && /\.(png|jpg|jpeg|webp|gif)/i.test(fileMeta.fileName || fileMeta.url));
+
+                  return (
+                    <div key={rIdx} className="op-submitted-req-card">
+                      <div className="op-submitted-req-header">
+                        <span className="op-submitted-req-name">{reqName}</span>
+                        <span className="op-submitted-req-type">
+                          {isImage ? '📷 Image' : fileMeta ? '📄 Document' : inputType === 'date' ? '📅 Date' : inputType === 'number' ? '🔢 Number' : '✏️ Text'}
+                        </span>
+                      </div>
+
+                      {/* Image Thumbnail Preview & Link */}
+                      {fileMeta && isImage && (
+                        <div className="op-submitted-img-box">
+                          <img src={fileMeta.url} alt={reqName} className="op-submitted-img-preview" />
+                          <div className="op-submitted-img-actions">
+                            <span className="op-file-name">{fileMeta.fileName || 'Attached Image'}</span>
+                            <a
+                              href={fileMeta.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="op-req-view-btn"
+                              title="Open full resolution image"
+                            >
+                              <i className="fa-solid fa-arrow-up-right-from-square"></i> View Full Image
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Document File Link */}
+                      {fileMeta && !isImage && (
+                        <div className="op-submitted-doc-box">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <i className="fa-solid fa-file-pdf" style={{ fontSize: '1.25rem', color: '#ef4444' }}></i>
+                            <div style={{ overflow: 'hidden' }}>
+                              <div className="op-file-name">{fileMeta.fileName || 'Attached Document'}</div>
+                              {fileMeta.fileSize && (
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                  ({(fileMeta.fileSize / 1024 / 1024).toFixed(2)} MB)
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <a
+                            href={fileMeta.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="op-req-view-btn"
+                            title="Download/View Document"
+                          >
+                            <i className="fa-solid fa-download"></i> View File
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Text / Date / Number Value Response */}
+                      {!fileMeta && valueStr && (
+                        <div className="op-submitted-text-box">
+                          <span className="op-text-label">Response:</span>
+                          <span className="op-text-value">{valueStr}</span>
+                        </div>
+                      )}
+
+                      {!fileMeta && !valueStr && (
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                          Standard requirement acknowledged by client
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

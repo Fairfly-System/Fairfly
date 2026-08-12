@@ -13,6 +13,7 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
   const [requirements, setRequirements] = useState(initialRequirements);
 
   const [newReqName, setNewReqName] = useState('');
+  const [newReqInputType, setNewReqInputType] = useState('image'); // 'image' | 'file' | 'text' | 'date' | 'number'
   const [newReqRequired, setNewReqRequired] = useState(true);
   
   // Attachment State
@@ -77,11 +78,14 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
 
     setRequirements([...requirements, {
       name: newReqName.trim(),
+      title: newReqName.trim(),
+      inputType: newReqInputType,
       required: newReqRequired,
       attachment: attachmentObj
     }]);
 
     setNewReqName('');
+    setNewReqInputType('image');
     setNewReqRequired(true);
     setAttachmentType('none');
     setAttachmentUrl('');
@@ -125,18 +129,21 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
                     <div className="stepBadge">{index + 1}</div>
                     <div className="stepContent">
-                      <h4>{req.name}</h4>
-                      <span
-                        style={{
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          color: req.required ? 'var(--red)' : 'var(--text-mid)',
-                          marginTop: '0.125rem',
-                          display: 'inline-block',
-                        }}
-                      >
-                        {req.required ? '(Required)' : '(Optional)'}
-                      </span>
+                      <h4>{req.name || req.title}</h4>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.125rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            color: req.required ? 'var(--red)' : 'var(--text-mid)',
+                          }}
+                        >
+                          {req.required ? '(Required)' : '(Optional)'}
+                        </span>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, background: '#e0e7ff', color: '#3730a3', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                          Type: {req.inputType || 'text'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <button
@@ -193,13 +200,27 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
 
         <div className="formGroup" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
           <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>Add New Requirement</label>
-          <input
-            type="text"
-            className="modalInput"
-            placeholder="Requirement name (e.g. Barangay Clearance) *"
-            value={newReqName}
-            onChange={(e) => setNewReqName(e.target.value)}
-          />
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+            <input
+              type="text"
+              className="modalInput"
+              placeholder="Requirement name (e.g. Passport Image) *"
+              value={newReqName}
+              onChange={(e) => setNewReqName(e.target.value)}
+            />
+            <select
+              className="modalSelect"
+              value={newReqInputType}
+              onChange={(e) => setNewReqInputType(e.target.value)}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <option value="image">📷 Image Upload</option>
+              <option value="file">📄 Document File</option>
+              <option value="text">✏️ Text Response</option>
+              <option value="date">📅 Date Input</option>
+              <option value="number">🔢 Number Input</option>
+            </select>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem 0' }}>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-mid)', fontWeight: 600 }}>Requirement Type:</span>
