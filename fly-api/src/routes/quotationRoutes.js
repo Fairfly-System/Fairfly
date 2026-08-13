@@ -4,7 +4,8 @@ const {
   createQuotation, 
   getQuotations, 
   updateQuotationStatus, 
-  deleteQuotation 
+  deleteQuotation,
+  updateQuotation
 } = require('../controllers/quotationController');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { verifyFirebaseToken } = require('../middleware/auth');
@@ -17,6 +18,7 @@ router.post('/', publicRateLimiter, (req, res, next) => {
 
 router.get('/', performanceProfiler('GET /quotations', verifyFirebaseToken, apiRateLimiter, getQuotations));
 router.patch('/:id/status', performanceProfiler('PATCH /quotations/:id/status', verifyFirebaseToken, apiRateLimiter, updateQuotationStatus));
+router.patch('/:id', performanceProfiler('PATCH /quotations/:id', verifyFirebaseToken, apiRateLimiter, updateQuotation));
 router.delete('/:id', performanceProfiler('DELETE /quotations/:id', verifyFirebaseToken, apiRateLimiter, deleteQuotation));
 
 module.exports = router;

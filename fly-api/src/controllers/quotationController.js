@@ -128,9 +128,39 @@ const deleteQuotation = async (req, res) => {
   }
 };
 
+/**
+ * Update quotation details
+ */
+const updateQuotation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+
+    const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Quotation not found' });
+
+    // Handle number conversions if sent
+    if (updates.rate !== undefined) updates.rate = Number(updates.rate) || 0;
+    if (updates.totalAmount !== undefined) updates.totalAmount = Number(updates.totalAmount) || 0;
+
+    await updateToDatabase(dbPath, {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+
+    return res.status(200).json({ message: 'Quotation updated successfully' });
+  } catch (error) {
+    console.error('Error updating quotation:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   createQuotation,
   getQuotations,
   updateQuotationStatus,
-  deleteQuotation
+  deleteQuotation,
+  updateQuotation
 };
