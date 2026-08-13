@@ -7,6 +7,7 @@ import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import PageHeader from "../../../components/UI/PageHeader/PageHeader";
 import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
+import KpiCard from "../../../components/UI/KpiCard/KpiCard";
 import "./admin-inquiry-history.css";
 
 export default function HistoryContent() {
@@ -79,7 +80,7 @@ export default function HistoryContent() {
   const rejectedCount = Array.isArray(historyApplications) ? historyApplications.filter((a) => a.status === "rejected").length : 0;
 
   return (
-    <div className="inquiry-page page-fade-in">
+    <main className="inquiry-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -88,7 +89,28 @@ export default function HistoryContent() {
         illustrationSrc="/pageImages/admin/inquiry-history.png"
       />
 
-      <div className="card inquiry-table-card">
+      <section className="services-summary-grid">
+        <KpiCard
+          title="Total Processed"
+          value={totalHistory}
+          icon="fa-solid fa-clock-rotate-left"
+          iconColor="var(--purple)"
+        />
+        <KpiCard
+          title="Approved"
+          value={approvedCount}
+          icon="fa-regular fa-circle-check"
+          iconColor="var(--complete-green-dark)"
+        />
+        <KpiCard
+          title="Rejected"
+          value={rejectedCount}
+          icon="fa-solid fa-ban"
+          iconColor="var(--error-red-dark)"
+        />
+      </section>
+
+      <section className="card inquiry-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Toolbar Search & Filter */}
@@ -131,7 +153,7 @@ export default function HistoryContent() {
           />
         </div>
 
-      <div className="franchise-cards-container">
+        {/* Cards Grid */}
         {franchiseLoading ? (
           <div className="empty-state-box">
             <p>Loading inquiry history...</p>
@@ -165,19 +187,18 @@ export default function HistoryContent() {
             ))}
           </div>
         )}
-      </div>
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalItems={filteredHistory.length}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
-      </div>
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredHistory.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </section>
 
       <ApplicationModal ref={modalRef} isLoading={isLoading} showButtons={false} />
-    </div>
+    </main>
   );
 }

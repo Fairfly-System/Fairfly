@@ -10,6 +10,7 @@ import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import DataTable from "../../../components/UI/DataTable/DataTable";
 import PageHeader from "../../../components/UI/PageHeader/PageHeader";
 import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
+import KpiCard from "../../../components/UI/KpiCard/KpiCard";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
@@ -348,7 +349,7 @@ export default function OperatorsContent() {
   const inactiveCount = totalOperators - activeCount;
 
   return (
-    <div className="operators-page page-fade-in">
+    <main className="operators-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -362,7 +363,28 @@ export default function OperatorsContent() {
         }}
       />
 
-      <div className="card operators-table-card">
+      <section className="services-summary-grid">
+        <KpiCard
+          title="Total Operators"
+          value={totalOperators}
+          icon="fa-solid fa-building-user"
+          iconColor="var(--purple)"
+        />
+        <KpiCard
+          title="Active"
+          value={activeCount}
+          icon="fa-regular fa-circle-check"
+          iconColor="var(--complete-green-dark)"
+        />
+        <KpiCard
+          title="Disabled"
+          value={inactiveCount}
+          icon="fa-solid fa-ban"
+          iconColor="var(--error-red-dark)"
+        />
+      </section>
+
+      <section className="card operators-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Toolbar Filter Row */}
@@ -431,7 +453,7 @@ export default function OperatorsContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      </div>
+      </section>
 
       {/* Render the Operator Modal */}
       <OperatorModal
@@ -516,6 +538,6 @@ export default function OperatorsContent() {
         isLoading={isConfirmLoading}
         OnConfirm={handleConfirm}
       />
-    </div>
+    </main>
   );
 }

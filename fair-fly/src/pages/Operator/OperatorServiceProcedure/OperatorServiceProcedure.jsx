@@ -119,10 +119,10 @@ function ServiceProcedureContent() {
   ];
 
   return (
-    <div className="operator-procedure-page page-fade-in">
+    <main className="operator-procedure-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
-      <div className="card op-procedure-page">
+      <section className="card op-procedure-page">
         <div className="op-procedure-top-bar">
         <Link to="/operator" className="op-procedure-back-btn">
           <i className="fa-solid fa-arrow-left"></i> Back to Active Services
@@ -293,7 +293,7 @@ function ServiceProcedureContent() {
             else if (step.status === 'Ongoing') statusClass = 'ongoing';
 
             return (
-              <div
+              <article
                 key={idx}
                 className={`op-procedure-step-card ${isCompleted ? 'completed' : isActive ? 'active' : 'locked'}`}
               >
@@ -371,13 +371,13 @@ function ServiceProcedureContent() {
                     </a>
                   )}
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
       </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

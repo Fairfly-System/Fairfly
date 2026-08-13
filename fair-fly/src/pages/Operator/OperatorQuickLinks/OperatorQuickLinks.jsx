@@ -71,7 +71,7 @@ function QuickLinksContent() {
   ];
 
   return (
-    <div className="operator-quick-links-page page-fade-in">
+    <main className="operator-quick-links-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -80,7 +80,7 @@ function QuickLinksContent() {
         illustrationSrc="/pageImages/operator/quick-links.png"
       />
 
-      <div className="card op-quicklinks">
+      <section className="card op-quicklinks">
 
       <div className="op-tab-strip">
         {TABS.map((tab) => (
@@ -126,8 +126,8 @@ function QuickLinksContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

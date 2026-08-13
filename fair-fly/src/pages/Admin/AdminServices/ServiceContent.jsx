@@ -444,7 +444,7 @@ export default function ServiceContent() {
     : 0;
 
   return (
-    <div className="services-page page-fade-in">
+    <main className="services-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -458,7 +458,7 @@ export default function ServiceContent() {
         }}
       />
 
-      <div className="services-summary-grid">
+      <section className="services-summary-grid">
         <KpiCard
           title="Total Services"
           value={totalServices}
@@ -483,9 +483,9 @@ export default function ServiceContent() {
           icon="fa-solid fa-tags"
           iconColor="#f0653e"
         />
-      </div>
+      </section>
 
-      <div className="card services-table-card">
+      <section className="card services-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Toolbar Search & Filter */}
@@ -554,7 +554,7 @@ export default function ServiceContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      </div>
+      </section>
 
       {/* Render Service Modal */}
       <ServiceModal
@@ -639,6 +639,6 @@ export default function ServiceContent() {
         isLoading={isConfirmLoading}
         OnConfirm={handleConfirm}
       />
-    </div>
+    </main>
   );
 }

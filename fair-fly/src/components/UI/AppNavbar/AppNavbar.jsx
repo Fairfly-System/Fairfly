@@ -60,10 +60,15 @@ export default function AppNavbar({
           </button>
         )}
 
-        <NavLink to="/home" className="app-logoIcon">
-          <div className="client-logoIcon">
-            <img src="/FairflyLogo.png" alt="Fairfly Logo" />
-          </div>
+        <NavLink to="/home" className="app-logoIcon" aria-label="Fairfly Home">
+          <img
+            src="/FairflyLogo.png"
+            alt="Fairfly Logo"
+            loading="eager"
+            decoding="async"
+            width="36"
+            height="36"
+          />
         </NavLink>
 
         <div className="app-nav-brand-text">

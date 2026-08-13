@@ -73,7 +73,7 @@ function AppointmentContent() {
   ];
 
   return (
-    <div className="operator-appointments-page page-fade-in">
+    <main className="operator-appointments-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -82,7 +82,7 @@ function AppointmentContent() {
         illustrationSrc="/pageImages/operator/appointments.png"
       />
 
-      <div className="card op-appointments">
+      <section className="card op-appointments">
 
       {/* Toolbar Filter */}
       <div className="table-toolbar">
@@ -146,7 +146,7 @@ function AppointmentContent() {
             const purpose = a.purpose || 'Face-to-face consultation';
 
             return (
-              <div key={a.id} className="op-appt-card">
+              <article key={a.id} className="op-appt-card">
                 <div className="op-appt-top">
                   <div className="op-appt-left">
                     <div className="op-avatar">{name[0]?.toUpperCase() || 'C'}</div>
@@ -217,7 +217,7 @@ function AppointmentContent() {
                 <p className="op-appt-requested">
                   Requested: {a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Recently'}
                 </p>
-              </div>
+              </article>
             );
           })
         )}
@@ -230,8 +230,8 @@ function AppointmentContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

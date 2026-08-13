@@ -2,7 +2,7 @@ import React from 'react';
 import './welcome-hero.css';
 
 /**
- * WelcomeHero — dashboard greeting hero banner.
+ * WelcomeHero — dashboard greeting hero banner with semantic header & image performance controls.
  *
  * Props:
  *  userName        {string}  — User's name (e.g., "Admin", "John")
@@ -25,7 +25,7 @@ export default function WelcomeHero({
   });
 
   return (
-    <div className="welcome-hero card">
+    <header className="welcome-hero card">
       <div className="welcome-hero-content">
         <div className="welcome-hero-date">
           <i className="fa-regular fa-calendar-days"></i> {formattedDate}
@@ -40,9 +40,15 @@ export default function WelcomeHero({
 
       {illustrationSrc && (
         <div className="welcome-hero-illustration">
-          <img src={illustrationSrc} alt="Dashboard Illustration" />
+          <img
+            src={illustrationSrc}
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+            decoding="async"
+          />
         </div>
       )}
-    </div>
+    </header>
   );
 }

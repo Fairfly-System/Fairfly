@@ -8,6 +8,7 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { useAdminContext } from '../../../context/AdminContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
@@ -103,7 +104,7 @@ export default function FranchiseContent() {
   const rejectedCount = Array.isArray(franchiseApplications) ? franchiseApplications.filter((a) => a.status === 'rejected').length : 0;
 
   return (
-    <div className="franchise-page page-fade-in">
+    <main className="franchise-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -112,7 +113,34 @@ export default function FranchiseContent() {
         illustrationSrc="/pageImages/admin/franchise-apps.png"
       />
 
-      <div className="card franchise-table-card">
+      <section className="services-summary-grid">
+        <KpiCard
+          title="Total Applications"
+          value={totalApps}
+          icon="fa-solid fa-file-signature"
+          iconColor="var(--purple)"
+        />
+        <KpiCard
+          title="Pending Review"
+          value={pendingCount}
+          icon="fa-regular fa-clock"
+          iconColor="var(--orange)"
+        />
+        <KpiCard
+          title="Approved"
+          value={approvedCount}
+          icon="fa-regular fa-circle-check"
+          iconColor="var(--complete-green-dark)"
+        />
+        <KpiCard
+          title="Rejected"
+          value={rejectedCount}
+          icon="fa-solid fa-ban"
+          iconColor="var(--error-red-dark)"
+        />
+      </section>
+
+      <section className="card franchise-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Toolbar Filter Row */}
@@ -156,40 +184,38 @@ export default function FranchiseContent() {
           />
         </div>
 
-        {/* Cards / Content Container */}
-        <div className="franchise-cards-container">
-          {franchiseLoading ? (
-            <Loader text="Loading franchise applications..." />
-          ) : paginatedApplications.length === 0 ? (
-            <div className="empty-state-box">
-              <i className="fa-solid fa-folder-open empty-icon"></i>
-              <p>No franchise applications match your selected filters</p>
-            </div>
-          ) : (
-            <div className="franchise-cards-list">
-              {paginatedApplications.map((application) => (
-                <FranchiseCard
-                  key={application.id}
-                  avatar={`https://placehold.co/400x400/6B6FF5/FFFFFF?text=` + (application.fullName || 'F').substring(0, 1).toUpperCase()}
-                  name={application.fullName}
-                  email={application.email}
-                  status={(application.status || 'PENDING').toUpperCase()}
-                  contactNumber={application.phoneNumber}
-                  address={application.preferredBranchLocation}
-                  experience={application.businessExperience + ' year(s)'}
-                  investmentCapacity={'PHP ' + application.investmentCapacity}
-                  preferredMeetingDate={
-                    application.preferredMeetingDate
-                      ? new Date(application.preferredMeetingDate).toLocaleDateString()
-                      : 'N/A'
-                  }
-                  additionalMessage={application.additionalMessage}
-                  onView={() => modalRef.current.openModal(application)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Cards Grid */}
+        {franchiseLoading ? (
+          <Loader text="Loading franchise applications..." />
+        ) : paginatedApplications.length === 0 ? (
+          <div className="empty-state-box">
+            <i className="fa-solid fa-folder-open empty-icon"></i>
+            <p>No franchise applications match your selected filters</p>
+          </div>
+        ) : (
+          <div className="franchise-cards-list">
+            {paginatedApplications.map((application) => (
+              <FranchiseCard
+                key={application.id}
+                avatar={`https://placehold.co/400x400/6B6FF5/FFFFFF?text=` + (application.fullName || 'F').substring(0, 1).toUpperCase()}
+                name={application.fullName}
+                email={application.email}
+                status={(application.status || 'PENDING').toUpperCase()}
+                contactNumber={application.phoneNumber}
+                address={application.preferredBranchLocation}
+                experience={application.businessExperience + ' year(s)'}
+                investmentCapacity={'PHP ' + application.investmentCapacity}
+                preferredMeetingDate={
+                  application.preferredMeetingDate
+                    ? new Date(application.preferredMeetingDate).toLocaleDateString()
+                    : 'N/A'
+                }
+                additionalMessage={application.additionalMessage}
+                onView={() => modalRef.current.openModal(application)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Pagination Component */}
         <Pagination
@@ -199,7 +225,7 @@ export default function FranchiseContent() {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
-      </div>
+      </section>
 
       <ApplicationModal
         ref={modalRef}
@@ -207,6 +233,6 @@ export default function FranchiseContent() {
         handleApprove={handleApplicationStatusChange}
         handleReject={handleApplicationStatusChange}
       />
-    </div>
+    </main>
   );
 }

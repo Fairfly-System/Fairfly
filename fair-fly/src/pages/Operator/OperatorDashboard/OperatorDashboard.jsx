@@ -53,14 +53,14 @@ function DashboardContent() {
   }, [filteredServices, currentPage, pageSize]);
 
   return (
-    <div className="operator-dashboard page-fade-in">
+    <main className="operator-dashboard page-fade-in">
       <WelcomeHero
         userName={userDetails?.name || 'Operator'}
         subtitle="Real-time processing status & step-by-step guided procedures for client services"
         illustrationSrc="/pageImages/operator/dashboard.png"
       />
 
-      <div className="card op-dashboard">
+      <section className="card op-dashboard">
         <div className="op-dashboard-header">
           <div>
             <h2>Active Services Fulfillment</h2>
@@ -134,7 +134,7 @@ function DashboardContent() {
               const priorityType = s.priorityType || 'normal';
 
               return (
-                <div key={s.id} className="op-service-card">
+                <article key={s.id} className="op-service-card">
                   <div className="op-service-card-top">
                     <div className="op-service-meta">
                       <span className="op-service-name">{clientName}</span>
@@ -166,7 +166,7 @@ function DashboardContent() {
                   <div className="op-progress-track">
                     <div className="op-progress-fill" style={{ width: `${pct}%` }}></div>
                   </div>
-                </div>
+                </article>
               );
             })
           )}
@@ -179,8 +179,8 @@ function DashboardContent() {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

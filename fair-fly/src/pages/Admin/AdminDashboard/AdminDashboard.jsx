@@ -108,7 +108,7 @@ export default function Dashboard() {
   const renderLogRow = (log, index) => {
     const meta = ACTION_META[log.actionType] || ACTION_META.UPDATE;
     return (
-      <div
+      <article
         className="activity-row"
         key={log.id}
         style={{ animationDelay: `${index * 0.03}s` }}
@@ -142,14 +142,14 @@ export default function Dashboard() {
         <span className="activity-status-code" title={`HTTP ${log.statusCode}`}>
           {log.statusCode}
         </span>
-      </div>
+      </article>
     );
   };
 
   const adminName = userDetails?.name || user?.email?.split('@')[0] || 'Admin';
 
   return (
-    <div className="dashboard page-fade-in">
+    <main className="dashboard page-fade-in">
       <WelcomeHero
         userName={adminName}
         subtitle="Manage travel services, monitor operators, and view incoming franchise applications in real-time."
@@ -163,7 +163,7 @@ export default function Dashboard() {
 
       {/* Charts Section */}
       <section className="dashboard-charts">
-        <div className="chart-card card">
+        <article className="chart-card card">
           <h3 className="chart-title">Monthly Revenue</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -183,9 +183,9 @@ export default function Dashboard() {
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </article>
 
-        <div className="chart-card card">
+        <article className="chart-card card">
           <h3 className="chart-title">Services Completed</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={servicesCompletedData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -197,7 +197,7 @@ export default function Dashboard() {
               <Bar dataKey="completed" name="Completed" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </article>
       </section>
 
       {/* Recent Activity Card */}
@@ -252,6 +252,6 @@ export default function Dashboard() {
         allLogsLoading={allLogsLoading}
         onExportLogs={(logs) => handleExportLogs(logs)}
       />
-    </div>
+    </main>
   );
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import './page-header.css';
 
 /**
- * PageHeader — reusable page header for table/data pages.
+ * PageHeader — reusable page header for table/data pages with semantic header & image loading controls.
  *
  * Props:
  *  title             {string}          — Main page title
@@ -22,7 +22,7 @@ export default function PageHeader({
   children,
 }) {
   return (
-    <div className="page-header card">
+    <header className="page-header card">
       <div className="page-header-content">
         <div className="page-header-text">
           <h1 className="page-header-title">{title}</h1>
@@ -46,9 +46,15 @@ export default function PageHeader({
 
       {illustrationSrc && (
         <div className="page-header-illustration">
-          <img src={illustrationSrc} alt={`${title} Illustration`} />
+          <img
+            src={illustrationSrc}
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+            decoding="async"
+          />
         </div>
       )}
-    </div>
+    </header>
   );
 }

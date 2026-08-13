@@ -82,7 +82,7 @@ export default function ClientDashboard() {
         {/* Action Cards Grid */}
         <div className="client-action-grid">
           {/* Request Service Card */}
-          <div className="card client-action-card">
+          <article className="card client-action-card">
             <div className="client-card-header">
               <div className="client-icon-bubble client-icon-bubble--primary">
                 <i className="fa-solid fa-file-circle-plus"></i>
@@ -107,10 +107,10 @@ export default function ClientDashboard() {
                 Request Service Online
               </button>
             </div>
-          </div>
+          </article>
 
           {/* Schedule Appointment Card */}
-          <div className="card client-action-card">
+          <article className="card client-action-card">
             <div className="client-card-header">
               <div className="client-icon-bubble client-icon-bubble--secondary">
                 <i className="fa-solid fa-calendar-check"></i>
@@ -135,7 +135,7 @@ export default function ClientDashboard() {
                 Schedule Appointment
               </button>
             </div>
-          </div>
+          </article>
         </div>
 
         {/* Modals */}
@@ -150,7 +150,7 @@ export default function ClientDashboard() {
         />
 
         {/* Services Tracker List */}
-        <div className="card client-services-card">
+        <section className="card client-services-card">
           <div className="client-services-header">
             <div>
               <h2>My Active Services</h2>
@@ -190,7 +190,7 @@ export default function ClientDashboard() {
               ))
             )}
           </div>
-        </div>
+        </section>
       </main>
     </div>
   );

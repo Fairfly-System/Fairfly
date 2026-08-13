@@ -70,7 +70,14 @@ export default function AppSidebar({
 
         {/* Brand Header */}
         <div className="sidebar-brand">
-          <img src="/FairflyLogo.png" alt="Fairfly Logo" />
+          <img
+            src="/FairflyLogo.png"
+            alt="Fairfly Logo"
+            loading="eager"
+            decoding="async"
+            width="32"
+            height="32"
+          />
           <div className="sidebar-brand-text">
             <span className="sidebar-brand-title">Fairfly {portalName}</span>
             <span className="sidebar-brand-subtitle">{portalSubtitle}</span>

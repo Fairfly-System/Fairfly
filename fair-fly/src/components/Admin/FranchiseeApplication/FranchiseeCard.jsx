@@ -16,13 +16,17 @@ export default function FranchiseCard({
   onDelete,
 }) {
   return (
-    <div className={`franchise-card ${status.toLowerCase()}`}>
+    <article className={`franchise-card ${status.toLowerCase()}`}>
       <div className="franchise-card-header">
         <div className="franchisee-info">
           <img
             src={avatar}
-            alt="Franchisee"
+            alt={`${name || 'Franchisee'} Avatar`}
             className="franchisee-avatar"
+            loading="lazy"
+            decoding="async"
+            width="48"
+            height="48"
           />
           <div className="franchisee-details">
             <h3>{name}</h3>
@@ -81,6 +85,6 @@ export default function FranchiseCard({
         <h3>ADDITIONAL MESSAGE:</h3>
         <p className="additional-message">{additionalMessage}</p>
       </div>
-    </div>
+    </article>
   );
 }

@@ -35,7 +35,7 @@ function InquiryContent() {
   ];
 
   return (
-    <div className="operator-inquiries-page page-fade-in">
+    <main className="operator-inquiries-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -49,7 +49,7 @@ function InquiryContent() {
         }}
       />
 
-      <div className="card op-inquiry">
+      <section className="card op-inquiry">
 
       {/* Toolbar Search */}
       <div className="table-toolbar">
@@ -92,7 +92,7 @@ function InquiryContent() {
           </div>
         ) : (
           paginatedForms.map((form) => (
-            <div key={form.id} className="op-inquiry-card">
+            <article key={form.id} className="op-inquiry-card">
               <div className="op-inquiry-card-main">
                 <div className="op-inquiry-icon">
                   <i className="fa-solid fa-file-lines"></i>
@@ -107,7 +107,7 @@ function InquiryContent() {
               <div className="op-inquiry-card-actions">
                 <span className="status-pill status-pill-active">{form.status || 'Active'}</span>
               </div>
-            </div>
+            </article>
           ))
         )}
       </div>
@@ -121,10 +121,10 @@ function InquiryContent() {
         onPageSizeChange={setPageSize}
       />
 
-      </div>
+      </section>
 
       {showModal && <CreateInquiryFormModal onClose={() => setShowModal(false)} />}
-    </div>
+    </main>
   );
 }
 

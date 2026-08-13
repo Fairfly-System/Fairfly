@@ -1,6 +1,51 @@
 # Update Logs
 
-## [2026-08-13] Phase 3 — Client Portal Redesign Completed
+## [2026-08-13] Consistent Page Layouts, Div Optimization & Semantic SEO Enhancement
+
+### Files Modified
+- **Core UI Primitives & Navigation**:
+  - `fair-fly/src/components/UI/WelcomeHero/WelcomeHero.jsx` (Converted root element to `<header className="welcome-hero card">`, added eager loading and async decoding attributes to illustrations)
+  - `fair-fly/src/components/UI/PageHeader/PageHeader.jsx` (Converted root element to `<header className="page-header card">`, added eager loading and async decoding attributes to header illustrations)
+  - `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` (Removed redundant logo wrapper `div`, added explicit width/height and eager loading attributes to brand logo `<img>`)
+  - `fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx` (Added explicit width/height and eager loading attributes to brand logo `<img>`)
+  - `fair-fly/src/components/Admin/FranchiseeApplication/FranchiseeCard.jsx` (Converted root element to `<article className="franchise-card">`, added lazy loading and async decoding to franchisee avatars)
+- **Admin Portal Pages**:
+  - `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx` (Converted root container to `<main className="dashboard page-fade-in">`, activity rows to `<article>`, chart cards to `<article>`)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Converted root container to `<main>`, grid containers to `<section>`)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Converted root container to `<main>`, added standard `<section className="services-summary-grid">` with `KpiCard`s, converted table container to `<section>`)
+  - `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx` (Converted root container to `<main>`, added standard `<section className="services-summary-grid">` with `KpiCard`s, removed redundant `.franchise-cards-container` wrapper `div`)
+  - `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Converted root container to `<main>`, added standard `<section className="services-summary-grid">` with `KpiCard`s, removed redundant `.tickets-table-container` wrapper `div`)
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx` (Converted root container to `<main>`, added standard `<section className="services-summary-grid">` with `KpiCard`s, removed redundant wrapper `div`)
+  - `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx` (Converted root container to `<main>`, added standard `<section className="services-summary-grid">` with `KpiCard`s, converted table container to `<section>`)
+  - `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx` (Converted root container to `<main>`, table card container to `<section>`)
+- **Operator Portal Pages**:
+  - `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Converted root container to `<main>`, active services list container to `<section>`, service cards to `<article>`)
+  - `fair-fly/src/pages/Operator/OperatorAppointments/OperatorAppointments.jsx` (Converted root container to `<main>`, appt container to `<section>`, appt cards to `<article>`)
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx` (Converted root container to `<main>`, form card container to `<section>`, inquiry cards to `<article>`)
+  - `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Converted root container to `<main>`, quotations container to `<section>`, quotation cards to `<article>`)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Converted root container to `<main>`, added standard `<section className="services-summary-grid">` with `KpiCard`s, removed redundant `.op-tickets-table-container` wrapper `div`)
+  - `fair-fly/src/pages/Operator/OperatorQuickLinks/OperatorQuickLinks.jsx` (Converted root container to `<main>`, quicklinks container to `<section>`)
+  - `fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx` (Converted root container to `<main>`, history container to `<section>`)
+  - `fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx` (Converted root container to `<main>`, procedure page container to `<section>`, execution step cards to `<article>`)
+- **Client Portal Pages**:
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx` (Converted action cards to `<article className="card client-action-card">`, service tracker card to `<section className="card client-services-card">`)
+
+### Summary of Changes
+- **Standardized Top-to-Bottom Layout Hierarchy**: Enforced uniform structure across every single page across Admin, Operator, and Client portals: `Breadcrumbs` -> `PageHeader` / `WelcomeHero` (`<header>`) -> KPI Summary Grid (`<section className="services-summary-grid">`) -> Main Content/Table Card (`<section className="card ...">`).
+- **Div Wrapper & Depth Optimization**: Reduced DOM node nesting and removed unneeded wrapper `div`s (e.g. `.tickets-table-container`, `.franchise-cards-container`, `.op-tickets-table-container`), improving layout render timings and eliminating Cumulative Layout Shift (CLS).
+- **Semantic HTML for SEO & Accessibility**: Replaced generic root `div` wrappers with semantic `<main>` page tags, header sections with `<header>`, card containers with `<section>`, and individual list/grid cards with `<article>`.
+- **Image Performance & Optimization**: Applied performance attributes across all images:
+  - Top-of-page hero graphics & navigation logos: `loading="eager" decoding="async" alt="" aria-hidden="true"` with explicit `width`/`height` reservations.
+  - Avatars & card content images: `loading="lazy" decoding="async"`.
+- **Build Verification**: Verified production build using `npm run build` with 0 errors across 2,555 transformed modules.
+
+### Reason
+- Fulfill user request to make page layouts consistent, optimize div usage to reduce layout shifts, enhance semantic HTML structure for SEO, and optimize image loading.
+
+### Breaking Changes
+- None.
+
+---
 
 ### Files Modified, Deleted & Created
 - **Modified Pages**:

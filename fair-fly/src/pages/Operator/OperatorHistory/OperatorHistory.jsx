@@ -69,7 +69,7 @@ export default function OperatorHistory() {
   ];
 
   return (
-    <div className="operator-history-page page-fade-in">
+    <main className="operator-history-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -78,7 +78,7 @@ export default function OperatorHistory() {
         illustrationSrc="/pageImages/operator/history.png"
       />
 
-      <div className="card op-history">
+      <section className="card op-history">
 
       <div className="op-tab-strip">
         <button
@@ -121,7 +121,7 @@ export default function OperatorHistory() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

@@ -7,6 +7,7 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import DataTable from '../../../components/UI/DataTable/DataTable';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { useAuthContext } from '../../../context/AuthContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -245,8 +246,11 @@ export default function QuickLinksContent() {
     { label: 'Quick Links' },
   ];
 
+  const totalLinks = quickLinksList.length;
+  const categoriesCount = new Set(quickLinksList.map((l) => l.category).filter(Boolean)).size;
+
   return (
-    <div className="quicklinks-page page-fade-in">
+    <main className="quicklinks-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -260,7 +264,22 @@ export default function QuickLinksContent() {
         }}
       />
 
-      <div className="card quicklinks-table-card">
+      <section className="services-summary-grid">
+        <KpiCard
+          title="Total Shortcuts"
+          value={totalLinks}
+          icon="fa-solid fa-link"
+          iconColor="var(--purple)"
+        />
+        <KpiCard
+          title="Resource Categories"
+          value={categoriesCount}
+          icon="fa-solid fa-folder-tree"
+          iconColor="var(--blue-dark)"
+        />
+      </section>
+
+      <section className="card quicklinks-table-card">
         {/* Toolbar Search & Category Filter */}
         <div className="table-toolbar">
           <div className="search-box">
@@ -328,7 +347,7 @@ export default function QuickLinksContent() {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
-      </div>
+      </section>
 
       {/* Modal for Add / Edit */}
       <QuickLinkModal
@@ -364,6 +383,6 @@ export default function QuickLinksContent() {
         isLoading={isDeleting}
         OnConfirm={() => handleBulkDelete(bulkDeleteIds)}
       />
-    </div>
+    </main>
   );
 }

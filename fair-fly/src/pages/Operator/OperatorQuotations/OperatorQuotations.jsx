@@ -221,7 +221,7 @@ function QuotationsContent() {
   ];
 
   return (
-    <div className="operator-quotations-page page-fade-in">
+    <main className="operator-quotations-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -235,7 +235,7 @@ function QuotationsContent() {
         }}
       />
 
-      <div className="card op-quotations-page">
+      <section className="card op-quotations-page">
 
       <div className="table-toolbar">
         <div className="search-box">
@@ -281,7 +281,7 @@ function QuotationsContent() {
           </div>
         ) : (
           paginatedQuotations.map((q) => (
-            <div key={q.id} className="op-quotation-card">
+            <article key={q.id} className="op-quotation-card">
               <div className="op-quotation-top">
                 <div>
                   <span className="op-quotation-client-name">{q.clientName}</span>
@@ -319,7 +319,7 @@ function QuotationsContent() {
                   <span>{q.preparedBy || 'Operator'}</span>
                 </div>
               </div>
-            </div>
+            </article>
           ))
         )}
       </div>
@@ -331,10 +331,10 @@ function QuotationsContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
-      </div>
+      </section>
 
       <CreateQuotationModal isOpen={showModal} onClose={() => setShowModal(false)} />
-    </div>
+    </main>
   );
 }
 

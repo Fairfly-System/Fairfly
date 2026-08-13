@@ -11,6 +11,7 @@ import TicketThread from '../../../components/Admin/Tickets/TicketThread';
 import CreateTicketModal from '../../../components/Admin/Tickets/CreateTicketModal';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 
@@ -189,11 +190,11 @@ export default function TicketsContent() {
   const closedCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length : 0;
 
   return (
-    <div className="tickets-page page-fade-in">
+    <main className="tickets-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       {activeTicket ? (
-        <div className="card tickets-table-card">
+        <section className="card tickets-table-card">
           <TicketThread
             ticket={activeTicket}
             onBack={() => setSelectedTicketId(null)}
@@ -202,7 +203,7 @@ export default function TicketsContent() {
             onStatusChange={handleStatusChange}
             isLoading={isSubmitting}
           />
-        </div>
+        </section>
       ) : (
         <>
           <PageHeader
@@ -216,7 +217,34 @@ export default function TicketsContent() {
             }}
           />
 
-          <div className="card tickets-table-card">
+          <section className="services-summary-grid">
+            <KpiCard
+              title="Total Tickets"
+              value={totalTickets}
+              icon="fa-solid fa-headset"
+              iconColor="var(--purple)"
+            />
+            <KpiCard
+              title="Pending"
+              value={pendingCount}
+              icon="fa-regular fa-clock"
+              iconColor="var(--orange)"
+            />
+            <KpiCard
+              title="Ongoing Threads"
+              value={ongoingCount}
+              icon="fa-solid fa-comments"
+              iconColor="var(--blue-dark)"
+            />
+            <KpiCard
+              title="Closed"
+              value={closedCount}
+              icon="fa-regular fa-circle-check"
+              iconColor="var(--complete-green-dark)"
+            />
+          </section>
+
+          <section className="card tickets-table-card">
             <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
             {/* Toolbar Search & Filter Chips */}
@@ -261,16 +289,14 @@ export default function TicketsContent() {
             </div>
 
             {/* Ticket Table */}
-            <div className="tickets-table-container">
-              <TicketTable
-                tickets={paginatedTickets}
-                loading={ticketsLoading}
-                disabled={isSubmitting}
-                onViewThread={(t) => setSelectedTicketId(t.id)}
-                onCloseTicket={handleCloseTicket}
-                onStatusChange={handleStatusChange}
-              />
-            </div>
+            <TicketTable
+              tickets={paginatedTickets}
+              loading={ticketsLoading}
+              disabled={isSubmitting}
+              onViewThread={(t) => setSelectedTicketId(t.id)}
+              onCloseTicket={handleCloseTicket}
+              onStatusChange={handleStatusChange}
+            />
 
             {/* Pagination */}
             <Pagination
@@ -280,7 +306,7 @@ export default function TicketsContent() {
               onPageChange={setCurrentPage}
               onPageSizeChange={setPageSize}
             />
-          </div>
+          </section>
         </>
       )}
 
@@ -289,6 +315,6 @@ export default function TicketsContent() {
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
       />
-    </div>
+    </main>
   );
 }

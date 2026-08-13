@@ -317,7 +317,7 @@ export default function AdminWorkflowTemplates() {
   const totalTemplates = Array.isArray(templates) ? templates.length : 0;
 
   return (
-    <div className="workflow-template-page page-fade-in">
+    <main className="workflow-template-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
@@ -331,7 +331,7 @@ export default function AdminWorkflowTemplates() {
         }}
       />
 
-      <div className="card workflow-template-table-card">
+      <section className="card workflow-template-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Search & Filter Toolbar */}
@@ -399,7 +399,7 @@ export default function AdminWorkflowTemplates() {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
-      </div>
+      </section>
 
       {/* Modal */}
       <WorkflowModal
@@ -435,6 +435,6 @@ export default function AdminWorkflowTemplates() {
         isLoading={isConfirmLoading}
         OnConfirm={() => handleBulkDelete(confirmState?.ids)}
       />
-    </div>
+    </main>
   );
 }

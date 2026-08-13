@@ -11,6 +11,7 @@ import TicketThread from '../../../components/Admin/Tickets/TicketThread';
 import CreateTicketModal from '../../../components/Admin/Tickets/CreateTicketModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 
@@ -38,7 +39,6 @@ export default function OperatorTicketsContent() {
   const operatorTickets = useMemo(() => {
     if (!tickets) return [];
     return tickets.filter((t) => {
-      // Show tickets created by or assigned to this operator, or if op account
       return true;
     });
   }, [tickets]);
@@ -156,19 +156,24 @@ export default function OperatorTicketsContent() {
     { label: 'Tickets' },
   ];
 
+  const totalTickets = operatorTickets.length;
+  const pendingCount = operatorTickets.filter((t) => (t.status || '').toLowerCase() === 'pending').length;
+  const ongoingCount = operatorTickets.filter((t) => (t.status || '').toLowerCase() === 'ongoing').length;
+  const closedCount = operatorTickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length;
+
   return (
-    <div className="operator-tickets-page page-fade-in">
+    <main className="operator-tickets-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       {activeTicket ? (
-        <div className="card operator-tickets-card">
+        <section className="card operator-tickets-card">
           <TicketThread
             ticket={activeTicket}
             onBack={() => setSelectedTicketId(null)}
             onSendMessage={handleSendMessage}
             isLoading={isSubmitting}
           />
-        </div>
+        </section>
       ) : (
         <>
           <PageHeader
@@ -182,8 +187,34 @@ export default function OperatorTicketsContent() {
             }}
           />
 
-          <div className="card operator-tickets-card">
+          <section className="services-summary-grid">
+            <KpiCard
+              title="Total Tickets"
+              value={totalTickets}
+              icon="fa-solid fa-headset"
+              iconColor="var(--purple)"
+            />
+            <KpiCard
+              title="Pending"
+              value={pendingCount}
+              icon="fa-regular fa-clock"
+              iconColor="var(--orange)"
+            />
+            <KpiCard
+              title="Ongoing Threads"
+              value={ongoingCount}
+              icon="fa-solid fa-comments"
+              iconColor="var(--blue-dark)"
+            />
+            <KpiCard
+              title="Closed"
+              value={closedCount}
+              icon="fa-regular fa-circle-check"
+              iconColor="var(--complete-green-dark)"
+            />
+          </section>
 
+          <section className="card operator-tickets-card">
             <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
             <div className="table-toolbar">
@@ -213,10 +244,10 @@ export default function OperatorTicketsContent() {
 
               <FilterChipGroup
                 chips={[
-                  { value: 'pending', label: `Pending (${operatorTickets.filter((t) => (t.status || '').toLowerCase() === 'pending').length})` },
-                  { value: 'ongoing', label: `Ongoing (${operatorTickets.filter((t) => (t.status || '').toLowerCase() === 'ongoing').length})` },
-                  { value: 'closed', label: `Closed (${operatorTickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length})` },
-                  { value: 'all', label: `All (${operatorTickets.length})` },
+                  { value: 'pending', label: `Pending (${pendingCount})` },
+                  { value: 'ongoing', label: `Ongoing (${ongoingCount})` },
+                  { value: 'closed', label: `Closed (${closedCount})` },
+                  { value: 'all', label: `All (${totalTickets})` },
                 ]}
                 activeChip={statusFilter}
                 onChipChange={(val) => {
@@ -226,14 +257,12 @@ export default function OperatorTicketsContent() {
               />
             </div>
 
-            <div className="op-tickets-table-container">
-              <TicketTable
-                tickets={paginatedTickets}
-                loading={ticketsLoading}
-                disabled={isSubmitting}
-                onViewThread={(t) => setSelectedTicketId(t.id)}
-              />
-            </div>
+            <TicketTable
+              tickets={paginatedTickets}
+              loading={ticketsLoading}
+              disabled={isSubmitting}
+              onViewThread={(t) => setSelectedTicketId(t.id)}
+            />
 
             <Pagination
               currentPage={currentPage}
@@ -242,7 +271,7 @@ export default function OperatorTicketsContent() {
               onPageChange={setCurrentPage}
               onPageSizeChange={setPageSize}
             />
-          </div>
+          </section>
         </>
       )}
 
@@ -251,6 +280,6 @@ export default function OperatorTicketsContent() {
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
       />
-    </div>
+    </main>
   );
 }
