@@ -58,7 +58,7 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="550px"
+      maxWidth="56rem"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-diagram-project" style={{ color: 'var(--purple)' }}></i>
@@ -137,14 +137,17 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
 
         <hr className="modalDivider" />
 
-        <button
-          type="button"
-          className="modalSubmitBtn btnBlue"
-          onClick={handleSave}
-        >
-          <i className="fa-solid fa-floppy-disk" style={{ marginRight: '0.5rem' }}></i>
-          Save Attached Workflows
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleSave}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            <i className="fa-solid fa-floppy-disk" style={{ marginRight: '0.5rem' }}></i>
+            Save Attached Workflows
+          </button>
+        </div>
       </div>
     </BaseModal>
   );

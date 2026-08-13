@@ -20,7 +20,8 @@ const ApplicationModal = forwardRef(({ handleApprove, handleReject, isLoading, s
     return (
         <BaseModal
             ref={baseModalRef}
-            maxWidth="600px"
+            maxWidth="56rem"
+            isLoading={isLoading}
             title={
                 <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                     <span>
@@ -114,10 +115,10 @@ const ApplicationModal = forwardRef(({ handleApprove, handleReject, isLoading, s
                 {showButtons && (
                     <div className="button-group">
                         <button className="approve-button" onClick={() => handleApprove(selectedApplication?.id, true)} disabled={isLoading}>
-                            ✓ Approve
+                            <i className="fa-solid fa-check" style={{ marginRight: '0.375rem' }}></i> Approve
                         </button>
                         <button className="reject-button" onClick={() => handleReject(selectedApplication?.id, false)} disabled={isLoading}>
-                            ✗ Reject
+                            <i className="fa-solid fa-xmark" style={{ marginRight: '0.375rem' }}></i> Reject
                         </button>
                     </div>
                 )}

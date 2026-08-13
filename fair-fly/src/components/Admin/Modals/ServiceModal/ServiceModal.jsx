@@ -16,8 +16,8 @@ const ServiceModal = forwardRef(({ isOpen, onClose, editingService: propEditingS
         setInternalService(null);
         if (onClose) onClose();
       }}
-      onOpen={(service) => setInternalService(service || null)}
-      maxWidth="480px"
+      onOpen={(srv) => setInternalService(srv || null)}
+      maxWidth="56rem"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i

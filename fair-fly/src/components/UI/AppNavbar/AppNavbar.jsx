@@ -100,7 +100,7 @@ export default function AppNavbar({
 
       {isChatOpen && <TeamChatModal onClose={() => setIsChatOpen(false)} />}
 
-      <BaseModal ref={logoutModalRef} title="Confirm Logout">
+      <BaseModal ref={logoutModalRef} title="Confirm Logout" maxWidth="26.25rem">
         <div className="logout-confirm-content">
           <p className="logout-confirm-message">
             Are you sure you want to log out of the {portalName.toLowerCase()} portal?
@@ -108,12 +108,14 @@ export default function AppNavbar({
           <div className="logout-confirm-actions">
             <button
               className="btn-secondary"
+              style={{ flex: 1, justifyContent: 'center' }}
               onClick={() => logoutModalRef.current?.closeModal()}
             >
               Stay
             </button>
             <button
               className="btn-danger"
+              style={{ flex: 1, justifyContent: 'center' }}
               onClick={() => {
                 logoutModalRef.current?.closeModal();
                 handleLogoutConfirm();

@@ -55,7 +55,7 @@ export default function TeamChatModal({ onClose }) {
     <BaseModal
       isOpen={true}
       onClose={onClose}
-      maxWidth="520px"
+      maxWidth="56rem"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-regular fa-message" style={{ color: 'var(--purple)' }}></i>

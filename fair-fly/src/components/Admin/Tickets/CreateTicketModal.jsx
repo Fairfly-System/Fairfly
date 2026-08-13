@@ -61,15 +61,15 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
   return (
     <BaseModal
       ref={baseModalRef}
-      maxWidth="560px"
+      maxWidth="56rem"
       title="Create New Support Ticket"
       subtitle="Manually create a support ticket thread on behalf of an operator"
       isLoading={isLoading}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+      <form onSubmit={handleSubmit} className="form-column" style={{ gap: '1rem' }}>
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">
               Operator ID *
             </label>
             <input
@@ -80,12 +80,12 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
               placeholder="e.g. OP-1001"
               required
               disabled={isLoading}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-input"
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+          <div className="form-column">
+            <label className="form-label">
               Operator Name *
             </label>
             <input
@@ -96,45 +96,47 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
               placeholder="e.g. Cebu Central Operator"
               required
               disabled={isLoading}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-input"
             />
           </div>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Operator Email
-          </label>
-          <input
-            type="email"
-            name="operatorEmail"
-            value={formData.operatorEmail}
-            onChange={handleChange}
-            placeholder="e.g. operator@fairfly.com"
-            disabled={isLoading}
-            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-          />
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">
+              Operator Email
+            </label>
+            <input
+              type="email"
+              name="operatorEmail"
+              value={formData.operatorEmail}
+              onChange={handleChange}
+              placeholder="e.g. operator@fairfly.com"
+              disabled={isLoading}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-column">
+            <label className="form-label">
+              Ticket Subject / Title *
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              placeholder="e.g. Fleet Scheduling System Sync Delay"
+              required
+              disabled={isLoading}
+              className="form-input"
+            />
+          </div>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Ticket Subject / Title *
-          </label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            placeholder="e.g. Fleet Scheduling System Sync Delay"
-            required
-            disabled={isLoading}
-            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-          />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">
               Category
             </label>
             <select
@@ -142,7 +144,7 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
               value={formData.category}
               onChange={handleChange}
               disabled={isLoading}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-select"
             >
               <option value="Technical Support">Technical Support</option>
               <option value="Billing & Payments">Billing & Payments</option>
@@ -151,8 +153,8 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
             </select>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+          <div className="form-column">
+            <label className="form-label">
               Priority
             </label>
             <select
@@ -160,7 +162,7 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
               value={formData.priority}
               onChange={handleChange}
               disabled={isLoading}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-select"
             >
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
@@ -170,8 +172,8 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
           </div>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+        <div className="form-column">
+          <label className="form-label">
             Initial Message Request *
           </label>
           <textarea
@@ -182,14 +184,14 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
             rows={4}
             required
             disabled={isLoading}
-            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'inherit' }}
+            className="form-textarea"
           ></textarea>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
           <button
             type="button"
-            className="back-to-table-btn"
+            className="btn-secondary"
             onClick={() => baseModalRef.current?.closeModal()}
             disabled={isLoading}
           >
@@ -197,16 +199,16 @@ const CreateTicketModal = forwardRef(({ onCreateTicket, isLoading }, ref) => {
           </button>
           <button
             type="submit"
-            className="forum-send-btn"
+            className="btn-primary"
             disabled={!formData.title.trim() || !formData.initialMessage.trim() || isLoading}
           >
             {isLoading ? (
               <>
-                <i className="fa-solid fa-spinner fa-spin"></i> Creating...
+                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i> Creating...
               </>
             ) : (
               <>
-                <i className="fa-solid fa-plus"></i> Create Ticket
+                <i className="fa-solid fa-plus" style={{ marginRight: '0.375rem' }}></i> Create Ticket
               </>
             )}
           </button>

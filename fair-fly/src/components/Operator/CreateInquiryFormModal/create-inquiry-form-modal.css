@@ -1,139 +1,53 @@
-.cif-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(17, 17, 24, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.cif-modal {
-  background: #fff;
-  width: 100%;
-  max-width: 560px;
-  max-height: 90vh;
-  border-radius: 18px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── Fixed header ─────────────────────────────── */
-.cif-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 26px 28px 18px;
-  border-bottom: 1px solid #eceef3;
-  flex-shrink: 0;
-}
-
-.cif-header h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin-bottom: 4px;
-}
-
-.cif-header p {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.cif-close {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 8px;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-}
-
-.cif-close:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-/* ── Scrollable body ──────────────────────────── */
-.cif-body {
-  overflow-y: auto;
-  padding: 22px 28px 28px;
-  flex: 1;
-}
-
-/* Custom scrollbar */
-.cif-body::-webkit-scrollbar {
-  width: 8px;
-}
-.cif-body::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 99px;
-}
-.cif-body::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 99px;
-}
-.cif-body::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
 /* ── Section title ────────────────────────────── */
 .cif-section-title {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
-  color: #1a1a2e;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eceef3;
-  margin: 24px 0 18px;
+  color: var(--text-dark);
+  padding-bottom: 0.625rem;
+  border-bottom: 0.0625rem solid var(--border-color);
+  margin: 1.5rem 0 1.125rem;
 }
 
 /* ── Field ────────────────────────────────────── */
 .cif-field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 0.4375rem;
 }
 
 .cif-field label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-dark);
 }
 
 .cif-field label span {
-  color: #ef4444;
+  color: var(--red);
 }
 
 .cif-field input,
 .cif-field textarea {
   width: 100%;
-  padding: 10px 13px;
-  border: 1.5px solid var(--border-color);
-  border-radius: 9px;
-  font-size: 13.5px;
-  font-family: inherit;
+  padding: 0.625rem 0.8125rem;
+  border: 0.0625rem solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.84375rem;
+  font-family: var(--font);
   color: var(--text-dark);
-  background: var(--bg);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--card-bg);
+  transition: var(--transition-fast);
 }
 
 .cif-field input:focus,
 .cif-field textarea:focus {
   outline: none;
   border-color: var(--purple);
-  box-shadow: 0 0 0 3px var(--purple-glow);
-  background: #fff;
+  box-shadow: 0 0 0 0.1875rem rgba(107, 111, 245, 0.15);
 }
 
 .cif-field input::placeholder,
 .cif-field textarea::placeholder {
-  color: #9ca3af;
+  color: var(--text-light);
 }
 
 .cif-field textarea {
@@ -141,50 +55,50 @@
 }
 
 .cif-textarea-light {
-  background: #f3f4f6 !important;
+  background: var(--bg) !important;
 }
 
 /* half-width date field */
 .cif-field-half {
-  max-width: 260px;
+  max-width: 16.25rem;
 }
 
 /* ── Layout rows ──────────────────────────────── */
 .cif-row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 14px;
+  gap: 0.875rem;
+  margin-bottom: 0.875rem;
 }
 
 .cif-row3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
 }
 
 /* ── Checkboxes ───────────────────────────────── */
 .cif-checkboxes {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px 16px;
-  margin-top: 2px;
+  gap: 0.625rem 1rem;
+  margin-top: 0.125rem;
 }
 
 .cif-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13.5px;
-  color: #374151;
+  gap: 0.5rem;
+  font-size: 0.84375rem;
+  color: var(--text-dark);
   cursor: pointer;
   font-weight: 500;
 }
 
 .cif-checkbox-label input[type='checkbox'] {
-  width: 15px;
-  height: 15px;
+  width: 0.9375rem;
+  height: 0.9375rem;
   accent-color: var(--purple);
   cursor: pointer;
   flex-shrink: 0;
@@ -192,26 +106,26 @@
 
 /* ── Actions ──────────────────────────────────── */
 .cif-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 28px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
 }
 
 .cif-btn-submit {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0.5rem;
   background: var(--purple);
-  color: #fff;
+  color: #ffffff;
   border: none;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 13px;
-  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: var(--transition-fast);
 }
 
 .cif-btn-submit:hover {
@@ -219,26 +133,23 @@
 }
 
 .cif-btn-cancel {
-  background: #fff;
-  border: 1.5px solid #d1d5db;
-  color: #374151;
-  font-size: 14px;
+  background: var(--bg);
+  border: 0.0625rem solid var(--border-color);
+  color: var(--text-mid);
+  font-size: 0.875rem;
   font-weight: 600;
-  padding: 13px;
-  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: var(--transition-fast);
 }
 
 .cif-btn-cancel:hover {
-  background: #f3f4f6;
+  background: var(--border-color);
+  color: var(--text-dark);
 }
 
 @media (max-width: 640px) {
-  .cif-modal {
-    max-height: 95vh;
-  }
-
   .cif-row2,
   .cif-row3 {
     grid-template-columns: 1fr;
@@ -253,6 +164,10 @@
   }
 
   .cif-actions {
-    grid-template-columns: 1fr;
+    flex-direction: column-reverse;
+  }
+
+  .cif-actions button {
+    width: 100%;
   }
 }

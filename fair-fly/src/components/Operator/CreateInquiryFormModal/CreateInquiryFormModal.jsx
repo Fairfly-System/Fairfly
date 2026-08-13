@@ -90,7 +90,7 @@ export default function CreateInquiryFormModal({ onClose }) {
     <BaseModal
       isOpen={true}
       onClose={onClose}
-      maxWidth="680px"
+      maxWidth="56rem"
       title="Create New Inquiry Form"
       subtitle="Fill out the form details for client inquiry documentation"
     >

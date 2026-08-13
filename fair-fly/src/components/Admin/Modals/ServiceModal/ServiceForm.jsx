@@ -53,35 +53,39 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
 
   return (
     <>
-      <form className="modalForm" onSubmit={handleSubmit}>
-        <div className="formGroup">
-          <label>Service Name</label>
-          <input
-            type="text"
-            className="modalInput"
-            placeholder="e.g., PSA Birth Certificate"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
+      <form className="modalForm form-column" onSubmit={handleSubmit} style={{ gap: '1rem' }}>
+        <div className="form-grid-2">
+          <div className="formGroup">
+            <label className="form-label">Service Name *</label>
+            <input
+              type="text"
+              className="modalInput"
+              placeholder="e.g., PSA Birth Certificate"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="formGroup">
+            <label className="form-label">Price *</label>
+            <input
+              type="text"
+              className="modalInput"
+              placeholder="e.g., ₱365"
+              value={formData.price}
+              onChange={(e) =>
+                setFormData({ ...formData, price: e.target.value })
+              }
+              required
+              disabled={isLoading}
+            />
+          </div>
         </div>
 
         <div className="formGroup">
-          <label>Price</label>
-          <input
-            type="text"
-            className="modalInput"
-            placeholder="e.g., ₱365"
-            value={formData.price}
-            onChange={(e) =>
-              setFormData({ ...formData, price: e.target.value })
-            }
-            required
-          />
-        </div>
-
-        <div className="formGroup">
-          <label>Processing Time</label>
+          <label className="form-label">Processing Time *</label>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <input
               type="number"
@@ -98,10 +102,11 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                   },
                 })
               }
-              style={{ width: "4.375rem" }}
+              style={{ width: "5.5rem" }}
               required
+              disabled={isLoading}
             />
-            <span>-</span>
+            <span style={{ color: 'var(--text-mid)', fontWeight: 600 }}>-</span>
             <input
               type="number"
               min="0"
@@ -117,7 +122,8 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                   },
                 })
               }
-              style={{ width: "4.375rem" }}
+              style={{ width: "5.5rem" }}
+              disabled={isLoading}
             />
             <select
               className="modalSelect"
@@ -131,7 +137,9 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                   },
                 })
               }
-              style={{ flex: 1 }}>
+              style={{ flex: 1 }}
+              disabled={isLoading}
+            >
               <option value="days">Day/s</option>
               <option value="weeks">Week/s</option>
               <option value="months">Month/s</option>
@@ -142,13 +150,14 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             type="button"
             className="modalSubmitBtn btnLightBlue"
-            style={{ flex: 1 }}
+            style={{ flex: 1, margin: 0, justifyContent: 'center' }}
+            disabled={isLoading}
             onClick={() => setIsRequirementsModalOpen(true)}>
-            <span style={{ color: "var(--purple)" }}>
+            <span style={{ color: "var(--purple)", fontWeight: 600 }}>
               <i className="fa-regular fa-clipboard" style={{ marginRight: "0.375rem" }}></i>
               {requirements.length > 0 ? `Requirements (${requirements.length})` : "Add Requirements"}
             </span>
@@ -157,27 +166,33 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
           <button
             type="button"
             className="modalSubmitBtn btnLightBlue"
-            style={{ flex: 1 }}
+            style={{ flex: 1, margin: 0, justifyContent: 'center' }}
+            disabled={isLoading}
             onClick={() => setIsWorkflowsModalOpen(true)}>
-            <span style={{ color: "var(--orange)" }}>
+            <span style={{ color: "var(--orange)", fontWeight: 600 }}>
               <i className="fa-solid fa-diagram-project" style={{ marginRight: "0.375rem" }}></i>
               {workflowIds.length > 0 ? `Workflows (${workflowIds.length})` : "Attach Workflow"}
             </span>
           </button>
         </div>
 
-        <button
-          type="submit"
-          className="modalSubmitBtn btnBlue"
-          disabled={isLoading}>
-          {isLoading
-            ? isEditMode
-              ? "Updating Service..."
-              : "Adding Service..."
-            : isEditMode
-              ? "Update Service"
-              : "Add Service"}
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isLoading}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            {isLoading ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i>
+                {isEditMode ? "Updating Service..." : "Adding Service..."}
+              </>
+            ) : (
+              isEditMode ? "Update Service" : "Add Service"
+            )}
+          </button>
+        </div>
       </form>
 
       <ServiceRequirementsModal

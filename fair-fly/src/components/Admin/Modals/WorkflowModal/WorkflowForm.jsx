@@ -158,7 +158,7 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="550px"
+      maxWidth="56rem"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-diagram-project" style={{ color: 'var(--orange)' }}></i>
@@ -510,23 +510,38 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
   };
 
   return (
-    <form className="modalForm" onSubmit={handleSubmit}>
-      <div className="formGroup">
-        <label>Workflow Name *</label>
-        <input
-          type="text"
-          name="name"
-          className="modalInput"
-          placeholder="e.g., Customer Onboarding Process"
-          value={formData.name}
-          disabled={isLoading}
-          onChange={handleInputChange}
-          required
-        />
+    <form className="modalForm form-column" onSubmit={handleSubmit} style={{ gap: '1rem' }}>
+      <div className="form-grid-2">
+        <div className="formGroup">
+          <label className="form-label">Workflow Name *</label>
+          <input
+            type="text"
+            name="name"
+            className="modalInput"
+            placeholder="e.g., Customer Onboarding Process"
+            value={formData.name}
+            disabled={isLoading}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+
+        <div className="formGroup">
+          <label className="form-label">Workflow / Service Type (Optional)</label>
+          <input
+            type="text"
+            name="type"
+            className="modalInput"
+            placeholder="e.g., PSA, Passport, Visa, onboarding"
+            value={formData.type}
+            disabled={isLoading}
+            onChange={handleInputChange}
+          />
+        </div>
       </div>
 
       <div className="formGroup">
-        <label>Description *</label>
+        <label className="form-label">Description *</label>
         <textarea
           name="description"
           className="modalInput"
@@ -539,20 +554,7 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
       </div>
 
       <div className="formGroup">
-        <label>Workflow / Service Type (Optional)</label>
-        <input
-          type="text"
-          name="type"
-          className="modalInput"
-          placeholder="e.g., PSA, Passport, Visa, onboarding"
-          value={formData.type}
-          disabled={isLoading}
-          onChange={handleInputChange}
-        />
-      </div>
-
-      <div className="formGroup">
-        <label>Workflow Steps</label>
+        <label className="form-label">Workflow Steps</label>
         <button
           type="button"
           className="modalSubmitBtn btnLightBlue"
@@ -560,39 +562,39 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
           onClick={() => setIsStepsModalOpen(true)}
           style={{ opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
         >
-          <span style={{ color: 'var(--purple)' }}>
+          <span style={{ color: 'var(--purple)', fontWeight: 600 }}>
             <i className="fa-solid fa-diagram-project" style={{ marginRight: '0.375rem' }}></i>
             {steps.length > 0 ? `Edit / Reorder Steps (${steps.length})` : 'Add Step/s'}
           </span>
         </button>
       </div>
 
-      <button
-        type="submit"
-        className="modalSubmitBtn btnGreen"
-        disabled={isLoading}
-        style={{ opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
-      >
-        {isLoading ? (
-          <>
-            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.5rem' }}></i>
-            Processing...
-          </>
-        ) : (
-          initialData ? 'Update Workflow' : 'Create Workflow'
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+        {onCancel && (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={isLoading}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
         )}
-      </button>
-      {onCancel && (
         <button
-          type="button"
-          className="modalSubmitBtn"
+          type="submit"
+          className="btn-primary"
           disabled={isLoading}
-          onClick={onCancel}
-          style={{ backgroundColor: 'var(--text-mid)', marginTop: 0, opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
         >
-          Cancel
+          {isLoading ? (
+            <>
+              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i>
+              Processing...
+            </>
+          ) : (
+            initialData ? 'Update Workflow' : 'Create Workflow'
+          )}
         </button>
-      )}
+      </div>
 
       <WorkflowStepsModal
         isOpen={isStepsModalOpen}

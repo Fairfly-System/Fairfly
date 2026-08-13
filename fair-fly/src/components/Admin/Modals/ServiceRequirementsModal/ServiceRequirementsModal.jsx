@@ -107,7 +107,7 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="550px"
+      maxWidth="56rem"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-regular fa-clipboard" style={{ color: 'var(--purple)' }}></i>
@@ -140,7 +140,7 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
                         >
                           {req.required ? '(Required)' : '(Optional)'}
                         </span>
-                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, background: '#e0e7ff', color: '#3730a3', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, background: 'var(--purple-light-2)', color: 'var(--purple-dark)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
                           Type: {req.inputType || 'text'}
                         </span>
                       </div>
@@ -214,11 +214,11 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
               onChange={(e) => setNewReqInputType(e.target.value)}
               style={{ fontSize: '0.85rem' }}
             >
-              <option value="image">📷 Image Upload</option>
-              <option value="file">📄 Document File</option>
-              <option value="text">✏️ Text Response</option>
-              <option value="date">📅 Date Input</option>
-              <option value="number">🔢 Number Input</option>
+              <option value="image">Image Upload</option>
+              <option value="file">Document File</option>
+              <option value="text">Text Response</option>
+              <option value="date">Date Input</option>
+              <option value="number">Number Input</option>
             </select>
           </div>
 

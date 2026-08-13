@@ -7,81 +7,85 @@ export default function ConfirmationModal({
   Icon,
   Title,
   Desc,
-  BtnColor = '#5865f2',
+  BtnColor = 'var(--purple)',
   OnConfirm,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   isLoading = false,
 }) {
-  
+
   const handleConfirm = async () => {
     if (OnConfirm) {
       await OnConfirm();
     }
   };
 
+  const isDanger = typeof BtnColor === 'string' && (BtnColor.includes('red') || BtnColor.includes('error'));
+
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="420px" isLoading={isLoading}>
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="26.25rem" width="100%" isLoading={isLoading}>
       <div className="modalForm" style={{ textAlign: 'center', alignItems: 'center' }}>
         {Icon && (
           <div
             style={{
-              width: '56px',
-              height: '56px',
+              width: '3.5rem',
+              height: '3.5rem',
               borderRadius: '50%',
-              backgroundColor: typeof BtnColor === 'string' && BtnColor.startsWith('var(') ? 'rgba(124, 58, 237, 0.1)' : `${BtnColor}1a`,
+              backgroundColor: isDanger ? 'var(--orange-glow)' : 'var(--purple-light-2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 8px',
+              margin: '0 auto 0.5rem',
             }}
           >
-            <Icon style={{ color: BtnColor, fontSize: '22px' }} />
+            <Icon style={{ color: isDanger ? 'var(--red)' : BtnColor, fontSize: '1.375rem' }} />
           </div>
         )}
 
         {Title && (
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#111827' }}>
+          <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-dark)' }}>
             {Title}
           </h3>
         )}
 
         {Desc && (
-          <p style={{ margin: '4px 0 8px', fontSize: '14px', color: '#6b7280' }}>
+          <p style={{ margin: '0.25rem 0 0.5rem', fontSize: '0.875rem', color: 'var(--text-mid)' }}>
             {Desc}
           </p>
         )}
 
-        <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', width: '100%', marginTop: '1rem' }}>
           <button
             type="button"
-            className="modalSubmitBtn"
+            className="btn-secondary"
             onClick={onClose}
             disabled={isLoading}
-            style={{
-              backgroundColor: '#f3f4f6',
-              color: '#374151',
-              flex: 1,
-              margin: 0,
-            }}
+            style={{ flex: 1, margin: 0, justifyContent: 'center' }}
           >
             {cancelText}
           </button>
 
           <button
             type="button"
-            className="modalSubmitBtn"
+            className={isDanger ? 'btn-danger' : 'btn-primary'}
             onClick={handleConfirm}
             disabled={isLoading}
             style={{
-              backgroundColor: BtnColor,
-              color: '#ffffff',
+              backgroundColor: !isDanger ? BtnColor : undefined,
               flex: 1,
               margin: 0,
+              justifyContent: 'center',
               opacity: isLoading ? 0.7 : 1,
             }}
           >
-            {isLoading ? 'Please wait...' : confirmText}
+            {isLoading ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i>
+                Processing...
+              </>
+            ) : (
+              confirmText
+            )}
           </button>
         </div>
       </div>

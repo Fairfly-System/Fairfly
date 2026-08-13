@@ -18,73 +18,90 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
   };
 
   return (
-    <form className="modalForm" onSubmit={handleSubmit}>
-      <div className="formGroup">
-        <label>Branch Name</label>
-        <input
-          type="text"
-          className="modalInput"
-          placeholder="e.g., Manila Branch"
-          value={formData.branchName}
-          disabled={isLoading}
-          onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
-        />
+    <form className="modalForm form-column" onSubmit={handleSubmit} style={{ gap: '1rem' }}>
+      <div className="form-grid-2">
+        <div className="formGroup">
+          <label className="form-label">Branch Name *</label>
+          <input
+            type="text"
+            className="modalInput"
+            placeholder="e.g., Manila Branch"
+            value={formData.branchName}
+            disabled={isLoading}
+            required
+            onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
+          />
+        </div>
+        <div className="formGroup">
+          <label className="form-label">Contact Number *</label>
+          <input
+            type="text"
+            className="modalInput"
+            placeholder="e.g., +63 912 345 6789"
+            value={formData.contactNumber}
+            disabled={isLoading}
+            required
+            onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+          />
+        </div>
       </div>
+
       <div className="formGroup">
-        <label>Address</label>
+        <label className="form-label">Address *</label>
         <input
           type="text"
           className="modalInput"
           placeholder="e.g., 123 Main St, Manila"
           value={formData.address}
           disabled={isLoading}
+          required
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
         />
       </div>
-      <div className="formGroup">
-        <label>Contact Number</label>
-        <input
-          type="text"
-          className="modalInput"
-          placeholder="e.g., +63 912 345 6789"
-          value={formData.contactNumber}
-          disabled={isLoading}
-          onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-        />
-      </div>
-      <div className="formGroup">
-        <label>Email</label>
-        <input
-          type="email"
-          className="modalInput"
-          placeholder="e.g., manila_operator@example.com"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          disabled={isEditMode || isLoading}
-          title={isEditMode ? "Email can't be changed" : undefined}
-          style={isEditMode ? { backgroundColor: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' } : undefined}
-        />
-      </div>
 
-      {!isEditMode && (
+      <div className="form-grid-2">
         <div className="formGroup">
-          <label>Password</label>
+          <label className="form-label">Email *</label>
           <input
-            type="text"
+            type="email"
             className="modalInput"
-            placeholder="Create a password"
-            value={formData.password}
-            disabled={isLoading}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            placeholder="e.g., manila_operator@example.com"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            disabled={isEditMode || isLoading}
+            title={isEditMode ? "Email can't be changed" : undefined}
+            style={isEditMode ? { backgroundColor: 'var(--bg)', color: 'var(--text-light)', cursor: 'not-allowed' } : undefined}
           />
         </div>
-      )}
 
-      <button type="submit" className="modalSubmitBtn btnGreen" disabled={isLoading}>
-        {isLoading
-          ? (isEditMode ? 'Saving Changes...' : 'Creating Account...')
-          : (isEditMode ? 'Save Changes' : 'Create Account')}
-      </button>
+        {!isEditMode && (
+          <div className="formGroup">
+            <label className="form-label">Password *</label>
+            <input
+              type="text"
+              className="modalInput"
+              placeholder="Create a password"
+              value={formData.password}
+              disabled={isLoading}
+              required
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            />
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+        <button type="submit" className="btn-primary" disabled={isLoading} style={{ width: '100%', justifyContent: 'center' }}>
+          {isLoading ? (
+            <>
+              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i>
+              {isEditMode ? 'Saving Changes...' : 'Creating Account...'}
+            </>
+          ) : (
+            isEditMode ? 'Save Changes' : 'Create Account'
+          )}
+        </button>
+      </div>
     </form>
   );
 }

@@ -17,9 +17,8 @@
   background: var(--card-bg);
   border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 28.125rem;
-  /* 450px */
-  max-height: 90vh;
+  max-width: 28.125rem; /* 450px default compact width for confirmation / prompt / logout modals */
+  max-height: 85vh;
   box-shadow: var(--shadow-lg), 0 0 1.25rem rgba(107, 111, 245, 0.15);
   display: flex;
   flex-direction: column;

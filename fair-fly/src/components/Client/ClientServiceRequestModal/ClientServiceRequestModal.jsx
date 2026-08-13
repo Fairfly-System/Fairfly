@@ -303,13 +303,13 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="680px"
+      maxWidth="56rem"
       title="Request a Travel & Processing Service"
       subtitle="Select your service, upload requirements, and assign it to your preferred branch"
       isLoading={isSubmitting}
     >
       {loadingOptions ? (
-        <div style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-light)' }}>
           <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
           <p>Loading available services and branches...</p>
         </div>
@@ -319,7 +319,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
             {/* Select Service */}
             <div className="form-column">
               <label htmlFor="serviceSelect" className="form-label">
-                <i className="fa-solid fa-concierge-bell" style={{ color: '#6366f1', marginRight: '0.35rem' }}></i>
+                <i className="fa-solid fa-concierge-bell" style={{ color: 'var(--purple)', marginRight: '0.35rem' }}></i>
                 Requested Service <span className="req-star">*</span>
               </label>
               <select
@@ -347,7 +347,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
             {/* Select Branch Operator */}
             <div className="form-column">
               <label htmlFor="branchSelect" className="form-label">
-                <i className="fa-solid fa-building" style={{ color: '#3b82f6', marginRight: '0.35rem' }}></i>
+                <i className="fa-solid fa-building" style={{ color: 'var(--purple)', marginRight: '0.35rem' }}></i>
                 Select Processing Branch <span className="req-star">*</span>
               </label>
               <select
@@ -374,7 +374,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
             {serviceRequirements.length > 0 && (
               <div className="client-req-section">
                 <h3 className="client-req-title">
-                  <i className="fa-solid fa-clipboard-check" style={{ color: '#6366f1' }}></i>
+                  <i className="fa-solid fa-clipboard-check" style={{ color: 'var(--purple)' }}></i>
                   Service Requirements ({serviceRequirements.length})
                 </h3>
 
@@ -392,11 +392,11 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
                             {reqName} {isReq && <span className="req-star">*</span>}
                           </span>
                           <span className="client-req-type-tag">
-                            {inputType === 'image' && '📷 Image Upload'}
-                            {inputType === 'file' && '📄 Document File'}
-                            {inputType === 'text' && '✏️ Text Input'}
-                            {inputType === 'date' && '📅 Date Input'}
-                            {inputType === 'number' && '🔢 Number Input'}
+                            {inputType === 'image' && <><i className="fa-regular fa-image" style={{ marginRight: '0.25rem' }}></i> Image Upload</>}
+                            {inputType === 'file' && <><i className="fa-regular fa-file-lines" style={{ marginRight: '0.25rem' }}></i> Document File</>}
+                            {inputType === 'text' && <><i className="fa-solid fa-pen-to-square" style={{ marginRight: '0.25rem' }}></i> Text Input</>}
+                            {inputType === 'date' && <><i className="fa-regular fa-calendar" style={{ marginRight: '0.25rem' }}></i> Date Input</>}
+                            {inputType === 'number' && <><i className="fa-solid fa-hashtag" style={{ marginRight: '0.25rem' }}></i> Number Input</>}
                           </span>
                         </div>
 

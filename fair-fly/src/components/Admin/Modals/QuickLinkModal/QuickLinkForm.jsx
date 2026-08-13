@@ -37,21 +37,44 @@ export default function QuickLinkForm({ onSubmit, isLoading, initialData = null 
   };
 
   return (
-    <form className="modalForm" onSubmit={handleSubmit}>
-      <div className="formGroup">
-        <label>Website Title *</label>
-        <input
-          type="text"
-          className="modalInput"
-          placeholder="e.g., PSA Serbilis Portal"
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          required
-        />
+    <form className="modalForm form-column" onSubmit={handleSubmit} style={{ gap: '1rem' }}>
+      <div className="form-grid-2">
+        <div className="formGroup">
+          <label className="form-label">Website Title *</label>
+          <input
+            type="text"
+            className="modalInput"
+            placeholder="e.g., PSA Serbilis Portal"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            required
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="formGroup">
+          <label className="form-label">Category *</label>
+          <select
+            className="modalSelect"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            required
+            disabled={isLoading}
+          >
+            <option value="" disabled hidden>
+              Select category
+            </option>
+            <option value="government">Government</option>
+            <option value="airlines">Airlines</option>
+            <option value="hotels">Hotels</option>
+            <option value="visaAndEmbassy">Visa & Embassy</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
       </div>
 
       <div className="formGroup">
-        <label>Website URL *</label>
+        <label className="form-label">Website URL *</label>
         <input
           type="url"
           className="modalInput"
@@ -59,39 +82,27 @@ export default function QuickLinkForm({ onSubmit, isLoading, initialData = null 
           value={formData.url}
           onChange={(e) => setFormData({ ...formData, url: e.target.value })}
           required
+          disabled={isLoading}
         />
       </div>
 
-      <div className="formGroup">
-        <label>Category *</label>
-        <select
-          className="modalSelect"
-          value={formData.category}
-          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-          required
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={isLoading}
+          style={{ width: '100%', justifyContent: 'center' }}
         >
-          <option value="" disabled hidden>
-            Select category
-          </option>
-          <option value="government">Government</option>
-          <option value="airlines">Airlines</option>
-          <option value="hotels">Hotels</option>
-          <option value="visaAndEmbassy">Visa & Embassy</option>
-          <option value="other">Other</option>
-        </select>
+          {isLoading ? (
+            <>
+              <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i>
+              Saving...
+            </>
+          ) : (
+            initialData ? 'Update Link' : 'Add Link'
+          )}
+        </button>
       </div>
-
-      <button
-        type="submit"
-        className="modalSubmitBtn btnBlue"
-        disabled={isLoading}
-      >
-        {isLoading
-          ? 'Saving...'
-          : initialData
-          ? 'Update Link'
-          : 'Add Link'}
-      </button>
     </form>
   );
 }

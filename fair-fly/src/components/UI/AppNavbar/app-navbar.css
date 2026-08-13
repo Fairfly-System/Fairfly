@@ -129,7 +129,7 @@
 }
 
 .logout-confirm-message {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   color: var(--text-mid);
   line-height: 1.5;
   font-size: 0.9375rem;
