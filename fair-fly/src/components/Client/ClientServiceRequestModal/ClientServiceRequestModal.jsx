@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
+import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import './client-service-request-modal.css';
@@ -299,79 +300,75 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
   };
 
   return (
-    <div className="modalOverlay" onClick={onClose}>
-      <div className="client-request-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="closeBtn" onClick={onClose} aria-label="Close modal">
-          <i className="fa-solid fa-circle-xmark"></i>
-        </button>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="680px"
+      title="Request a Travel & Processing Service"
+      subtitle="Select your service, upload requirements, and assign it to your preferred branch"
+      isLoading={isSubmitting}
+    >
+      {loadingOptions ? (
+        <div style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b' }}>
+          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
+          <p>Loading available services and branches...</p>
+        </div>
+      ) : (
+        <form className="client-request-form form-column" onSubmit={handleSubmit} style={{ gap: '1.25rem' }}>
+          <div className="form-grid-2">
+            {/* Select Service */}
+            <div className="form-column">
+              <label htmlFor="serviceSelect" className="form-label">
+                <i className="fa-solid fa-concierge-bell" style={{ color: '#6366f1', marginRight: '0.35rem' }}></i>
+                Requested Service <span className="req-star">*</span>
+              </label>
+              <select
+                id="serviceSelect"
+                value={selectedServiceId}
+                onChange={(e) => {
+                  setSelectedServiceId(e.target.value);
+                  setRequirementInputs({});
+                }}
+                required
+                className="form-select"
+              >
+                {servicesList.length === 0 ? (
+                  <option value="">No active services available</option>
+                ) : (
+                  servicesList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.price || 'Standard Fee'})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
 
-        <div className="client-request-modal-header">
-          <i className="fa-solid fa-file-signature client-request-icon"></i>
-          <div>
-            <h2>Request a Travel & Processing Service</h2>
-            <p>Select your service, upload requirements, and assign it to your preferred branch</p>
+            {/* Select Branch Operator */}
+            <div className="form-column">
+              <label htmlFor="branchSelect" className="form-label">
+                <i className="fa-solid fa-building" style={{ color: '#3b82f6', marginRight: '0.35rem' }}></i>
+                Select Processing Branch <span className="req-star">*</span>
+              </label>
+              <select
+                id="branchSelect"
+                value={selectedBranchUid}
+                onChange={(e) => setSelectedBranchUid(e.target.value)}
+                required
+                className="form-select"
+              >
+                {branchesList.length === 0 ? (
+                  <option value="">No active branches available</option>
+                ) : (
+                  branchesList.map((b) => (
+                    <option key={b.uid} value={b.uid}>
+                      {b.branchName} {b.address ? `(${b.address})` : ''}
+                    </option>
+                  ))
+                )}
+              </select>
           </div>
         </div>
-
-        {loadingOptions ? (
-          <div style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b' }}>
-            <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
-            <p>Loading available services and branches...</p>
-          </div>
-        ) : (
-          <form className="client-request-form" onSubmit={handleSubmit}>
-            <div className="form-group-grid">
-              {/* Select Service */}
-              <div className="form-field">
-                <label htmlFor="serviceSelect">
-                  <i className="fa-solid fa-concierge-bell" style={{ color: '#6366f1' }}></i>
-                  Requested Service <span className="req-star">*</span>
-                </label>
-                <select
-                  id="serviceSelect"
-                  value={selectedServiceId}
-                  onChange={(e) => {
-                    setSelectedServiceId(e.target.value);
-                    setRequirementInputs({});
-                  }}
-                  required
-                >
-                  {servicesList.length === 0 ? (
-                    <option value="">No active services available</option>
-                  ) : (
-                    servicesList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.price || 'Standard Fee'})
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              {/* Select Branch Operator */}
-              <div className="form-field">
-                <label htmlFor="branchSelect">
-                  <i className="fa-solid fa-building" style={{ color: '#3b82f6' }}></i>
-                  Select Processing Branch <span className="req-star">*</span>
-                </label>
-                <select
-                  id="branchSelect"
-                  value={selectedBranchUid}
-                  onChange={(e) => setSelectedBranchUid(e.target.value)}
-                  required
-                >
-                  {branchesList.length === 0 ? (
-                    <option value="">No active branches available</option>
-                  ) : (
-                    branchesList.map((b) => (
-                      <option key={b.uid} value={b.uid}>
-                        {b.branchName} {b.address ? `(${b.address})` : ''}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-            </div>
 
             {/* Dynamic Service Requirements Inputs Section */}
             {serviceRequirements.length > 0 && (
@@ -449,7 +446,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
                         {inputType === 'text' && (
                           <input
                             type="text"
-                            className="client-req-input"
+                            className="client-req-input form-input"
                             placeholder={`Enter ${reqName}...`}
                             value={userState.textValue || ''}
                             onChange={(e) => handleReqTextChange(idx, e.target.value)}
@@ -461,7 +458,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
                         {inputType === 'date' && (
                           <input
                             type="date"
-                            className="client-req-input"
+                            className="client-req-input form-input"
                             value={userState.textValue || ''}
                             onChange={(e) => handleReqTextChange(idx, e.target.value)}
                             required={isReq}
@@ -472,7 +469,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
                         {inputType === 'number' && (
                           <input
                             type="number"
-                            className="client-req-input"
+                            className="client-req-input form-input"
                             placeholder={`Enter ${reqName} number...`}
                             value={userState.textValue || ''}
                             onChange={(e) => handleReqTextChange(idx, e.target.value)}
@@ -486,10 +483,10 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
               </div>
             )}
 
-            <div className="form-group-grid">
+            <div className="form-grid-2">
               {/* Client Name */}
-              <div className="form-field">
-                <label htmlFor="clientNameInput">Full Name <span className="req-star">*</span></label>
+              <div className="form-column">
+                <label htmlFor="clientNameInput" className="form-label">Full Name <span className="req-star">*</span></label>
                 <input
                   id="clientNameInput"
                   type="text"
@@ -497,53 +494,57 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   required
+                  className="form-input"
                 />
               </div>
 
               {/* Email Address */}
-              <div className="form-field">
-                <label htmlFor="clientEmailInput">Email Address</label>
+              <div className="form-column">
+                <label htmlFor="clientEmailInput" className="form-label">Email Address</label>
                 <input
                   id="clientEmailInput"
                   type="email"
                   placeholder="example@email.com"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
+                  className="form-input"
                 />
               </div>
             </div>
 
-            <div className="form-group-grid">
+            <div className="form-grid-2">
               {/* Phone Number */}
-              <div className="form-field">
-                <label htmlFor="clientPhoneInput">Contact Phone Number</label>
+              <div className="form-column">
+                <label htmlFor="clientPhoneInput" className="form-label">Contact Phone Number</label>
                 <input
                   id="clientPhoneInput"
                   type="text"
                   placeholder="0917-000-0000"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
+                  className="form-input"
                 />
               </div>
             </div>
 
             {/* Additional Notes */}
-            <div className="form-field">
-              <label htmlFor="additionalNotesInput">Additional Instructions / Notes</label>
+            <div className="form-column">
+              <label htmlFor="additionalNotesInput" className="form-label">Additional Instructions / Notes</label>
               <textarea
                 id="additionalNotesInput"
                 rows="3"
                 placeholder="Specify any special requests or notes for the branch operator..."
                 value={additionalNotes}
                 onChange={(e) => setAdditionalNotes(e.target.value)}
+                className="form-textarea"
               />
             </div>
 
-            <div className="client-request-actions">
-              <button type="button" className="btn-cancel" onClick={onClose} disabled={isSubmitting}>
+            <div className="client-request-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </button>
-              <button type="submit" className="btn-submit" disabled={isSubmitting || servicesList.length === 0}>
+              <button type="submit" className="btn-primary" disabled={isSubmitting || servicesList.length === 0}>
                 {isSubmitting ? (
                   <>
                     <i className="fa-solid fa-spinner fa-spin"></i> Submitting & Uploading...
@@ -557,7 +558,6 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </BaseModal>
   );
 }

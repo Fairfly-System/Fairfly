@@ -5,6 +5,7 @@ import { useAuthContext } from '../../../context/AuthContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import AddServiceModal from '../../../components/Operator/AddServiceModal/AddServiceModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
 import './operator-dashboard.css';
 
 function DashboardContent() {
@@ -20,7 +21,7 @@ function DashboardContent() {
 
   const filteredServices = useMemo(() => {
     if (!dbServices) return [];
-    
+
     // Filter by branch operator if role is operator
     let list = dbServices;
     if (user?.uid && userDetails?.role === 'operator') {
@@ -52,125 +53,133 @@ function DashboardContent() {
   }, [filteredServices, currentPage, pageSize]);
 
   return (
-    <div className="card op-dashboard page-fade-in">
-      <div className="op-dashboard-header">
-        <div>
-          <h2>Active Services Fulfillment</h2>
-          <p>Real-time processing status & step-by-step guided procedures for client services</p>
-        </div>
-        <button className="op-dashboard-btn" onClick={() => setShowAddService(true)}>
-          <i className="fa-solid fa-plus"></i>
-          Add Service
-        </button>
-      </div>
+    <div className="operator-dashboard page-fade-in">
+      <WelcomeHero
+        userName={userDetails?.name || 'Operator'}
+        subtitle="Real-time processing status & step-by-step guided procedures for client services"
+        illustrationSrc="/pageImages/operator/dashboard.png"
+      />
 
-      {/* Toolbar Search & Filter */}
-      <div className="table-toolbar">
-        <div className="search-box">
-          <i className="fa-solid fa-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            placeholder="Search by client name or service type..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
+      <div className="card op-dashboard">
+        <div className="op-dashboard-header">
+          <div>
+            <h2>Active Services Fulfillment</h2>
+            <p>Real-time processing status & step-by-step guided procedures for client services</p>
+          </div>
+          <button className="btn-primary" onClick={() => setShowAddService(true)}>
+            <i className="fa-solid fa-plus"></i>
+            Add Service
+          </button>
+        </div>
+
+        {/* Toolbar Search & Filter */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Search by client name or service type..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <FilterChipGroup
+            chips={[
+              { value: 'all', label: `All (${(dbServices || []).length})` },
+              { value: 'high', label: `High Priority (${(dbServices || []).filter((s) => s.priorityType === 'high').length})` },
+              { value: 'normal', label: `Normal Priority (${(dbServices || []).filter((s) => s.priorityType === 'normal').length})` },
+            ]}
+            activeChip={priorityFilter}
+            onChipChange={(val) => {
+              setPriorityFilter(val);
               setCurrentPage(1);
             }}
           />
-          {searchTerm && (
-            <button
-              className="clear-search-btn"
-              onClick={() => {
-                setSearchTerm('');
-                setCurrentPage(1);
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
+        </div>
+
+        {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
+
+        <div className="op-service-list">
+          {loading ? (
+            <div className="empty-state-box"><p>Loading active services...</p></div>
+          ) : paginatedServices.length === 0 ? (
+            <div className="empty-state-box">
+              <i className="fa-solid fa-list-check empty-icon"></i>
+              <p>No active services match your criteria</p>
+            </div>
+          ) : (
+            paginatedServices.map((s) => {
+              const steps = s.steps || [];
+              const completedCount = steps.filter((step) => step.status === 'Completed').length;
+              const totalSteps = steps.length || s.total || 5;
+              const pct = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
+              const clientName = s.clientName || s.name || 'Client Service';
+              const serviceType = s.serviceType || s.type || 'General Service';
+              const priority = s.priority || 'Normal Priority';
+              const priorityType = s.priorityType || 'normal';
+
+              return (
+                <div key={s.id} className="op-service-card">
+                  <div className="op-service-card-top">
+                    <div className="op-service-meta">
+                      <span className="op-service-name">{clientName}</span>
+                      <span className="op-service-type">{serviceType}</span>
+                      {s.branchName && (
+                        <span className="op-service-type" style={{ background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe' }}>
+                          <i className="fa-solid fa-building" style={{ marginRight: '0.3rem' }}></i>
+                          {s.branchName}
+                        </span>
+                      )}
+                      <span className={`op-priority ${priorityType}`}>{priority}</span>
+                    </div>
+                    <Link to={`/operator/services/${s.id}/procedure`} className="op-view-btn">
+                      <i className="fa-regular fa-file-lines"></i>
+                      Perform Workflow Procedure
+                    </Link>
+                  </div>
+
+                  <p className="op-service-started">
+                    Started: {s.startedAt ? new Date(s.startedAt).toLocaleDateString() : s.started || 'Recently'}
+                  </p>
+
+                  <div className="op-progress-row">
+                    <span className="op-progress-label">Fulfillment Progress</span>
+                    <span className="op-progress-step">
+                      {completedCount} of {totalSteps} Steps ({pct}%)
+                    </span>
+                  </div>
+                  <div className="op-progress-track">
+                    <div className="op-progress-fill" style={{ width: `${pct}%` }}></div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
 
-        <FilterChipGroup
-          chips={[
-            { value: 'all', label: `All (${(dbServices || []).length})` },
-            { value: 'high', label: `High Priority (${(dbServices || []).filter((s) => s.priorityType === 'high').length})` },
-            { value: 'normal', label: `Normal Priority (${(dbServices || []).filter((s) => s.priorityType === 'normal').length})` },
-          ]}
-          activeChip={priorityFilter}
-          onChipChange={(val) => {
-            setPriorityFilter(val);
-            setCurrentPage(1);
-          }}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredServices.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
       </div>
-
-      {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
-
-      <div className="op-service-list">
-        {loading ? (
-          <div className="empty-state-box"><p>Loading active services...</p></div>
-        ) : paginatedServices.length === 0 ? (
-          <div className="empty-state-box">
-            <i className="fa-solid fa-list-check empty-icon"></i>
-            <p>No active services match your criteria</p>
-          </div>
-        ) : (
-          paginatedServices.map((s) => {
-            const steps = s.steps || [];
-            const completedCount = steps.filter((step) => step.status === 'Completed').length;
-            const totalSteps = steps.length || s.total || 5;
-            const pct = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
-            const clientName = s.clientName || s.name || 'Client Service';
-            const serviceType = s.serviceType || s.type || 'General Service';
-            const priority = s.priority || 'Normal Priority';
-            const priorityType = s.priorityType || 'normal';
-
-            return (
-              <div key={s.id} className="op-service-card">
-                <div className="op-service-card-top">
-                  <div className="op-service-meta">
-                    <span className="op-service-name">{clientName}</span>
-                    <span className="op-service-type">{serviceType}</span>
-                    {s.branchName && (
-                      <span className="op-service-type" style={{ background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe' }}>
-                        <i className="fa-solid fa-building" style={{ marginRight: '0.3rem' }}></i>
-                        {s.branchName}
-                      </span>
-                    )}
-                    <span className={`op-priority ${priorityType}`}>{priority}</span>
-                  </div>
-                  <Link to={`/operator/services/${s.id}/procedure`} className="op-view-btn">
-                    <i className="fa-regular fa-file-lines"></i>
-                    Perform Workflow Procedure
-                  </Link>
-                </div>
-
-                <p className="op-service-started">
-                  Started: {s.startedAt ? new Date(s.startedAt).toLocaleDateString() : s.started || 'Recently'}
-                </p>
-
-                <div className="op-progress-row">
-                  <span className="op-progress-label">Fulfillment Progress</span>
-                  <span className="op-progress-step">
-                    {completedCount} of {totalSteps} Steps ({pct}%)
-                  </span>
-                </div>
-                <div className="op-progress-track">
-                  <div className="op-progress-fill" style={{ width: `${pct}%` }}></div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      <Pagination
-        currentPage={currentPage}
-        totalItems={filteredServices.length}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
     </div>
   );
 }

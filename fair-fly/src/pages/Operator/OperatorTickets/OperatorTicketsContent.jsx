@@ -9,6 +9,8 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import TicketTable from '../../../components/Admin/Tickets/TicketTable';
 import TicketThread from '../../../components/Admin/Tickets/TicketThread';
 import CreateTicketModal from '../../../components/Admin/Tickets/CreateTicketModal';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 
@@ -149,38 +151,38 @@ export default function OperatorTicketsContent() {
     });
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Tickets' },
+  ];
+
   return (
-    <>
-      <div className="card operator-tickets-page page-fade-in">
-        {activeTicket ? (
+    <div className="operator-tickets-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      {activeTicket ? (
+        <div className="card operator-tickets-card">
           <TicketThread
             ticket={activeTicket}
             onBack={() => setSelectedTicketId(null)}
             onSendMessage={handleSendMessage}
             isLoading={isSubmitting}
           />
-        ) : (
-          <>
-            <div className="op-tickets-header">
-              <div className="op-tickets-header-left">
-                <div className="op-tickets-header-icon">
-                  <i className="fa-solid fa-headset"></i>
-                </div>
-                <div>
-                  <h2>Support Tickets & Head Office Communication</h2>
-                  <p>Raise technical or operational issues directly to Fairfly Head Office</p>
-                </div>
-              </div>
+        </div>
+      ) : (
+        <>
+          <PageHeader
+            title="Support Tickets & Head Office Communication"
+            subtitle="Raise technical or operational issues directly to Fairfly Head Office"
+            illustrationSrc="/pageImages/operator/tickets.png"
+            primaryAction={{
+              label: 'New Ticket',
+              icon: 'fa-solid fa-plus',
+              onClick: () => createModalRef.current?.openModal(),
+            }}
+          />
 
-              <button
-                type="button"
-                className="create-ticket-btn"
-                onClick={() => createModalRef.current?.openModal()}
-              >
-                <i className="fa-solid fa-plus"></i>
-                <span>New Ticket</span>
-              </button>
-            </div>
+          <div className="card operator-tickets-card">
 
             <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
@@ -240,15 +242,15 @@ export default function OperatorTicketsContent() {
               onPageChange={setCurrentPage}
               onPageSizeChange={setPageSize}
             />
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       <CreateTicketModal
         ref={createModalRef}
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
       />
-    </>
+    </div>
   );
 }

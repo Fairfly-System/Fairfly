@@ -1,15 +1,22 @@
 import { Outlet } from 'react-router';
 import { useState, useEffect } from 'react';
-import OperatorNavbar from '../../../components/Operator/OperatorNavbar/OperatorNavbar';
-import OperatorSidebar from '../../../components/Operator/OperatorSidebar/OperatorSidebar';
-import StatCards from '../../../components/Admin/StatCards/StatCards';
+import AppLayout from '../../../components/UI/AppLayout/AppLayout';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import './operator-layout.css';
 
-export default function OperatorLayout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const operatorLinks = [
+  { to: '/operator', end: true, icon: 'fa-solid fa-table-cells-large', label: 'Dashboard' },
+  { to: '/operator/appointments', icon: 'fa-regular fa-calendar', label: 'Appointments' },
+  { to: '/operator/inquiry-forms', icon: 'fa-solid fa-file-pen', label: 'Inquiry Forms' },
+  { to: '/operator/quotations', icon: 'fa-solid fa-file-invoice-dollar', label: 'Quotations' },
+  { to: '/operator/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
+  { to: '/operator/quick-links', icon: 'fa-solid fa-globe', label: 'Quick Links' },
+  { to: '/operator/history', icon: 'fa-solid fa-clock-rotate-left', label: 'History' },
+];
 
+export default function OperatorLayout() {
   // Real-time stat metrics
   const [activeServices, setActiveServices] = useState(0);
   const [completedServices, setCompletedServices] = useState(0);
@@ -50,61 +57,46 @@ export default function OperatorLayout() {
     };
   }, []);
 
-  /** Close sidebar when window resizes past mobile breakpoint */
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth > 768 && isSidebarOpen) {
-        setIsSidebarOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isSidebarOpen]);
-
   return (
-    <>
-      <OperatorSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+    <AppLayout
+      portalName="Operator"
+      portalSubtitle="Branch Operations"
+      navLinks={operatorLinks}
+      statCards={
+        <>
+          <KpiCard
+            title="Active Services"
+            value={activeServices}
+            detail="Currently processing"
+            icon="fa-solid fa-clipboard-list"
+            iconColor="#3b82f6"
+            badge="In Progress"
+            badgeType="info"
+          />
 
-      <OperatorNavbar onMenuToggle={() => setIsSidebarOpen((prev) => !prev)} />
+          <KpiCard
+            title="Completed Services"
+            value={completedServices}
+            detail="Total fulfilled requests"
+            icon="fa-solid fa-circle-check"
+            iconColor="#16a34a"
+            badge="Updated"
+            badgeType="ok"
+          />
 
-      <div className="op-dashboard-stats">
-        <StatCards
-          title="Active Services"
-          value={activeServices}
-          detail="Currently processing"
-          icon="fa-solid fa-clipboard-list"
-          iconColor="#3b82f6"
-          badge="In Progress"
-          badgeType="info"
-        />
-
-        <StatCards
-          title="Completed Services"
-          value={completedServices}
-          detail="Total fulfilled requests"
-          icon="fa-solid fa-circle-check"
-          iconColor="#16a34a"
-          badge="Updated"
-          badgeType="ok"
-        />
-
-        <StatCards
-          title="Pending Appointments"
-          value={pendingActions}
-          detail="Requires attention"
-          icon="fa-regular fa-clock"
-          iconColor="#f97316"
-          badge={pendingActions > 0 ? `${pendingActions} Action Needed` : 'Clear'}
-          badgeType={pendingActions > 0 ? 'warn' : 'ok'}
-        />
-      </div>
-
-      <main className="op-layout-content">
-        <Outlet />
-      </main>
-    </>
+          <KpiCard
+            title="Pending Appointments"
+            value={pendingActions}
+            detail="Requires attention"
+            icon="fa-regular fa-clock"
+            iconColor="#f97316"
+            badge={pendingActions > 0 ? `${pendingActions} Action Needed` : 'Clear'}
+            badgeType={pendingActions > 0 ? 'warn' : 'ok'}
+          />
+        </>
+      }
+    >
+      <Outlet />
+    </AppLayout>
   );
 }

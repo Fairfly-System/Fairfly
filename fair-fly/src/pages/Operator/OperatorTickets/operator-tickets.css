@@ -1,5 +1,4 @@
 .operator-tickets-page {
-  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -50,11 +49,4 @@
   gap: 1rem;
   flex: 1;
   min-height: 20rem;
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 48rem) {
-  .operator-tickets-page {
-    padding: 1rem;
-  }
 }

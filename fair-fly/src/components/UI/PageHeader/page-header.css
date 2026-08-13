@@ -5,6 +5,7 @@
   align-items: center;
   /* Stretch children to have equal height */
   padding: 2rem;
+  max-height: 20rem;
   min-height: 15rem;
   background-color: var(--card-bg);
   border-radius: var(--radius-lg);

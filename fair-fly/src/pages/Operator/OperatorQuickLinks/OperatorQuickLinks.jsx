@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import './operator-quick-links.css';
 
 const DEFAULT_LINKS = {
@@ -63,17 +65,22 @@ function QuickLinksContent() {
     return activeCategoryLinks.slice(start, start + pageSize);
   }, [activeCategoryLinks, currentPage, pageSize]);
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Quick Links' },
+  ];
+
   return (
-    <div className="card op-quicklinks page-fade-in">
-      <div className="op-quicklinks-header">
-        <div className="op-quicklinks-title">
-          <i className="fa-solid fa-globe" style={{ color: 'var(--purple)' }}></i>
-          <div>
-            <h2>Quick Links - External Resources</h2>
-            <p>Fast access to frequently used websites for service fulfillment</p>
-          </div>
-        </div>
-      </div>
+    <div className="operator-quick-links-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Quick Links - External Resources"
+        subtitle="Fast access to frequently used websites for service fulfillment"
+        illustrationSrc="/pageImages/operator/quick-links.png"
+      />
+
+      <div className="card op-quicklinks">
 
       <div className="op-tab-strip">
         {TABS.map((tab) => (
@@ -119,6 +126,7 @@ function QuickLinksContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
     </div>
   );
 }

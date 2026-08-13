@@ -5,7 +5,8 @@
 }
 
 .app-layout-main {
-  margin-left: 15.625rem; /* Matches sidebar width */
+  margin-left: 15.625rem;
+  /* Matches sidebar width */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -14,9 +15,11 @@
 
 /* ── KPI/Stat Cards Row ── */
 .app-layout-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   padding: 1.5rem 2rem 0.5rem 2rem;
 }
 

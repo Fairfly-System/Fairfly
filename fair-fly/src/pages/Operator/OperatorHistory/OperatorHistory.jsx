@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import './operator-history.css';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import DataTable from '../../../components/UI/DataTable/DataTable';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 
 const MOCK_APPT_HISTORY = [
   { id: 1, name: 'Juan Dela Cruz', service: 'Passport Processing', date: 'March 20, 2026', status: 'Completed' },
@@ -61,15 +63,22 @@ export default function OperatorHistory() {
     []
   );
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'History' },
+  ];
+
   return (
-    <div className="card op-history page-fade-in">
-      <div className="op-history-header">
-        <i className="fa-solid fa-clock-rotate-left" style={{ color: 'var(--complete-green)' }}></i>
-        <div>
-          <h2>History Records</h2>
-          <p>View past appointments and completed service fulfillments</p>
-        </div>
-      </div>
+    <div className="operator-history-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="History Records"
+        subtitle="View past appointments and completed service fulfillments"
+        illustrationSrc="/pageImages/operator/history.png"
+      />
+
+      <div className="card op-history">
 
       <div className="op-tab-strip">
         <button
@@ -112,6 +121,7 @@ export default function OperatorHistory() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
     </div>
   );
 }

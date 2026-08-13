@@ -114,20 +114,20 @@
 .cif-field textarea {
   width: 100%;
   padding: 10px 13px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--border-color);
   border-radius: 9px;
   font-size: 13.5px;
   font-family: inherit;
-  color: #111827;
-  background: #f9fafb;
+  color: var(--text-dark);
+  background: var(--bg);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .cif-field input:focus,
 .cif-field textarea:focus {
   outline: none;
-  border-color: #5b63ff;
-  box-shadow: 0 0 0 3px rgba(91, 99, 255, 0.13);
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-glow);
   background: #fff;
 }
 
@@ -185,7 +185,7 @@
 .cif-checkbox-label input[type='checkbox'] {
   width: 15px;
   height: 15px;
-  accent-color: #5b63ff;
+  accent-color: var(--purple);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -203,7 +203,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #5b63ff;
+  background: var(--purple);
   color: #fff;
   border: none;
   font-size: 14px;
@@ -215,7 +215,7 @@
 }
 
 .cif-btn-submit:hover {
-  background: #4a51e0;
+  background: var(--purple-dark);
 }
 
 .cif-btn-cancel {

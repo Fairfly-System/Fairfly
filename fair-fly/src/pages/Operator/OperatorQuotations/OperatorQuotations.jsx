@@ -5,6 +5,8 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import BaseModal from '../../../components/UI/ModalBase/BaseModal';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import './operator-quotations.css';
@@ -62,12 +64,10 @@ function CreateQuotationModal({ isOpen, onClose }) {
       subtitle="Generate a detailed quotation breakdown for a client"
       isLoading={isSubmitting}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-              Client Name *
-            </label>
+      <form onSubmit={handleSubmit} className="form-column" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">Client Name *</label>
             <input
               type="text"
               name="clientName"
@@ -76,14 +76,12 @@ function CreateQuotationModal({ isOpen, onClose }) {
               onChange={handleChange}
               required
               disabled={isSubmitting}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-input"
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-              Client Email
-            </label>
+          <div className="form-column">
+            <label className="form-label">Client Email</label>
             <input
               type="email"
               name="clientEmail"
@@ -91,16 +89,14 @@ function CreateQuotationModal({ isOpen, onClose }) {
               value={formData.clientEmail}
               onChange={handleChange}
               disabled={isSubmitting}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-input"
             />
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-              Service Title *
-            </label>
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">Service Title *</label>
             <input
               type="text"
               name="serviceTitle"
@@ -109,14 +105,12 @@ function CreateQuotationModal({ isOpen, onClose }) {
               onChange={handleChange}
               required
               disabled={isSubmitting}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-input"
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-              Rate per Person (PHP) *
-            </label>
+          <div className="form-column">
+            <label className="form-label">Rate per Person (PHP) *</label>
             <input
               type="number"
               name="rate"
@@ -125,15 +119,13 @@ function CreateQuotationModal({ isOpen, onClose }) {
               onChange={handleChange}
               required
               disabled={isSubmitting}
-              style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              className="form-input"
             />
           </div>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Inclusions
-          </label>
+        <div className="form-column">
+          <label className="form-label">Inclusions</label>
           <input
             type="text"
             name="inclusions"
@@ -141,14 +133,12 @@ function CreateQuotationModal({ isOpen, onClose }) {
             value={formData.inclusions}
             onChange={handleChange}
             disabled={isSubmitting}
-            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            className="form-input"
           />
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Exclusions
-          </label>
+        <div className="form-column">
+          <label className="form-label">Exclusions</label>
           <input
             type="text"
             name="exclusions"
@@ -156,15 +146,15 @@ function CreateQuotationModal({ isOpen, onClose }) {
             value={formData.exclusions}
             onChange={handleChange}
             disabled={isSubmitting}
-            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            className="form-input"
           />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-          <button type="button" className="btn-cancel" onClick={onClose} disabled={isSubmitting}>
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
-          <button type="submit" className="op-quotation-btn" disabled={isSubmitting}>
+          <button type="submit" className="btn-primary" disabled={isSubmitting}>
             {isSubmitting ? 'Creating...' : 'Create Quotation'}
           </button>
         </div>
@@ -225,21 +215,27 @@ function QuotationsContent() {
     );
   };
 
-  return (
-    <div className="card op-quotations-page page-fade-in">
-      <div className="op-quotations-header">
-        <div className="op-quotations-title">
-          <i className="fa-solid fa-file-invoice-dollar" style={{ color: 'var(--purple)', fontSize: '1.5rem' }}></i>
-          <div>
-            <h2>Quotation Forms Management</h2>
-            <p>Create and manage client service quotations with rates, inclusions, and terms</p>
-          </div>
-        </div>
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Quotations' },
+  ];
 
-        <button className="op-quotation-btn" onClick={() => setShowModal(true)}>
-          <i className="fa-solid fa-plus"></i> Create Quotation
-        </button>
-      </div>
+  return (
+    <div className="operator-quotations-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Quotation Forms Management"
+        subtitle="Create and manage client service quotations with rates, inclusions, and terms"
+        illustrationSrc="/pageImages/operator/quotations.png"
+        primaryAction={{
+          label: 'Create Quotation',
+          icon: 'fa-solid fa-plus',
+          onClick: () => setShowModal(true),
+        }}
+      />
+
+      <div className="card op-quotations-page">
 
       <div className="table-toolbar">
         <div className="search-box">
@@ -335,6 +331,7 @@ function QuotationsContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
 
       <CreateQuotationModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </div>

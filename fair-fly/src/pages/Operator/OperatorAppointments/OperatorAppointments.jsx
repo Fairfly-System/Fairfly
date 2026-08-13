@@ -4,6 +4,8 @@ import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import './operator-appointments.css';
@@ -65,20 +67,22 @@ function AppointmentContent() {
 
   const pendingCount = (appointments || []).filter((a) => (a.status || '').toLowerCase() === 'pending').length;
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Appointments' },
+  ];
+
   return (
-    <div className="card op-appointments page-fade-in">
-      <div className="op-appointments-header">
-        <div className="op-appointments-title">
-          <i className="fa-regular fa-calendar" style={{ color: 'var(--orange)' }}></i>
-          <div>
-            <h2>Appointment Requests</h2>
-            <p>Clients requesting face-to-face consultations</p>
-          </div>
-        </div>
-        <span className="op-appointments-badge">
-          {pendingCount} Pending
-        </span>
-      </div>
+    <div className="operator-appointments-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Appointment Requests"
+        subtitle="Clients requesting face-to-face consultations"
+        illustrationSrc="/pageImages/operator/appointments.png"
+      />
+
+      <div className="card op-appointments">
 
       {/* Toolbar Filter */}
       <div className="table-toolbar">
@@ -219,7 +223,6 @@ function AppointmentContent() {
         )}
       </div>
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalItems={filteredAppointments.length}
@@ -227,6 +230,7 @@ function AppointmentContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
     </div>
   );
 }

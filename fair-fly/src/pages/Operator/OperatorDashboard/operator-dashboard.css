@@ -5,6 +5,12 @@
   gap: 1.25rem;
 }
 
+.operator-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 .op-dashboard-header {
   display: flex;
   align-items: flex-start;

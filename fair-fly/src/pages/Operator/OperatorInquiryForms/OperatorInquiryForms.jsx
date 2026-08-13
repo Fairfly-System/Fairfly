@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import CreateInquiryFormModal from '../../../components/Operator/CreateInquiryFormModal/CreateInquiryFormModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import './operator-inquiry-forms.css';
 
 function InquiryContent() {
@@ -27,21 +29,27 @@ function InquiryContent() {
     return filteredForms.slice(start, start + pageSize);
   }, [filteredForms, currentPage, pageSize]);
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Inquiry Forms' },
+  ];
+
   return (
-    <div className="card op-inquiry page-fade-in">
-      <div className="op-inquiry-header">
-        <div className="op-inquiry-title">
-          <i className="fa-solid fa-file-pen" style={{ color: 'var(--purple)' }}></i>
-          <div>
-            <h2>Inquiry Forms</h2>
-            <p>Record, track, and process prospective client inquiries</p>
-          </div>
-        </div>
-        <button className="op-inquiry-btn" onClick={() => setShowModal(true)}>
-          <i className="fa-solid fa-plus"></i>
-          Create Inquiry Form
-        </button>
-      </div>
+    <div className="operator-inquiries-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Inquiry Forms"
+        subtitle="Record, track, and process prospective client inquiries"
+        illustrationSrc="/pageImages/operator/inquiry-forms.png"
+        primaryAction={{
+          label: 'Create Inquiry Form',
+          icon: 'fa-solid fa-plus',
+          onClick: () => setShowModal(true),
+        }}
+      />
+
+      <div className="card op-inquiry">
 
       {/* Toolbar Search */}
       <div className="table-toolbar">
@@ -112,6 +120,8 @@ function InquiryContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+
+      </div>
 
       {showModal && <CreateInquiryFormModal onClose={() => setShowModal(false)} />}
     </div>

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import './operator-service-procedure.css';
@@ -112,9 +113,17 @@ function ServiceProcedureContent() {
     );
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Procedure Checklist' },
+  ];
+
   return (
-    <div className="card op-procedure-page page-fade-in">
-      <div className="op-procedure-top-bar">
+    <div className="operator-procedure-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <div className="card op-procedure-page">
+        <div className="op-procedure-top-bar">
         <Link to="/operator" className="op-procedure-back-btn">
           <i className="fa-solid fa-arrow-left"></i> Back to Active Services
         </Link>
@@ -366,6 +375,7 @@ function ServiceProcedureContent() {
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );

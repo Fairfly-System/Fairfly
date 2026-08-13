@@ -5,7 +5,8 @@ import { useAuthContext } from '../../../context/AuthContext';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
 import ClientServiceRequestModal from '../../../components/Client/ClientServiceRequestModal/ClientServiceRequestModal';
 import ClientServiceTracker from '../../../components/Client/ClientServiceTracker/ClientServiceTracker';
-import ClientNavbar from '../../../components/Client/ClientNavbar/ClientNavbar';
+import AppNavbar from '../../../components/UI/AppNavbar/AppNavbar';
+import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
 import './client-dashboard.css';
 
 export default function ClientDashboard() {
@@ -64,41 +65,42 @@ export default function ClientDashboard() {
   }, [user]);
 
   return (
-    <div className="page">
-      <ClientNavbar />
+    <div className="client-dashboard-page page-fade-in">
+      <AppNavbar
+        portalName="Client"
+        portalSubtitle="Travel Services & Bookings"
+        showSidebarOffset={false}
+      />
 
       <main className="main">
-        <h1 className="pageTitle">Welcome to Your Dashboard</h1>
-
-        <p className="pageSub">
-          Request a service, schedule an appointment, and track your active requests in real-time!
-        </p>
+        <WelcomeHero
+          title="Welcome to Your Dashboard"
+          subtitle="Request a service, schedule an appointment, and track your active requests in real-time!"
+          illustrationSrc="/pageImages/client/dashboard.png"
+        />
 
         {/* Action Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div className="client-action-grid">
           {/* Request Service Card */}
-          <div className="appointmentCard" style={{ margin: 0 }}>
-            <div className="appointmentHeader">
-              <div className="appointmentIconWrap" style={{ background: '#eef2ff', color: '#4f46e5' }}>
-                <p><i className="fa-solid fa-file-circle-plus"></i></p>
+          <div className="card client-action-card">
+            <div className="client-card-header">
+              <div className="client-icon-bubble client-icon-bubble--primary">
+                <i className="fa-solid fa-file-circle-plus"></i>
               </div>
 
               <div>
-                <h2 className="appointmentTitle">Request a Service</h2>
-                <p className="appointmentSub">
-                  Select a travel service and choose your preferred branch for processing
-                </p>
+                <h2>Request a Service</h2>
+                <p>Select a travel service and choose your preferred branch for processing</p>
               </div>
             </div>
 
-            <div className="appointmentBody">
-              <p className="appointmentDesc">
+            <div className="client-card-body">
+              <p>
                 Avail travel services online including PSA documents, passport processing, VISA assistance, package tours, and airline tickets assigned directly to your branch of choice.
               </p>
 
               <button
-                className="scheduleBtn"
-                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)', color: '#ffffff' }}
+                className="btn-primary"
                 onClick={() => setShowServiceRequestModal(true)}
               >
                 <i className="fa-solid fa-plus-circle"></i>
@@ -108,27 +110,25 @@ export default function ClientDashboard() {
           </div>
 
           {/* Schedule Appointment Card */}
-          <div className="appointmentCard" style={{ margin: 0 }}>
-            <div className="appointmentHeader">
-              <div className="appointmentIconWrap">
-                <p><i className="fa-solid fa-calendar-check"></i></p>
+          <div className="card client-action-card">
+            <div className="client-card-header">
+              <div className="client-icon-bubble client-icon-bubble--secondary">
+                <i className="fa-solid fa-calendar-check"></i>
               </div>
 
               <div>
-                <h2 className="appointmentTitle">Schedule Branch Appointment</h2>
-                <p className="appointmentSub">
-                  Book a face-to-face meeting with our agency branch
-                </p>
+                <h2>Schedule Branch Appointment</h2>
+                <p>Book a face-to-face meeting with our agency branch</p>
               </div>
             </div>
 
-            <div className="appointmentBody">
-              <p className="appointmentDesc">
+            <div className="client-card-body">
+              <p>
                 Book an appointment to visit our physical branch office for face-to-face consultations, document turn-over, or in-person assistance.
               </p>
 
               <button
-                className="scheduleBtn"
+                className="btn-secondary"
                 onClick={() => setShowAppointmentModal(true)}
               >
                 <i className="fa-solid fa-calendar-day"></i>
@@ -150,35 +150,34 @@ export default function ClientDashboard() {
         />
 
         {/* Services Tracker List */}
-        <div className="servicesCard">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <h2 className="servicesTitle" style={{ margin: 0 }}>My Active Services</h2>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', background: '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '20px' }}>
-              <i className="fa-solid fa-bolt" style={{ color: '#eab308', marginRight: '0.35rem' }}></i>
+        <div className="card client-services-card">
+          <div className="client-services-header">
+            <div>
+              <h2>My Active Services</h2>
+              <p>Track step-by-step fulfillment progress for your requested services</p>
+            </div>
+            <span className="client-realtime-badge">
+              <i className="fa-solid fa-bolt"></i>
               Live Real-Time Updates
             </span>
           </div>
 
-          <p className="servicesSub">
-            Track step-by-step fulfillment progress for your requested services
-          </p>
-
-          <div className="servicesList" style={{ marginTop: '1rem' }}>
+          <div className="servicesList">
             {loadingServices ? (
-              <div style={{ textAlign: 'center', padding: '2.5rem 0', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', padding: '2.5rem 0', color: 'var(--text-light)' }}>
                 <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
                 <p>Connecting to real-time service tracking...</p>
               </div>
             ) : activeServices.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                <i className="fa-solid fa-box-open" style={{ fontSize: '2.5rem', color: '#94a3b8', marginBottom: '0.75rem' }}></i>
-                <h3 style={{ fontSize: '1.1rem', color: '#334155', margin: '0 0 0.5rem 0' }}>No Active Service Requests</h3>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: '0 0 1.25rem 0' }}>
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--bg)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
+                <i className="fa-solid fa-box-open" style={{ fontSize: '2.5rem', color: 'var(--text-light)', marginBottom: '0.75rem' }}></i>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-dark)', margin: '0 0 0.5rem 0' }}>No Active Service Requests</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', margin: '0 0 1.25rem 0' }}>
                   You haven't requested any services yet. Click "Request Service Online" above to select a service and assigned branch.
                 </p>
                 <button
-                  className="scheduleBtn"
-                  style={{ display: 'inline-flex', width: 'auto', padding: '0.6rem 1.25rem' }}
+                  className="btn-primary"
+                  style={{ display: 'inline-flex', width: 'auto' }}
                   onClick={() => setShowServiceRequestModal(true)}
                 >
                   <i className="fa-solid fa-plus-circle"></i>

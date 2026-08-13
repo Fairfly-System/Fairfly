@@ -1,62 +1,82 @@
+import BaseModal from '../../UI/ModalBase/BaseModal';
 import './client-appointment-form.css';
 
 export default function ClientAppointmentForm({ isOpen, onClose }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="modalOverlay">
-      <div className="modal">
-        <button
-          className="closeBtn"
-          onClick={onClose}
-        >
-          <i class="fa-solid fa-circle-xmark"></i>
-        </button>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="500px"
+      title="Request Service Appointment"
+      subtitle="Fill out the form below to schedule a face-to-face meeting with our branch"
+    >
+      <form className="appointmentForm form-column" onSubmit={(e) => e.preventDefault()}>
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">Service Type</label>
+            <select className="form-select">
+              <option>Tour Package</option>
+              <option>Passport Processing</option>
+              <option>VISA Assistance</option>
+              <option>PSA Documents</option>
+              <option>Airline Tickets</option>
+            </select>
+          </div>
 
-        <h2>Request Service Appointment</h2>
+          <div className="form-column">
+            <label className="form-label">Branch</label>
+            <select className="form-select">
+              <option>Fairfly Baliuag</option>
+            </select>
+          </div>
+        </div>
 
-        <p>
-          Fill out the form below to schedule an appointment.
-        </p>
-
-        <form className="appointmentForm">
-          <label>Service Type</label>
-          <select>
-            <option>Tour Package</option>
-            <option>Passport Processing</option>
-            <option>VISA Assistance</option>
-            <option>PSA Documents</option>
-            <option>Airline Tickets</option>
-          </select>
-
-          <label>Branch</label>
-          <select>
-            <option>Fairfly Baliuag</option>
-          </select>
-
-          <label>Email Address</label>
+        <div className="form-column">
+          <label className="form-label">Email Address</label>
           <input
             type="email"
             placeholder="example@email.com"
+            className="form-input"
           />
+        </div>
 
-          <label>Preferred Date</label>
-          <input type="date" />
+        <div className="form-grid-2">
+          <div className="form-column">
+            <label className="form-label">Preferred Date</label>
+            <input type="date" className="form-input" />
+          </div>
 
-          <label>Preferred Time</label>
-          <input type="time" />
+          <div className="form-column">
+            <label className="form-label">Preferred Time</label>
+            <input type="time" className="form-input" />
+          </div>
+        </div>
 
-          <label>Additional Information</label>
-          <textarea rows="4" />
+        <div className="form-column">
+          <label className="form-label">Additional Information</label>
+          <textarea rows="4" className="form-textarea" />
+        </div>
 
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
-            className="submitBtn"
+            className="btn-primary"
+            onClick={(e) => {
+              e.preventDefault();
+              onClose();
+            }}
           >
-            <i class="fa-regular fa-paper-plane"></i> Submit Request
+            <i className="fa-regular fa-paper-plane"></i> Submit Request
           </button>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </BaseModal>
   );
 }

@@ -1,5 +1,64 @@
 # Update Logs
 
+## [2026-08-13] Phase 3 — Client Portal Redesign Completed
+
+### Files Modified, Deleted & Created
+- **Modified Pages**:
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx` (Migrated navigation to `AppNavbar`, integrated `WelcomeHero`, and refactored action cards/services list layout)
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/client-dashboard.css` (Redesigned with card grid layouts, spacing variables, and hover properties)
+- **Modified Components**:
+  - `fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx` (Refactored to inherit `BaseModal` and use standard forms layout)
+  - `fair-fly/src/components/Client/ClientAppointmentForm/client-appointment-form.css` (Cleared custom styles in favor of core form utility classes)
+  - `fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx` (Refactored to inherit `BaseModal` and use standard forms layout)
+  - `fair-fly/src/components/Client/ClientServiceRequestModal/client-service-request-modal.css` (Removed slide-up overlay animations, centered components, and styled dropzones)
+  - `fair-fly/src/components/Client/ClientServiceTracker/ClientServiceTracker.jsx` (Polished layout wrapper)
+  - `fair-fly/src/components/Client/ClientServiceTracker/service-tracker.css` (Refactored using card shadow tokens and flat border highlights)
+  - `fair-fly/src/components/Client/ClientServiceTracker/Steps/Steps.jsx` (Redesigned status icons representation: `in-progress` maps to Loader spinner, `todo` maps to Circle)
+  - `fair-fly/src/components/Client/ClientServiceTracker/Steps/steps.css` (Refactored using card border/background variables and added CSS keyframe spinning loader animation)
+- **Deleted Folders**:
+  - `fair-fly/src/components/Client/ClientNavbar` (Retired folder deleted)
+
+### Summary of Changes
+- **Navbar & Hero Integration**: Migrated the Client dashboard to use the unified `AppNavbar` spanning the full width (no sidebar offset), and integrated `<WelcomeHero>` with `/pageImages/client/dashboard.png`.
+- **Card Primitives & Layout Uniformity**: Refactored the dashboard action cards ("Request Service", "Book Appointment") and the "My Active Services" container to use flat `.card` layouts, removing gradients and transition lifts.
+- **BaseModal Adoption**: Updated `ClientAppointmentForm` and `ClientServiceRequestModal` to use `<BaseModal>`, standardizing layout alignment, centering, backdrop shading, and closing actions.
+- **Workflow Steps Refinement**: Improved progress icons in `Steps.jsx`, showing an empty grey circle for `todo` tasks, and a spinning purple Loader icon for the active `in-progress` step.
+- **Retired Files Cleanup**: Deleted the legacy `ClientNavbar` component directory.
+
+---
+
+## [2026-08-13] Phase 2 — Operator Portal Redesign Completed
+
+### Files Modified, Deleted & Created
+- **Modified Pages**:
+  - `fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx` (Migrated to `AppLayout` and `KpiCard`)
+  - `fair-fly/src/pages/Operator/OperatorLayout/operator-layout.css` (Cleared obsolete CSS declarations)
+  - `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Integrated `WelcomeHero` and wrapper classes)
+  - `fair-fly/src/pages/Operator/OperatorAppointments/OperatorAppointments.jsx` (Added `PageHeader`, `Breadcrumbs`, and fixed unclosed tags)
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx` (Added `PageHeader` and `Breadcrumbs`)
+  - `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Added `PageHeader`, `Breadcrumbs`, fixed unclosed tags, and restyled `CreateQuotationModal` form elements)
+  - `fair-fly/src/pages/Operator/OperatorQuickLinks/OperatorQuickLinks.jsx` (Added `PageHeader` and `Breadcrumbs`)
+  - `fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx` (Added `PageHeader` and `Breadcrumbs`)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Added `PageHeader` and `Breadcrumbs`)
+  - `fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx` (Added `Breadcrumbs` and layout refinements)
+- **Modified Components**:
+  - `fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx` (Cleaned layout)
+  - `fair-fly/src/components/Operator/CreateInquiryFormModal/create-inquiry-form-modal.css` (Updated inline colors to use index.css variables)
+  - `fair-fly/src/pages/Operator/OperatorQuotations/operator-quotations.css` (Removed linear-gradients and translateY hover transforms, added grid layout helpers)
+  - `fair-fly/src/pages/Operator/OperatorTickets/operator-tickets.css` (Removed duplicate page padding and responsive media query overrides)
+- **Deleted Folders**:
+  - `fair-fly/src/components/Operator/OperatorSidebar` (Retired folder deleted)
+  - `fair-fly/src/components/Operator/OperatorNavbar` (Retired folder deleted)
+
+### Summary of Changes
+- **Layout Shell Migration**: Rewrote `OperatorLayout.jsx` to inherit the unified `AppLayout` framework, passing operator-specific navbar/sidebar links and dynamic statistics cards.
+- **Header & Breadcrumbs Integration**: Unified all Operator subpages by adding `<Breadcrumbs>` navigation and `<PageHeader>` tags rendering travel-themed illustration graphics linked to `/pageImages/operator/{page}.png`.
+- **Form Modal Uniformity**: Refactored inputs and submit buttons in `CreateQuotationModal` and `CreateInquiryFormModal` to replace inline styles and custom hex codes with core styling variables (e.g. `var(--purple)`, `var(--purple-dark)`, and `.form-input`).
+- **Tickets Padding Alignment**: Resolved layout inconsistency by removing double padding margins on the Tickets page, aligning its spacing perfectly with the rest of the portal.
+- **Retired Assets Cleanup**: Deleted the retired legacy Operator Sidebar and Navbar component directories.
+
+---
+
 ## [2026-08-13] Universal Scrollbar Customization & Header Layout Enhancements
 
 ### Files Modified & Created
