@@ -8,6 +8,8 @@ import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModa
 import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import DataTable from "../../../components/UI/DataTable/DataTable";
+import PageHeader from "../../../components/UI/PageHeader/PageHeader";
+import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
@@ -336,80 +338,90 @@ export default function OperatorsContent() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: "Dashboard", to: "/admin" },
+    { label: "Operators" },
+  ];
+
+  const totalOperators = Array.isArray(operators) ? operators.length : 0;
+  const activeCount = Array.isArray(operators) ? operators.filter((o) => o.status === "Active").length : 0;
+  const inactiveCount = totalOperators - activeCount;
+
   return (
-    <div className="card operators-page page-fade-in">
-      {/* Page Header */}
-      <div className="operators-header">
-        <div>
-          <h2>Operator Management</h2>
-          <p>Create, configure, and monitor franchise operator accounts</p>
-        </div>
+    <div className="operators-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
 
-        <button className="operator-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
-          <i className="fa-solid fa-user-plus"></i>
-          Add Operator
-        </button>
-      </div>
+      <PageHeader
+        title="Operator Management"
+        subtitle="Create, configure, and monitor franchise operator accounts"
+        illustrationSrc="/pageImages/admin/operators.png"
+        primaryAction={{
+          label: "Add Operator",
+          icon: "fa-solid fa-user-plus",
+          onClick: handleOpenAddModal,
+        }}
+      />
 
-      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+      <div className="card operators-table-card">
+        <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
-      {/* Toolbar Filter Row */}
-      <div className="table-toolbar">
-        <div className="search-box">
-          <i className="fa-solid fa-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            placeholder="Search by branch or email..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
+        {/* Toolbar Filter Row */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Search by branch or email..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <FilterChipGroup
+            chips={[
+              { value: "all", label: `All (${totalOperators})` },
+              { value: "active", label: `Active (${activeCount})` },
+              { value: "disabled", label: `Disabled (${inactiveCount})` },
+            ]}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
               setCurrentPage(1);
             }}
           />
-          {searchTerm && (
-            <button
-              className="clear-search-btn"
-              onClick={() => {
-                setSearchTerm("");
-                setCurrentPage(1);
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          )}
         </div>
 
-        <FilterChipGroup
-          chips={[
-            { value: "all", label: `All (${operators.length})` },
-            { value: "active", label: `Active (${operators.filter((o) => o.status === "Active").length})` },
-            { value: "disabled", label: `Disabled (${operators.filter((o) => o.status === "Disabled").length})` },
-          ]}
-          activeChip={statusFilter}
-          onChipChange={(val) => {
-            setStatusFilter(val);
-            setCurrentPage(1);
+        {/* Standardized Reusable DataTable */}
+        <DataTable
+          columns={columns}
+          data={paginatedOperators}
+          keyField="id"
+          selectable={true}
+          selectedIds={selectedIds}
+          disabled={isConfirmLoading || isSubmitting}
+          onSelectionChange={setSelectedIds}
+          onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}
+          onBulkDisable={(ids) => setConfirmState({ type: "bulk-disable", ids })}
+          onBulkDelete={(ids) => setConfirmState({ type: "bulk-delete", ids })}
+          emptyState={{
+            icon: "fa-solid fa-user-slash",
+            message: "No operators match your criteria",
           }}
         />
-      </div>
-
-      {/* Standardized Reusable DataTable */}
-      <DataTable
-        columns={columns}
-        data={paginatedOperators}
-        keyField="id"
-        selectable={true}
-        selectedIds={selectedIds}
-        disabled={isConfirmLoading || isSubmitting}
-        onSelectionChange={setSelectedIds}
-        onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}
-        onBulkDisable={(ids) => setConfirmState({ type: "bulk-disable", ids })}
-        onBulkDelete={(ids) => setConfirmState({ type: "bulk-delete", ids })}
-        emptyState={{
-          icon: "fa-solid fa-user-slash",
-          message: "No operators match your criteria",
-        }}
-      />
 
       {/* Pagination Component */}
       <Pagination
@@ -419,6 +431,7 @@ export default function OperatorsContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
 
       {/* Render the Operator Modal */}
       <OperatorModal

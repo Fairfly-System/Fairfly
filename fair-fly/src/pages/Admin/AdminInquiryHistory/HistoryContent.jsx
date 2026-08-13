@@ -5,6 +5,8 @@ import ApplicationModal from "../../../components/Admin/Modals/ApplicationModal/
 import FranchiseCard from "../../../components/Admin/FranchiseeApplication/FranchiseeCard";
 import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
+import PageHeader from "../../../components/UI/PageHeader/PageHeader";
+import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
 import "./admin-inquiry-history.css";
 
 export default function HistoryContent() {
@@ -67,59 +69,67 @@ export default function HistoryContent() {
     };
   }, [historyApplications]);
 
+  const breadcrumbItems = [
+    { label: "Dashboard", to: "/admin" },
+    { label: "Inquiry History" },
+  ];
+
+  const totalHistory = Array.isArray(historyApplications) ? historyApplications.length : 0;
+  const approvedCount = Array.isArray(historyApplications) ? historyApplications.filter((a) => a.status === "approved").length : 0;
+  const rejectedCount = Array.isArray(historyApplications) ? historyApplications.filter((a) => a.status === "rejected").length : 0;
+
   return (
-    <div className="card inquiry-page page-fade-in">
-      <div className="inquiry-header">
-        <div className="inquiry-header-icon">
-          <i className="fa-solid fa-clipboard-list"></i>
-        </div>
-        <div>
-          <h2>Franchising Inquiry History</h2>
-          <p>Complete record of processed (approved and rejected) franchise applications</p>
-        </div>
-      </div>
+    <div className="inquiry-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
 
-      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+      <PageHeader
+        title="Franchising Inquiry History"
+        subtitle="Complete record of processed (approved and rejected) franchise applications"
+        illustrationSrc="/pageImages/admin/inquiry-history.png"
+      />
 
-      {/* Toolbar Search & Filter */}
-      <div className="table-toolbar">
-        <div className="search-box">
-          <i className="fa-solid fa-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            placeholder="Search by name, email, or location..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
+      <div className="card inquiry-table-card">
+        <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+
+        {/* Toolbar Search & Filter */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Search by name, email, or location..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <FilterChipGroup
+            chips={[
+              { value: "all", label: `All History (${totalHistory})` },
+              { value: "approved", label: `Approved (${approvedCount})` },
+              { value: "rejected", label: `Rejected (${rejectedCount})` },
+            ]}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
               setCurrentPage(1);
             }}
           />
-          {searchTerm && (
-            <button
-              className="clear-search-btn"
-              onClick={() => {
-                setSearchTerm("");
-                setCurrentPage(1);
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          )}
         </div>
-
-        <FilterChipGroup
-          chips={[
-            { value: "all", label: `All History (${historyApplications.length})` },
-            { value: "approved", label: `Approved (${historyApplications.filter((a) => a.status === "approved").length})` },
-            { value: "rejected", label: `Rejected (${historyApplications.filter((a) => a.status === "rejected").length})` },
-          ]}
-          activeChip={statusFilter}
-          onChipChange={(val) => {
-            setStatusFilter(val);
-            setCurrentPage(1);
-          }}
-        />
-      </div>
 
       <div className="franchise-cards-container">
         {franchiseLoading ? (
@@ -165,6 +175,7 @@ export default function HistoryContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
 
       <ApplicationModal ref={modalRef} isLoading={isLoading} showButtons={false} />
     </div>

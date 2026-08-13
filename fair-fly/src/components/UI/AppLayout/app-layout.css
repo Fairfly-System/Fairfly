@@ -1,0 +1,52 @@
+.app-layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-layout-main {
+  margin-left: 15.625rem; /* Matches sidebar width */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── KPI/Stat Cards Row ── */
+.app-layout-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  padding: 1.5rem 2rem 0.5rem 2rem;
+}
+
+/* ── Main Content Area ── */
+.app-layout-content {
+  padding: 1.25rem 2rem 2rem 2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Responsive breakpoints ── */
+@media (max-width: 64rem) {
+  .app-layout-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 48rem) {
+  .app-layout-main {
+    margin-left: 0;
+  }
+
+  .app-layout-stats {
+    grid-template-columns: 1fr;
+    padding: 1rem 1rem 0.5rem 1rem;
+  }
+
+  .app-layout-content {
+    padding: 0.5rem 1rem 1.5rem 1rem;
+  }
+}

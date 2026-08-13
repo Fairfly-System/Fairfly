@@ -5,6 +5,8 @@ import QuickLinkModal from '../../../components/Admin/Modals/QuickLinkModal/Quic
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import DataTable from '../../../components/UI/DataTable/DataTable';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import { useAuthContext } from '../../../context/AuthContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -238,87 +240,95 @@ export default function QuickLinksContent() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/admin' },
+    { label: 'Quick Links' },
+  ];
+
   return (
-    <div className="card quicklinks-page page-fade-in">
-      <div className="quicklinks-header">
-        <div>
-          <h2>Quick Links Management</h2>
-          <p>Manage external resource portals and shortcuts for operators</p>
-        </div>
+    <div className="quicklinks-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
 
-        <button className="quicklinks-btn" onClick={handleOpenAddModal} disabled={isLoading || isDeleting}>
-          <i className="fa-solid fa-plus"></i>
-          Add Quick Link
-        </button>
-      </div>
-
-      {/* Toolbar Search & Category Filter */}
-      <div className="table-toolbar">
-        <div className="search-box">
-          <i className="fa-solid fa-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            placeholder="Search by title or URL..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {searchTerm && (
-            <button
-              className="clear-search-btn"
-              onClick={() => {
-                setSearchTerm('');
-                setCurrentPage(1);
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          )}
-        </div>
-
-        <FilterChipGroup
-          chips={[
-            { value: 'all', label: `All (${quickLinksList.length})` },
-            { value: 'airlines', label: 'Airlines' },
-            { value: 'hotels', label: 'Hotels' },
-            { value: 'government', label: 'Government' },
-            { value: 'visaandembassy', label: 'Visa & Embassy' },
-            { value: 'other', label: 'Other' },
-          ]}
-          activeChip={categoryFilter}
-          onChipChange={(val) => {
-            setCategoryFilter(val);
-            setCurrentPage(1);
-          }}
-        />
-      </div>
-
-      {/* Reusable DataTable */}
-      <DataTable
-        columns={columns}
-        data={paginatedLinks}
-        keyField="id"
-        selectable={true}
-        selectedIds={selectedIds}
-        disabled={isLoading || isDeleting}
-        onSelectionChange={setSelectedIds}
-        onBulkDelete={(ids) => setBulkDeleteIds(ids)}
-        emptyState={{
-          icon: 'fa-solid fa-link-slash',
-          message: 'No quick links match your search',
+      <PageHeader
+        title="Quick Links Management"
+        subtitle="Manage external resource portals and shortcuts for operators"
+        illustrationSrc="/pageImages/admin/quick-links.png"
+        primaryAction={{
+          label: 'Add Quick Link',
+          icon: 'fa-solid fa-plus',
+          onClick: handleOpenAddModal,
         }}
       />
 
-      {/* Pagination Component */}
-      <Pagination
-        currentPage={currentPage}
-        totalItems={filteredLinks.length}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
+      <div className="card quicklinks-table-card">
+        {/* Toolbar Search & Category Filter */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Search by title or URL..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <FilterChipGroup
+            chips={[
+              { value: 'all', label: `All (${quickLinksList.length})` },
+              { value: 'airlines', label: 'Airlines' },
+              { value: 'hotels', label: 'Hotels' },
+              { value: 'government', label: 'Government' },
+              { value: 'visaandembassy', label: 'Visa & Embassy' },
+              { value: 'other', label: 'Other' },
+            ]}
+            activeChip={categoryFilter}
+            onChipChange={(val) => {
+              setCategoryFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
+        {/* Reusable DataTable */}
+        <DataTable
+          columns={columns}
+          data={paginatedLinks}
+          keyField="id"
+          selectable={true}
+          selectedIds={selectedIds}
+          disabled={isLoading || isDeleting}
+          onSelectionChange={setSelectedIds}
+          onBulkDelete={(ids) => setBulkDeleteIds(ids)}
+          emptyState={{
+            icon: 'fa-solid fa-link-slash',
+            message: 'No quick links match your search',
+          }}
+        />
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredLinks.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </div>
 
       {/* Modal for Add / Edit */}
       <QuickLinkModal

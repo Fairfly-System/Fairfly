@@ -1,16 +1,23 @@
 import './admin-layout.css';
 import { Outlet } from 'react-router';
-import AdminNavbar from '../../../components/Admin/AdminNavbar/AdminNavbar';
-import AdminSidebar from '../../../components/Admin/AdminSidebar/AdminSidebar';
-import StatCards from '../../../components/Admin/StatCards/StatCards';
+import AppLayout from '../../../components/UI/AppLayout/AppLayout';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
-export default function MainLayout() {
-  // ── Sidebar toggle (mobile drawer) ──
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const adminLinks = [
+  { to: '/admin', end: true, icon: 'fa-solid fa-arrow-trend-up', label: 'Analytics' },
+  { to: '/admin/services', icon: 'fa-regular fa-file-lines', label: 'Services' },
+  { to: '/admin/workflow-templates', icon: 'fa-solid fa-diagram-project', label: 'Workflows' },
+  { to: '/admin/operators', icon: 'fa-solid fa-users', label: 'Operators' },
+  { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
+  { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
+  { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },
+  { to: '/admin/quick-links', icon: 'fa-solid fa-link', label: 'Quick Links' },
+];
 
+export default function AdminLayout() {
   // Services
   const [activeServices, setActiveServices] = useState(0);
   const [disabledServices, setDisabledServices] = useState(0);
@@ -77,87 +84,72 @@ export default function MainLayout() {
     };
   }, []);
 
-  /** Close sidebar when window resizes past mobile breakpoint */
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth > 768 && isSidebarOpen) {
-        setIsSidebarOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isSidebarOpen]);
-
   const totalOperators = activeOperators + disabledOperators;
   const totalServices = activeServices + disabledServices;
 
   return (
-    <>
-      <AdminSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+    <AppLayout
+      portalName="Admin"
+      portalSubtitle="Management Portal"
+      navLinks={adminLinks}
+      statCards={
+        <>
+          {/* ── Revenue ── */}
+          <KpiCard
+            title="Total Revenue"
+            value="—"
+            detail="Revenue tracking not yet configured"
+            icon="fa-solid fa-peso-sign"
+            iconColor="#16a34a"
+            badge="Placeholder"
+            badgeType="neutral"
+          />
 
-      <AdminNavbar onMenuToggle={() => setIsSidebarOpen((prev) => !prev)} />
+          {/* ── Active Services ── */}
+          <KpiCard
+            title="Active Services"
+            value={activeServices}
+            detail={`${totalServices} service${totalServices !== 1 ? 's' : ''} in catalog`}
+            icon="fa-regular fa-file-lines"
+            iconColor="#3b82f6"
+            badge={disabledServices > 0 ? `${disabledServices} Disabled` : 'All Active'}
+            badgeType={disabledServices > 0 ? 'warn' : 'ok'}
+          />
 
-      <div className="dashboard-stats">
-        {/* ── Revenue ── */}
-        <StatCards
-          title="Total Revenue"
-          value="—"
-          detail="Revenue tracking not yet configured"
-          icon="fa-solid fa-peso-sign"
-          iconColor="#16a34a"
-          badge="Placeholder"
-          badgeType="neutral"
-        />
+          {/* ── Clients ── */}
+          <KpiCard
+            title="Clients"
+            value={clients}
+            detail="Registered client accounts"
+            icon="fa-solid fa-user-group"
+            iconColor="#a855f7"
+            badge={clients > 0 ? `${clients} registered` : 'No clients yet'}
+            badgeType={clients > 0 ? 'info' : 'neutral'}
+          />
 
-        {/* ── Active Services ── */}
-        <StatCards
-          title="Active Services"
-          value={activeServices}
-          detail={`${totalServices} service${totalServices !== 1 ? 's' : ''} in catalog`}
-          icon="fa-regular fa-file-lines"
-          iconColor="#3b82f6"
-          badge={disabledServices > 0 ? `${disabledServices} Disabled` : 'All Active'}
-          badgeType={disabledServices > 0 ? 'warn' : 'ok'}
-        />
-
-        {/* ── Clients ── */}
-        <StatCards
-          title="Clients"
-          value={clients}
-          detail="Registered client accounts"
-          icon="fa-solid fa-user-group"
-          iconColor="#a855f7"
-          badge={clients > 0 ? `${clients} registered` : 'No clients yet'}
-          badgeType={clients > 0 ? 'info' : 'neutral'}
-        />
-
-        {/* ── Operators ── */}
-        <StatCards
-          title="Operators"
-          value={activeOperators}
-          detail={`${totalOperators} total franchise branch${totalOperators !== 1 ? 'es' : ''}`}
-          icon="fa-solid fa-people-group"
-          iconColor="#f0653e"
-          badge={
-            pendingApps > 0 ? `${pendingApps} App${pendingApps !== 1 ? 's' : ''} Pending`
-              : disabledOperators > 0 ? `${disabledOperators} Inactive` : 'All Active'
-          }
-          badgeType={
-            pendingApps > 0
-              ? 'warn'
-              : disabledOperators > 0
+          {/* ── Operators ── */}
+          <KpiCard
+            title="Operators"
+            value={activeOperators}
+            detail={`${totalOperators} total franchise branch${totalOperators !== 1 ? 'es' : ''}`}
+            icon="fa-solid fa-people-group"
+            iconColor="#f0653e"
+            badge={
+              pendingApps > 0 ? `${pendingApps} App${pendingApps !== 1 ? 's' : ''} Pending`
+                : disabledOperators > 0 ? `${disabledOperators} Inactive` : 'All Active'
+            }
+            badgeType={
+              pendingApps > 0
                 ? 'warn'
-                : 'ok'
-          }
-        />
-      </div>
-
-      <main className="layout-content">
-        <Outlet />
-      </main>
-    </>
+                : disabledOperators > 0
+                  ? 'warn'
+                  : 'ok'
+            }
+          />
+        </>
+      }
+    >
+      <Outlet />
+    </AppLayout>
   );
 }

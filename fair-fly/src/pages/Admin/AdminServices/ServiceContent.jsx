@@ -6,6 +6,9 @@ import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModa
 import Pagination from "../../../components/UI/Pagination/Pagination";
 import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import DataTable from "../../../components/UI/DataTable/DataTable";
+import PageHeader from "../../../components/UI/PageHeader/PageHeader";
+import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
+import KpiCard from "../../../components/UI/KpiCard/KpiCard";
 import { useAuthContext } from "../../../context/AuthContext";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
@@ -428,79 +431,120 @@ export default function ServiceContent() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: "Dashboard", to: "/admin" },
+    { label: "Services" },
+  ];
+
+  const totalServices = Array.isArray(service) ? service.length : 0;
+  const activeCount = Array.isArray(service) ? service.filter((s) => s.status === "Active").length : 0;
+  const inactiveCount = totalServices - activeCount;
+  const categoriesCount = Array.isArray(service)
+    ? new Set(service.map((s) => s.category).filter(Boolean)).size
+    : 0;
+
   return (
-    <div className="card services-page page-fade-in">
-      <div className="services-header">
-        <div>
-          <h2>Services Catalog Management</h2>
-          <p>Configure available franchise services, fees, requirements, and workflows</p>
-        </div>
+    <div className="services-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
 
-        <button className="service-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
-          <i className="fa-solid fa-plus"></i>
-          Add Service
-        </button>
-      </div>
+      <PageHeader
+        title="Services Catalog Management"
+        subtitle="Configure available franchise services, fees, requirements, and workflows"
+        illustrationSrc="/pageImages/admin/services.png"
+        primaryAction={{
+          label: "Add Service",
+          icon: "fa-solid fa-plus",
+          onClick: handleOpenAddModal,
+        }}
+      />
 
-      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
-
-      {/* Toolbar Search & Filter */}
-      <div className="table-toolbar">
-        <div className="search-box">
-          <i className="fa-solid fa-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            placeholder="Search service name or category..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {searchTerm && (
-            <button
-              className="clear-search-btn"
-              onClick={() => {
-                setSearchTerm("");
-                setCurrentPage(1);
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          )}
-        </div>
-
-        <FilterChipGroup
-          chips={[
-            { value: "all", label: `All (${service.length})` },
-            { value: "active", label: `Active (${service.filter((s) => s.status === "Active").length})` },
-            { value: "disabled", label: `Disabled (${service.filter((s) => s.status === "Disabled").length})` },
-          ]}
-          activeChip={statusFilter}
-          onChipChange={(val) => {
-            setStatusFilter(val);
-            setCurrentPage(1);
-          }}
+      <div className="services-summary-grid">
+        <KpiCard
+          title="Total Services"
+          value={totalServices}
+          icon="fa-solid fa-layer-group"
+          iconColor="var(--purple)"
+        />
+        <KpiCard
+          title="Active"
+          value={activeCount}
+          icon="fa-regular fa-circle-check"
+          iconColor="var(--complete-green-dark)"
+        />
+        <KpiCard
+          title="Inactive"
+          value={inactiveCount}
+          icon="fa-solid fa-ban"
+          iconColor="var(--error-red-dark)"
+        />
+        <KpiCard
+          title="Categories"
+          value={categoriesCount}
+          icon="fa-solid fa-tags"
+          iconColor="#f0653e"
         />
       </div>
 
-      {/* Standardized Reusable DataTable */}
-      <DataTable
-        columns={columns}
-        data={paginatedServices}
-        keyField="id"
-        selectable={true}
-        selectedIds={selectedIds}
-        disabled={isConfirmLoading || isSubmitting}
-        onSelectionChange={setSelectedIds}
-        onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}
-        onBulkDisable={(ids) => setConfirmState({ type: "bulk-disable", ids })}
-        onBulkDelete={(ids) => setConfirmState({ type: "bulk-delete", ids })}
-        emptyState={{
-          icon: "fa-solid fa-layer-group",
-          message: "No services match your search criteria",
-        }}
-      />
+      <div className="card services-table-card">
+        <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+
+        {/* Toolbar Search & Filter */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Search service name or category..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <FilterChipGroup
+            chips={[
+              { value: "all", label: `All (${totalServices})` },
+              { value: "active", label: `Active (${activeCount})` },
+              { value: "disabled", label: `Disabled (${inactiveCount})` },
+            ]}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
+        {/* Standardized Reusable DataTable */}
+        <DataTable
+          columns={columns}
+          data={paginatedServices}
+          keyField="id"
+          selectable={true}
+          selectedIds={selectedIds}
+          disabled={isConfirmLoading || isSubmitting}
+          onSelectionChange={setSelectedIds}
+          onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}
+          onBulkDisable={(ids) => setConfirmState({ type: "bulk-disable", ids })}
+          onBulkDelete={(ids) => setConfirmState({ type: "bulk-delete", ids })}
+          emptyState={{
+            icon: "fa-solid fa-layer-group",
+            message: "No services match your search criteria",
+          }}
+        />
 
       {/* Pagination */}
       <Pagination
@@ -510,6 +554,7 @@ export default function ServiceContent() {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+      </div>
 
       {/* Render Service Modal */}
       <ServiceModal

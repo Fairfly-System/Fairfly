@@ -6,6 +6,8 @@ import Loader from '../../../components/Admin/Loader/Loader';
 import ApplicationModal from '../../../components/Admin/Modals/ApplicationModal/ApplicationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import { useAdminContext } from '../../../context/AdminContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
@@ -90,20 +92,27 @@ export default function FranchiseContent() {
     };
   }, [franchiseApplications]);
 
-  return (
-    <>
-      <div className="card franchise-page page-fade-in">
-        {/* Header */}
-        <div className="franchise-header">
-          <div className="franchise-header-icon">
-            <i className="fa-solid fa-briefcase"></i>
-          </div>
-          <div>
-            <h2>Franchise Applications</h2>
-            <p>Review, approve, and manage submitted franchise partner applications</p>
-          </div>
-        </div>
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/admin' },
+    { label: 'Franchise Applications' },
+  ];
 
+  const totalApps = Array.isArray(franchiseApplications) ? franchiseApplications.length : 0;
+  const pendingCount = Array.isArray(franchiseApplications) ? franchiseApplications.filter((a) => a.status === 'pending').length : 0;
+  const approvedCount = Array.isArray(franchiseApplications) ? franchiseApplications.filter((a) => a.status === 'approved').length : 0;
+  const rejectedCount = Array.isArray(franchiseApplications) ? franchiseApplications.filter((a) => a.status === 'rejected').length : 0;
+
+  return (
+    <div className="franchise-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Franchise Applications"
+        subtitle="Review, approve, and manage submitted franchise partner applications"
+        illustrationSrc="/pageImages/admin/franchise-apps.png"
+      />
+
+      <div className="card franchise-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
         {/* Toolbar Filter Row */}
@@ -134,10 +143,10 @@ export default function FranchiseContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'pending', label: `Pending (${franchiseApplications.filter((a) => a.status === 'pending').length})` },
-              { value: 'approved', label: `Approved (${franchiseApplications.filter((a) => a.status === 'approved').length})` },
-              { value: 'rejected', label: `Rejected (${franchiseApplications.filter((a) => a.status === 'rejected').length})` },
-              { value: 'all', label: `All (${franchiseApplications.length})` },
+              { value: 'pending', label: `Pending (${pendingCount})` },
+              { value: 'approved', label: `Approved (${approvedCount})` },
+              { value: 'rejected', label: `Rejected (${rejectedCount})` },
+              { value: 'all', label: `All (${totalApps})` },
             ]}
             activeChip={statusFilter}
             onChipChange={(val) => {
@@ -198,6 +207,6 @@ export default function FranchiseContent() {
         handleApprove={handleApplicationStatusChange}
         handleReject={handleApplicationStatusChange}
       />
-    </>
+    </div>
   );
 }

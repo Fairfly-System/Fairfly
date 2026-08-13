@@ -6,6 +6,8 @@ import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModa
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import DataTable from '../../../components/UI/DataTable/DataTable';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -307,87 +309,97 @@ export default function AdminWorkflowTemplates() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/admin' },
+    { label: 'Workflows' },
+  ];
+
+  const totalTemplates = Array.isArray(templates) ? templates.length : 0;
+
   return (
-    <div className="card workflow-template-page page-fade-in">
-      <div className="workflow-template-header">
-        <div>
-          <h2>Workflow Templates</h2>
-          <p>Create and manage step-by-step workflow templates for service automation</p>
-        </div>
+    <div className="workflow-template-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
 
-        <button className="workflow-btn" onClick={handleOpenAddModal} disabled={isSubmitting || isConfirmLoading}>
-          <i className="fa-solid fa-plus"></i>
-          New Template
-        </button>
-      </div>
-
-      <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
-
-      {/* Search & Filter Toolbar */}
-      <div className="table-toolbar">
-        <div className="search-box">
-          <i className="fa-solid fa-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            placeholder="Search by template name or type..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {searchTerm && (
-            <button
-              className="clear-search-btn"
-              onClick={() => {
-                setSearchTerm('');
-                setCurrentPage(1);
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          )}
-        </div>
-
-        <FilterChipGroup
-          chips={[
-            { value: 'all', label: `All (${templates.length})` },
-            { value: 'psa', label: 'PSA' },
-            { value: 'passport', label: 'Passport' },
-            { value: 'visa', label: 'Visa' },
-          ]}
-          activeChip={serviceTypeFilter}
-          onChipChange={(val) => {
-            setServiceTypeFilter(val);
-            setCurrentPage(1);
-          }}
-        />
-      </div>
-
-      {/* Reusable DataTable */}
-      <DataTable
-        columns={columns}
-        data={paginatedTemplates}
-        keyField="id"
-        selectable={true}
-        selectedIds={selectedIds}
-        disabled={isConfirmLoading || isSubmitting}
-        onSelectionChange={setSelectedIds}
-        onBulkDelete={(ids) => setConfirmState({ type: 'bulk-delete', ids })}
-        emptyState={{
-          icon: 'fa-solid fa-diagram-project',
-          message: 'No workflow templates match your filter',
+      <PageHeader
+        title="Workflow Templates"
+        subtitle="Create and manage step-by-step workflow templates for service automation"
+        illustrationSrc="/pageImages/admin/workflow-templates.png"
+        primaryAction={{
+          label: 'New Template',
+          icon: 'fa-solid fa-plus',
+          onClick: handleOpenAddModal,
         }}
       />
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalItems={filteredTemplates.length}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
+      <div className="card workflow-template-table-card">
+        <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+
+        {/* Search & Filter Toolbar */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Search by template name or type..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <FilterChipGroup
+            chips={[
+              { value: 'all', label: `All (${totalTemplates})` },
+              { value: 'psa', label: 'PSA' },
+              { value: 'passport', label: 'Passport' },
+              { value: 'visa', label: 'Visa' },
+            ]}
+            activeChip={serviceTypeFilter}
+            onChipChange={(val) => {
+              setServiceTypeFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
+        {/* Reusable DataTable */}
+        <DataTable
+          columns={columns}
+          data={paginatedTemplates}
+          keyField="id"
+          selectable={true}
+          selectedIds={selectedIds}
+          disabled={isConfirmLoading || isSubmitting}
+          onSelectionChange={setSelectedIds}
+          onBulkDelete={(ids) => setConfirmState({ type: 'bulk-delete', ids })}
+          emptyState={{
+            icon: 'fa-solid fa-diagram-project',
+            message: 'No workflow templates match your filter',
+          }}
+        />
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredTemplates.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </div>
 
       {/* Modal */}
       <WorkflowModal

@@ -2,6 +2,7 @@ import './admin-dashboard.css';
 import { useState, useEffect, useCallback } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { useAuthContext } from '../../../context/AuthContext';
 import {
   ResponsiveContainer,
   BarChart,
@@ -15,6 +16,7 @@ import {
   Legend,
 } from 'recharts';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
+import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
 import AdminLogsModal from '../../../components/Admin/Modals/AdminLogsModal/AdminLogsModal';
 import {
   ACTION_META,
@@ -26,6 +28,8 @@ import {
 } from './dashboardUtils';
 
 export default function Dashboard() {
+  const { user, userDetails } = useAuthContext();
+  
   // Recent activity from Firestore (15 items)
   const [recentLogs, setRecentLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
@@ -142,16 +146,24 @@ export default function Dashboard() {
     );
   };
 
+  const adminName = userDetails?.name || user?.email?.split('@')[0] || 'Admin';
+
   return (
-    <div className="dashboard">
+    <div className="dashboard page-fade-in">
+      <WelcomeHero
+        userName={adminName}
+        subtitle="Manage travel services, monitor operators, and view incoming franchise applications in real-time."
+        illustrationSrc="/pageImages/admin/dashboard.png"
+      />
+
       <AlertBar
-        message="Welcome to the Admin Dashboard! Here you can monitor key metrics, manage services, and review franchise applications."
+        message="System Monitor is fully active. All administrative action logs are recorded for compliance audit."
         type="info"
       />
 
       {/* Charts Section */}
       <section className="dashboard-charts">
-        <div className="chart-card">
+        <div className="chart-card card">
           <h3 className="chart-title">Monthly Revenue</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -164,7 +176,7 @@ export default function Dashboard() {
                 type="monotone"
                 dataKey="revenue"
                 name="Revenue"
-                stroke="#16a34a"
+                stroke="#6B6FF5"
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
@@ -173,7 +185,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-card">
+        <div className="chart-card card">
           <h3 className="chart-title">Services Completed</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={servicesCompletedData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -204,14 +216,14 @@ export default function Dashboard() {
 
           <div className="activity-header-actions">
             <button
-              className="activity-export-btn"
+              className="btn-secondary activity-export-btn"
               onClick={() => handleExportLogs(recentLogs)}
               title="Export logs as .txt"
             >
               <i className="fa-solid fa-file-export" />
               <span>Export</span>
             </button>
-            <button className="activity-viewall-btn" onClick={() => setIsViewAllOpen(true)}>
+            <button className="btn-primary activity-viewall-btn" onClick={() => setIsViewAllOpen(true)}>
               <i className="fa-solid fa-arrow-up-right-from-square" />
               <span>View All</span>
             </button>

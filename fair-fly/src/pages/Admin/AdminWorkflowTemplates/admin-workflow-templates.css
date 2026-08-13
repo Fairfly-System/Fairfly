@@ -1,47 +1,11 @@
 .workflow-template-page {
-  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.workflow-template-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.workflow-template-header h2 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-dark);
-}
-
-.workflow-template-header p {
-  color: var(--text-mid);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.workflow-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--purple);
-  color: #FFFFFF;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.6875rem 1.375rem;
-  border-radius: var(--radius-md);
-  transition: var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-}
-
-.workflow-btn:hover {
-  background: var(--purple-dark);
-  box-shadow: var(--shadow-purple);
-  transform: translateY(-0.0625rem);
+.workflow-template-table-card {
+  padding: 1.5rem;
 }
 
 .workflow-badge {
@@ -87,21 +51,4 @@
 
 .icon-btn.duplicate:hover {
   background: var(--orange-glow);
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 48rem) {
-  .workflow-template-page {
-    padding: 1rem;
-  }
-
-  .workflow-template-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .workflow-btn {
-    width: 100%;
-    justify-content: center;
-  }
 }

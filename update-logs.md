@@ -1,5 +1,118 @@
 # Update Logs
 
+## [2026-08-13] Universal Scrollbar Customization & Header Layout Enhancements
+
+### Files Modified & Created
+- `fair-fly/src/index.css` (Added universal custom scrollbar styles with white tracks and purple/indigo accents)
+- `fair-fly/src/components/UI/WelcomeHero/welcome-hero.css` (Updated illustration layout to use flexbox stretch with negative margins to fit container height, adjusted width to 50%, and added a left fade mask to the image)
+- `fair-fly/src/components/UI/PageHeader/page-header.css` (Updated illustration layout to use flexbox stretch with negative margins to fit container height, adjusted width to 50%, and added a left fade mask to the image)
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx` (Passed dynamic `/pageImages/admin/dashboard.png` path to `WelcomeHero`)
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Passed `/pageImages/admin/services.png` to `PageHeader`)
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Passed `/pageImages/admin/operators.png` to `PageHeader`)
+- `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx` (Passed `/pageImages/admin/franchise-apps.png` to `PageHeader`)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Passed `/pageImages/admin/tickets.png` to `PageHeader`)
+- `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx` (Passed `/pageImages/admin/inquiry-history.png` to `PageHeader`)
+- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx` (Passed `/pageImages/admin/quick-links.png` to `PageHeader`)
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx` (Passed `/pageImages/admin/workflow-templates.png` to `PageHeader`)
+
+### Summary of Changes
+- **Universal Custom Scrollbar**: Added custom scrollbar styles to `index.css` applying white background scrollbar tracks and purple/indigo accent highlights (`var(--purple-light)` and `var(--purple)` on hover) globally across all scrolling layouts. Supports both WebKit engines and Firefox.
+- **Flexbox Stretched Layout for Illustrations**: Updated `welcome-hero.css` and `page-header.css` to use `align-items: stretch` on flex container rows, stretching the illustration items vertically. Used negative margins on `.welcome-hero-illustration` and `.page-header-illustration` to counteract padding, causing the images to fill the parent container height naturally.
+- **Fade Masks & Sizing**: Configured the illustration wrappers to take 50% width (`flex: 0 0 50%`), and applied a horizontal fade mask (`mask-image: linear-gradient(to left, rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0) 100%)`) to make the illustration blend smoothly into the content area.
+- **Prepared Illustration Layouts**: Linked the page illustrations dynamically under the `public/pageImages/` directory for all Admin dashboard and page headers, preparing the frontend layouts to load them seamlessly when available.
+- **Created Illustration Prompts Checklist**: Delivered `illustration_prompts.md` detailing file names and highly optimized DALL-E/Midjourney image prompts for all portals.
+
+### Reason
+- Fulfill user request to prepare image layouts and prompts.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-08-13] Removed Animations and Vertical Transforms from Containers
+
+### Files Modified & Created
+- `fair-fly/src/index.css` (Removed `fadeInUp` animation from `.page-fade-in` utility)
+- `fair-fly/src/components/UI/KpiCard/kpi-card.css` (Removed `translateY` hover transform and transform transitions from `.kpi-card`)
+- `fair-fly/src/components/Admin/StatCards/stat-cards.css` (Removed `translateY` hover transform, transform transitions, and staggered `fadeInUp` render animations from `.stat-card`)
+- `fair-fly/src/pages/Admin/AdminDashboard/admin-dashboard.css` (Removed `translateY` hover transform and `fadeInUp` animation from `.activity-row`)
+- `fair-fly/src/components/UI/ServiceCard/service-card.css` (Removed `translateY` hover transform from `.card`)
+- `fair-fly/src/components/Shared/Services/services.css` (Removed `translateY` hover transform from `.card`)
+
+### Summary of Changes
+- **Animation and Transform Removal**: Completely disabled the container fade-in and slide-up animations globally. Removed all `translateY` vertical translations (both on page load and on mouse hover) across KPI cards, activity rows, services list cards, and other container elements to ensure a flat, stable layout presentation.
+
+### Reason
+- Fulfill user requests to completely remove all container animations and vertical hover translations.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-08-13] Implemented Admin Portal Redesign (Phase 1)
+
+### Files Modified & Created
+- `fair-fly/src/components/Admin/StatCards/StatCards.jsx` (Re-exported `KpiCard` for backward compatibility)
+- `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx` (Replaced legacy sidebar/navbar with standard layout primitives)
+- `fair-fly/src/pages/Admin/AdminLayout/admin-layout.css` (Cleaned up sidebar layout styling, leaving only overrides)
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx` & `admin-dashboard.css` (Integrated `WelcomeHero` and wrapper classes)
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` & `admin-services.css` (Integrated `PageHeader`, `Breadcrumbs`, summary stats KPI grid, and wrapper card classes)
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` & `admin-operators.css` (Integrated `PageHeader`, `Breadcrumbs`, and card wrappers)
+- `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx` & `admin-franchise-apps.css` (Restyled header markup and cleaned up layout styles)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` & `admin-tickets.css` (Integrated `PageHeader`, `Breadcrumbs`, and card wrappers)
+- `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx` & `admin-inquiry-history.css` (Integrated `PageHeader`, `Breadcrumbs`, and card wrappers)
+- `fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx` & `admin-quick-links.css` (Integrated `PageHeader`, `Breadcrumbs`, and card wrappers)
+- `fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx` & `admin-workflow-templates.css` (Integrated `PageHeader`, `Breadcrumbs`, and card wrappers)
+- `fair-fly/src/components/Admin/AdminSidebar` **[DELETED]** (Removed old sidebar folder)
+- `fair-fly/src/components/Admin/AdminNavbar` **[DELETED]** (Removed old navbar folder)
+
+### Summary of Changes
+- **Standardized Layout & Navigation**: Adopted `AppLayout` across the admin portal to wrap dashboards and subpages under a responsive, collapsible sidebar layout.
+- **Unified UI Component Adoption**: Restyled all admin subpages to use the shared UI primitives (`Breadcrumbs`, `PageHeader`, `WelcomeHero`, `KpiCard`) in strict compliance with the style guide constraints (no emojis, flat colors, REM-based spacing).
+- **CSS Cleanup & Deduplication**: Removed old padding and custom title styles from admin CSS files, relying on global utility classes and table wrappers.
+
+### Reason
+- Complete the visual layout redesign for the Admin Portal (Phase 1) under the system-wide redesign specification.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-08-13] Implemented Shared UI Foundation (Phase 0) for UI Redesign
+
+### Files Modified & Created
+- `fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx` **[NEW]** (Unified sidebar navigation supporting dynamic portals and theme metrics)
+- `fair-fly/src/components/UI/AppSidebar/app-sidebar.css` **[NEW]** (Sidebar CSS variables-driven styling)
+- `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` **[NEW]** (Unified top navigation bar wrapping Team Chat and Firebase authentication sign-out actions)
+- `fair-fly/src/components/UI/AppNavbar/app-navbar.css` **[NEW]** (Navbar layout styling with responsive media queries)
+- `fair-fly/src/components/UI/AppLayout/AppLayout.jsx` **[NEW]** (Unified shell wrapper for sidebars, navbars, and main content views)
+- `fair-fly/src/components/UI/AppLayout/app-layout.css` **[NEW]** (Layout styling grid and desktop responsive widths offsets)
+- `fair-fly/src/components/UI/WelcomeHero/WelcomeHero.jsx` **[NEW]** (Dashboard greeting card displaying dates and illustrations)
+- `fair-fly/src/components/UI/WelcomeHero/welcome-hero.css` **[NEW]** (Welcome banner CSS styles with left brand border accents)
+- `fair-fly/src/components/UI/Breadcrumbs/Breadcrumbs.jsx` **[NEW]** (Breadcrumb path trail with chevron delimiters)
+- `fair-fly/src/components/UI/Breadcrumbs/breadcrumbs.css` **[NEW]** (Breadcrumbs trail layout)
+- `fair-fly/src/components/UI/PageHeader/PageHeader.jsx` **[NEW]** (Descriptive table header layout wrapper with actions)
+- `fair-fly/src/components/UI/PageHeader/page-header.css` **[NEW]** (PageHeader CSS formatting)
+- `fair-fly/src/components/UI/KpiCard/KpiCard.jsx` **[NEW]** (Enriched metrics card displaying values, trend pointers, and badges)
+- `fair-fly/src/components/UI/KpiCard/kpi-card.css` **[NEW]** (KPI card colors and status badges styling)
+- `fair-fly/src/index.css` (Added global primary/secondary button classes and standard form input utilities)
+
+### Summary of Changes
+- **Shared UI foundation layout primitives**: Scaffolded all shared UI components required for modern SaaS look-and-feel.
+- **Strict guidelines enforcement**: Built components to consume CSS variables from `index.css` exclusively (no hardcoded hexadecimal colors) and completely eliminated emoticons/emojis.
+- **Button and form field utility standardization**: Created `.btn-*` and `.form-*` CSS patterns to ease page redesigns.
+
+### Reason
+- Set up reusable foundations (Phase 0) for the portal-wide UI/UX redesign of the Fairfly system.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [2026-08-06] Implemented Admin Support Ticketing System with Forum Threads
 
 ### Files Modified & Created

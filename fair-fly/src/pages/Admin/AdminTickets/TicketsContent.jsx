@@ -9,6 +9,8 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import TicketTable from '../../../components/Admin/Tickets/TicketTable';
 import TicketThread from '../../../components/Admin/Tickets/TicketThread';
 import CreateTicketModal from '../../../components/Admin/Tickets/CreateTicketModal';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 
@@ -175,11 +177,23 @@ export default function TicketsContent() {
     });
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/admin' },
+    { label: 'Tickets', to: activeTicket ? '/admin/tickets' : undefined },
+    ...(activeTicket ? [{ label: `Thread #${activeTicket.id.slice(0, 8)}` }] : []),
+  ];
+
+  const totalTickets = Array.isArray(tickets) ? tickets.length : 0;
+  const pendingCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'pending').length : 0;
+  const ongoingCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'ongoing').length : 0;
+  const closedCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length : 0;
+
   return (
-    <>
-      <div className="card tickets-page page-fade-in">
-        {/* Render Forum Thread view if a ticket is opened */}
-        {activeTicket ? (
+    <div className="tickets-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      {activeTicket ? (
+        <div className="card tickets-table-card">
           <TicketThread
             ticket={activeTicket}
             onBack={() => setSelectedTicketId(null)}
@@ -188,30 +202,21 @@ export default function TicketsContent() {
             onStatusChange={handleStatusChange}
             isLoading={isSubmitting}
           />
-        ) : (
-          <>
-            {/* Page Header */}
-            <div className="tickets-header">
-              <div className="tickets-header-left">
-                <div className="tickets-header-icon">
-                  <i className="fa-solid fa-ticket"></i>
-                </div>
-                <div>
-                  <h2>Support Tickets & Forum Threads</h2>
-                  <p>Manage and respond to operator support requests across all branches</p>
-                </div>
-              </div>
+        </div>
+      ) : (
+        <>
+          <PageHeader
+            title="Support Tickets & Forum Threads"
+            subtitle="Manage and respond to operator support requests across all branches"
+            illustrationSrc="/pageImages/admin/tickets.png"
+            primaryAction={{
+              label: 'New Ticket',
+              icon: 'fa-solid fa-plus',
+              onClick: () => createModalRef.current?.openModal(),
+            }}
+          />
 
-              <button
-                type="button"
-                className="create-ticket-btn"
-                onClick={() => createModalRef.current?.openModal()}
-              >
-                <i className="fa-solid fa-plus"></i>
-                <span>New Ticket</span>
-              </button>
-            </div>
-
+          <div className="card tickets-table-card">
             <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
             {/* Toolbar Search & Filter Chips */}
@@ -242,10 +247,10 @@ export default function TicketsContent() {
 
               <FilterChipGroup
                 chips={[
-                  { value: 'pending', label: `Pending (${tickets.filter((t) => (t.status || '').toLowerCase() === 'pending').length})` },
-                  { value: 'ongoing', label: `Ongoing (${tickets.filter((t) => (t.status || '').toLowerCase() === 'ongoing').length})` },
-                  { value: 'closed', label: `Closed (${tickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length})` },
-                  { value: 'all', label: `All (${tickets.length})` },
+                  { value: 'pending', label: `Pending (${pendingCount})` },
+                  { value: 'ongoing', label: `Ongoing (${ongoingCount})` },
+                  { value: 'closed', label: `Closed (${closedCount})` },
+                  { value: 'all', label: `All (${totalTickets})` },
                 ]}
                 activeChip={statusFilter}
                 onChipChange={(val) => {
@@ -275,15 +280,15 @@ export default function TicketsContent() {
               onPageChange={setCurrentPage}
               onPageSizeChange={setPageSize}
             />
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       <CreateTicketModal
         ref={createModalRef}
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
       />
-    </>
+    </div>
   );
 }
