@@ -50,8 +50,8 @@
   /* 15px */
   color: var(--text-mid);
   margin: 0;
-  max-width: 32rem;
-  /* 512px limit for readability */
+  max-width: 44rem;
+  /* Comfortably fits on wide screens */
 }
 
 .welcome-hero-illustration {

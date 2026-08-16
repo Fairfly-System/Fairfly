@@ -33,6 +33,11 @@ const createService = async (req, res) => {
 
     const docId = await addToDatabase(COLLECTIONS.SERVICES, {
       ...serviceData,
+      category: serviceData.category || 'General Services',
+      tags: Array.isArray(serviceData.tags) ? serviceData.tags.map(t => String(t).trim()).filter(Boolean) : [],
+      coverImage: serviceData.coverImage || serviceData.coverPhoto || serviceData.coverPhotoUrl || '',
+      description: serviceData.description || '',
+      featured: Boolean(serviceData.featured),
       requirements: Array.isArray(serviceData.requirements) ? serviceData.requirements : (serviceData.actions || []),
       workflowIds: Array.isArray(serviceData.workflowIds) ? serviceData.workflowIds : [],
       status: serviceData.status || 'Active',
@@ -69,6 +74,30 @@ const updateService = async (req, res) => {
       ...updates,
       updatedAt: new Date().toISOString()
     };
+
+    if (updates.category !== undefined) {
+      sanitizedUpdates.category = updates.category || 'General Services';
+    }
+
+    if (updates.tags !== undefined) {
+      sanitizedUpdates.tags = Array.isArray(updates.tags)
+        ? updates.tags.map(t => String(t).trim()).filter(Boolean)
+        : [];
+    }
+
+    if (updates.coverImage !== undefined || updates.coverPhoto !== undefined || updates.coverPhotoUrl !== undefined) {
+      sanitizedUpdates.coverImage = updates.coverImage !== undefined 
+        ? updates.coverImage 
+        : (updates.coverPhoto !== undefined ? updates.coverPhoto : updates.coverPhotoUrl || '');
+    }
+
+    if (updates.description !== undefined) {
+      sanitizedUpdates.description = updates.description || '';
+    }
+
+    if (updates.featured !== undefined) {
+      sanitizedUpdates.featured = Boolean(updates.featured);
+    }
 
     if (updates.requirements) {
       sanitizedUpdates.requirements = updates.requirements;

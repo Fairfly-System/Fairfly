@@ -1,13 +1,17 @@
+.app-navbar-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  width: 100%;
+}
+
 .app-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 2rem;
+  padding: 0.75rem 1.25rem;
   background: var(--card-bg);
   border-bottom: 0.0625rem solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 999;
   box-shadow: var(--shadow-sm);
   transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -19,12 +23,18 @@
 .app-nav-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-/* Hide brand in navbar on desktop — sidebar shows it */
+/* Brand logo & text visible by default (Client portal) */
 .app-nav-left .app-logoIcon,
 .app-nav-left .app-nav-brand-text {
+  display: flex;
+}
+
+/* Hide brand in navbar on desktop ONLY when sidebar is present (.app-nav--offset) */
+.app-nav--offset .app-nav-left .app-logoIcon,
+.app-nav--offset .app-nav-left .app-nav-brand-text {
   display: none;
 }
 
@@ -53,6 +63,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
+}
+
+.app-logoIcon img {
+  height: 2.25rem;
+  width: auto;
+  object-fit: contain;
 }
 
 .client-logoIcon img {
@@ -80,6 +97,43 @@
   line-height: 1.2;
 }
 
+/* ── Client Portal Navigation Links (Desktop) ────────────────────── */
+.client-nav-links-desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.client-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5625rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.client-nav-link:hover {
+  color: var(--purple);
+  background: var(--bg);
+}
+
+.client-nav-link.active {
+  color: var(--purple-dark);
+  background: var(--purple-light-2);
+  border-color: rgba(107, 111, 245, 0.25);
+}
+
+.client-nav-link.active i {
+  color: var(--purple);
+}
+
+/* ── Right Actions ───────────────────────────────────────────────── */
 .app-nav-actions {
   display: flex;
   align-items: center;
@@ -101,7 +155,7 @@
 
 .app-nav-client-welcome {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-mid);
 }
 
@@ -121,6 +175,35 @@
 .app-nav-logout:hover {
   color: var(--error-red-dark);
   background-color: var(--error-red-light);
+}
+
+/* ── Client Mobile Sub-Navigation Bar / Drawer ───────────────────── */
+.client-nav-mobile-drawer {
+  display: none;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.client-mobile-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-decoration: none;
+  background: var(--bg);
+}
+
+.client-mobile-nav-item.active {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
 }
 
 /* Logout Modal Styles */
@@ -153,6 +236,18 @@
 
   .app-hamburger {
     display: flex;
+  }
+
+  .client-nav-links-desktop {
+    display: none;
+  }
+
+  .client-nav-mobile-drawer {
+    display: flex;
+  }
+
+  .app-nav-client-welcome {
+    display: none;
   }
 
   /* Show brand in navbar on mobile (sidebar is hidden) */

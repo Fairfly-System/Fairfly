@@ -1,0 +1,25 @@
+.client-portal-layout {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.client-portal-main {
+  width: 100%;
+  max-width: 105rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+@media (max-width: 48rem) {
+  .client-portal-main {
+    padding: 1rem 1rem 2.5rem;
+    gap: 1rem;
+  }
+}

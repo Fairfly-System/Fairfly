@@ -26,7 +26,14 @@ const SERVICE_ALLOWED_FIELDS = [
   'requirements',
   'workflowIds',
   'actions',
-  'status'
+  'status',
+  'coverImage',
+  'coverPhoto',
+  'coverPhotoUrl',
+  'tags',
+  'category',
+  'description',
+  'featured'
 ];
 
 const activeServiceRoutes = require('./activeServiceRoutes');

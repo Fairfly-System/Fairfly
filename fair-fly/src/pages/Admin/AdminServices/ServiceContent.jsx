@@ -82,9 +82,12 @@ export default function ServiceContent() {
   const filteredServices = useMemo(() => {
     if (!service) return [];
     return service.filter((item) => {
+      const term = searchTerm.toLowerCase();
       const matchesSearch =
-        (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.category || "").toLowerCase().includes(searchTerm.toLowerCase());
+        (item.name || "").toLowerCase().includes(term) ||
+        (item.category || "").toLowerCase().includes(term) ||
+        (item.description || "").toLowerCase().includes(term) ||
+        (Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase().includes(term)));
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -106,9 +109,72 @@ export default function ServiceContent() {
     () => [
       {
         key: "name",
-        header: "Service Name",
+        header: "Service Details",
         className: "service-name-cell",
-        render: (item) => <strong>{item.name || "N/A"}</strong>,
+        render: (item) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div
+              style={{
+                width: '3.25rem',
+                height: '2.5rem',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                backgroundColor: 'var(--bg)',
+                border: '1px solid var(--border-color)',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {item.coverImage ? (
+                <img
+                  src={item.coverImage}
+                  alt={item.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  loading="lazy"
+                />
+              ) : (
+                <i className="fa-regular fa-image" style={{ color: 'var(--text-light)', fontSize: '1rem' }}></i>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <strong style={{ color: 'var(--text-dark)' }}>{item.name || "N/A"}</strong>
+                {item.featured && (
+                  <span title="Featured on Client Marketplace" style={{ color: 'var(--warning-yellow)', fontSize: '0.875rem' }}>
+                    <i className="fa-solid fa-star"></i>
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--purple)', fontWeight: 600 }}>
+                  {item.category || "General Services"}
+                </span>
+                {Array.isArray(item.tags) && item.tags.slice(0, 2).map((t, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      fontSize: '0.6875rem',
+                      padding: '0.0625rem 0.375rem',
+                      borderRadius: 'var(--radius-xs)',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-mid)',
+                    }}
+                  >
+                    #{t}
+                  </span>
+                ))}
+                {Array.isArray(item.tags) && item.tags.length > 2 && (
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-light)' }}>
+                    +{item.tags.length - 2}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ),
       },
       {
         key: "requirements",
@@ -245,31 +311,47 @@ export default function ServiceContent() {
   }, [service]);
 
   const processPendingFilesForService = async (serviceData) => {
-    if (!serviceData || !Array.isArray(serviceData.requirements)) {
-      return serviceData;
+    if (!serviceData) return serviceData;
+
+    let coverImageUrl = serviceData.coverImage || '';
+
+    // If there is a new pending cover photo file to upload
+    if (serviceData.pendingCoverFile) {
+      const { url: uploadedCoverUrl } = await uploadFileToBackend(
+        serviceData.pendingCoverFile,
+        'service_covers',
+        userToken
+      );
+      coverImageUrl = uploadedCoverUrl;
     }
 
-    const updatedRequirements = await Promise.all(
-      serviceData.requirements.map(async (req) => {
-        if (req.attachment && req.attachment.pendingFile) {
-          const file = req.attachment.pendingFile;
-          const { url: downloadUrl } = await uploadFileToBackend(file, 'service_requirements', userToken);
+    let updatedRequirements = serviceData.requirements || [];
+    if (Array.isArray(serviceData.requirements)) {
+      updatedRequirements = await Promise.all(
+        serviceData.requirements.map(async (req) => {
+          if (req.attachment && req.attachment.pendingFile) {
+            const file = req.attachment.pendingFile;
+            const { url: downloadUrl } = await uploadFileToBackend(file, 'service_requirements', userToken);
 
-          const { pendingFile, ...restAttachment } = req.attachment;
-          return {
-            ...req,
-            attachment: {
-              ...restAttachment,
-              url: downloadUrl,
-            },
-          };
-        }
-        return req;
-      })
-    );
+            const { pendingFile, ...restAttachment } = req.attachment;
+            return {
+              ...req,
+              attachment: {
+                ...restAttachment,
+                url: downloadUrl,
+              },
+            };
+          }
+          return req;
+        })
+      );
+    }
+
+    const { pendingCoverFile, coverImagePreview, ...cleanData } = serviceData;
 
     return {
-      ...serviceData,
+      ...cleanData,
+      coverImage: coverImageUrl,
       requirements: updatedRequirements,
     };
   };

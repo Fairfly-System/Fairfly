@@ -6,7 +6,12 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import './client-service-request-modal.css';
 
-export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSuccess }) {
+export default function ClientServiceRequestModal({
+  isOpen,
+  onClose,
+  onRequestSuccess,
+  initialServiceId
+}) {
   const { user, userToken, userDetails } = useAuthContext();
   const { addToast } = useToast();
 
@@ -15,7 +20,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
   const [selectedBranchUid, setSelectedBranchUid] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -24,6 +29,14 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
 
   // Requirement Inputs State: { [index]: { textValue: '', file: File|null, previewUrl: '' } }
   const [requirementInputs, setRequirementInputs] = useState({});
+
+  // When initialServiceId or isOpen changes, sync selectedServiceId
+  useEffect(() => {
+    if (initialServiceId) {
+      setSelectedServiceId(initialServiceId);
+      setRequirementInputs({});
+    }
+  }, [initialServiceId, isOpen]);
 
   // Prefill client information if user is logged in
   useEffect(() => {
@@ -53,7 +66,10 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
             const activeOnly = list.filter((s) => s.status !== 'Inactive' && s.status !== 'Disabled');
             if (activeOnly.length > 0) {
               setServicesList(activeOnly);
-              setSelectedServiceId(activeOnly[0].id);
+              const defaultSel = initialServiceId && activeOnly.some((s) => s.id === initialServiceId)
+                ? initialServiceId
+                : activeOnly[0].id;
+              setSelectedServiceId(defaultSel);
             } else {
               fetchServicesFromFirestore();
             }
@@ -95,7 +111,10 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
           .filter((s) => s.status !== 'Inactive' && s.status !== 'Disabled');
         if (list.length > 0) {
           setServicesList(list);
-          setSelectedServiceId(list[0].id);
+          const defaultSel = initialServiceId && list.some((s) => s.id === initialServiceId)
+            ? initialServiceId
+            : list[0].id;
+          setSelectedServiceId(defaultSel);
         }
       } catch (err) {
         console.error('Firestore services fallback error:', err);
@@ -129,7 +148,7 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
     };
 
     loadOptions();
-  }, [isOpen, userToken]);
+  }, [isOpen, userToken, initialServiceId]);
 
   // Selected Service object
   const selectedService = servicesList.find((s) => s.id === selectedServiceId);
@@ -367,8 +386,85 @@ export default function ClientServiceRequestModal({ isOpen, onClose, onRequestSu
                   ))
                 )}
               </select>
+            </div>
           </div>
-        </div>
+
+          {/* Selected Service Preview Summary Card */}
+          {selectedService && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '0.875rem 1.125rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg)',
+                border: '1px solid var(--border-color)',
+              }}
+            >
+              {selectedService.coverImage || selectedService.coverPhoto ? (
+                <img
+                  src={selectedService.coverImage || selectedService.coverPhoto}
+                  alt={selectedService.name}
+                  style={{
+                    width: '4.5rem',
+                    height: '3.5rem',
+                    borderRadius: 'var(--radius-sm)',
+                    objectFit: 'cover',
+                    border: '1px solid var(--border-color)',
+                    flexShrink: 0
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '4.5rem',
+                    height: '3.5rem',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--purple-light-2)',
+                    color: 'var(--purple)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.5rem',
+                    flexShrink: 0
+                  }}
+                >
+                  <i className="fa-solid fa-passport"></i>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <strong style={{ fontSize: '0.9375rem', color: 'var(--text-dark)' }}>{selectedService.name}</strong>
+                  <span style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--purple)' }}>
+                    {selectedService.price ? (selectedService.price.startsWith('₱') || selectedService.price.startsWith('PHP') ? selectedService.price : `₱${Number(selectedService.price).toLocaleString('en-US')}`) : 'Standard Fee'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--purple)' }}>
+                    {selectedService.category || 'General Services'}
+                  </span>
+                  {Array.isArray(selectedService.tags) && selectedService.tags.map((t, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        fontSize: '0.6875rem',
+                        padding: '0.0625rem 0.375rem',
+                        borderRadius: 'var(--radius-xs)',
+                        background: 'var(--card-bg)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-mid)',
+                      }}
+                    >
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
             {/* Dynamic Service Requirements Inputs Section */}
             {serviceRequirements.length > 0 && (

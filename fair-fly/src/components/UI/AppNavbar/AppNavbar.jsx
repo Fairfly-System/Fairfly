@@ -10,12 +10,6 @@ import './app-navbar.css';
 
 /**
  * AppNavbar — unified top navbar for Admin, Operator, and Client portals.
- *
- * Props:
- *  portalName      {string}   — "Admin" / "Operator" / "Client"
- *  portalSubtitle  {string}   — Subtitle under the brand header (e.g., "Branch Operations")
- *  onMenuToggle    {Function} — Sidebar hamburger toggle callback
- *  showSidebarOffset {boolean} — Whether to push content to the right to account for fixed sidebar
  */
 export default function AppNavbar({
   portalName,
@@ -28,6 +22,7 @@ export default function AppNavbar({
   const { addToast } = useToast();
   const logoutModalRef = useRef(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
 
   const handleLogoutConfirm = async () => {
     try {
@@ -47,85 +42,161 @@ export default function AppNavbar({
   const isClient = portalName === 'Client';
 
   return (
-    <nav className={`app-nav ${showSidebarOffset ? 'app-nav--offset' : ''}`}>
-      <div className="app-nav-left">
-        {/* Hamburger menu trigger — mobile only, hide on Client portal */}
-        {!isClient && (
-          <button
-            className="app-hamburger"
-            onClick={onMenuToggle}
-            aria-label="Toggle navigation menu"
-          >
-            <i className="fa-solid fa-bars"></i>
-          </button>
-        )}
-
-        <NavLink to="/home" className="app-logoIcon" aria-label="Fairfly Home">
-          <img
-            src="/FairflyLogo.png"
-            alt="Fairfly Logo"
-            loading="eager"
-            decoding="async"
-            width="36"
-            height="36"
-          />
-        </NavLink>
-
-        <div className="app-nav-brand-text">
-          <p id="top-title">Fairfly {portalName}</p>
-          {portalSubtitle && <p id="down-title">{portalSubtitle}</p>}
-        </div>
-      </div>
-
-      <div className="app-nav-actions">
-        {/* Render team chat for Admin & Operator only */}
-        {!isClient && (
-          <button className="app-nav-chat btn-ghost" onClick={() => setIsChatOpen(true)}>
-            <i className="fa-regular fa-message"></i> Team Chat
-          </button>
-        )}
-
-        {/* Render welcome text for Client */}
-        {isClient && (
-          <span className="app-nav-client-welcome">
-            Welcome, {userDetails?.name || user?.email || 'Client'}
-          </span>
-        )}
-
-        <a href="#" className="app-nav-logout" onClick={handleLogoutClick} aria-label="Log out">
-          <i className="fa-solid fa-arrow-right-from-bracket"></i>
-          <span className="logout-text">Logout</span>
-        </a>
-      </div>
-
-      {isChatOpen && <TeamChatModal onClose={() => setIsChatOpen(false)} />}
-
-      <BaseModal ref={logoutModalRef} title="Confirm Logout" maxWidth="26.25rem">
-        <div className="logout-confirm-content">
-          <p className="logout-confirm-message">
-            Are you sure you want to log out of the {portalName.toLowerCase()} portal?
-          </p>
-          <div className="logout-confirm-actions">
+    <header className="app-navbar-wrapper">
+      <nav className={`app-nav ${showSidebarOffset ? 'app-nav--offset' : ''}`}>
+        <div className="app-nav-left">
+          {/* Hamburger menu trigger — for Admin & Operator */}
+          {!isClient && (
             <button
-              className="btn-secondary"
-              style={{ flex: 1, justifyContent: 'center' }}
-              onClick={() => logoutModalRef.current?.closeModal()}
+              className="app-hamburger"
+              onClick={onMenuToggle}
+              aria-label="Toggle navigation menu"
             >
-              Stay
+              <i className="fa-solid fa-bars"></i>
             </button>
+          )}
+
+          {/* Client Mobile Menu Toggle */}
+          {isClient && (
             <button
-              className="btn-danger"
-              style={{ flex: 1, justifyContent: 'center' }}
-              onClick={() => {
-                logoutModalRef.current?.closeModal();
-                handleLogoutConfirm();
-              }}
+              className="app-hamburger client-mobile-menu-btn"
+              onClick={() => setIsClientMobileMenuOpen(!isClientMobileMenuOpen)}
+              aria-label="Toggle Client navigation"
             >
-              Log Out
+              <i className={`fa-solid ${isClientMobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
             </button>
+          )}
+
+          <NavLink to={isClient ? "/client" : "/home"} className="app-logoIcon" aria-label="Fairfly Home">
+            <img
+              src="/FairflyLogo.png"
+              alt="Fairfly Logo"
+              loading="eager"
+              decoding="async"
+              width="36"
+              height="36"
+            />
+          </NavLink>
+
+          <div className="app-nav-brand-text">
+            <p id="top-title">Fairfly {portalName}</p>
+            {portalSubtitle && <p id="down-title">{portalSubtitle}</p>}
           </div>
         </div>
-      </BaseModal>
-    </nav>
+
+        {/* Client Portal Navigation Links (Desktop) */}
+        {isClient && (
+          <div className="client-nav-links-desktop">
+            <NavLink
+              to="/client"
+              end
+              className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-store"></i>
+              <span>Services Store</span>
+            </NavLink>
+
+            <NavLink
+              to="/client/tracking"
+              className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-list-check"></i>
+              <span>Track Requests</span>
+            </NavLink>
+
+            <NavLink
+              to="/client/appointments"
+              className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-calendar-check"></i>
+              <span>Appointments</span>
+            </NavLink>
+          </div>
+        )}
+
+        <div className="app-nav-actions">
+          {/* Render team chat for Admin & Operator only */}
+          {!isClient && (
+            <button className="app-nav-chat btn-ghost" onClick={() => setIsChatOpen(true)}>
+              <i className="fa-regular fa-message"></i> Team Chat
+            </button>
+          )}
+
+          {/* Render welcome text for Client */}
+          {isClient && (
+            <span className="app-nav-client-welcome">
+              Welcome, <strong>{userDetails?.name || user?.displayName || user?.email?.split('@')[0] || 'Client'}</strong>
+            </span>
+          )}
+
+          <a href="#" className="app-nav-logout" onClick={handleLogoutClick} aria-label="Log out">
+            <i className="fa-solid fa-arrow-right-from-bracket"></i>
+            <span className="logout-text">Logout</span>
+          </a>
+        </div>
+
+        {isChatOpen && <TeamChatModal onClose={() => setIsChatOpen(false)} />}
+
+        <BaseModal ref={logoutModalRef} title="Confirm Logout" maxWidth="26.25rem">
+          <div className="logout-confirm-content">
+            <p className="logout-confirm-message">
+              Are you sure you want to log out of the {portalName.toLowerCase()} portal?
+            </p>
+            <div className="logout-confirm-actions">
+              <button
+                className="btn-secondary"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => logoutModalRef.current?.closeModal()}
+              >
+                Stay
+              </button>
+              <button
+                className="btn-danger"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => {
+                  logoutModalRef.current?.closeModal();
+                  handleLogoutConfirm();
+                }}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </BaseModal>
+      </nav>
+
+      {/* Client Mobile Sub-Navigation Bar */}
+      {isClient && isClientMobileMenuOpen && (
+        <div className="client-nav-mobile-drawer">
+          <NavLink
+            to="/client"
+            end
+            onClick={() => setIsClientMobileMenuOpen(false)}
+            className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <i className="fa-solid fa-store"></i>
+            <span>Services Store</span>
+          </NavLink>
+
+          <NavLink
+            to="/client/tracking"
+            onClick={() => setIsClientMobileMenuOpen(false)}
+            className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <i className="fa-solid fa-list-check"></i>
+            <span>Track Service Requests</span>
+          </NavLink>
+
+          <NavLink
+            to="/client/appointments"
+            onClick={() => setIsClientMobileMenuOpen(false)}
+            className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <i className="fa-solid fa-calendar-check"></i>
+            <span>Book Appointments</span>
+          </NavLink>
+        </div>
+      )}
+    </header>
   );
 }

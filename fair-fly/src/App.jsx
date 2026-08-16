@@ -13,7 +13,10 @@ import Register from './pages/Index/Register/Register';
 import ScrollToTop from './components/UI/ScrollToTop/ScrollToTop';
 import Loading from './components/UI/Loading/Loading';
 import Index from './pages/Index/Index';
+import ClientLayout from './pages/ClientSide/ClientLayout/ClientLayout';
 import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
+import ClientTrackingPage from './pages/ClientSide/ClientTracking/ClientTrackingPage';
+import ClientAppointmentsPage from './pages/ClientSide/ClientAppointments/ClientAppointmentsPage';
 import AdminLayout from './pages/Admin/AdminLayout/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
 import AdminServices from './pages/Admin/AdminServices/AdminServices';
@@ -62,7 +65,12 @@ function App() {
   const roleRoutes = {
     client: (
       <>
-        <Route path="/client" element={<ClientDashboard />} />
+        <Route path="/client" element={<ClientLayout />}>
+          <Route index element={<ClientDashboard />} />
+          <Route path="services" element={<ClientDashboard />} />
+          <Route path="tracking" element={<ClientTrackingPage />} />
+          <Route path="appointments" element={<ClientAppointmentsPage />} />
+        </Route>
       </>
     ),
 

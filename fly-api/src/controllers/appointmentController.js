@@ -15,10 +15,13 @@ const COLLECTIONS = {
 const createAppointment = async (req, res) => {
   try {
     const { 
+      clientUid,
       clientName, 
       clientEmail, 
       clientPhone, 
       preferredBranchLocation, 
+      branchUid,
+      branchName,
       preferredDate, 
       preferredTime, 
       serviceType, 
@@ -31,13 +34,16 @@ const createAppointment = async (req, res) => {
 
     const now = new Date().toISOString();
     const newAppointment = {
+      clientUid: req.user?.uid || clientUid || '',
       clientName: clientName.trim(),
-      clientEmail: clientEmail ? clientEmail.trim() : '',
+      clientEmail: clientEmail ? clientEmail.trim() : (req.user?.email || ''),
       clientPhone: clientPhone.trim(),
-      preferredBranchLocation: preferredBranchLocation || 'Main Branch',
+      preferredBranchLocation: preferredBranchLocation || branchName || 'Main Branch',
+      branchUid: branchUid || '',
+      branchName: branchName || preferredBranchLocation || 'Main Branch',
       preferredDate: preferredDate,
       preferredTime: preferredTime || '10:00 AM',
-      serviceType: serviceType || 'Passport Processing',
+      serviceType: serviceType || 'General Consultation',
       purpose: purpose || 'Consultation & Inquiry',
       status: 'Pending',
       createdAt: now,
@@ -57,11 +63,18 @@ const createAppointment = async (req, res) => {
  */
 const getAppointments = async (req, res) => {
   try {
-    const { status, limit } = req.query;
+    const { status, limit, clientUid } = req.query;
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
     };
+
+    // If client user is querying, enforce their clientUid
+    if (req.user?.role === 'client') {
+      options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
+    } else if (clientUid) {
+      options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+    }
 
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });

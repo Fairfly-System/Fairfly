@@ -1,5 +1,39 @@
 # Update Logs
 
+## [2026-08-16] Admin Service Catalog Enhancements & Client "Airbnb/Shopping UI" Marketplace
+
+### Files Created & Modified
+- **Backend Service Layer (`fly-api`)**:
+  - `fly-api/src/routes/serviceRoutes.js` (Updated `SERVICE_ALLOWED_FIELDS` to allow `coverImage`, `coverPhoto`, `coverPhotoUrl`, `tags`, `category`, `description`, and `featured`)
+  - `fly-api/src/controllers/serviceController.js` (Updated `createService` and `updateService` to properly sanitize and persist category, tags array, cover image URL, description, and featured boolean flag)
+- **Admin Portal Components & Modals (`fair-fly`)**:
+  - `fair-fly/src/components/Admin/Modals/ServiceModal/ServiceForm.jsx` (Redesigned with Cover Photo file dropzone/preview with remove/change controls, Category select with custom input, interactive Tag chip input with suggested tags `#Visa`, `#Passport`, `#Express`, `#DFA`, etc., Description textarea, and Featured toggle switch)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Added batch upload for `pendingCoverFile` to Firebase Storage under `service_covers/`, updated DataTable columns to show thumbnail cover images, category pills, tags badges, and expanded multi-field search)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx` & `service-detail.css` (Redesigned the entire View Service Details page with high-res cover hero banner and fallback gradient graphic, category badge overlays, marketplace spotlight badge, 4-stat KPI quick metrics cards for Price, Turnaround, Required Inputs, and Workflow Steps, formatted description panel, requirement input cards with file icons and sample attachments, and full edit/disable/delete management lifecycle)
+- **Client Portal 3-Page Architecture & Navigation (`fair-fly`)**:
+  - `fair-fly/src/App.jsx` (Configured `/client`, `/client/services`, `/client/tracking`, and `/client/appointments` nested routes under `ClientLayout`)
+  - `fair-fly/src/pages/ClientSide/ClientLayout/ClientLayout.jsx` **[NEW]** & `client-layout.css` **[NEW]** (Created dedicated layout wrapper with `AppNavbar` and responsive container)
+  - `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` & `app-navbar.css` (Added Client NavLinks with active pill styles for **Services Store**, **Track Requests**, and **Appointments**, with mobile sub-navigation drawer)
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx` (Streamlined to focus exclusively on the **Services Shopping Catalog** with welcome hero, action links, and aside filter store)
+  - `fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx` **[NEW]** & `client-tracking.css` **[NEW]** (Created dedicated Service Tracking & History page with real-time `onSnapshot()` sync, 3-stat KPI summary grid, status filter tabs, search, and expandable step milestones)
+  - `fair-fly/src/components/Client/ClientServiceTracker/ClientServiceTracker.jsx` & `service-tracker.css` (Enhanced tracker component with cover thumbnails, category icons, branch badges, tag chips, and submitted requirements viewer)
+  - `fair-fly/src/pages/ClientSide/ClientAppointments/ClientAppointmentsPage.jsx` **[NEW]** & `client-appointments.css` **[NEW]** (Created dedicated Branch Appointments page with real-time `onSnapshot()` sync, 4-stat KPI grid, status filters, appointment cards, and new booking trigger)
+  - `fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx` (Connected to `POST /api/appointments`, dynamically loaded active services & branch operators, prefilled client data, and added submission state handling)
+- **Backend Service Layer (`fly-api`)**:
+  - `fly-api/src/controllers/appointmentController.js` (Updated `createAppointment` and `getAppointments` to support `clientUid`, `branchUid`, `branchName`, and client-scoped appointment queries)
+
+### Summary of Changes
+- **Admin Service Form (Create & Update)**: Admins can now upload a Cover Photo, select from pre-configured travel categories (or provide custom ones), manage interactive tag chips, write descriptions, and toggle featured spotlight status.
+- **Admin View Service Page**: Enhanced with a cover hero banner, KPI statistics grid, category icons, tag chips, detailed metadata, and requirement attachments.
+- **Client 3-Page Portal Experience**:
+  1. **Services Store** (`/client`): 2-column e-commerce store with aside filter checkboxes and dropdowns.
+  2. **Track Requests** (`/client/tracking`): Step-by-step fulfillment tracking for submitted service requests with live Firestore sync.
+  3. **Appointments** (`/client/appointments`): Schedule and manage branch visits with live status tracking.
+- **Unified Client Navigation**: Integrated active NavLinks in the Navbar with full desktop and mobile support.
+- **Strict Architecture Compliance**: Followed the "Don't trust the client" model where all CUD operations route through `fly-api` endpoints and files upload securely to Firebase Storage bucket. All frontend reads use real-time `onSnapshot()` listeners without polling.
+
+---
+
 ## [2026-08-14] KPI Layout Flex-wrap Optimization & Record Detail View Pages
 
 ### Files Modified & Refactored
