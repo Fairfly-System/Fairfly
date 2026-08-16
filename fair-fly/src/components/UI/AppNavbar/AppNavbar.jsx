@@ -68,21 +68,26 @@ export default function AppNavbar({
             </button>
           )}
 
-          <NavLink to={isClient ? '/client' : `/${portalName.toLowerCase()}`} className="app-nav-brand">
-            <img
-              src="/fairfly_logo.png"
-              alt="FairFly Logo"
-              className="app-nav-logo"
-              width="36"
-              height="36"
-              loading="eager"
-            />
-          </NavLink>
+          {/* Render Brand Logo & Title on Client portal only */}
+          {isClient && (
+            <>
+              <NavLink to="/client" className="app-nav-brand" aria-label="Fairfly Client Home">
+                <img
+                  src="/fairfly_logo.png"
+                  alt="FairFly Logo"
+                  className="app-nav-logo"
+                  width="36"
+                  height="36"
+                  loading="eager"
+                />
+              </NavLink>
 
-          <div className="app-nav-brand-text">
-            <p id="top-title">Fairfly {portalName}</p>
-            {portalSubtitle && <p id="down-title">{portalSubtitle}</p>}
-          </div>
+              <div className="app-nav-brand-text">
+                <p id="top-title">Fairfly {portalName}</p>
+                {portalSubtitle && <p id="down-title">{portalSubtitle}</p>}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Client Portal Navigation Links (Desktop) */}

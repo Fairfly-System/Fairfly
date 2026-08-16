@@ -1,5 +1,38 @@
 # Update Logs
 
+## [2026-08-17] Breadcrumbs Navigation for Messages Page
+
+### Files Modified
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Imported and integrated `<Breadcrumbs>` with role-aware path routing (`Dashboard > Direct Messages` or `Home > Direct Messages > Partner Name`))
+- `fair-fly/src/pages/Shared/MessagesPage/messages-page.css` (Added layout spacing gap for the breadcrumb header)
+
+### Summary of Changes
+- Standardized navigation on the Messages page by adding breadcrumb navigation across Admin, Operator, and Client views.
+
+---
+
+## [2026-08-17] AppNavbar Logo Visibility: Client Portal Only
+
+### Files Modified
+- `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` (Restricted the FairFly logo and portal title brand rendering to the Client portal (`{isClient && ...}`), removing duplicate logo display from the Admin and Operator top navbars)
+- `fair-fly/src/components/UI/AppNavbar/app-navbar.css` (Updated `.app-nav-brand` class selector rules)
+
+### Summary of Changes
+- Removed the FairFly brand logo and text from the top navbar in the Admin and Operator portals (which already display the brand in the primary sidebar), while keeping it clearly displayed in the Client portal navbar.
+
+---
+
+## [2026-08-17] Fix: Prevent Window Jump on Chat Selection (Removed autoFocus & scrollIntoView)
+
+### Files Modified
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Removed `autoFocus` on the chat input field and removed `scrollIntoView` effects so browsers don't force-scroll the page down when opening a chat session)
+- `fair-fly/src/pages/Shared/MessagesPage/messages-page.css` (Adjusted `.messages-page-wrapper` to `calc(100vh - 8rem)` so the messaging container fits cleanly within the dashboard layout without vertical scrollbar overflow)
+
+### Summary of Changes
+- Completely resolved the issue where selecting a chat session in the admin or operator side caused the browser window/page to scroll down.
+
+---
+
 ## [2026-08-17] Fix: FilterChipGroup Event Handling & Case-Insensitive Status Filtering
 
 ### Files Modified

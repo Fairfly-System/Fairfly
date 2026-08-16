@@ -11,6 +11,7 @@ import {
   getOrCreateDirectChat
 } from '../../../services/chatService';
 import NewChatModal from '../../../components/Shared/Messaging/NewChatModal/NewChatModal';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import './messages-page.css';
 
 function formatFileSize(bytes) {
@@ -103,7 +104,6 @@ export default function MessagesPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-  const messagesEndRef = useRef(null);
 
   // Real-time subscription to conversations list
   useEffect(() => {
@@ -140,11 +140,6 @@ export default function MessagesPage() {
 
     return () => unsub();
   }, [activeConversation?.id, currentUid]);
-
-  // Auto-scroll to bottom on new message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   // Helper to extract partner details
   const getPartnerDetails = (conv) => {
@@ -275,8 +270,26 @@ export default function MessagesPage() {
   const activePartner = activeConversation ? getPartnerDetails(activeConversation) : null;
   const currentInitial = (userDetails?.name || user?.email || 'U')[0].toUpperCase();
 
+  const breadcrumbItems = useMemo(() => {
+    const rootTo = currentRole === 'client' ? '/client' : `/${currentRole}`;
+    const rootLabel = currentRole === 'client' ? 'Home' : 'Dashboard';
+
+    const items = [
+      { label: rootLabel, to: rootTo },
+      { label: 'Direct Messages' }
+    ];
+
+    if (activePartner?.name) {
+      items.push({ label: activePartner.name });
+    }
+
+    return items;
+  }, [currentRole, activePartner?.name]);
+
   return (
     <div className="messages-page-wrapper page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
       <div className={`messages-container-card ${activeConversation ? 'chat-open' : ''}`}>
         {/* ────────────────────────────────────────────────────────────────
             LEFT PANE: CONVERSATIONS LIST
@@ -495,7 +508,6 @@ export default function MessagesPage() {
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Attachment Preview Strip */}
@@ -546,7 +558,6 @@ export default function MessagesPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isSending}
-                    autoFocus
                   />
                 </div>
 

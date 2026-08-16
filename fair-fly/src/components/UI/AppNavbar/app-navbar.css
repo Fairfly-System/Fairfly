@@ -27,13 +27,14 @@
 }
 
 /* Brand logo & text visible by default (Client portal) */
-.app-nav-left .app-logoIcon,
+.app-nav-left .app-nav-brand,
 .app-nav-left .app-nav-brand-text {
   display: flex;
+  align-items: center;
 }
 
 /* Hide brand in navbar on desktop ONLY when sidebar is present (.app-nav--offset) */
-.app-nav--offset .app-nav-left .app-logoIcon,
+.app-nav--offset .app-nav-left .app-nav-brand,
 .app-nav--offset .app-nav-left .app-nav-brand-text {
   display: none;
 }
