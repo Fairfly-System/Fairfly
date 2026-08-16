@@ -39,6 +39,20 @@ export default function AdminsContent() {
 
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+  const [operatorsMap, setOperatorsMap] = useState({});
+
+  // Subscribe to real-time operators map for branch names
+  useEffect(() => {
+    const q = query(collection(firestore, 'users'), where('role', '==', 'operator'));
+    const unsub = onSnapshot(q, (snap) => {
+      const map = {};
+      snap.docs.forEach((d) => {
+        map[d.id] = d.data();
+      });
+      setOperatorsMap(map);
+    });
+    return () => unsub();
+  }, []);
 
   // Subscribe to real-time admins list
   useEffect(() => {
@@ -186,10 +200,9 @@ export default function AdminsContent() {
         (a.username || '').toLowerCase().includes(q) ||
         (a.email || '').toLowerCase().includes(q);
 
-      const matchStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && (a.status || 'Active') === 'Active') ||
-        (statusFilter === 'inactive' && (a.status || '') === 'Inactive');
+      const adminStatus = (a.status || 'Active').toLowerCase();
+      const filter = (statusFilter || 'all').toLowerCase();
+      const matchStatus = filter === 'all' || adminStatus === filter;
 
       return matchSearch && matchStatus;
     });
@@ -246,6 +259,48 @@ export default function AdminsContent() {
             </span>
           )
         )
+      },
+      {
+        key: 'assignedOperators',
+        header: 'Assigned Branches',
+        render: (a) => {
+          if (a.isSuperAdmin) {
+            return (
+              <span className="assigned-op-pill all-branches">
+                <i className="fa-solid fa-crown" style={{ fontSize: '0.625rem' }}></i> All Branches
+              </span>
+            );
+          }
+          const list = a.assignedOperators || [];
+          if (list.length === 0) {
+            return <span className="assigned-op-pill none">None Assigned</span>;
+          }
+          if (list.length <= 2) {
+            return (
+              <div className="assigned-operators-cell">
+                {list.map((opId) => {
+                  const op = operatorsMap[opId];
+                  return (
+                    <span key={opId} className="assigned-op-pill">
+                      {op?.branchName || op?.name || 'Branch'}
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          }
+          const firstOp = operatorsMap[list[0]];
+          return (
+            <div className="assigned-operators-cell">
+              <span className="assigned-op-pill">
+                {firstOp?.branchName || firstOp?.name || 'Branch'}
+              </span>
+              <span className="assigned-op-pill" style={{ background: 'var(--bg)', color: 'var(--text-dark)' }}>
+                +{list.length - 1} more
+              </span>
+            </div>
+          );
+        }
       },
       {
         key: 'phone',
@@ -408,8 +463,11 @@ export default function AdminsContent() {
               { label: 'Active', value: 'active', count: activeCount },
               { label: 'Inactive', value: 'inactive', count: totalCount - activeCount }
             ]}
-            activeValue={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
           />
         </div>
 

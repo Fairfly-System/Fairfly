@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -30,6 +30,20 @@ export default function AdminDetailPage() {
 
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+  const [operatorsMap, setOperatorsMap] = useState({});
+
+  // Subscribe to real-time operators map
+  useEffect(() => {
+    const q = query(collection(firestore, 'users'), where('role', '==', 'operator'));
+    const unsub = onSnapshot(q, (snap) => {
+      const map = {};
+      snap.docs.forEach((d) => {
+        map[d.id] = { id: d.id, ...d.data() };
+      });
+      setOperatorsMap(map);
+    });
+    return () => unsub();
+  }, []);
 
   // Subscribe to real-time doc
   useEffect(() => {
@@ -281,6 +295,74 @@ export default function AdminDetailPage() {
               </div>
             </article>
           </div>
+
+          {/* Assigned Branch Operators Panel */}
+          <article className="card detail-panel">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h2 className="panel-title" style={{ margin: 0 }}>
+                <i className="fa-solid fa-users"></i> Assigned Branch Operators
+              </h2>
+              {isSuperAdmin && !isTargetSuperAdmin && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: '0.8125rem', padding: '0.3125rem 0.75rem' }}
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  <i className="fa-solid fa-pen-to-square"></i> Manage Assignments
+                </button>
+              )}
+            </div>
+
+            {isTargetSuperAdmin ? (
+              <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginTop: '0.75rem' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-dark)', fontWeight: 600 }}>
+                  <i className="fa-solid fa-crown" style={{ color: '#eab308', marginRight: '0.5rem' }}></i>
+                  Global Access (All Branches)
+                </p>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                  As Super Administrator, this account has unrestricted administrative authority across all franchise branches and operators.
+                </p>
+              </div>
+            ) : adminData.assignedOperators && adminData.assignedOperators.length > 0 ? (
+              <div className="admin-assigned-operators-list">
+                {adminData.assignedOperators.map((opId) => {
+                  const op = operatorsMap[opId];
+                  return (
+                    <div key={opId} className="admin-assigned-op-card">
+                      <div className="admin-assigned-op-avatar">
+                        <i className="fa-solid fa-store"></i>
+                      </div>
+                      <div className="admin-assigned-op-details">
+                        <span className="admin-assigned-op-name">
+                          {op?.branchName || op?.name || 'Franchise Branch'}
+                        </span>
+                        <span className="admin-assigned-op-email">
+                          {op?.email || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-light)', background: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', marginTop: '0.75rem' }}>
+                <i className="fa-solid fa-user-slash" style={{ fontSize: '2rem', marginBottom: '0.5rem', opacity: 0.5 }}></i>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: 'var(--text-dark)' }}>No Operators Assigned</p>
+                <p style={{ margin: '0 0 1rem 0', fontSize: '0.8125rem' }}>This support administrator is not currently assigned to oversee any specific branch operators.</p>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ fontSize: '0.8125rem', padding: '0.375rem 0.875rem' }}
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    <i className="fa-solid fa-plus"></i> Assign Branch Operators
+                  </button>
+                )}
+              </div>
+            )}
+          </article>
 
           {/* Audit / Recent Activity Panel */}
           <article className="card detail-panel">

@@ -21,7 +21,7 @@ const createAdmin = async (req, res) => {
   let uid;
 
   try {
-    const { email, password, username, fullName, phone } = req.body;
+    const { email, password, username, fullName, phone, assignedOperators } = req.body;
 
     if (!email || !password || (!username && !fullName)) {
       return res.status(400).json({ error: 'Email, password, and username/name are required' });
@@ -55,6 +55,7 @@ const createAdmin = async (req, res) => {
       role: 'admin',
       isSuperAdmin: false,
       status: 'Active',
+      assignedOperators: Array.isArray(assignedOperators) ? assignedOperators : [],
       createdBySuperAdmin: req.user?.uid || 'superadmin',
       createdByName: req.userDetails?.fullName || req.userDetails?.name || 'Super Admin',
       createdAt: now,

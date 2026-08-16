@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { firestore } from '../../../../firebase';
 import { useToast } from '../../../UI/toast/ToastProvider';
 
 export default function AdminForm({ onSubmit, isLoading, initialData }) {
@@ -9,6 +11,64 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(initialData?.status || 'Active');
+  const [assignedOperators, setAssignedOperators] = useState(initialData?.assignedOperators || []);
+
+  const [availableOperators, setAvailableOperators] = useState([]);
+  const [loadingOperators, setLoadingOperators] = useState(true);
+  const [operatorSearch, setOperatorSearch] = useState('');
+
+  // Fetch all active operators
+  useEffect(() => {
+    const fetchOperators = async () => {
+      setLoadingOperators(true);
+      try {
+        const q = query(
+          collection(firestore, 'users'),
+          where('role', '==', 'operator')
+        );
+        const snapshot = await getDocs(q);
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setAvailableOperators(list);
+      } catch (err) {
+        console.error('Error fetching operators for assignment:', err);
+      } finally {
+        setLoadingOperators(false);
+      }
+    };
+
+    fetchOperators();
+  }, []);
+
+  const handleToggleOperator = (opId) => {
+    setAssignedOperators((prev) => {
+      if (prev.includes(opId)) {
+        return prev.filter((id) => id !== opId);
+      } else {
+        return [...prev, opId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    setAssignedOperators(availableOperators.map((op) => op.id));
+  };
+
+  const handleClearAll = () => {
+    setAssignedOperators([]);
+  };
+
+  const filteredOperators = availableOperators.filter((op) => {
+    if (!operatorSearch.trim()) return true;
+    const q = operatorSearch.toLowerCase().trim();
+    return (
+      op.branchName?.toLowerCase().includes(q) ||
+      op.name?.toLowerCase().includes(q) ||
+      op.email?.toLowerCase().includes(q)
+    );
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,7 +93,8 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
       fullName: fullName.trim() || username.trim(),
       name: fullName.trim() || username.trim(),
       phone: phone.trim(),
-      status: status
+      status: status,
+      assignedOperators: assignedOperators
     };
 
     if (!initialData) {
@@ -145,9 +206,88 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
           <input
             type="text"
             className="form-input"
-            value="Support Administrator (Fairfly Admin)"
+            value={initialData?.isSuperAdmin ? 'Super Administrator (Full System Authority)' : 'Support Administrator (Fairfly Admin)'}
             disabled
           />
+        </div>
+      </div>
+
+      {/* ── Assigned Branch Operators ── */}
+      <div className="form-column" style={{ marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <label className="form-label" style={{ margin: 0 }}>
+            Assigned Branch Operators ({assignedOperators.length} selected)
+          </label>
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ fontSize: '0.75rem', padding: '0.1875rem 0.5rem' }}
+              onClick={handleSelectAll}
+            >
+              Select All
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ fontSize: '0.75rem', padding: '0.1875rem 0.5rem' }}
+              onClick={handleClearAll}
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
+          Assign branch operators this administrator is responsible for monitoring and supporting.
+        </p>
+
+        {availableOperators.length > 4 && (
+          <div style={{ marginBottom: '0.5rem' }}>
+            <input
+              type="text"
+              className="form-input"
+              style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
+              placeholder="Filter branches by name..."
+              value={operatorSearch}
+              onChange={(e) => setOperatorSearch(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div className="admin-form-operators-grid">
+          {loadingOperators ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: 'var(--text-light)', fontSize: '0.8125rem' }}>
+              <i className="fa-solid fa-circle-notch fa-spin"></i> Loading operators...
+            </div>
+          ) : filteredOperators.length === 0 ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: 'var(--text-light)', fontSize: '0.8125rem' }}>
+              No branch operators found.
+            </div>
+          ) : (
+            filteredOperators.map((op) => {
+              const isChecked = assignedOperators.includes(op.id);
+              return (
+                <label
+                  key={op.id}
+                  className={`admin-operator-checkbox-card ${isChecked ? 'selected' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => handleToggleOperator(op.id)}
+                    style={{ accentColor: 'var(--purple)', width: '1rem', height: '1rem' }}
+                  />
+                  <div className="admin-op-card-info">
+                    <span className="admin-op-card-name">
+                      {op.branchName || op.name || op.fullName || 'Branch Operator'}
+                    </span>
+                    <span className="admin-op-card-email">{op.email}</span>
+                  </div>
+                </label>
+              );
+            })
+          )}
         </div>
       </div>
 

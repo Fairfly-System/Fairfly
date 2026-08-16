@@ -1,5 +1,32 @@
 # Update Logs
 
+## [2026-08-17] Fix: FilterChipGroup Event Handling & Case-Insensitive Status Filtering
+
+### Files Modified
+- `fair-fly/src/components/UI/FilterChipGroup/FilterChipGroup.jsx` (Added prop alias resilience for `activeChip`/`activeValue`/`value` and `onChipChange`/`onChange`/`onSelect`, plus automatic formatted `(count)` rendering when `count` property is provided on chip objects)
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Fixed `FilterChipGroup` prop bindings to `activeChip` and `onChipChange`, fixed case-sensitive mismatch between `"Active"`/`"Disabled"` chip values and lowercase state matching, and added page-reset `setCurrentPage(1)` on filter selection)
+- `fair-fly/src/pages/Admin/AdminAdmins/AdminsContent.jsx` (Fixed `FilterChipGroup` prop bindings to `activeChip` and `onChipChange`, standardized case-insensitive filtering for status, and reset `currentPage` on chip click)
+
+### Summary of Changes
+- Resolved the issue where clicking filter chips on the Operators and Administrators tables failed to filter rows or update the active chip visual state.
+
+---
+
+## [2026-08-17] Operator Branch Assignment for Support Administrators
+
+### Files Modified
+- `fly-api/src/controllers/adminController.js` (Updated `createAdmin` and `updateAdmin` to parse and persist `assignedOperators` array of branch operator UIDs)
+- `fair-fly/src/components/Admin/Modals/AdminModal/AdminForm.jsx` (Added interactive branch operator checkbox selector with live branch search filter, item count indicators, and "Select All" / "Clear All" bulk actions)
+- `fair-fly/src/pages/Admin/AdminAdmins/AdminsContent.jsx` (Added "Assigned Branches" column with real-time branch name resolution and badge pills: `All Branches (Super Admin)`, branch name chips, or `None Assigned`)
+- `fair-fly/src/pages/Admin/AdminAdmins/AdminDetailPage.jsx` (Added dedicated "Assigned Branch Operators" panel with branch cards, contact info, and one-click "Manage Assignments" edit trigger)
+- `fair-fly/src/pages/Admin/AdminAdmins/admin-admins.css` (Added styling for operator assignment selector cards, pills, and detail view cards)
+
+### Summary of Changes
+- Super Admins can now assign specific branch operators to each Support Administrator during creation or profile edits.
+- The Admins table and Admin Detail Page display the assigned branches clearly with real-time data sync from Firestore.
+
+---
+
 ## [2026-08-17] Phase 4: 1-to-1 Messaging System (WhatsApp Web Style) & Head Office Announcements
 
 ### Files Created & Modified

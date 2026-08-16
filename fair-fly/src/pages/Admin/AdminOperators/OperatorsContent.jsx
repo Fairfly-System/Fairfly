@@ -67,14 +67,16 @@ export default function OperatorsContent() {
   const filteredOperators = useMemo(() => {
     if (!operators) return [];
     return operators.filter((op) => {
+      const q = searchTerm.toLowerCase().trim();
       const matchesSearch =
-        (op.branchName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (op.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+        !q ||
+        (op.branchName || "").toLowerCase().includes(q) ||
+        (op.email || "").toLowerCase().includes(q) ||
+        (op.address || "").toLowerCase().includes(q);
       
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && op.status === "Active") ||
-        (statusFilter === "disabled" && op.status === "Disabled");
+      const opStatus = (op.status || "Active").toLowerCase();
+      const filter = (statusFilter || "all").toLowerCase();
+      const matchesStatus = filter === "all" || opStatus === filter;
 
       return matchesSearch && matchesStatus;
     });
@@ -444,11 +446,14 @@ export default function OperatorsContent() {
           <FilterChipGroup
             chips={[
               { label: "All", value: "all", count: totalOperators },
-              { label: "Active", value: "Active", count: activeCount },
-              { label: "Disabled", value: "Disabled", count: inactiveCount },
+              { label: "Active", value: "active", count: activeCount },
+              { label: "Disabled", value: "disabled", count: inactiveCount },
             ]}
-            activeValue={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
           />
         </div>
 
