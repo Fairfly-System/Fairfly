@@ -18,7 +18,7 @@ The current FairFly UI is functional but inconsistent across the three portals (
 > [!IMPORTANT]
 > This redesign touches visual styling and component structure only. **No business logic, API calls, data fetching, or backend changes will be modified.** All Firestore `onSnapshot()` listeners, API calls, and state management remain untouched.
 
-> Take a break after each phase to confirm that I'm going in the right direction. I'll tell you when to proceed to the next phase.
+> Take a break after each phase to confirm that I'm going in the right direction. I'll tell you when to proceed to the next phase. AND MAKE SURE TO NOT BREAK ANY CODE.
 
 ---
 

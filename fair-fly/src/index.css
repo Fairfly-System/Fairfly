@@ -376,3 +376,16 @@ tbody tr:hover td {
   scrollbar-width: thin;
   scrollbar-color: var(--purple-light) #ffffff;
 }
+
+/* --- KPI / Summary Flex Grid --- */
+.services-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.services-summary-grid > * {
+  flex: 1 1 18rem;
+  min-width: 15rem;
+}

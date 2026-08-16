@@ -1,5 +1,59 @@
 # Update Logs
 
+## [2026-08-14] KPI Layout Flex-wrap Optimization & Record Detail View Pages
+
+### Files Modified & Refactored
+- **Global Theme Styles**:
+  - `fair-fly/src/index.css` (Added global `.services-summary-grid` using flexbox display, `flex-wrap: wrap`, and a flexible child base width of `18rem` and `min-width: 15rem` to accommodate card counts not divisible by 4)
+- **Local Layout Styles**:
+  - `fair-fly/src/pages/Admin/AdminServices/admin-services.css` (Removed redundant local grid template column column definitions and responsive media queries)
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/admin-inquiry-history.css` (Removed redundant flexbox definition overrides)
+
+### Files Created
+- **Shared Layout Components**:
+  - `fair-fly/src/components/UI/RecordDetailLayout/RecordDetailLayout.jsx` & `record-detail-layout.css` (Created a reusable detail view wrapper featuring breadcrumbs, animated transitions, unified back buttons, status badge formatting, loading/error states, and action headers)
+- **Admin Portal Detail Pages**:
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorDetailPage.jsx` & `operator-detail.css` (Shows operator statistics, active status alert bars, and custom recent actions log timelines with placeholder mini-charts)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx` & `service-detail.css` (Displays catalog data, required document input icons, and workflow checklist step pipelines)
+  - `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseAppDetailPage.jsx` & `franchise-app-detail.css` (Reused detail component supporting pending review action approvals and inquiry historical tracking configurations)
+  - `fair-fly/src/pages/Admin/AdminTickets/TicketDetailPage.jsx` & `ticket-detail.css` (Integrates support message thread timeline logs)
+- **Operator Portal Detail Pages**:
+  - `fair-fly/src/pages/Operator/OperatorAppointments/AppointmentDetailPage.jsx` & `appointment-detail.css` (Shows client profiles and consultation schedule purposes)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketDetailPage.jsx` & `operator-ticket-detail.css` (Displays communication logs with head office in real-time)
+  - `fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx` & `quotation-detail.css` (Allows inline editing of client rates, inclusions, and exclusions directly on the page, with status adjustments and deletion)
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx` & `inquiry-form-detail.css` (Displays prospective client inquiry intakes)
+
+### Files Modified
+- **App Routes Configuration**:
+  - `fair-fly/src/App.jsx` (Registered all index layout and `:id` sub-routes cleanly underneath their parent context providers)
+- **Admin Wrapper Layouts**:
+  - `fair-fly/src/pages/Admin/AdminOperators/AdminOperators.jsx` (Updated to render `Outlet` inside the provider wrapper)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Added a Link-based "View Details" eye icon to row actions)
+  - `fair-fly/src/pages/Admin/AdminServices/AdminServices.jsx` (Updated to render `Outlet`)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Added Link-based "View Details" row actions)
+  - `fair-fly/src/pages/Admin/AdminFranchiseApps/AdminFranchiseApps.jsx` (Updated to render `Outlet`)
+  - `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx` (Updated card View buttons to route directly to detail page)
+  - `fair-fly/src/pages/Admin/AdminTickets/AdminTickets.jsx` (Updated to render `Outlet`)
+  - `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Purged inline thread selection layout in favor of detail sub-routing)
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryHistory.jsx` (Updated to render `Outlet`)
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx` (Updated cards to route to inquiry details)
+- **Operator Wrapper Layouts**:
+  - `fair-fly/src/pages/Operator/OperatorAppointments/OperatorAppointments.jsx` (Exported content component and updated wrapper to render `Outlet`)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTickets.jsx` (Updated to render `Outlet`)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Purged inline support threads in favor of details sub-routing)
+  - `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Exported content component and updated wrapper to render `Outlet`, added View button links)
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx` (Exported content component and updated wrapper to render `Outlet`, added View details button links)
+- **Backend API Routes & Controllers**:
+  - `fly-api/src/controllers/quotationController.js` (Added a generic `updateQuotation` method to patch data fields dynamically)
+  - `fly-api/src/routes/quotationRoutes.js` (Registered `PATCH /:id` route for updating quotations)
+
+### Summary of Changes
+- **No Redundant Listeners**: Leveraged nested route outlets to share the same Firestore snapshot listeners (`AdminProvider`/`OperatorProvider`), ensuring real-time data syncs on the detail view with zero redundant subscriptions.
+- **Inline Editing**: Added robust inline editing to Operator Quotation detail pages (client details, pricing rates, inclusions, and exclusions text blocks turn into inputs).
+- **Responsive Layout Design**: Aligned detail layouts with strict human design rules (no emojis, REM spacing, FontAwesome icon integration, and visual hierarchies).
+
+---
+
 ## [2026-08-13] System Modals Redesign Completed (Style Guide & Design System Compliance)
 
 ### Files Modified & Created

@@ -1,0 +1,13 @@
+.inquiry-detail-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.inquiry-text {
+  font-size: 0.9375rem;
+  color: var(--text-mid);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}

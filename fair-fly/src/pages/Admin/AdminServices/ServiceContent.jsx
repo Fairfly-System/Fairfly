@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router";
 import "./admin-services.css";
 import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
 import ServiceModal from "../../../components/Admin/Modals/ServiceModal/ServiceModal";
@@ -175,6 +176,14 @@ export default function ServiceContent() {
         className: "actions-col",
         render: (item) => (
           <>
+            <Link
+              to={`/admin/services/${item.id}`}
+              className="icon-btn view"
+              title="View Details"
+              style={{ color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <i className="fa-solid fa-eye"></i>
+            </Link>
             <button
               className="icon-btn edit"
               title="Edit Service"

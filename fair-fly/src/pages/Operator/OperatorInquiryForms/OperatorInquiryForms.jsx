@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Outlet, Link } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import CreateInquiryFormModal from '../../../components/Operator/CreateInquiryFormModal/CreateInquiryFormModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
@@ -6,7 +7,7 @@ import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import './operator-inquiry-forms.css';
 
-function InquiryContent() {
+export function InquiryContent() {
   const { data: inquiryForms, loading } = useOperatorContext();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,7 +105,14 @@ function InquiryContent() {
                   </p>
                 </div>
               </div>
-              <div className="op-inquiry-card-actions">
+              <div className="op-inquiry-card-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <Link
+                  to={`/operator/inquiry-forms/${form.id}`}
+                  className="ticket-action-btn view-thread-btn"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.775rem', textDecoration: 'none', background: 'var(--purple-light-2)', color: 'var(--purple-dark)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <i className="fa-solid fa-eye"></i> View
+                </Link>
                 <span className="status-pill status-pill-active">{form.status || 'Active'}</span>
               </div>
             </article>
@@ -131,7 +139,7 @@ function InquiryContent() {
 export default function OperatorInquiryForms() {
   return (
     <OperatorProvider targetCollection="inquiries">
-      <InquiryContent />
+      <Outlet />
     </OperatorProvider>
   );
 }

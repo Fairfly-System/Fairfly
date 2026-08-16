@@ -17,14 +17,15 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+
+app.use(express.json());//Use express.json() to parse incoming JSON requests (POST/PUT/PATCH)
 
 // Admin action audit logger — fires post-response via res.on('finish')
 const { adminLogger } = require('./middleware/adminLogger');
-app.use(adminLogger);
+app.use(adminLogger); //All requests pass through this logger which calls the writeAdminActionToDB function to log all admin actions to the database
 
 // Mount the centralized API router
-app.use('/api', apiRoutes);
+app.use('/api', apiRoutes); //All API requests pass through this router which routes them to the appropriate controller
 
 // Health check endpoint
 app.get('/health', (req, res) => {

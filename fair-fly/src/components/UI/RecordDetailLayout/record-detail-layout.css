@@ -1,0 +1,164 @@
+.record-detail-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.record-detail-nav-back {
+  display: flex;
+  align-items: center;
+}
+
+.detail-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.detail-back-btn:hover {
+  color: var(--purple);
+}
+
+.record-detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.record-detail-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.record-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.record-header-info h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.record-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin: 0.25rem 0 0 0;
+}
+
+.record-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-icon {
+  margin-right: 0.5rem;
+}
+
+.record-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Loading & Not Found States */
+.loading-card,
+.not-found-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 25rem;
+  padding: 2rem;
+}
+
+.spinner-box,
+.not-found-content {
+  text-align: center;
+}
+
+.spinner-icon {
+  font-size: 2.5rem;
+  color: var(--purple);
+  margin-bottom: 1rem;
+}
+
+.warning-icon {
+  font-size: 3rem;
+  color: var(--orange);
+  margin-bottom: 1.25rem;
+}
+
+.not-found-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 0.5rem 0;
+}
+
+.not-found-content p {
+  color: var(--text-mid);
+  margin: 0 0 1.5rem 0;
+  max-width: 25rem;
+}
+
+.back-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Grid helper utilities for detail page grids */
+.details-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.details-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 64rem) {
+  .details-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48rem) {
+  .details-grid-2,
+  .details-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .record-detail-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .record-header-actions {
+    width: 100%;
+  }
+
+  .record-header-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}

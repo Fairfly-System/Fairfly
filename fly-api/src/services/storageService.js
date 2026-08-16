@@ -58,36 +58,37 @@ async function deleteFilesFromStorage(urlsOrPaths) {
 
 /**
  * Recursively extracts all Firebase Storage URLs/paths from an arbitrary data structure
- * @param {any} obj 
+ * @param {any} obj //Obj is the field or array of links from a record
  * @returns {string[]}
  */
 function extractStorageUrls(obj) {
-  const urls = [];
+  const urls = []; //Arrays of Urls to be deleted
   if (!obj) return urls;
 
   function traverse(item) {
     if (!item) return;
 
+    //Sees if that item contains a string, and if that string is a referecne to a firebase storage upload link.
     if (typeof item === 'string') {
       if (item.includes('firebasestorage.googleapis.com') || item.includes('/o/')) {
         urls.push(item);
       }
     } else if (Array.isArray(item)) {
       item.forEach(traverse);
-    } else if (typeof item === 'object') {
+    } else if (typeof item === 'object') { // If it is an object, checks each fields to see if it contains a string that is a firebase storage upload link.
       Object.keys(item).forEach((key) => {
         if (key === 'url' || key === 'storagePath' || key === 'fileUrl') {
-          if (typeof item[key] === 'string' && item[key].trim()) {
-            urls.push(item[key]);
+          if (typeof item[key] === 'string' && item[key].trim()) { //Checks if the value is a non-empty string.
+            urls.push(item[key]); //Put that URL to the array
           }
         }
-        traverse(item[key]);
+        traverse(item[key]); //Use the function recursively to check other fields and nested objects.
       });
     }
   }
 
   traverse(obj);
-  return [...new Set(urls.filter(Boolean))];
+  return [...new Set(urls.filter(Boolean))]; //returns a Set of 
 }
 
 /**

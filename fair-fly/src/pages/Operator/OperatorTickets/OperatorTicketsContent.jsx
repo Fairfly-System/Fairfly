@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import './operator-tickets.css';
 import { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -16,6 +17,7 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 
 export default function OperatorTicketsContent() {
+  const navigate = useNavigate();
   const { data: tickets, loading: ticketsLoading } = useOperatorContext();
   const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -165,19 +167,8 @@ export default function OperatorTicketsContent() {
     <main className="operator-tickets-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
-      {activeTicket ? (
-        <section className="card operator-tickets-card">
-          <TicketThread
-            ticket={activeTicket}
-            onBack={() => setSelectedTicketId(null)}
-            onSendMessage={handleSendMessage}
-            isLoading={isSubmitting}
-          />
-        </section>
-      ) : (
-        <>
-          <PageHeader
-            title="Support Tickets & Head Office Communication"
+      <PageHeader
+        title="Support Tickets & Head Office Communication"
             subtitle="Raise technical or operational issues directly to Fairfly Head Office"
             illustrationSrc="/pageImages/operator/tickets.png"
             primaryAction={{
@@ -261,7 +252,7 @@ export default function OperatorTicketsContent() {
               tickets={paginatedTickets}
               loading={ticketsLoading}
               disabled={isSubmitting}
-              onViewThread={(t) => setSelectedTicketId(t.id)}
+              onViewThread={(t) => navigate(`/operator/tickets/${t.id}`)}
             />
 
             <Pagination
@@ -272,8 +263,6 @@ export default function OperatorTicketsContent() {
               onPageSizeChange={setPageSize}
             />
           </section>
-        </>
-      )}
 
       <CreateTicketModal
         ref={createModalRef}

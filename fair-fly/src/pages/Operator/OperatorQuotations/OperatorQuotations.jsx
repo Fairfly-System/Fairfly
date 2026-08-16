@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { Outlet } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -163,7 +164,7 @@ function CreateQuotationModal({ isOpen, onClose }) {
   );
 }
 
-function QuotationsContent() {
+export function QuotationsContent() {
   const { data: quotations, loading } = useOperatorContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -288,6 +289,13 @@ function QuotationsContent() {
                   <span className="op-quotation-number" style={{ marginLeft: '0.75rem' }}>{q.quoteNo || 'QT-001'}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <Link
+                    to={`/operator/quotations/${q.id}`}
+                    className="ticket-action-btn view-thread-btn"
+                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.775rem', textDecoration: 'none', background: 'var(--purple-light-2)', color: 'var(--purple-dark)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <i className="fa-solid fa-eye"></i> View
+                  </Link>
                   <span className="status-pill status-pill-active">{q.status || 'Draft'}</span>
                   {q.status !== 'Sent' && (
                     <button
@@ -341,7 +349,7 @@ function QuotationsContent() {
 export default function OperatorQuotations() {
   return (
     <OperatorProvider targetCollection="quotations">
-      <QuotationsContent />
+      <Outlet />
     </OperatorProvider>
   );
 }

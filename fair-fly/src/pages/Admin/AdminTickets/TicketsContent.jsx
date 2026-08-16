@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import './admin-tickets.css';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -16,6 +17,7 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 
 export default function TicketsContent() {
+  const navigate = useNavigate();
   const { data: tickets, loading: ticketsLoading } = useAdminContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -180,8 +182,7 @@ export default function TicketsContent() {
 
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/admin' },
-    { label: 'Tickets', to: activeTicket ? '/admin/tickets' : undefined },
-    ...(activeTicket ? [{ label: `Thread #${activeTicket.id.slice(0, 8)}` }] : []),
+    { label: 'Tickets' },
   ];
 
   const totalTickets = Array.isArray(tickets) ? tickets.length : 0;
@@ -193,21 +194,8 @@ export default function TicketsContent() {
     <main className="tickets-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
-      {activeTicket ? (
-        <section className="card tickets-table-card">
-          <TicketThread
-            ticket={activeTicket}
-            onBack={() => setSelectedTicketId(null)}
-            onSendMessage={handleSendMessage}
-            onCloseForum={handleCloseTicket}
-            onStatusChange={handleStatusChange}
-            isLoading={isSubmitting}
-          />
-        </section>
-      ) : (
-        <>
-          <PageHeader
-            title="Support Tickets & Forum Threads"
+      <PageHeader
+        title="Support Tickets & Forum Threads"
             subtitle="Manage and respond to operator support requests across all branches"
             illustrationSrc="/pageImages/admin/tickets.png"
             primaryAction={{
@@ -293,7 +281,7 @@ export default function TicketsContent() {
               tickets={paginatedTickets}
               loading={ticketsLoading}
               disabled={isSubmitting}
-              onViewThread={(t) => setSelectedTicketId(t.id)}
+              onViewThread={(t) => navigate(`/admin/tickets/${t.id}`)}
               onCloseTicket={handleCloseTicket}
               onStatusChange={handleStatusChange}
             />
@@ -307,8 +295,6 @@ export default function TicketsContent() {
               onPageSizeChange={setPageSize}
             />
           </section>
-        </>
-      )}
 
       <CreateTicketModal
         ref={createModalRef}

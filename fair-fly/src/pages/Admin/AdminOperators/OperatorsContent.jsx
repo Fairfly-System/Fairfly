@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router";
 import "./admin-operators.css";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import { useAuthContext } from "../../../context/AuthContext";
@@ -22,6 +23,7 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 const CheckIcon = (props) => <i className="fa-solid fa-circle-check" {...props}></i>;
 
 export default function OperatorsContent() {
+  console.log('[OperatorsContent] Rendering list view');
   const { data: operators, loading: operatorLoading } = useAdminContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
@@ -125,6 +127,15 @@ export default function OperatorsContent() {
         className: "actions-col",
         render: (op) => (
           <>
+            <Link
+              to={`/admin/operators/${op.id}`}
+              className="icon-btn view"
+              title="View Details"
+              style={{ color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <i className="fa-solid fa-eye"></i>
+            </Link>
+
             <button
               className="icon-btn edit"
               title="Edit Operator"

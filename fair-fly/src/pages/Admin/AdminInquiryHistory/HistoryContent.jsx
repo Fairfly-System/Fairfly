@@ -1,5 +1,6 @@
 import { useAdminContext } from "../../../context/AdminContext";
 import { useState, useRef, useMemo } from "react";
+import { useNavigate } from "react-router";
 import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
 import ApplicationModal from "../../../components/Admin/Modals/ApplicationModal/ApplicationModal";
 import FranchiseCard from "../../../components/Admin/FranchiseeApplication/FranchiseeCard";
@@ -11,6 +12,7 @@ import KpiCard from "../../../components/UI/KpiCard/KpiCard";
 import "./admin-inquiry-history.css";
 
 export default function HistoryContent() {
+  const navigate = useNavigate();
   const { data: franchiseApplications, loading: franchiseLoading } = useAdminContext();
   const modalRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +53,7 @@ export default function HistoryContent() {
 
   // ── AlertBar logic ────────────────────────────────────────────────────────
   const alertBarProps = useMemo(() => {
-    const total    = historyApplications.length;
+    const total = historyApplications.length;
     const approved = historyApplications.filter(a => a.status === 'approved').length;
     const rejected = historyApplications.filter(a => a.status === 'rejected').length;
 
@@ -182,7 +184,7 @@ export default function HistoryContent() {
                     : 'N/A'
                 }
                 additionalMessage={application.additionalMessage}
-                onView={() => modalRef.current.openModal(application)}
+                onView={() => navigate(`/admin/inquiry-history/${application.id}`)}
               />
             ))}
           </div>

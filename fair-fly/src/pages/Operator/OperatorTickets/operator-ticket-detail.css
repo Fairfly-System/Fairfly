@@ -1,9 +1,9 @@
-.services-page {
+.operator-ticket-detail-page {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.services-table-card {
+.ticket-detail-card {
   padding: 1.5rem;
 }

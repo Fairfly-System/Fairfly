@@ -35,6 +35,26 @@ import OperatorQuotations from './pages/Operator/OperatorQuotations/OperatorQuot
 import OperatorServiceProcedure from './pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure';
 import { useAuthContext } from './context/AuthContext';
 
+// Detail views & content components
+import OperatorsContent from './pages/Admin/AdminOperators/OperatorsContent';
+import OperatorDetailPage from './pages/Admin/AdminOperators/OperatorDetailPage';
+import ServiceContent from './pages/Admin/AdminServices/ServiceContent';
+import ServiceDetailPage from './pages/Admin/AdminServices/ServiceDetailPage';
+import FranchiseContent from './pages/Admin/AdminFranchiseApps/FranchiseContent';
+import FranchiseAppDetailPage from './pages/Admin/AdminFranchiseApps/FranchiseAppDetailPage';
+import TicketsContent from './pages/Admin/AdminTickets/TicketsContent';
+import TicketDetailPage from './pages/Admin/AdminTickets/TicketDetailPage';
+import HistoryContent from './pages/Admin/AdminInquiryHistory/HistoryContent';
+
+import { AppointmentContent } from './pages/Operator/OperatorAppointments/OperatorAppointments';
+import AppointmentDetailPage from './pages/Operator/OperatorAppointments/AppointmentDetailPage';
+import OperatorTicketsContent from './pages/Operator/OperatorTickets/OperatorTicketsContent';
+import OperatorTicketDetailPage from './pages/Operator/OperatorTickets/OperatorTicketDetailPage';
+import { QuotationsContent } from './pages/Operator/OperatorQuotations/OperatorQuotations';
+import QuotationDetailPage from './pages/Operator/OperatorQuotations/QuotationDetailPage';
+import { InquiryContent } from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
+import InquiryFormDetailPage from './pages/Operator/OperatorInquiryForms/InquiryFormDetailPage';
+
 function App() {
 
   const { user, userDetails, userLoading } = useAuthContext();
@@ -50,11 +70,26 @@ function App() {
       <>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="services" element={<AdminServices />} />
-          <Route path="operators" element={<AdminOperators />} />
-          <Route path="franchise-apps" element={<AdminFranchiseApps />} />
-          <Route path="tickets" element={<AdminTickets />} />
-          <Route path="inquiry-history" element={<AdminInquiryHistory />} />
+          <Route path="services" element={<AdminServices />}>
+            <Route index element={<ServiceContent />} />
+            <Route path=":id" element={<ServiceDetailPage />} />
+          </Route>
+          <Route path="operators" element={<AdminOperators />}>
+            <Route index element={<OperatorsContent />} />
+            <Route path=":id" element={<OperatorDetailPage />} />
+          </Route>
+          <Route path="franchise-apps" element={<AdminFranchiseApps />}>
+            <Route index element={<FranchiseContent />} />
+            <Route path=":id" element={<FranchiseAppDetailPage />} />
+          </Route>
+          <Route path="tickets" element={<AdminTickets />}>
+            <Route index element={<TicketsContent />} />
+            <Route path=":id" element={<TicketDetailPage />} />
+          </Route>
+          <Route path="inquiry-history" element={<AdminInquiryHistory />}>
+            <Route index element={<HistoryContent />} />
+            <Route path=":id" element={<FranchiseAppDetailPage isHistoryMode={true} />} />
+          </Route>
           <Route path="quick-links" element={<AdminQuickLinks />} />
           <Route path="workflow-templates" element={<AdminWorkflowTemplates />} />
         </Route>
@@ -66,13 +101,25 @@ function App() {
         <Route path="/operator" element={<OperatorLayout />}>
           <Route index element={<OperatorDashboard />} />
           <Route path="services/:id/procedure" element={<OperatorServiceProcedure />} />
-          <Route path="appointments" element={<OperatorAppointments />} />
+          <Route path="appointments" element={<OperatorAppointments />}>
+            <Route index element={<AppointmentContent />} />
+            <Route path=":id" element={<AppointmentDetailPage />} />
+          </Route>
           <Route path="workflows" element={<Navigate to="/operator" replace />} />
-          <Route path="tickets" element={<OperatorTickets />} />
-          <Route path="quotations" element={<OperatorQuotations />} />
+          <Route path="tickets" element={<OperatorTickets />}>
+            <Route index element={<OperatorTicketsContent />} />
+            <Route path=":id" element={<OperatorTicketDetailPage />} />
+          </Route>
+          <Route path="quotations" element={<OperatorQuotations />}>
+            <Route index element={<QuotationsContent />} />
+            <Route path=":id" element={<QuotationDetailPage />} />
+          </Route>
           <Route path="history" element={<OperatorHistory />} />
           <Route path="quick-links" element={<OperatorQuickLinks />} />
-          <Route path="inquiry-forms" element={<OperatorInquiryForms />} />
+          <Route path="inquiry-forms" element={<OperatorInquiryForms />}>
+            <Route index element={<InquiryContent />} />
+            <Route path=":id" element={<InquiryFormDetailPage />} />
+          </Route>
         </Route>
       </>
     ),

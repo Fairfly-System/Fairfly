@@ -1,10 +1,11 @@
+import { Outlet } from "react-router";
 import OperatorProvider from "../../../context/OperatorContext";
-import OperatorTicketsContent from "./OperatorTicketsContent";
 
 export default function OperatorTickets() {
+  console.log('[OperatorTickets] Rendering wrapper, Outlet should render children');
   return (
     <OperatorProvider targetCollection="tickets">
-      <OperatorTicketsContent />
+      <Outlet />
     </OperatorProvider>
   );
 }

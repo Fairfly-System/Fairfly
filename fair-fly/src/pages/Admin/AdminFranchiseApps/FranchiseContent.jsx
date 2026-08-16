@@ -2,6 +2,7 @@ import './admin-franchise-apps.css';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import FranchiseCard from '../../../components/Admin/FranchiseeApplication/FranchiseeCard';
 import { useState, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router';
 import Loader from '../../../components/Admin/Loader/Loader';
 import ApplicationModal from '../../../components/Admin/Modals/ApplicationModal/ApplicationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
@@ -16,6 +17,7 @@ import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 
 export default function FranchiseContent() {
+  const navigate = useNavigate();
   const { data: franchiseApplications, loading: franchiseLoading } = useAdminContext();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -211,7 +213,7 @@ export default function FranchiseContent() {
                     : 'N/A'
                 }
                 additionalMessage={application.additionalMessage}
-                onView={() => modalRef.current.openModal(application)}
+                onView={() => navigate(`/admin/franchise-apps/${application.id}`)}
               />
             ))}
           </div>

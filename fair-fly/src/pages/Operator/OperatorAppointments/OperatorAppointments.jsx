@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Outlet, Link } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -10,7 +11,7 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import './operator-appointments.css';
 
-function AppointmentContent() {
+export function AppointmentContent() {
   const { data: appointments, loading } = useOperatorContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -170,6 +171,13 @@ function AppointmentContent() {
                       {a.status || 'Pending'}
                     </span>
                     <div className="op-appt-btn-group">
+                      <Link
+                        to={`/operator/appointments/${a.id}`}
+                        className="op-appt-btn confirm"
+                        style={{ background: 'var(--purple-light-2)', color: 'var(--purple-dark)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <i className="fa-solid fa-eye"></i> View details
+                      </Link>
                       {(a.status || 'Pending').toLowerCase() === 'pending' && (
                         <>
                           <button
@@ -238,7 +246,7 @@ function AppointmentContent() {
 export default function OperatorAppointments() {
   return (
     <OperatorProvider targetCollection="appointments">
-      <AppointmentContent />
+      <Outlet />
     </OperatorProvider>
   );
 }
