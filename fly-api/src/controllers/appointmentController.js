@@ -4,6 +4,11 @@ const {
   queryDatabaseAdvanced, 
   updateToDatabase 
 } = require('../services/firebaseService');
+const { 
+  createNotification, 
+  notifyAdmins, 
+  notifyBranchOperators 
+} = require('../services/notificationService');
 
 const COLLECTIONS = {
   APPOINTMENTS: 'appointments'
@@ -51,6 +56,16 @@ const createAppointment = async (req, res) => {
     };
 
     const docId = await addToDatabase(COLLECTIONS.APPOINTMENTS, newAppointment);
+
+    // Dispatch background notifications
+    notifyBranchOperators({
+      branchName: newAppointment.branchName,
+      title: 'New Appointment Booking',
+      message: `${newAppointment.clientName} booked for ${newAppointment.serviceType} on ${newAppointment.preferredDate} (${newAppointment.preferredTime})`,
+      type: 'appointment',
+      link: '/operator/appointments'
+    }).catch(e => console.warn('Appointment notification warning:', e.message));
+
     return res.status(201).json({ id: docId, ...newAppointment, message: 'Appointment requested successfully' });
   } catch (error) {
     console.error('Error creating appointment:', error);
@@ -114,6 +129,18 @@ const updateAppointmentStatus = async (req, res) => {
       status: normalizedStatus,
       updatedAt: new Date().toISOString()
     });
+
+    // Notify client if clientUid exists
+    if (existing.clientUid) {
+      createNotification({
+        recipientUid: existing.clientUid,
+        title: `Appointment ${normalizedStatus}`,
+        message: `Your appointment for ${existing.serviceType} on ${existing.preferredDate} has been ${normalizedStatus.toLowerCase()}.`,
+        type: 'appointment',
+        link: '/client/appointments',
+        metadata: { appointmentId: id, status: normalizedStatus }
+      }).catch(e => console.warn('Appointment status notification warning:', e.message));
+    }
 
     return res.status(200).json({ message: `Appointment status updated to ${normalizedStatus}` });
   } catch (error) {

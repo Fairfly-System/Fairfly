@@ -27,7 +27,8 @@ export default function OperatorsContent() {
   const { data: operators, loading: operatorLoading } = useAdminContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
-  const { userToken } = useAuthContext();
+  const { userToken, user, userDetails } = useAuthContext();
+  const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -90,31 +91,44 @@ export default function OperatorsContent() {
     () => [
       {
         key: "branchName",
-        header: "Branch Name",
-        className: "branch-col",
+        header: "Operator / Branch",
+        sortable: true,
         render: (op) => (
-          <div className="branch-info">
-            <div className="branch-avatar">
-              <i className="fa-solid fa-building-user"></i>
-            </div>
-            <span>{op.branchName || "N/A"}</span>
+          <div>
+            <span style={{ fontWeight: 600, color: "var(--text-dark)" }}>
+              {op.branchName}
+            </span>
+            <span
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                color: "var(--text-light)",
+              }}
+            >
+              {op.email}
+            </span>
           </div>
         ),
       },
       {
-        key: "email",
-        header: "Email",
-        render: (op) => op.email || "N/A",
+        key: "address",
+        header: "Location",
+        sortable: true,
+        render: (op) => op.address || "N/A",
+      },
+      {
+        key: "contactNumber",
+        header: "Contact",
+        render: (op) => op.contactNumber || "N/A",
       },
       {
         key: "status",
         header: "Status",
+        sortable: true,
         render: (op) => (
           <span
             className={`status-pill ${
-              op.status === "Active"
-                ? "status-pill-active"
-                : "status-pill-disabled"
+              op.status === "Active" ? "status-pill--active" : "status-pill--disabled"
             }`}
           >
             {op.status || "Active"}
@@ -126,54 +140,60 @@ export default function OperatorsContent() {
         header: "Actions",
         className: "actions-col",
         render: (op) => (
-          <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
             <Link
               to={`/admin/operators/${op.id}`}
               className="icon-btn view"
               title="View Details"
-              style={{ color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <i className="fa-solid fa-eye"></i>
             </Link>
 
-            <button
-              className="icon-btn edit"
-              title="Edit Operator"
-              disabled={isSubmitting || isConfirmLoading}
-              onClick={() => handleOpenEditModal(op)}
-            >
-              <i className="fa-solid fa-pen-to-square"></i>
-            </button>
+            {isSuperAdmin && (
+              <>
+                <button
+                  type="button"
+                  className="icon-btn edit"
+                  title="Edit Operator"
+                  disabled={isSubmitting || isConfirmLoading}
+                  onClick={() => handleOpenEditModal(op)}
+                >
+                  <i className="fa-solid fa-pen-to-square"></i>
+                </button>
 
-            <button
-              className="icon-btn ban"
-              title={op.status === "Active" ? "Disable" : "Enable"}
-              disabled={isSubmitting || isConfirmLoading}
-              onClick={() =>
-                setConfirmState({ type: "deactivate", operator: op })
-              }
-            >
-              <i
-                className={`fa-solid ${
-                  op.status === "Active" ? "fa-ban" : "fa-circle-check"
-                }`}
-              ></i>
-            </button>
-            <button
-              className="icon-btn delete"
-              title="Delete"
-              disabled={isSubmitting || isConfirmLoading}
-              onClick={() =>
-                setConfirmState({ type: "delete", operator: op })
-              }
-            >
-              <i className="fa-solid fa-trash"></i>
-            </button>
-          </>
+                <button
+                  type="button"
+                  className={`icon-btn ${op.status === "Active" ? "ban" : "check"}`}
+                  title={op.status === "Active" ? "Disable Operator" : "Enable Operator"}
+                  disabled={isSubmitting || isConfirmLoading}
+                  onClick={() =>
+                    setConfirmState({ type: "deactivate", operator: op })
+                  }
+                >
+                  <i
+                    className={`fa-solid ${
+                      op.status === "Active" ? "fa-ban" : "fa-circle-check"
+                    }`}
+                  ></i>
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn delete"
+                  title="Delete Operator"
+                  disabled={isSubmitting || isConfirmLoading}
+                  onClick={() =>
+                    setConfirmState({ type: "delete", operator: op })
+                  }
+                >
+                  <i className="fa-solid fa-trash"></i>
+                </button>
+              </>
+            )}
+          </div>
         ),
       },
     ],
-    [isSubmitting, isConfirmLoading]
+    [isSubmitting, isConfirmLoading, isSuperAdmin]
   );
 
   // AlertBar logic
@@ -365,13 +385,13 @@ export default function OperatorsContent() {
 
       <PageHeader
         title="Operator Management"
-        subtitle="Create, configure, and monitor franchise operator accounts"
+        subtitle={isSuperAdmin ? "Create, configure, and monitor franchise operator accounts" : "Monitor franchise operator accounts and branch locations"}
         illustrationSrc="/pageImages/admin/operators.png"
-        primaryAction={{
+        primaryAction={isSuperAdmin ? {
           label: "Add Operator",
           icon: "fa-solid fa-user-plus",
           onClick: handleOpenAddModal,
-        }}
+        } : null}
       />
 
       <section className="services-summary-grid">
@@ -404,20 +424,17 @@ export default function OperatorsContent() {
             <i className="fa-solid fa-magnifying-glass search-icon"></i>
             <input
               type="text"
-              placeholder="Search by branch or email..."
+              placeholder="Search by branch name, email, or address..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
             />
             {searchTerm && (
               <button
-                className="clear-search-btn"
-                onClick={() => {
-                  setSearchTerm("");
-                  setCurrentPage(1);
-                }}
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchTerm("")}
+                aria-label="Clear search"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
@@ -426,24 +443,20 @@ export default function OperatorsContent() {
 
           <FilterChipGroup
             chips={[
-              { value: "all", label: `All (${totalOperators})` },
-              { value: "active", label: `Active (${activeCount})` },
-              { value: "disabled", label: `Disabled (${inactiveCount})` },
+              { label: "All", value: "all", count: totalOperators },
+              { label: "Active", value: "Active", count: activeCount },
+              { label: "Disabled", value: "Disabled", count: inactiveCount },
             ]}
-            activeChip={statusFilter}
-            onChipChange={(val) => {
-              setStatusFilter(val);
-              setCurrentPage(1);
-            }}
+            activeValue={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
           />
         </div>
 
-        {/* Standardized Reusable DataTable */}
+        {/* The Reusable DataTable Component */}
         <DataTable
-          columns={columns}
           data={paginatedOperators}
-          keyField="id"
-          selectable={true}
+          columns={columns}
+          selectable={isSuperAdmin}
           selectedIds={selectedIds}
           disabled={isConfirmLoading || isSubmitting}
           onSelectionChange={setSelectedIds}

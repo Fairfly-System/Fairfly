@@ -42,7 +42,10 @@ export default function AppSidebar({
       return userDetails.branchName;
     }
     const role = userDetails?.role || (portalName === 'Admin' ? 'admin' : 'operator');
-    if (role === 'admin') return 'Super Administrator';
+    if (role === 'admin') {
+      const isSuper = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
+      return isSuper ? 'Super Administrator' : 'Support Administrator';
+    }
     if (role === 'operator') return 'Operator Account';
     return role.charAt(0).toUpperCase() + role.slice(1);
   };

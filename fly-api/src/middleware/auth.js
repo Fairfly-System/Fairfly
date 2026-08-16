@@ -71,7 +71,25 @@ const requireRole = (allowedRoles) => {
   };
 };
 
+/**
+ * Middleware to enforce Super Admin only access
+ */
+const requireSuperAdmin = (req, res, next) => {
+  if (!req.userDetails || req.userDetails.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+
+  const isSuper = req.userDetails.isSuperAdmin === true || req.userDetails.email === 'admin@gmail.com' || req.user?.email === 'admin@gmail.com';
+  if (!isSuper) {
+    return res.status(403).json({ error: 'Forbidden: Super Administrator access required' });
+  }
+
+  next();
+};
+
 module.exports = {
   verifyFirebaseToken,
-  requireRole
+  requireRole,
+  requireSuperAdmin
 };
+

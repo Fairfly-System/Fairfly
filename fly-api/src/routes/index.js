@@ -11,6 +11,9 @@ const ticketRoutes = require('./ticketRoutes');
 const inquiryRoutes = require('./inquiryRoutes');
 const quotationRoutes = require('./quotationRoutes');
 const appointmentRoutes = require('./appointmentRoutes');
+const adminRoutes = require('./adminRoutes');
+const notificationRoutes = require('./notificationRoutes');
+const resourceRoutes = require('./resourceRoutes');
 
 router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
@@ -23,5 +26,8 @@ router.use('/tickets', ticketRoutes);
 router.use('/inquiries', inquiryRoutes);
 router.use('/quotations', quotationRoutes);
 router.use('/appointments', appointmentRoutes);
+router.use('/admins', adminRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/resources', resourceRoutes);
 
 module.exports = router;

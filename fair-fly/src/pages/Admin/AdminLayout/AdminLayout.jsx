@@ -2,15 +2,17 @@ import './admin-layout.css';
 import { Outlet } from 'react-router';
 import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useAuthContext } from '../../../context/AuthContext';
 
-const adminLinks = [
+const baseAdminLinks = [
   { to: '/admin', end: true, icon: 'fa-solid fa-arrow-trend-up', label: 'Analytics' },
   { to: '/admin/services', icon: 'fa-regular fa-file-lines', label: 'Services' },
   { to: '/admin/workflow-templates', icon: 'fa-solid fa-diagram-project', label: 'Workflows' },
   { to: '/admin/operators', icon: 'fa-solid fa-users', label: 'Operators' },
+  { to: '/admin/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },
   { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
   { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
   { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },
@@ -18,6 +20,22 @@ const adminLinks = [
 ];
 
 export default function AdminLayout() {
+  const { user, userDetails } = useAuthContext();
+  const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
+
+  const navLinks = useMemo(() => {
+    if (isSuperAdmin) {
+      // Insert Admins link right after Operators (index 3)
+      const links = [...baseAdminLinks];
+      links.splice(4, 0, {
+        to: '/admin/admins',
+        icon: 'fa-solid fa-user-shield',
+        label: 'Admins'
+      });
+      return links;
+    }
+    return baseAdminLinks;
+  }, [isSuperAdmin]);
   // Services
   const [activeServices, setActiveServices] = useState(0);
   const [disabledServices, setDisabledServices] = useState(0);
@@ -91,7 +109,7 @@ export default function AdminLayout() {
     <AppLayout
       portalName="Admin"
       portalSubtitle="Management Portal"
-      navLinks={adminLinks}
+      navLinks={navLinks}
       statCards={
         <>
           {/* ── Revenue ── */}

@@ -1,5 +1,75 @@
 # Update Logs
 
+## [2026-08-16] Phase 3: Resources System (Marketing, Documentation & Help Materials)
+
+### Files Created & Modified
+- **Backend Resource Layer (`fly-api`)**:
+  - `fly-api/src/controllers/resourceController.js` **[NEW]** (Implemented `createResource`, `getResources`, `getResourceById`, `updateResource`, `deleteResource`, and `recordDownload` with automatic operator notification triggers upon new upload)
+  - `fly-api/src/routes/resourceRoutes.js` **[NEW]** (Created `/api/resources` endpoints with role-based access control: Admin only for mutations, all authenticated users for reading and downloading)
+  - `fly-api/src/routes/index.js` (Registered `/resources` route)
+- **Admin Portal Components & Modals (`fair-fly`)**:
+  - `fair-fly/src/components/Admin/Modals/ResourceModal/ResourceModal.jsx` **[NEW]** & `ResourceForm.jsx` **[NEW]** & `resource-modal.css` **[NEW]** (Interactive drag-and-drop file upload modal with Firebase Storage integration, progress indicator, file size limit guards [20MB for video, 10MB for documents], category dropdown, suggested tags `#Promo`, `#SocialMedia`, `#SOP`, `#Training`, and audience selector)
+  - `fair-fly/src/pages/Admin/AdminResources/AdminResources.jsx` **[NEW]** & `ResourcesContent.jsx` **[NEW]** & `admin-resources.css` **[NEW]** (Admin resource management dashboard with real-time `onSnapshot` DataTable, 4 KPI cards [Total Materials, Marketing, Docs & Guides, Total Downloads], category/tag/search filters, and edit/delete actions)
+  - `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx` (Added **Resources** navigation link to Admin sidebar)
+- **Operator Portal Resource Hub (`fair-fly`)**:
+  - `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` **[NEW]** & `operator-resources.css` **[NEW]** (Operator-facing materials library with category filter pills, count badges, keyword search, Grid/List view switcher, file type badge icons, tag chips, preview modal for PDFs and images, and direct download buttons with backend download counter tracking)
+  - `fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx` (Added **Resources** navigation link to Operator sidebar)
+  - `fair-fly/src/App.jsx` (Registered `/admin/resources` and `/operator/resources` routes)
+
+### Summary of Changes
+- **Admin Resource Publishing**: Administrators can upload and distribute marketing materials, operational SOPs, and help templates to operators with cloud storage upload and tag metadata.
+- **Operator Material Library**: Franchise operators have access to an organized, searchable library with category pills, quick previews, and single-click downloads with download analytics tracking.
+
+---
+
+### Files Created & Modified
+- **Backend Notification Layer (`fly-api`)**:
+  - `fly-api/src/services/notificationService.js` **[NEW]** (Implemented `createNotification`, `notifyAdmins`, and `notifyBranchOperators` helpers dispatching structured notifications to Firestore `notifications` collection)
+  - `fly-api/src/controllers/notificationController.js` **[NEW]** (Implemented `getNotifications`, `markAsRead`, `markAllAsRead`, and `deleteNotification` endpoints with user authorization checks)
+  - `fly-api/src/routes/notificationRoutes.js` **[NEW]** (Created `/api/notifications` routes protected by `verifyFirebaseToken` and rate limiter)
+  - `fly-api/src/routes/index.js` (Registered `/notifications` route)
+  - `fly-api/src/controllers/appointmentController.js` (Integrated notifications on appointment creation and status update)
+  - `fly-api/src/controllers/ticketController.js` (Integrated notifications on ticket creation and reply thread messages)
+  - `fly-api/src/controllers/franchiseController.js` (Integrated notifications on new franchise applications)
+- **Frontend Components & Real-time State (`fair-fly`)**:
+  - `fair-fly/src/context/NotificationContext.jsx` **[NEW]** (Created real-time Firestore `onSnapshot` provider for current user's notifications, unread count tracking, and read/delete mutations)
+  - `fair-fly/src/components/UI/NotificationBell/NotificationBell.jsx` **[NEW]** & `notification-bell.css` **[NEW]** (Built interactive bell button with animated unread badge, floating dropdown panel with `All` vs `Unread` tabs, "Mark all read" action, contextual type icons, human-readable time-ago formatting, click-to-navigate route routing, and dismissal actions)
+  - `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` (Mounted `<NotificationBell />` in the top right navbar for Admin, Operator, and Client portals)
+  - `fair-fly/src/main.jsx` (Wrapped app root with `<NotificationProvider>`)
+  - `fair-fly/src/index.css` (Enhanced `.status-pill` and `.icon-btn` color schemes and badge styling)
+
+### Summary of Changes
+- **Live Notifications Across Portals**: Admins, Operators, and Clients now receive instant in-app alerts when appointments are booked/updated, tickets are created/replied, and franchise applications are submitted.
+- **Interactive Notification Center**: Bell icon in navbar provides a dropdown with unread badges, category filtering, unread status indicators, and direct navigation links.
+
+---
+
+### Files Created & Modified
+- **Backend Admin Layer (`fly-api`)**:
+  - `fly-api/src/controllers/adminController.js` **[NEW]** (Implemented `createAdmin`, `getAdmins`, `getAdminById`, `updateAdmin`, and `deleteAdmin` with Super Admin protection safeguards)
+  - `fly-api/src/routes/adminRoutes.js` **[NEW]** (Created `/api/admins` routes protected by `verifyFirebaseToken` and `requireSuperAdmin`)
+  - `fly-api/src/routes/index.js` (Registered `/admins` route)
+  - `fly-api/src/middleware/auth.js` (Added `requireSuperAdmin` middleware checking `req.userDetails.isSuperAdmin === true` or `email === 'admin@gmail.com'`)
+  - `fly-api/src/routes/operatorRoutes.js` (Restricted operator creation, bulk status, bulk delete, patch, and delete endpoints to Super Admin only)
+- **Admin Portal Components & Pages (`fair-fly`)**:
+  - `fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx` (Differentiated `Super Administrator` vs `Support Administrator` role badge in sidebar profile footer)
+  - `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx` (Dynamically rendered `Admins` navigation tab exclusively for Super Admin)
+  - `fair-fly/src/pages/Admin/AdminAdmins/AdminAdmins.jsx` **[NEW]** (Outlet wrapper for Admins management)
+  - `fair-fly/src/pages/Admin/AdminAdmins/AdminsContent.jsx` **[NEW]** & `admin-admins.css` **[NEW]** (Real-time Firestore `onSnapshot` DataTable listing all administrators, Super Admin gold crown badge vs Support Admin badge, KPI summary cards, and search/filters)
+  - `fair-fly/src/pages/Admin/AdminAdmins/AdminDetailPage.jsx` **[NEW]** (Detailed admin profile view, system access summary, activity audit overview, and status toggle/delete handlers)
+  - `fair-fly/src/components/Admin/Modals/AdminModal/AdminModal.jsx` **[NEW]** & `AdminForm.jsx` **[NEW]** (Modal form for creating and updating Support Administrator accounts)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` & `OperatorDetailPage.jsx` (Restricted operator mutation buttons so regular Support Admins can view branches, but only Super Admin can create, enable/disable, or delete operators)
+  - `fair-fly/src/App.jsx` (Registered `/admin/admins` and `/admin/admins/:id` routes)
+
+### Summary of Changes
+- **Super Admin vs Support Admin Distinction**: The primary administrator (`admin@gmail.com`) is designated as `isSuperAdmin: true`.
+- **Privilege Separation**:
+  - Super Admin can create, edit, disable, and delete Support Admins, as well as create and configure Operators.
+  - Support Admins can view branch operators and handle day-to-day operations but cannot create/disable operators or manage other admins.
+- **Dedicated Admins Management**: Super Admin has a dedicated **Admins** tab in the sidebar with live Firestore sync, profile view, and audit overview.
+
+---
+
 ## [2026-08-16] Admin Service Catalog Enhancements & Client "Airbnb/Shopping UI" Marketplace
 
 ### Files Created & Modified

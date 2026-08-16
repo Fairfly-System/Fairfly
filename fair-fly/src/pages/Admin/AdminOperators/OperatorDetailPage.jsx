@@ -20,7 +20,8 @@ export default function OperatorDetailPage() {
   console.log('[OperatorDetailPage] Rendering detail page, ID =', id);
   const navigate = useNavigate();
   const { data: operators, loading } = useAdminContext();
-  const { userToken } = useAuthContext();
+  const { userToken, user, userDetails } = useAuthContext();
+  const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
   const { addToast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,7 +49,7 @@ export default function OperatorDetailPage() {
         setConfirmState(null);
       },
       (error) => {
-        addToast(`Failed to update operator status: ${error.message}`, 'error');
+        addToast(`Failed to update status: ${error.message}`, 'error');
       },
       setIsConfirmLoading
     );
@@ -62,9 +63,8 @@ export default function OperatorDetailPage() {
       null,
       { Authorization: `Bearer ${userToken}` },
       () => {
-        addToast('Operator account deleted successfully', 'success');
-        setConfirmState(null);
-        navigate('/admin/operators'); // Return to list after deletion
+        addToast('Operator deleted successfully', 'success');
+        navigate('/admin/operators');
       },
       (error) => {
         addToast(`Failed to delete operator: ${error.message}`, 'error');
@@ -115,7 +115,7 @@ export default function OperatorDetailPage() {
     { label: operator ? operator.branchName : 'Loading...' },
   ];
 
-  const actions = [
+  const actions = isSuperAdmin ? [
     {
       label: 'Edit Info',
       icon: 'fa-solid fa-pen-to-square',
@@ -137,7 +137,7 @@ export default function OperatorDetailPage() {
       className: 'btn-danger',
       disabled: isSubmitting || isConfirmLoading,
     },
-  ];
+  ] : [];
 
   const alertBarProps = useMemo(() => {
     if (!operator) return null;

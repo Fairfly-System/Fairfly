@@ -4,6 +4,7 @@ const {
   queryDatabaseAdvanced, 
   updateToDatabase 
 } = require('../services/firebaseService');
+const { notifyAdmins } = require('../services/notificationService');
 
 const COLLECTIONS = {
   FRANCHISE_APPLICATIONS: 'franchiseApplications'
@@ -36,6 +37,16 @@ const submitApplication = async (req, res) => {
     };
 
     const docId = await addToDatabase(COLLECTIONS.FRANCHISE_APPLICATIONS, sanitizedData);
+
+    // Notify admins
+    notifyAdmins({
+      title: 'New Franchise Application',
+      message: `${sanitizedData.fullName} submitted an application for ${sanitizedData.preferredBranchLocation}`,
+      type: 'franchise',
+      link: '/admin/franchise-apps',
+      metadata: { applicationId: docId }
+    }).catch(e => console.warn('Franchise notification warning:', e.message));
+
     return res.status(201).json({ id: docId, message: 'Application submitted successfully' });
   } catch (error) {
     console.error('Error submitting franchise application:', error);

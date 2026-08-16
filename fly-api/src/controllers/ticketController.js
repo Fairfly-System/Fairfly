@@ -4,6 +4,7 @@ const {
   queryDatabaseAdvanced, 
   updateToDatabase 
 } = require('../services/firebaseService');
+const { createNotification, notifyAdmins } = require('../services/notificationService');
 
 const COLLECTIONS = {
   TICKETS: 'tickets'
@@ -60,6 +61,15 @@ const createTicket = async (req, res) => {
     };
 
     const docId = await addToDatabase(COLLECTIONS.TICKETS, newTicketData);
+
+    // Notify admins
+    notifyAdmins({
+      title: 'New Support Ticket',
+      message: `${newTicketData.operatorName} submitted ticket: "${newTicketData.title}" (${newTicketData.priority})`,
+      type: 'ticket',
+      link: '/admin/tickets'
+    }).catch(e => console.warn('Ticket notification warning:', e.message));
+
     return res.status(201).json({ id: docId, ...newTicketData, message: 'Ticket created successfully' });
   } catch (error) {
     console.error('Error creating support ticket:', error);
@@ -220,6 +230,26 @@ const addMessageToThread = async (req, res) => {
       status: newStatus,
       updatedAt: now
     });
+
+    // Notify the other party
+    if (activeRole === 'admin' && existingTicket.operatorId) {
+      createNotification({
+        recipientUid: existingTicket.operatorId,
+        title: 'Support Ticket Reply',
+        message: `${activeName} replied on: "${existingTicket.title}"`,
+        type: 'ticket',
+        link: '/operator/tickets',
+        metadata: { ticketId: id }
+      }).catch(e => console.warn('Ticket reply notification warning:', e.message));
+    } else if (activeRole === 'operator') {
+      notifyAdmins({
+        title: 'Operator Ticket Reply',
+        message: `${activeName} replied on ticket: "${existingTicket.title}"`,
+        type: 'ticket',
+        link: '/admin/tickets',
+        metadata: { ticketId: id }
+      }).catch(e => console.warn('Admin ticket notification warning:', e.message));
+    }
 
     return res.status(200).json({ 
       message: 'Message added to ticket thread successfully', 

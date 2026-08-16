@@ -6,6 +6,7 @@ import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../toast/ToastProvider';
 import BaseModal from '../ModalBase/BaseModal';
 import TeamChatModal from '../../Shared/TeamChatModal/TeamChatModal';
+import NotificationBell from '../NotificationBell/NotificationBell';
 import './app-navbar.css';
 
 /**
@@ -115,6 +116,9 @@ export default function AppNavbar({
         )}
 
         <div className="app-nav-actions">
+          {/* Notification Bell */}
+          <NotificationBell />
+
           {/* Render team chat for Admin & Operator only */}
           {!isClient && (
             <button className="app-nav-chat btn-ghost" onClick={() => setIsChatOpen(true)}>

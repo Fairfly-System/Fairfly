@@ -1,0 +1,174 @@
+/* ==========================================================================
+   Admin Resources Page Styles
+   ========================================================================== */
+
+.admin-resources-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.resources-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .resources-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .resources-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.resources-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.resources-filters-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.resources-search-box {
+  position: relative;
+  min-width: 15rem;
+  max-width: 22rem;
+  flex: 1;
+}
+
+.resources-search-box i {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-light);
+  font-size: 0.875rem;
+}
+
+.resources-search-input {
+  width: 100%;
+  padding: 0.5rem 0.875rem 0.5rem 2.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 0.8125rem;
+  color: var(--text-dark);
+  outline: none;
+  transition: var(--transition-fast);
+}
+
+.resources-search-input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 0.1875rem var(--purple-glow);
+}
+
+.resources-select-filter {
+  padding: 0.5rem 2rem 0.5rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 0.8125rem;
+  color: var(--text-dark);
+  cursor: pointer;
+  outline: none;
+}
+
+.resources-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+}
+
+.resources-category-badge.marketing {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.resources-category-badge.documentation {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+}
+
+.resources-category-badge.help {
+  background: var(--warning-yellow-light);
+  color: #B78103;
+}
+
+.resources-category-badge.forms {
+  background: var(--complete-green-light);
+  color: var(--complete-green-dark);
+}
+
+.resources-category-badge.brand {
+  background: #FDF2F8;
+  color: #DB2777;
+}
+
+.resource-row-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.resource-file-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--purple-light-2);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.resource-title-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.resource-title-text {
+  font-weight: 700;
+  color: var(--text-dark);
+  font-size: 0.875rem;
+}
+
+.resource-filename-text {
+  font-size: 0.6875rem;
+  color: var(--text-light);
+}
+
+.resource-tags-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.resource-table-tag {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.375rem;
+  background: var(--bg);
+  color: var(--text-mid);
+  border-radius: var(--radius-xs);
+  font-weight: 500;
+}

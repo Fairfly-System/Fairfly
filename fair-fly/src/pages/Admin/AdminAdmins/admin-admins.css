@@ -1,0 +1,139 @@
+/* ==========================================================================
+   Admin Management Styles (Super Admin)
+   ========================================================================== */
+
+.admin-admins-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.admins-table-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.super-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.71875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+  border: 1px solid rgba(107, 111, 245, 0.25);
+}
+
+.support-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.71875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  color: var(--text-mid);
+  border: 1px solid var(--border-color);
+}
+
+.admin-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-avatar-bubble {
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 50%;
+  background: var(--purple-light-2);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.admin-avatar-bubble--super {
+  background: var(--purple);
+  color: #ffffff;
+}
+
+.admin-user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.admin-user-name {
+  font-weight: 700;
+  color: var(--text-dark);
+  font-size: 0.875rem;
+}
+
+.admin-user-email {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+/* Detail page styles */
+.admin-detail-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-actions-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.admin-action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+}
+
+.admin-action-icon {
+  color: var(--purple);
+  margin-top: 0.1875rem;
+}
+
+.admin-action-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  flex: 1;
+}
+
+.admin-action-title {
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.admin-action-meta {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}

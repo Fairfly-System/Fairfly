@@ -11,6 +11,7 @@ const operatorLinks = [
   { to: '/operator/appointments', icon: 'fa-regular fa-calendar', label: 'Appointments' },
   { to: '/operator/inquiry-forms', icon: 'fa-solid fa-file-pen', label: 'Inquiry Forms' },
   { to: '/operator/quotations', icon: 'fa-solid fa-file-invoice-dollar', label: 'Quotations' },
+  { to: '/operator/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },
   { to: '/operator/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
   { to: '/operator/quick-links', icon: 'fa-solid fa-globe', label: 'Quick Links' },
   { to: '/operator/history', icon: 'fa-solid fa-clock-rotate-left', label: 'History' },

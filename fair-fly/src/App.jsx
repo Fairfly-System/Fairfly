@@ -58,6 +58,12 @@ import QuotationDetailPage from './pages/Operator/OperatorQuotations/QuotationDe
 import { InquiryContent } from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
 import InquiryFormDetailPage from './pages/Operator/OperatorInquiryForms/InquiryFormDetailPage';
 
+import AdminAdmins from './pages/Admin/AdminAdmins/AdminAdmins';
+import AdminsContent from './pages/Admin/AdminAdmins/AdminsContent';
+import AdminDetailPage from './pages/Admin/AdminAdmins/AdminDetailPage';
+import AdminResources from './pages/Admin/AdminResources/AdminResources';
+import OperatorResources from './pages/Operator/OperatorResources/OperatorResources';
+
 function App() {
 
   const { user, userDetails, userLoading } = useAuthContext();
@@ -86,6 +92,11 @@ function App() {
             <Route index element={<OperatorsContent />} />
             <Route path=":id" element={<OperatorDetailPage />} />
           </Route>
+          <Route path="admins" element={<AdminAdmins />}>
+            <Route index element={<AdminsContent />} />
+            <Route path=":id" element={<AdminDetailPage />} />
+          </Route>
+          <Route path="resources" element={<AdminResources />} />
           <Route path="franchise-apps" element={<AdminFranchiseApps />}>
             <Route index element={<FranchiseContent />} />
             <Route path=":id" element={<FranchiseAppDetailPage />} />
@@ -114,6 +125,7 @@ function App() {
             <Route path=":id" element={<AppointmentDetailPage />} />
           </Route>
           <Route path="workflows" element={<Navigate to="/operator" replace />} />
+          <Route path="resources" element={<OperatorResources />} />
           <Route path="tickets" element={<OperatorTickets />}>
             <Route index element={<OperatorTicketsContent />} />
             <Route path=":id" element={<OperatorTicketDetailPage />} />
@@ -148,7 +160,7 @@ function App() {
                 {roleRoutes[userDetails.role]}
                 <Route
                   path="*"
-                  element={<Navigate to={`/${userDetails.role}`} replace />}
+                  element={<Navigate to={`/${userDetails.role}`} replace />} //Default routes for authenticated users
                 />
               </>
             ) : (
