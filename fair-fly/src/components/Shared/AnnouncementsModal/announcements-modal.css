@@ -1,0 +1,218 @@
+/* ==========================================================================
+   Head Office Announcements Modal Styles
+   ========================================================================== */
+
+.announcements-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: 34rem;
+}
+
+/* Admin Broadcast Form */
+.announcements-admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--purple-light-2);
+  border-radius: var(--radius-lg);
+  border: 0.0625rem solid var(--purple-light);
+}
+
+.announcements-form-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--purple-dark);
+}
+
+.announcements-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 0.875rem;
+  color: var(--text-dark);
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition-fast);
+}
+
+.announcements-input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 0.1875rem var(--purple-glow);
+}
+
+.announcements-textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 0.875rem;
+  color: var(--text-dark);
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 4.5rem;
+  transition: var(--transition-fast);
+}
+
+.announcements-textarea:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 0.1875rem var(--purple-glow);
+}
+
+.announcements-form-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.announcements-priority-select {
+  padding: 0.5rem 1.75rem 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 0.8125rem;
+  color: var(--text-dark);
+  font-weight: 600;
+  outline: none;
+}
+
+/* Operator Banner */
+.announcements-operator-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: #EFF6FF;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid #BFDBFE;
+  font-size: 0.8125rem;
+  color: #1E40AF;
+}
+
+.announcements-operator-banner i {
+  font-size: 1.125rem;
+  color: #2563EB;
+}
+
+/* Announcements Feed */
+.announcements-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  overflow-y: auto;
+  max-height: 20rem;
+  padding-right: 0.25rem;
+}
+
+.announcement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.125rem;
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  border: 0.0625rem solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+}
+
+.announcement-card:hover {
+  border-color: var(--purple-light);
+}
+
+.announcement-card.urgent {
+  border-left: 0.25rem solid var(--error-red);
+}
+
+.announcement-card.important {
+  border-left: 0.25rem solid var(--orange);
+}
+
+.announcement-card.normal {
+  border-left: 0.25rem solid var(--purple);
+}
+
+.announcement-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.announcement-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.announcement-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.announcement-priority-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+}
+
+.announcement-priority-badge.urgent {
+  background: var(--error-red-light);
+  color: var(--error-red-dark);
+}
+
+.announcement-priority-badge.important {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+.announcement-priority-badge.normal {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+}
+
+.announcement-meta {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.announcement-content {
+  font-size: 0.875rem;
+  color: var(--text-mid);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.announcements-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-light);
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.announcements-empty i {
+  font-size: 2.5rem;
+  color: var(--text-light-2);
+}

@@ -13,6 +13,7 @@ const baseAdminLinks = [
   { to: '/admin/workflow-templates', icon: 'fa-solid fa-diagram-project', label: 'Workflows' },
   { to: '/admin/operators', icon: 'fa-solid fa-users', label: 'Operators' },
   { to: '/admin/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },
+  { to: '/admin/messages', icon: 'fa-solid fa-comments', label: 'Messages' },
   { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
   { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
   { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },

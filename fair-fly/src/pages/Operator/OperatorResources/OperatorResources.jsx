@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { firestore, auth } from '../../../firebase';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import { API_BASE_URL } from '../../../utils/config';
 import './operator-resources.css';
 
@@ -140,12 +142,21 @@ export default function OperatorResources() {
     }
   };
 
-  const handlePreview = (resource) => {
-    window.open(resource.fileUrl, '_blank', 'noopener,noreferrer');
-  };
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Resources' },
+  ];
 
   return (
-    <div className="operator-resources-page">
+    <main className="operator-resources-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Branch Resources & Materials"
+        subtitle="Access marketing materials, operational SOPs, forms, and templates provided by Head Office"
+        illustrationSrc="/pageImages/admin/resources.png"
+      />
+
       {/* Category Pills Bar */}
       <div className="op-resources-category-bar">
         {CATEGORIES.map((cat) => {
@@ -291,6 +302,6 @@ export default function OperatorResources() {
           })}
         </div>
       )}
-    </div>
+    </main>
   );
 }

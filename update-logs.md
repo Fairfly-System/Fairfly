@@ -1,5 +1,43 @@
 # Update Logs
 
+## [2026-08-17] Phase 4: 1-to-1 Messaging System (WhatsApp Web Style) & Head Office Announcements
+
+### Files Created & Modified
+- **Backend Messaging Layer (`fly-api`)**:
+  - `fly-api/src/controllers/chatController.js` **[MODIFIED]** (Implemented `getContacts` with role permissions filtering, `getOrCreateConversation` enforcing allowed communication channels [Client<->Operator, Operator<->Admin, Admin<->Admin, blocking Client<->Admin], `getUserConversations`, `postMessage` with recipient in-app notifications, `markConversationRead`, `getAnnouncements`, and `postAnnouncement` restricted to Admins)
+  - `fly-api/src/routes/chatRoutes.js` **[MODIFIED]** (Added `/contacts`, `/conversations`, `/conversations/:id/messages`, `/conversations/:id/read`, and `/announcements` routes)
+  - `fly-api/src/services/notificationService.js` (Added `notifyAllOperators` helper for broadcasting announcement notifications)
+- **Frontend Messaging & Modals (`fair-fly`)**:
+  - `fair-fly/src/services/chatService.js` **[MODIFIED]** (Implemented `getEligibleContacts`, `getOrCreateDirectChat`, `sendDirectMessage`, `markChatAsRead`, `subscribeToConversations`, `subscribeToMessages`, `subscribeToAnnouncements`, and `postAnnouncement`)
+  - `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` **[NEW]** & `messages-page.css` **[NEW]** (Full 2-pane WhatsApp Web-style messaging experience with conversation list, real-time unread badges, relative timestamps, search filter, message bubbles with check status, file attachments [5MB limit for images/PDFs/docs], enter-to-send, and clean empty state)
+  - `fair-fly/src/components/Shared/Messaging/NewChatModal/NewChatModal.jsx` **[NEW]** & `new-chat-modal.css` **[NEW]** (Contact selector modal filtered by permissions with role badges and branch indicators)
+  - `fair-fly/src/components/Shared/AnnouncementsModal/AnnouncementsModal.jsx` **[NEW]** & `announcements-modal.css` **[NEW]** (Rebranded Team Chat into broadcast Announcements: Admins can post with Priority tags and broadcast notifications; Operators have read-only feed)
+  - `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` (Replaced Team Chat with Announcements button and modal, added 4th NavLink for Messages in Client navbar and mobile drawer)
+  - `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx` (Added Messages link to Admin sidebar)
+  - `fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx` (Added Messages link to Operator sidebar)
+  - `fair-fly/src/App.jsx` (Mounted `/client/messages`, `/operator/messages`, and `/admin/messages` routes)
+
+### Summary of Changes
+- **Live 1-to-1 Messaging**: Built a 2-pane WhatsApp Web-style direct messaging portal across Client, Operator, and Admin interfaces with real-time sync, file sharing, and unread counters.
+- **Strict Role-Based Communication**: Enforced communication boundaries: Clients talk only to Operators, Operators talk to Admins and Clients, Admins talk to Admins and Operators (Client-to-Admin direct messaging strictly forbidden).
+- **Broadcast Announcements**: Transformed Team Chat into an administrative broadcast hub with priority badges (`Normal`, `Important`, `Urgent`) and automated operator notifications.
+
+---
+
+## [2026-08-17] Resources Layout Alignment & Standardization
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx` (Standardized page hierarchy: `<main className="resources-page page-fade-in">` -> `<Breadcrumbs>` -> `<PageHeader>` -> `<section className="resources-summary-grid">` -> `<section className="card resources-table-card">`, added `Pagination` component and paginated list slicing)
+- `fair-fly/src/pages/Admin/AdminResources/admin-resources.css` (Removed redundant `padding: 1.5rem` from root container, standardized spacing with `gap: 1.25rem`, aligned `.table-toolbar`, `.search-box`, and `.filter-select` controls with other Admin pages)
+- `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` (Added `<Breadcrumbs>` and `<PageHeader>`, wrapped in semantic `<main className="operator-resources-page page-fade-in">`)
+- `fair-fly/src/pages/Operator/OperatorResources/operator-resources.css` (Removed redundant outer padding, standardized spacing)
+
+### Summary of Changes
+- Eliminated double padding on Admin and Operator Resources pages to perfectly match the standard layout padding from `AppLayout` (`1.25rem 2rem 2rem 2rem`).
+- Enclosed the search bar, filter dropdowns, `DataTable`, and `Pagination` inside a standard `<section className="card resources-table-card">` with standard card padding.
+
+---
+
 ## [2026-08-16] Phase 3: Resources System (Marketing, Documentation & Help Materials)
 
 ### Files Created & Modified

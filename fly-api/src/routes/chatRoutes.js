@@ -1,23 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const {
-  createChatSession,
-  getChatSession,
-  postMessage
+  getContacts,
+  getOrCreateConversation,
+  getUserConversations,
+  postMessage,
+  markConversationRead,
+  getAnnouncements,
+  postAnnouncement
 } = require('../controllers/chatController');
 const { verifyFirebaseToken } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
 // All chat endpoints require authentication
 router.use(verifyFirebaseToken);
-//If rejected, return. 
 
-//Once Verified, Move onto Rate Limiter, then to the Controllers
-router.post('/', apiRateLimiter, createChatSession);
-router.get('/:id', apiRateLimiter, getChatSession);
-router.post('/:id/messages', apiRateLimiter, postMessage);
+// Contact directory & conversations
+router.get('/contacts', apiRateLimiter, getContacts);
+router.get('/conversations', apiRateLimiter, getUserConversations);
+router.post('/conversations', apiRateLimiter, getOrCreateConversation);
+router.post('/conversations/:id/messages', apiRateLimiter, postMessage);
+router.patch('/conversations/:id/read', apiRateLimiter, markConversationRead);
 
-// Note: GET /:id/messages is handled on the frontend via Firestore onSnapshot subscription
+// Announcements
+router.get('/announcements', apiRateLimiter, getAnnouncements);
+router.post('/announcements', apiRateLimiter, postAnnouncement);
+
+// Legacy routes
+router.post('/', apiRateLimiter, getOrCreateConversation);
 
 module.exports = router;
-

@@ -112,8 +112,37 @@ const notifyBranchOperators = async ({ branchName, title, message, type = 'syste
   }
 };
 
+/**
+ * Notify all active operators across all branches
+ */
+const notifyAllOperators = async ({ title, message, type = 'system', link = '/operator', metadata = {} }) => {
+  try {
+    const opSnaps = await db.collection(COLLECTIONS.USERS)
+      .where('role', '==', 'operator')
+      .get();
+
+    const promises = opSnaps.docs.map(doc =>
+      createNotification({
+        recipientUid: doc.id,
+        recipientRole: 'operator',
+        title,
+        message,
+        type,
+        link,
+        metadata
+      })
+    );
+
+    return await Promise.all(promises);
+  } catch (error) {
+    console.error('Error notifying all operators:', error);
+    return [];
+  }
+};
+
 module.exports = {
   createNotification,
   notifyAdmins,
-  notifyBranchOperators
+  notifyBranchOperators,
+  notifyAllOperators
 };

@@ -3,7 +3,10 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { firestore, auth } from '../../../firebase';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import DataTable from '../../../components/UI/DataTable/DataTable';
+import Pagination from '../../../components/UI/Pagination/Pagination';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import ResourceModal from '../../../components/Admin/Modals/ResourceModal/ResourceModal';
 import { API_BASE_URL } from '../../../utils/config';
@@ -50,6 +53,10 @@ export default function ResourcesContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedVisibility, setSelectedVisibility] = useState('all');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   // Modals & Actions
   const modalRef = useRef(null);
@@ -102,6 +109,12 @@ export default function ResourcesContent() {
       return true;
     });
   }, [resources, selectedCategory, selectedVisibility, searchQuery]);
+
+  // Paginated list
+  const paginatedResources = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredResources.slice(start, start + pageSize);
+  }, [filteredResources, currentPage, pageSize]);
 
   // KPI calculations
   const totalResources = resources.length;
@@ -175,7 +188,6 @@ export default function ResourcesContent() {
       }
 
       addToast('Resource deleted successfully', 'success');
-      confirmModalRef.current?.closeModal();
       setResourceToDelete(null);
     } catch (error) {
       console.error('Error deleting resource:', error);
@@ -318,10 +330,7 @@ export default function ResourcesContent() {
               type="button"
               className="icon-btn delete"
               title="Delete Resource"
-              onClick={() => {
-                setResourceToDelete(r);
-                confirmModalRef.current?.openModal();
-              }}
+              onClick={() => setResourceToDelete(r)}
             >
               <i className="fa-solid fa-trash"></i>
             </button>
@@ -332,10 +341,28 @@ export default function ResourcesContent() {
     []
   );
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/admin' },
+    { label: 'Resources' },
+  ];
+
   return (
-    <div className="admin-resources-container">
+    <main className="resources-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <PageHeader
+        title="Resource Materials & Documentation"
+        subtitle="Upload, organize, and distribute marketing materials, SOP guides, and templates for branch operators"
+        illustrationSrc="/pageImages/admin/resources.png"
+        primaryAction={{
+          label: 'Upload Resource',
+          icon: 'fa-solid fa-cloud-arrow-up',
+          onClick: handleOpenAddModal,
+        }}
+      />
+
       {/* 4 KPI Summary Cards */}
-      <div className="resources-kpi-grid">
+      <section className="resources-summary-grid">
         <KpiCard
           title="Total Materials"
           value={totalResources}
@@ -372,69 +399,93 @@ export default function ResourcesContent() {
           badge="Activity"
           badgeType="ok"
         />
-      </div>
+      </section>
 
-      {/* Toolbar */}
-      <div className="resources-toolbar">
-        <div className="resources-filters-group">
-          {/* Search Box */}
-          <div className="resources-search-box">
-            <i className="fa-solid fa-magnifying-glass"></i>
-            <input
-              type="text"
-              className="resources-search-input"
-              placeholder="Search by title, tags, or filename..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      {/* Card Table Container */}
+      <section className="card resources-table-card">
+        {/* Toolbar */}
+        <div className="table-toolbar">
+          <div className="table-toolbar-left">
+            {/* Search Box */}
+            <div className="search-box">
+              <i className="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search by title, tags, or filename..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="clear-search-btn"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCurrentPage(1);
+                  }}
+                  aria-label="Clear search"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter */}
+            <select
+              className="filter-select"
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">All Categories</option>
+              <option value="Marketing Materials">Marketing Materials</option>
+              <option value="Documentation & Guides">Documentation & Guides</option>
+              <option value="Help & FAQs">Help & FAQs</option>
+              <option value="Forms & Templates">Forms & Templates</option>
+              <option value="Brand Assets">Brand Assets</option>
+            </select>
+
+            {/* Visibility Filter */}
+            <select
+              className="filter-select"
+              value={selectedVisibility}
+              onChange={(e) => {
+                setSelectedVisibility(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">All Audiences</option>
+              <option value="all">Operators & Admins</option>
+              <option value="operator">Operators Only</option>
+              <option value="admin">Admins Only</option>
+            </select>
           </div>
-
-          {/* Category Filter */}
-          <select
-            className="resources-select-filter"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            <option value="all">All Categories</option>
-            <option value="Marketing Materials">Marketing Materials</option>
-            <option value="Documentation & Guides">Documentation & Guides</option>
-            <option value="Help & FAQs">Help & FAQs</option>
-            <option value="Forms & Templates">Forms & Templates</option>
-            <option value="Brand Assets">Brand Assets</option>
-          </select>
-
-          {/* Visibility Filter */}
-          <select
-            className="resources-select-filter"
-            value={selectedVisibility}
-            onChange={(e) => setSelectedVisibility(e.target.value)}
-          >
-            <option value="all">All Audiences</option>
-            <option value="all">Operators & Admins</option>
-            <option value="operator">Operators Only</option>
-            <option value="admin">Admins Only</option>
-          </select>
         </div>
 
-        {/* Upload Button */}
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleOpenAddModal}
-        >
-          <i className="fa-solid fa-cloud-arrow-up"></i>
-          Upload Resource
-        </button>
-      </div>
+        {/* Resources DataTable */}
+        <DataTable
+          columns={columns}
+          data={paginatedResources}
+          loading={loading}
+          emptyMessage="No resource materials found matching your filters."
+          keyField="id"
+        />
 
-      {/* Resources DataTable */}
-      <DataTable
-        columns={columns}
-        data={filteredResources}
-        loading={loading}
-        emptyMessage="No resource materials found matching your filters."
-        keyField="id"
-      />
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredResources.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </section>
 
       {/* Add / Edit Resource Modal */}
       <ResourceModal
@@ -456,6 +507,6 @@ export default function ResourcesContent() {
         isLoading={isSubmitting}
         OnConfirm={handleDeleteConfirm}
       />
-    </div>
+    </main>
   );
 }

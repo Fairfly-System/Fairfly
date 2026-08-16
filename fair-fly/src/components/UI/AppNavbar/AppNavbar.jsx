@@ -5,7 +5,7 @@ import { auth } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../toast/ToastProvider';
 import BaseModal from '../ModalBase/BaseModal';
-import TeamChatModal from '../../Shared/TeamChatModal/TeamChatModal';
+import AnnouncementsModal from '../../Shared/AnnouncementsModal/AnnouncementsModal';
 import NotificationBell from '../NotificationBell/NotificationBell';
 import './app-navbar.css';
 
@@ -22,7 +22,7 @@ export default function AppNavbar({
   const { user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const logoutModalRef = useRef(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAnnouncementsOpen, setIsAnnouncementsOpen] = useState(false);
   const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
 
   const handleLogoutConfirm = async () => {
@@ -60,22 +60,22 @@ export default function AppNavbar({
           {/* Client Mobile Menu Toggle */}
           {isClient && (
             <button
-              className="app-hamburger client-mobile-menu-btn"
+              className="app-hamburger client-mobile-toggle"
               onClick={() => setIsClientMobileMenuOpen(!isClientMobileMenuOpen)}
-              aria-label="Toggle Client navigation"
+              aria-label="Toggle navigation menu"
             >
-              <i className={`fa-solid ${isClientMobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
+              <i className={isClientMobileMenuOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars'}></i>
             </button>
           )}
 
-          <NavLink to={isClient ? "/client" : "/home"} className="app-logoIcon" aria-label="Fairfly Home">
+          <NavLink to={isClient ? '/client' : `/${portalName.toLowerCase()}`} className="app-nav-brand">
             <img
-              src="/FairflyLogo.png"
-              alt="Fairfly Logo"
-              loading="eager"
-              decoding="async"
+              src="/fairfly_logo.png"
+              alt="FairFly Logo"
+              className="app-nav-logo"
               width="36"
               height="36"
+              loading="eager"
             />
           </NavLink>
 
@@ -112,6 +112,14 @@ export default function AppNavbar({
               <i className="fa-solid fa-calendar-check"></i>
               <span>Appointments</span>
             </NavLink>
+
+            <NavLink
+              to="/client/messages"
+              className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-comments"></i>
+              <span>Messages</span>
+            </NavLink>
           </div>
         )}
 
@@ -119,10 +127,10 @@ export default function AppNavbar({
           {/* Notification Bell */}
           <NotificationBell />
 
-          {/* Render team chat for Admin & Operator only */}
+          {/* Render Announcements for Admin & Operator only */}
           {!isClient && (
-            <button className="app-nav-chat btn-ghost" onClick={() => setIsChatOpen(true)}>
-              <i className="fa-regular fa-message"></i> Team Chat
+            <button className="app-nav-chat btn-ghost" onClick={() => setIsAnnouncementsOpen(true)} title="Head Office Announcements">
+              <i className="fa-solid fa-bullhorn"></i> Announcements
             </button>
           )}
 
@@ -139,7 +147,8 @@ export default function AppNavbar({
           </a>
         </div>
 
-        {isChatOpen && <TeamChatModal onClose={() => setIsChatOpen(false)} />}
+        {/* Announcements Modal */}
+        <AnnouncementsModal isOpen={isAnnouncementsOpen} onClose={() => setIsAnnouncementsOpen(false)} />
 
         <BaseModal ref={logoutModalRef} title="Confirm Logout" maxWidth="26.25rem">
           <div className="logout-confirm-content">
@@ -198,6 +207,15 @@ export default function AppNavbar({
           >
             <i className="fa-solid fa-calendar-check"></i>
             <span>Book Appointments</span>
+          </NavLink>
+
+          <NavLink
+            to="/client/messages"
+            onClick={() => setIsClientMobileMenuOpen(false)}
+            className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <i className="fa-solid fa-comments"></i>
+            <span>Direct Messages</span>
           </NavLink>
         </div>
       )}
