@@ -2,6 +2,8 @@ import React from 'react'
 import './landing.css'
 import Services from '../../../components/Shared/Services/Services'
 import FooterCard from '../../../components/UI/FooterCard/FooterCard'
+import FranchiseSection from '../../../components/FranchiseSection/FranchiseSection'
+import Explore from '../../../components/Explore/Explore'
 
 export default function Landing() {
   return (
@@ -35,6 +37,8 @@ export default function Landing() {
     </section>
 
     <Services></Services>
+    <Explore></Explore>
+    <FranchiseSection></FranchiseSection>
     <FooterCard></FooterCard>
     </>
   )
