@@ -8,8 +8,9 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { createQuotation, updateQuotationStatus } from '../../../services/quotationService';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-quotations.css';
 
 function CreateQuotationModal({ isOpen, onClose }) {
@@ -40,17 +41,15 @@ function CreateQuotationModal({ isOpen, onClose }) {
       return;
     }
 
-    ApiCaller(
-      `${API_BASE_URL}/api/quotations`,
-      'POST',
+    createQuotation(
+      userToken,
       formData,
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast('Quotation form created successfully', 'success');
         onClose();
       },
       (error) => {
-        addToast(`Failed to create quotation: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Could not create quotation. Please check your inputs.'), 'error');
       },
       setIsSubmitting
     );
@@ -170,6 +169,7 @@ export function QuotationsContent() {
   const { addToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -181,7 +181,7 @@ export function QuotationsContent() {
       const clientStr = (q.clientName || '').toLowerCase();
       const serviceStr = (q.serviceTitle || '').toLowerCase();
       const quoteNoStr = (q.quoteNo || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
+      const search = debouncedSearch.toLowerCase();
 
       const matchesSearch =
         clientStr.includes(search) ||
@@ -194,7 +194,7 @@ export function QuotationsContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [quotations, searchTerm, statusFilter]);
+  }, [quotations, debouncedSearch, statusFilter]);
 
   const paginatedQuotations = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -202,16 +202,15 @@ export function QuotationsContent() {
   }, [filteredQuotations, currentPage, pageSize]);
 
   const handleStatusChange = (id, newStatus) => {
-    ApiCaller(
-      `${API_BASE_URL}/api/quotations/${id}/status`,
-      'PATCH',
-      { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
+    updateQuotationStatus(
+      userToken,
+      id,
+      newStatus,
       () => {
         addToast(`Quotation marked as ${newStatus}`, 'success');
       },
       (error) => {
-        addToast(`Failed to update quotation: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Could not update quotation status. Please try again.'), 'error');
       }
     );
   };

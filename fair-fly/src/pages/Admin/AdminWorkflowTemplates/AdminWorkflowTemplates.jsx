@@ -14,6 +14,8 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 const TrashIcon = (props) => (
   <i className="fa-solid fa-trash-can" {...props}></i>
@@ -35,6 +37,7 @@ export default function AdminWorkflowTemplates() {
 
   // Search / Filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
 
   // Pagination state
@@ -65,9 +68,10 @@ export default function AdminWorkflowTemplates() {
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
     return templates.filter((tmpl) => {
+      const q = debouncedSearch.toLowerCase();
       const matchesSearch =
-        (tmpl.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (tmpl.serviceType || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (tmpl.name || '').toLowerCase().includes(q) ||
+        (tmpl.serviceType || '').toLowerCase().includes(q);
 
       const matchesType =
         serviceTypeFilter === 'all' ||
@@ -75,7 +79,7 @@ export default function AdminWorkflowTemplates() {
 
       return matchesSearch && matchesType;
     });
-  }, [templates, searchTerm, serviceTypeFilter]);
+  }, [templates, debouncedSearch, serviceTypeFilter]);
 
   const paginatedTemplates = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

@@ -172,6 +172,50 @@ const bulkDeleteOperators = async (req, res) => {
 };
 
 /**
+ * Get all operators (Admin only)
+ */
+const getOperators = async (req, res) => {
+  try {
+    const { queryDatabaseAdvanced } = require('../services/firebaseService');
+    const operators = await queryDatabaseAdvanced(COLLECTIONS.USERS, {
+      filters: [{ field: 'role', operator: '==', value: 'operator' }]
+    });
+
+    const sorted = (operators || []).map((op) => ({
+      id: op.id,
+      uid: op.id,
+      ...op
+    })).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    return res.status(200).json(sorted);
+  } catch (error) {
+    console.error('Error fetching operators:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Get single operator by ID (Admin only)
+ */
+const getOperatorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Operator ID is required' });
+
+    const dbPath = `${COLLECTIONS.USERS}/${id}`;
+    const operator = await getFromDatabase(dbPath);
+    if (!operator || operator.role !== 'operator') {
+      return res.status(404).json({ error: 'Operator not found' });
+    }
+
+    return res.status(200).json({ id, uid: id, ...operator });
+  } catch (error) {
+    console.error('Error fetching operator by ID:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
  * Get active branches/operators list (Specifically for Form dropdown selection)
  */
 const getBranches = async (req, res) => {
@@ -199,6 +243,8 @@ const getBranches = async (req, res) => {
 };
 
 module.exports = {
+  getOperators,
+  getOperatorById,
   getBranches,
   createOperator,
   updateOperator,

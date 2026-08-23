@@ -36,6 +36,7 @@ const createService = async (req, res) => {
       category: serviceData.category || 'General Services',
       tags: Array.isArray(serviceData.tags) ? serviceData.tags.map(t => String(t).trim()).filter(Boolean) : [],
       coverImage: serviceData.coverImage || serviceData.coverPhoto || serviceData.coverPhotoUrl || '',
+      carouselImages: Array.isArray(serviceData.carouselImages) ? serviceData.carouselImages.filter(Boolean) : [],
       description: serviceData.description || '',
       featured: Boolean(serviceData.featured),
       requirements: Array.isArray(serviceData.requirements) ? serviceData.requirements : (serviceData.actions || []),
@@ -89,6 +90,12 @@ const updateService = async (req, res) => {
       sanitizedUpdates.coverImage = updates.coverImage !== undefined 
         ? updates.coverImage 
         : (updates.coverPhoto !== undefined ? updates.coverPhoto : updates.coverPhotoUrl || '');
+    }
+
+    if (updates.carouselImages !== undefined) {
+      sanitizedUpdates.carouselImages = Array.isArray(updates.carouselImages)
+        ? updates.carouselImages.filter(Boolean)
+        : [];
     }
 
     if (updates.description !== undefined) {
@@ -254,7 +261,7 @@ const updateQuickLink = async (req, res) => {
     const updates = req.body;
 
     if (!id) {
-      return res.status(400).json({ error: 'Quick link ID is required' });
+      return res.status(400).json({ error: 'Quick Link ID is required' });
     }
 
     const dbPath = `${COLLECTIONS.QUICK_LINKS}/${id}`;
@@ -281,7 +288,7 @@ const deleteQuickLink = async (req, res) => {
   try {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ error: 'Quick link ID is required' });
+      return res.status(400).json({ error: 'Quick Link ID is required' });
     }
 
     const dbPath = `${COLLECTIONS.QUICK_LINKS}/${id}`;
@@ -341,8 +348,29 @@ const getServices = async (req, res) => {
   }
 };
 
+const getServiceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Service ID is required' });
+    }
+
+    const dbPath = `${COLLECTIONS.SERVICES}/${id}`;
+    const service = await getFromDatabase(dbPath);
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    return res.status(200).json({ id, ...service });
+  } catch (error) {
+    console.error('Error getting service by ID:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   getServices,
+  getServiceById,
   createService,
   updateService,
   deleteService,

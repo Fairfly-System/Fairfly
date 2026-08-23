@@ -27,7 +27,9 @@ router.use('/inquiries', inquiryRoutes);
 router.use('/quotations', quotationRoutes);
 router.use('/appointments', appointmentRoutes);
 router.use('/admins', adminRoutes);
+router.use('/admin/admins', adminRoutes); // Backward compatibility alias
 router.use('/notifications', notificationRoutes);
 router.use('/resources', resourceRoutes);
+router.use('/services/resources', resourceRoutes); // Backward compatibility alias
 
 module.exports = router;

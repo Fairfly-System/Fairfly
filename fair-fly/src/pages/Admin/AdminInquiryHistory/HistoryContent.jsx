@@ -9,6 +9,7 @@ import AlertBar from "../../../components/UI/AlertBar/AlertBar";
 import PageHeader from "../../../components/UI/PageHeader/PageHeader";
 import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
 import KpiCard from "../../../components/UI/KpiCard/KpiCard";
+import useDebounce from "../../../hooks/useDebounce";
 import "./admin-inquiry-history.css";
 
 export default function HistoryContent() {
@@ -19,6 +20,7 @@ export default function HistoryContent() {
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Pagination state
@@ -33,10 +35,11 @@ export default function HistoryContent() {
 
   const filteredHistory = useMemo(() => {
     return historyApplications.filter((app) => {
+      const q = debouncedSearch.toLowerCase();
       const matchesSearch =
-        (app.fullName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (app.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (app.preferredBranchLocation || "").toLowerCase().includes(searchTerm.toLowerCase());
+        (app.fullName || "").toLowerCase().includes(q) ||
+        (app.email || "").toLowerCase().includes(q) ||
+        (app.preferredBranchLocation || "").toLowerCase().includes(q);
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -44,7 +47,7 @@ export default function HistoryContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [historyApplications, searchTerm, statusFilter]);
+  }, [historyApplications, debouncedSearch, statusFilter]);
 
   const paginatedHistory = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

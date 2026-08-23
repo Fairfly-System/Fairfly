@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { firestore, auth } from '../../../firebase';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchResources, recordResourceDownload } from '../../../services/resourceService';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-resources.css';
 
 const CATEGORIES = [
@@ -13,8 +14,31 @@ const CATEGORIES = [
   'Documentation & Guides',
   'Help & FAQs',
   'Forms & Templates',
-  'Brand Assets'
+  'Brand Assets',
 ];
+
+function getFileMeta(fileName) {
+  const ext = (fileName || '').split('.').pop().toLowerCase();
+  if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext)) {
+    return { icon: 'fa-solid fa-file-image', className: 'image', isPreviewable: true };
+  }
+  if (['mp4', 'webm', 'mov'].includes(ext)) {
+    return { icon: 'fa-solid fa-file-video', className: 'video', isPreviewable: false };
+  }
+  if (['pdf'].includes(ext)) {
+    return { icon: 'fa-solid fa-file-pdf', className: 'pdf', isPreviewable: true };
+  }
+  if (['doc', 'docx'].includes(ext)) {
+    return { icon: 'fa-solid fa-file-word', className: 'doc', isPreviewable: false };
+  }
+  if (['xls', 'xlsx', 'csv'].includes(ext)) {
+    return { icon: 'fa-solid fa-file-excel', className: 'spreadsheet', isPreviewable: false };
+  }
+  if (['zip', 'rar', '7z'].includes(ext)) {
+    return { icon: 'fa-solid fa-file-zipper', className: 'archive', isPreviewable: false };
+  }
+  return { icon: 'fa-solid fa-file-lines', className: 'other', isPreviewable: false };
+}
 
 function formatFileSize(bytes) {
   if (!bytes) return '0 B';
@@ -24,68 +48,40 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function getFileTypeInfo(ext) {
-  const e = (ext || '').toLowerCase();
-  if (['mp4', 'webm', 'mov', 'avi'].includes(e)) {
-    return { icon: 'fa-solid fa-file-video', className: 'video', isPreviewable: false };
-  }
-  if (['pdf'].includes(e)) {
-    return { icon: 'fa-solid fa-file-pdf', className: 'pdf', isPreviewable: true };
-  }
-  if (['doc', 'docx'].includes(e)) {
-    return { icon: 'fa-solid fa-file-word', className: 'word', isPreviewable: false };
-  }
-  if (['xls', 'xlsx', 'csv'].includes(e)) {
-    return { icon: 'fa-solid fa-file-excel', className: 'excel', isPreviewable: false };
-  }
-  if (['ppt', 'pptx'].includes(e)) {
-    return { icon: 'fa-solid fa-file-powerpoint', className: 'powerpoint', isPreviewable: false };
-  }
-  if (['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(e)) {
-    return { icon: 'fa-solid fa-file-image', className: 'image', isPreviewable: true };
-  }
-  if (['zip', 'rar', '7z', 'tar'].includes(e)) {
-    return { icon: 'fa-solid fa-file-zipper', className: 'zip', isPreviewable: false };
-  }
-  return { icon: 'fa-solid fa-file-lines', className: 'other', isPreviewable: false };
-}
-
 export default function OperatorResources() {
+  const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [activeCategory, setActiveCategory] = useState('All Materials');
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
-  // Real-time Firestore sync
-  useEffect(() => {
-    // Only fetch resources visible to operators
-    const q = query(
-      collection(firestore, 'resources'),
-      where('visibility', 'in', ['all', 'operator'])
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+  const loadResources = useCallback(() => {
+    if (!userToken) return;
+    setLoading(true);
+    fetchResources(
+      userToken,
+      (data) => {
+        const list = (data || []).filter((r) => r.visibility === 'all' || r.visibility === 'operator');
         list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         setResources(list);
         setLoading(false);
       },
       (error) => {
         console.error('Error loading resources for operator:', error);
+        addToast(toFriendlyMessage(error, 'Could not load branch resources. Please try refreshing.'), 'error');
         setLoading(false);
-      }
+      },
+      setLoading
     );
+  }, [userToken, addToast]);
 
-    return () => unsub();
-  }, []);
+  useEffect(() => {
+    loadResources();
+  }, [loadResources]);
 
   // Category counts
   const categoryCounts = useMemo(() => {
@@ -96,14 +92,14 @@ export default function OperatorResources() {
     return counts;
   }, [resources]);
 
-  // Filtered resources
+  // Filtered resources with debounced search
   const filteredResources = useMemo(() => {
     return resources.filter((item) => {
       if (activeCategory !== 'All Materials' && item.category !== activeCategory) {
         return false;
       }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase().trim();
         const matchesTitle = item.title?.toLowerCase().includes(q);
         const matchesDesc = item.description?.toLowerCase().includes(q);
         const matchesFileName = item.fileName?.toLowerCase().includes(q);
@@ -114,16 +110,12 @@ export default function OperatorResources() {
       }
       return true;
     });
-  }, [resources, activeCategory, searchQuery]);
+  }, [resources, activeCategory, debouncedSearch]);
 
   const handleDownload = async (resource) => {
     try {
-      const token = await auth.currentUser?.getIdToken();
       // Record download in backend
-      fetch(`${API_BASE_URL}/api/resources/${resource.id}/download`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      }).catch((e) => console.warn('Download record warning:', e));
+      recordResourceDownload(userToken, resource.id, () => {}, (e) => console.warn('Download record warning:', e));
 
       addToast(`Downloading "${resource.title}"...`, 'info');
 
@@ -138,7 +130,7 @@ export default function OperatorResources() {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Download error:', error);
-      addToast('Download failed: ' + error.message, 'error');
+      addToast(toFriendlyMessage(error, 'Download could not be completed. Please try again.'), 'error');
     }
   };
 

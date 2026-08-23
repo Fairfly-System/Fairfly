@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { fetchServices } from '../../../services/serviceService';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
 import ClientServiceRequestModal from '../../../components/Client/ClientServiceRequestModal/ClientServiceRequestModal';
 import ClientServicesMarketplace from '../../../components/Client/ClientServicesMarketplace/ClientServicesMarketplace';
@@ -16,37 +15,21 @@ export default function ClientDashboard() {
   const [catalogServices, setCatalogServices] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
 
-  // Firestore Real-time listener for Services Catalog
+  // Fetch Services Catalog via GET
   useEffect(() => {
-    let unsubscribe;
-    try {
-      setLoadingCatalog(true);
-      const servicesRef = collection(db, 'services');
-      unsubscribe = onSnapshot(
-        servicesRef,
-        (snapshot) => {
-          const list = snapshot.docs
-            .map((doc) => ({
-              id: doc.id,
-              ...doc.data()
-            }))
-            .filter((s) => s.status !== 'Disabled' && s.status !== 'Inactive');
-          setCatalogServices(list);
-          setLoadingCatalog(false);
-        },
-        (error) => {
-          console.error('[ClientDashboard] Error subscribing to services catalog onSnapshot:', error);
-          setLoadingCatalog(false);
-        }
-      );
-    } catch (err) {
-      console.error('[ClientDashboard] Catalog onSnapshot error:', err);
-      setLoadingCatalog(false);
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    setLoadingCatalog(true);
+    fetchServices(
+      (data) => {
+        const list = (data || []).filter((s) => s.status !== 'Disabled' && s.status !== 'Inactive');
+        setCatalogServices(list);
+        setLoadingCatalog(false);
+      },
+      (error) => {
+        console.error('[ClientDashboard] Error fetching services catalog:', error);
+        setLoadingCatalog(false);
+      },
+      setLoadingCatalog
+    );
   }, []);
 
   const handleRequestServiceFromCard = (service) => {

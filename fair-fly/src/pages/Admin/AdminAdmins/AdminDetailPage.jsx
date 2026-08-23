@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -9,8 +7,7 @@ import AdminModal from '../../../components/Admin/Modals/AdminModal/AdminModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchAdminById, updateAdmin, deleteAdmin, fetchOperators } from '../../../services/adminService';
 import './admin-admins.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -32,69 +29,60 @@ export default function AdminDetailPage() {
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [operatorsMap, setOperatorsMap] = useState({});
 
-  // Subscribe to real-time operators map
-  useEffect(() => {
-    const q = query(collection(firestore, 'users'), where('role', '==', 'operator'));
-    const unsub = onSnapshot(q, (snap) => {
-      const map = {};
-      snap.docs.forEach((d) => {
-        map[d.id] = { id: d.id, ...d.data() };
-      });
-      setOperatorsMap(map);
-    });
-    return () => unsub();
-  }, []);
+  const loadOperators = useCallback(() => {
+    if (!userToken) return;
+    fetchOperators(
+      userToken,
+      (data) => {
+        const map = {};
+        (data || []).forEach((d) => {
+          map[d.id || d.uid] = { id: d.id || d.uid, ...d };
+        });
+        setOperatorsMap(map);
+      },
+      (err) => console.error('Error loading operators:', err)
+    );
+  }, [userToken]);
 
-  // Subscribe to real-time doc
-  useEffect(() => {
-    if (!id) return;
+  const loadAdminDetail = useCallback(() => {
+    if (!id || !userToken) return;
     setLoading(true);
-
-    const docRef = doc(firestore, 'users', id);
-    const unsubscribe = onSnapshot(
-      docRef,
-      (snap) => {
-        if (snap.exists()) {
-          const d = snap.data();
-          const isSuper = d.isSuperAdmin === true || d.email === 'admin@gmail.com';
-          setAdminData({
-            id: snap.id,
-            ...d,
-            isSuperAdmin: isSuper
-          });
-        } else {
-          setAdminData(null);
-        }
+    fetchAdminById(
+      userToken,
+      id,
+      (data) => {
+        setAdminData(data || null);
         setLoading(false);
       },
       (err) => {
         console.error('Error fetching admin details:', err);
         addToast('Failed to load administrator details', 'error');
         setLoading(false);
-      }
+      },
+      setLoading
     );
+  }, [id, userToken, addToast]);
 
-    return () => unsubscribe();
-  }, [id, addToast]);
+  useEffect(() => {
+    loadOperators();
+    loadAdminDetail();
+  }, [loadOperators, loadAdminDetail]);
 
   const handleDeactivate = async () => {
     if (!adminData) return;
     const newStatus = adminData.status === 'Active' ? 'Inactive' : 'Active';
-    setIsConfirmLoading(true);
 
-    ApiCaller(
-      `${API_BASE_URL}/api/admins/${adminData.id}`,
-      'PATCH',
+    updateAdmin(
+      userToken,
+      adminData.id,
       { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast(`Administrator ${newStatus === 'Active' ? 'enabled' : 'disabled'} successfully`, 'success');
         setConfirmState(null);
-        setIsConfirmLoading(false);
+        loadAdminDetail();
       },
       (err) => {
         addToast(`Failed to update status: ${err.message}`, 'error');
-        setIsConfirmLoading(false);
       },
       setIsConfirmLoading
     );
@@ -102,40 +90,33 @@ export default function AdminDetailPage() {
 
   const handleDelete = async () => {
     if (!adminData) return;
-    setIsConfirmLoading(true);
 
-    ApiCaller(
-      `${API_BASE_URL}/api/admins/${adminData.id}`,
-      'DELETE',
-      null,
-      { Authorization: `Bearer ${userToken}` },
+    deleteAdmin(
+      userToken,
+      adminData.id,
       () => {
         addToast('Administrator deleted successfully', 'success');
         navigate('/admin/admins');
       },
       (err) => {
         addToast(`Failed to delete administrator: ${err.message}`, 'error');
-        setIsConfirmLoading(false);
       },
       setIsConfirmLoading
     );
   };
 
   const handleFormSubmit = async (formData) => {
-    setIsSubmitting(true);
-    ApiCaller(
-      `${API_BASE_URL}/api/admins/${adminData.id}`,
-      'PATCH',
+    updateAdmin(
+      userToken,
+      adminData.id,
       formData,
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast('Administrator details updated successfully', 'success');
         setIsModalOpen(false);
-        setIsSubmitting(false);
+        loadAdminDetail();
       },
       (err) => {
         addToast(`Failed to update administrator: ${err.message}`, 'error');
-        setIsSubmitting(false);
       },
       setIsSubmitting
     );

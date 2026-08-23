@@ -12,6 +12,7 @@ import {
 } from '../../../services/chatService';
 import NewChatModal from '../../../components/Shared/Messaging/NewChatModal/NewChatModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import useDebounce from '../../../hooks/useDebounce';
 import './messages-page.css';
 
 function formatFileSize(bytes) {
@@ -92,6 +93,7 @@ export default function MessagesPage() {
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [filterTab, setFilterTab] = useState('all'); // 'all' | 'unread'
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
 
@@ -164,8 +166,8 @@ export default function MessagesPage() {
 
       if (filterTab === 'unread' && !unread) return false;
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase().trim();
         const matchesName = partner.name?.toLowerCase().includes(q);
         const matchesEmail = partner.email?.toLowerCase().includes(q);
         const matchesBranch = partner.branchName?.toLowerCase().includes(q);
@@ -176,7 +178,7 @@ export default function MessagesPage() {
       }
       return true;
     });
-  }, [conversations, searchQuery, filterTab, currentUid]);
+  }, [conversations, debouncedSearch, filterTab, currentUid]);
 
   // Start chat with contact from NewChatModal
   const handleSelectContact = async (contact) => {

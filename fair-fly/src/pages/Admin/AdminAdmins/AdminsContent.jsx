@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
@@ -13,8 +11,8 @@ import DataTable from '../../../components/UI/DataTable/DataTable';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import AdminModal from '../../../components/Admin/Modals/AdminModal/AdminModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchAdmins, createAdmin, updateAdmin, deleteAdmin, fetchOperators } from '../../../services/adminService';
+import useDebounce from '../../../hooks/useDebounce';
 import './admin-admins.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -28,6 +26,7 @@ export default function AdminsContent() {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,55 +40,47 @@ export default function AdminsContent() {
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [operatorsMap, setOperatorsMap] = useState({});
 
-  // Subscribe to real-time operators map for branch names
-  useEffect(() => {
-    const q = query(collection(firestore, 'users'), where('role', '==', 'operator'));
-    const unsub = onSnapshot(q, (snap) => {
-      const map = {};
-      snap.docs.forEach((d) => {
-        map[d.id] = d.data();
-      });
-      setOperatorsMap(map);
-    });
-    return () => unsub();
-  }, []);
+  // Fetch operators list for branch mapping
+  const loadOperators = useCallback(() => {
+    if (!userToken) return;
+    fetchOperators(
+      userToken,
+      (data) => {
+        const map = {};
+        (data || []).forEach((d) => {
+          map[d.id || d.uid] = d;
+        });
+        setOperatorsMap(map);
+      },
+      (error) => {
+        console.error('Error fetching operators for admins:', error);
+      }
+    );
+  }, [userToken]);
 
-  // Subscribe to real-time admins list
-  useEffect(() => {
+  // Fetch admins list via GET
+  const loadAdmins = useCallback(() => {
+    if (!userToken) return;
     setLoading(true);
-    const q = query(collection(firestore, 'users'), where('role', '==', 'admin'));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list = snapshot.docs.map((doc) => {
-          const d = doc.data();
-          const isSuper = d.isSuperAdmin === true || d.email === 'admin@gmail.com';
-          return {
-            id: doc.id,
-            ...d,
-            isSuperAdmin: isSuper
-          };
-        });
-
-        // Sort Super Admin first, then newest
-        list.sort((a, b) => {
-          if (a.isSuperAdmin && !b.isSuperAdmin) return -1;
-          if (!a.isSuperAdmin && b.isSuperAdmin) return 1;
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-        });
-
-        setAdmins(list);
+    fetchAdmins(
+      userToken,
+      (data) => {
+        setAdmins(data || []);
         setLoading(false);
       },
       (error) => {
-        console.error('Error listening to admins:', error);
+        console.error('Error fetching admins:', error);
         addToast('Failed to load administrators', 'error');
         setLoading(false);
-      }
+      },
+      setLoading
     );
+  }, [userToken, addToast]);
 
-    return () => unsubscribe();
-  }, [addToast]);
+  useEffect(() => {
+    loadOperators();
+    loadAdmins();
+  }, [loadOperators, loadAdmins]);
 
   const handleOpenAddModal = () => {
     setEditingAdmin(null);
@@ -102,43 +93,36 @@ export default function AdminsContent() {
   };
 
   const handleFormSubmit = async (formData) => {
-    setIsSubmitting(true);
-
     if (editingAdmin) {
       // Update
-      ApiCaller(
-        `${API_BASE_URL}/api/admins/${editingAdmin.id}`,
-        'PATCH',
+      updateAdmin(
+        userToken,
+        editingAdmin.id,
         formData,
-        { Authorization: `Bearer ${userToken}` },
         () => {
           addToast('Administrator details updated successfully', 'success');
           setIsModalOpen(false);
           setEditingAdmin(null);
-          setIsSubmitting(false);
+          loadAdmins();
         },
         (err) => {
           addToast(`Failed to update administrator: ${err.message}`, 'error');
-          setIsSubmitting(false);
         },
         setIsSubmitting
       );
     } else {
       // Create
-      ApiCaller(
-        `${API_BASE_URL}/api/admins`,
-        'POST',
+      createAdmin(
+        userToken,
         formData,
-        { Authorization: `Bearer ${userToken}` },
         () => {
           addToast('Support administrator created successfully', 'success');
           setIsModalOpen(false);
           setEditingAdmin(null);
-          setIsSubmitting(false);
+          loadAdmins();
         },
         (err) => {
           addToast(`Failed to create administrator: ${err.message}`, 'error');
-          setIsSubmitting(false);
         },
         setIsSubmitting
       );
@@ -148,21 +132,18 @@ export default function AdminsContent() {
   const handleDeactivateAdmin = async (targetAdmin) => {
     if (!targetAdmin) return;
     const newStatus = targetAdmin.status === 'Active' ? 'Inactive' : 'Active';
-    setIsConfirmLoading(true);
 
-    ApiCaller(
-      `${API_BASE_URL}/api/admins/${targetAdmin.id}`,
-      'PATCH',
+    updateAdmin(
+      userToken,
+      targetAdmin.id,
       { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast(`Administrator ${newStatus === 'Active' ? 'enabled' : 'disabled'} successfully`, 'success');
         setConfirmState(null);
-        setIsConfirmLoading(false);
+        loadAdmins();
       },
       (err) => {
         addToast(`Failed to update status: ${err.message}`, 'error');
-        setIsConfirmLoading(false);
       },
       setIsConfirmLoading
     );
@@ -170,43 +151,38 @@ export default function AdminsContent() {
 
   const handleDeleteAdmin = async (targetAdmin) => {
     if (!targetAdmin) return;
-    setIsConfirmLoading(true);
 
-    ApiCaller(
-      `${API_BASE_URL}/api/admins/${targetAdmin.id}`,
-      'DELETE',
-      null,
-      { Authorization: `Bearer ${userToken}` },
+    deleteAdmin(
+      userToken,
+      targetAdmin.id,
       () => {
         addToast('Administrator deleted successfully', 'success');
         setConfirmState(null);
-        setIsConfirmLoading(false);
+        loadAdmins();
       },
       (err) => {
         addToast(`Failed to delete administrator: ${err.message}`, 'error');
-        setIsConfirmLoading(false);
       },
       setIsConfirmLoading
     );
   };
 
-  // Filtered admins
+  // Filtered admins with debounced search
   const filteredAdmins = useMemo(() => {
     return admins.filter((a) => {
-      const q = searchTerm.toLowerCase().trim();
+      const q = debouncedSearch.toLowerCase().trim();
       const matchSearch =
         !q ||
         (a.fullName || '').toLowerCase().includes(q) ||
         (a.username || '').toLowerCase().includes(q) ||
-        (a.email || '').toLowerCase().includes(q);
+        (a.email || '').toLowerCase().includes(q) ||
+        (a.phone || '').toLowerCase().includes(q);
 
-      const adminStatus = (a.status || 'Active').toLowerCase();
-      const filter = (statusFilter || 'all').toLowerCase();
-      const matchStatus = filter === 'all' || adminStatus === filter;
+      const matchStatus = statusFilter === 'all' || (a.status || 'Active').toLowerCase() === statusFilter.toLowerCase();
 
       return matchSearch && matchStatus;
     });
-  }, [admins, searchTerm, statusFilter]);
+  }, [admins, debouncedSearch, statusFilter]);
 
   const paginatedAdmins = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

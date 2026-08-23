@@ -1,40 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
-import { firestore } from '../../../../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { useAuthContext } from '../../../../context/AuthContext';
+import { fetchWorkflowTemplates } from '../../../../services/workflowService';
+import useDebounce from '../../../../hooks/useDebounce';
 
 export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflowIds = [], onSaveWorkflows }) {
+  const { userToken } = useAuthContext();
   const [selectedWorkflowIds, setSelectedWorkflowIds] = useState(initialWorkflowIds);
   const [workflowsList, setWorkflowsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     setSelectedWorkflowIds(initialWorkflowIds);
   }, [isOpen, initialWorkflowIds]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !userToken) return;
 
-    // Listen to real-time workflowTemplates from Firestore
-    const unsubscribe = onSnapshot(
-      collection(firestore, 'workflowTemplates'),
-      (snapshot) => {
-        const templates = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setWorkflowsList(templates);
+    setLoading(true);
+    fetchWorkflowTemplates(
+      userToken,
+      (data) => {
+        setWorkflowsList(data || []);
         setLoading(false);
       },
       (error) => {
         console.error('Error fetching workflow templates:', error);
         setLoading(false);
-      }
+      },
+      setLoading
     );
-
-    return () => unsubscribe();
-  }, [isOpen]);
+  }, [isOpen, userToken]);
 
   const handleToggleWorkflow = (workflowId) => {
     if (selectedWorkflowIds.includes(workflowId)) {
@@ -50,8 +48,8 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
   };
 
   const filteredWorkflows = workflowsList.filter(wf =>
-    (wf.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (wf.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (wf.name || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (wf.description || '').toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   return (

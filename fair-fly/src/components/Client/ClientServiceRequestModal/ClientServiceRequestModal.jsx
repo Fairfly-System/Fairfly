@@ -4,6 +4,7 @@ import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './client-service-request-modal.css';
 
 export default function ClientServiceRequestModal({
@@ -307,13 +308,13 @@ export default function ClientServiceRequestModal({
           onClose();
         },
         (error) => {
-          addToast(`Failed to submit request: ${error.message}`, 'error');
+          addToast(toFriendlyMessage(error, 'Unable to submit your service request. Please try again.'), 'error');
           setIsSubmitting(false);
         }
       );
     } catch (err) {
       console.error('Error submitting requirement uploads:', err);
-      addToast('An error occurred while uploading requirements', 'error');
+      addToast(toFriendlyMessage(err, 'An error occurred while uploading your requirements. Please try again.'), 'error');
       setIsSubmitting(false);
     }
   };

@@ -17,6 +17,7 @@ import ClientLayout from './pages/ClientSide/ClientLayout/ClientLayout';
 import ClientDashboard from './pages/ClientSide/ClientDashboard/ClientDashboard';
 import ClientTrackingPage from './pages/ClientSide/ClientTracking/ClientTrackingPage';
 import ClientAppointmentsPage from './pages/ClientSide/ClientAppointments/ClientAppointmentsPage';
+import ServiceItemPage from './pages/ClientSide/ClientServiceItem/ServiceItemPage';
 import AdminLayout from './pages/Admin/AdminLayout/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
 import AdminServices from './pages/Admin/AdminServices/AdminServices';
@@ -75,6 +76,7 @@ function App() {
         <Route path="/client" element={<ClientLayout />}>
           <Route index element={<ClientDashboard />} />
           <Route path="services" element={<ClientDashboard />} />
+          <Route path="services/:serviceId" element={<ServiceItemPage />} />
           <Route path="tracking" element={<ClientTrackingPage />} />
           <Route path="appointments" element={<ClientAppointmentsPage />} />
           <Route path="messages" element={<MessagesPage />} />
