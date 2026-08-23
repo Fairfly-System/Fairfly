@@ -4,6 +4,7 @@ import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './client-appointment-form.css';
 
 export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCreated }) {
@@ -158,7 +159,7 @@ export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCr
         onClose();
       },
       (error) => {
-        addToast(`Failed to book appointment: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Unable to schedule appointment. Please check your chosen date and try again.'), 'error');
         setIsSubmitting(false);
       },
       setIsSubmitting

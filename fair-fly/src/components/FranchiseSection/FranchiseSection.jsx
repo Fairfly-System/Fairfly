@@ -3,42 +3,47 @@ import './franchise-section.css'
 import FranchiseApplicationForm from '../Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx'
 
 const perks = [
-  'Complete business setup support & onboarding',
-  'Exclusive territory rights in your area',
-  'Centralized booking & management software',
-  'Ongoing training and marketing materials',
-  'Access to our nationwide supplier network',
-  'Dedicated franchise support team',
+  'ISO: 9001-2000 Ready Quality Management System accreditation',
+  '2-Month Fast-Track Training Academy backed by 29 years of expertise',
+  'Asset-light model with zero physical inventory required',
+  'Centralized cloud booking and automated workflow software',
+  'Exclusive territory rights and nationwide partner network',
+  'Direct head office operational, ticketing, and marketing backup',
 ]
 
 const stats = [
   {
-    icon: 'fa-solid fa-sack-dollar',
-    value: '\u20B1500K',
-    label: 'Starting Investment',
-    sub: 'Flexible payment options',
+    icon: 'fa-solid fa-clock-rotate-left',
+    value: '29 Yrs',
+    label: 'Industry Expertise',
+    sub: 'Proven operating knowledge',
   },
   {
-    icon: 'fa-solid fa-arrow-trend-up',
-    value: '3-6 mo',
-    label: 'Avg. Payback Period',
-    sub: 'Based on active branches',
+    icon: 'fa-solid fa-graduation-cap',
+    value: '2 Mo',
+    label: 'Mastery Training',
+    sub: 'Structured curriculum',
   },
   {
-    icon: 'fa-solid fa-people-group',
-    value: '100+',
-    label: 'Trusted Clients Nationwide',
-    sub: 'And expanding in 2026',
+    icon: 'fa-solid fa-cloud-arrow-up',
+    value: '100%',
+    label: 'Online System',
+    sub: 'Virtual office ready',
   },
-
+  {
+    icon: 'fa-solid fa-boxes-stacked',
+    value: 'Zero',
+    label: 'Physical Inventory',
+    sub: 'Upfront cashflow model',
+  },
 ]
 
 const steps = [
-  'Submit your franchise application online',
-  'Schedule a discovery call with our team',
-  'Review and sign the franchise agreement',
-  'Complete onboarding training (2 weeks)',
-  'Open your Fairfly branch and start serving clients!',
+  'Submit your franchise inquiry application online',
+  'Discovery consultation and territory evaluation',
+  'Review and sign the FairFly franchise agreement',
+  'Complete 2-month comprehensive academy training',
+  'Launch your FairFly branch and start earning independently!',
 ]
 
 export default function FranchiseSection() {

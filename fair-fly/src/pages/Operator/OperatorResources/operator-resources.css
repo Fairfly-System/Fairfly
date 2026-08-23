@@ -110,7 +110,7 @@
   gap: 0.125rem;
 }
 
-.op-view-btn {
+.op-resources-view-btn {
   width: 2rem;
   height: 2rem;
   border-radius: var(--radius-xs);
@@ -124,11 +124,11 @@
   transition: var(--transition-fast);
 }
 
-.op-view-btn:hover {
+.op-resources-view-btn:hover {
   color: var(--purple);
 }
 
-.op-view-btn.active {
+.op-resources-view-btn.active {
   background: var(--purple-light-2);
   color: var(--purple);
 }

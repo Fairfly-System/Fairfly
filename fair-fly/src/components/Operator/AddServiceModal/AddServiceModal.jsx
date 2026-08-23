@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
-import { firestore } from '../../../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { fetchServices } from '../../../services/serviceService';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './add-service-modal.css';
 
 const PRIORITY_LEVELS = ['Normal Priority', 'High Priority'];
@@ -27,24 +27,22 @@ export default function AddServiceModal({ onClose }) {
     source: 'Walk-in',
   });
 
-  // Listen to Admin Services Catalog from Firestore in real-time
+  // Fetch Admin Services Catalog via GET on mount
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(firestore, 'services'),
-      (snapshot) => {
-        const list = snapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((s) => s.status !== 'Disabled');
+    fetchServices(
+      (data) => {
+        const list = (data || []).filter((s) => s.status !== 'Disabled');
         setAdminServices(list);
         setLoadingAdminServices(false);
       },
       (error) => {
-        console.error('Error listening to Admin services catalog:', error);
+        console.error('Error fetching Admin services catalog:', error);
+        addToast(toFriendlyMessage(error, 'Unable to load services catalog. Please try again.'), 'error');
         setLoadingAdminServices(false);
-      }
+      },
+      setLoadingAdminServices
     );
-    return () => unsubscribe();
-  }, []);
+  }, [addToast]);
 
   const handleServiceSelect = (e) => {
     const selectedId = e.target.value;
@@ -84,7 +82,7 @@ export default function AddServiceModal({ onClose }) {
         onClose();
       },
       (error) => {
-        addToast(`Failed to create active service: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Could not create active service. Please try again.'), 'error');
       },
       setIsSubmitting
     );

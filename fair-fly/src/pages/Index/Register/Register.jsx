@@ -8,6 +8,7 @@ import { setDoc, doc } from "firebase/firestore";
 import { auth, firestore } from "../../../firebase";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import { useAuthContext } from "../../../context/AuthContext";
+import toFriendlyMessage from "../../../utils/friendlyErrors";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -164,7 +165,7 @@ export default function Register() {
       })
       .catch((error) => {
         setIsRegistering(false);
-        addToast(error.message, "error");
+        addToast(toFriendlyMessage(error, "Could not create your account. Please check your details and try again."), "error");
       });
   };
 

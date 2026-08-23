@@ -445,3 +445,88 @@
   font-size: 0.875rem;
   font-weight: 500;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Operator Submitter Context & UID Badges
+   ────────────────────────────────────────────────────────────────────────── */
+
+.operator-submitter-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1.125rem;
+  background: var(--purple-light-2, #f5f3ff);
+  border: 1px solid var(--purple-light, #ddd6fe);
+  border-radius: var(--radius-md, 10px);
+  margin-bottom: 0.25rem;
+}
+
+.operator-submitter-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.operator-submitter-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: var(--purple, #7c3aed);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.operator-submitter-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.operator-submitter-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-dark, #1e1b4b);
+}
+
+.operator-submitter-email {
+  font-size: 0.775rem;
+  color: var(--text-mid, #6b7280);
+}
+
+.ticket-op-uid-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono, 'SFMono-Regular', Consolas, monospace);
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: var(--purple-dark, #5b21b6);
+  background: var(--purple-light-2, #f5f3ff);
+  border: 1px solid var(--purple-light, #ddd6fe);
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  cursor: help;
+  max-width: 100%;
+}
+
+.ticket-uid-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono, 'SFMono-Regular', Consolas, monospace);
+  font-size: 0.775rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  user-select: all;
+}
+

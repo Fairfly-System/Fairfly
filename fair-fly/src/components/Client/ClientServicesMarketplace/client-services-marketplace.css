@@ -5,8 +5,10 @@
 .shopping-ui-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.75rem;
   width: 100%;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border-color);
 }
 
 /* Header & Intro */

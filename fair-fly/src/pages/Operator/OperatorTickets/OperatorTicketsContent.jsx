@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import './operator-tickets.css';
-import { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
@@ -13,16 +12,20 @@ import CreateTicketModal from '../../../components/Admin/Tickets/CreateTicketMod
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchTickets, createTicket, sendMessageToTicket } from '../../../services/ticketService';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 export default function OperatorTicketsContent() {
   const navigate = useNavigate();
-  const { data: tickets, loading: ticketsLoading } = useOperatorContext();
   const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
 
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
@@ -32,18 +35,45 @@ export default function OperatorTicketsContent() {
 
   const createModalRef = useRef(null);
 
-  // Active operator ID & details
-  const currentOperatorId = userDetails?.uid || user?.uid || 'OP-ACCOUNT';
-  const currentOperatorName = userDetails?.name || userDetails?.branchName || 'Operator Branch';
+  // Active operator ID & details (using real Firestore account UID)
+  const currentOperatorId = user?.uid || userDetails?.id || userDetails?.uid || '';
+  const currentOperatorName = userDetails?.branchName || userDetails?.name || 'Operator Branch';
   const currentOperatorEmail = userDetails?.email || user?.email || 'operator@fairfly.com';
 
-  // Filter operator-specific tickets or all branch tickets
+  const loadTickets = useCallback(() => {
+    if (!userToken) return;
+    setTicketsLoading(true);
+    fetchTickets(
+      userToken,
+      (data) => {
+        setTickets(data || []);
+        setTicketsLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching tickets:', err);
+        addToast(toFriendlyMessage(err, 'Unable to load support tickets. Please refresh.'), 'error');
+        setTicketsLoading(false);
+      },
+      setTicketsLoading
+    );
+  }, [userToken, addToast]);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
+
+  // Filter operator-specific tickets for this branch
   const operatorTickets = useMemo(() => {
     if (!tickets) return [];
     return tickets.filter((t) => {
-      return true;
+      if (!currentOperatorId) return true;
+      return (
+        t.operatorId === currentOperatorId ||
+        t.operatorEmail?.toLowerCase() === currentOperatorEmail?.toLowerCase() ||
+        (t.operatorName && userDetails?.branchName && t.operatorName.toLowerCase() === userDetails.branchName.toLowerCase())
+      );
     });
-  }, [tickets]);
+  }, [tickets, currentOperatorId, currentOperatorEmail, userDetails?.branchName]);
 
   const activeTicket = useMemo(() => {
     if (!selectedTicketId || !operatorTickets) return null;
@@ -56,7 +86,7 @@ export default function OperatorTicketsContent() {
       const opIdStr = (ticket.operatorId || '').toLowerCase();
       const opNameStr = (ticket.operatorName || '').toLowerCase();
       const idStr = (ticket.id || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
+      const search = debouncedSearch.toLowerCase();
 
       const matchesSearch =
         titleStr.includes(search) ||
@@ -74,7 +104,7 @@ export default function OperatorTicketsContent() {
       const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [operatorTickets, searchTerm, statusFilter]);
+  }, [operatorTickets, debouncedSearch, statusFilter]);
 
   const paginatedTickets = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -109,48 +139,35 @@ export default function OperatorTicketsContent() {
       operatorEmail: ticketData.operatorEmail || currentOperatorEmail,
     };
 
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets`,
-        'POST',
-        payload,
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Support ticket submitted to Head Office', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to submit ticket: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return createTicket(
+      userToken,
+      payload,
+      (res) => {
+        addToast('Support ticket submitted to Head Office', 'success');
+        createModalRef.current?.closeModal();
+        loadTickets();
+      },
+      (error) => {
+        addToast(toFriendlyMessage(error, 'Could not send support ticket. Please try again.'), 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const handleSendMessage = async (ticketId, messageText) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/messages`,
-        'POST',
-        {
-          message: messageText,
-          senderId: currentOperatorId,
-          senderName: currentOperatorName,
-          senderRole: 'operator',
-        },
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Message sent to Head Office thread', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to send message: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return sendMessageToTicket(
+      userToken,
+      ticketId,
+      messageText,
+      (res) => {
+        addToast('Message sent to Head Office thread', 'success');
+        loadTickets();
+      },
+      (error) => {
+        addToast(toFriendlyMessage(error, 'Could not send message. Please try again.'), 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const breadcrumbItems = [
@@ -268,6 +285,12 @@ export default function OperatorTicketsContent() {
         ref={createModalRef}
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
+        isOperatorPortal={true}
+        defaultOperator={{
+          operatorId: currentOperatorId,
+          operatorName: currentOperatorName,
+          operatorEmail: currentOperatorEmail,
+        }}
       />
     </main>
   );

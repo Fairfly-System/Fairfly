@@ -27,22 +27,29 @@ export default function TicketTable({
       },
       {
         key: 'operatorId',
-        header: 'Operator ID & Name',
+        header: 'Branch Operator',
         className: 'ticket-op-col',
         render: (ticket) => {
-          const initials = (ticket.operatorName || 'Op')
+          const name = ticket.operatorName || 'Operator Branch';
+          const initials = name
             .split(' ')
+            .filter(Boolean)
             .map((w) => w[0])
             .join('')
             .toUpperCase()
-            .slice(0, 2);
+            .slice(0, 2) || 'OP';
+
+          const uid = ticket.operatorId || 'N/A';
+          const shortUid = uid.length > 14 ? `${uid.slice(0, 10)}...` : uid;
 
           return (
             <div className="ticket-op-info">
               <div className="ticket-op-avatar">{initials}</div>
               <div className="ticket-op-details">
-                <span className="ticket-op-name">{ticket.operatorName || 'Operator'}</span>
-                <span className="ticket-op-id">ID: {ticket.operatorId || 'N/A'}</span>
+                <span className="ticket-op-name">{name}</span>
+                <span className="ticket-op-uid-pill" title={`Firestore Operator UID: ${uid}`}>
+                  <i className="fa-solid fa-id-badge"></i> UID: {shortUid}
+                </span>
               </div>
             </div>
           );

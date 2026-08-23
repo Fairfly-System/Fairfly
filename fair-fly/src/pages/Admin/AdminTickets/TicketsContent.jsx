@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import './admin-tickets.css';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
@@ -13,32 +12,73 @@ import CreateTicketModal from '../../../components/Admin/Tickets/CreateTicketMod
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchTickets, createTicket, sendMessageToTicket, closeTicket, updateTicketStatus } from '../../../services/ticketService';
+import { fetchOperators } from '../../../services/adminService';
+import useDebounce from '../../../hooks/useDebounce';
 
 export default function TicketsContent() {
   const navigate = useNavigate();
-  const { data: tickets, loading: ticketsLoading } = useAdminContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
 
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [operatorsList, setOperatorsList] = useState([]);
 
   const createModalRef = useRef(null);
 
-  // Keep selected ticket object in sync with real-time Firestore updates
+  // Load operators list for ticket creation dropdown
+  const loadOperators = useCallback(() => {
+    if (!userToken) return;
+    fetchOperators(
+      userToken,
+      (data) => {
+        setOperatorsList(data || []);
+      },
+      (err) => console.error('Error fetching operators list:', err)
+    );
+  }, [userToken]);
+
+  // Load tickets list via GET
+  const loadTickets = useCallback(() => {
+    if (!userToken) return;
+    setTicketsLoading(true);
+    fetchTickets(
+      userToken,
+      (data) => {
+        setTickets(data || []);
+        setTicketsLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching tickets:', err);
+        addToast('Failed to load tickets', 'error');
+        setTicketsLoading(false);
+      },
+      setTicketsLoading
+    );
+  }, [userToken, addToast]);
+
+  useEffect(() => {
+    loadOperators();
+    loadTickets();
+  }, [loadOperators, loadTickets]);
+
+  // Keep selected ticket object in sync with latest tickets list
   const activeTicket = useMemo(() => {
     if (!selectedTicketId || !tickets) return null;
     return tickets.find((t) => t.id === selectedTicketId) || null;
   }, [selectedTicketId, tickets]);
 
-  // Filtered tickets
+  // Filtered tickets with debounced search
   const filteredTickets = useMemo(() => {
     if (!tickets) return [];
     return tickets.filter((ticket) => {
@@ -47,7 +87,7 @@ export default function TicketsContent() {
       const opNameStr = (ticket.operatorName || '').toLowerCase();
       const opEmailStr = (ticket.operatorEmail || '').toLowerCase();
       const idStr = (ticket.id || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
+      const search = debouncedSearch.toLowerCase();
 
       const matchesSearch =
         titleStr.includes(search) ||
@@ -66,7 +106,7 @@ export default function TicketsContent() {
       const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [tickets, searchTerm, statusFilter]);
+  }, [tickets, debouncedSearch, statusFilter]);
 
   // Paginated tickets slice
   const paginatedTickets = useMemo(() => {
@@ -98,86 +138,69 @@ export default function TicketsContent() {
 
   // API Handler: Create Ticket
   const handleCreateTicket = async (ticketData) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets`,
-        'POST',
-        ticketData,
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Support ticket created successfully', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to create ticket: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return createTicket(
+      userToken,
+      ticketData,
+      (res) => {
+        addToast('Support ticket created successfully', 'success');
+        createModalRef.current?.closeModal();
+        loadTickets();
+      },
+      (error) => {
+        addToast(`Failed to create ticket: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   // API Handler: Send message in forum thread
   const handleSendMessage = async (ticketId, messageText) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/messages`,
-        'POST',
-        { message: messageText, senderRole: 'admin' },
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Response posted to support thread', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to send message: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return sendMessageToTicket(
+      userToken,
+      ticketId,
+      messageText,
+      (res) => {
+        addToast('Response posted to support thread', 'success');
+        loadTickets();
+      },
+      (error) => {
+        addToast(`Failed to send message: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   // API Handler: Close Ticket / Forum Thread
   const handleCloseTicket = async (ticketId) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/close`,
-        'POST',
-        {},
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Support forum thread has been closed', 'info');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to close ticket: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return closeTicket(
+      userToken,
+      ticketId,
+      (res) => {
+        addToast('Support forum thread has been closed', 'info');
+        loadTickets();
+      },
+      (error) => {
+        addToast(`Failed to close ticket: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   // API Handler: Change Status
   const handleStatusChange = async (ticketId, newStatus) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/status`,
-        'PATCH',
-        { status: newStatus },
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast(`Ticket status updated to ${newStatus}`, 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to update status: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return updateTicketStatus(
+      userToken,
+      ticketId,
+      newStatus,
+      (res) => {
+        addToast(`Ticket status updated to ${newStatus}`, 'success');
+        loadTickets();
+      },
+      (error) => {
+        addToast(`Failed to update status: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const breadcrumbItems = [
@@ -300,6 +323,8 @@ export default function TicketsContent() {
         ref={createModalRef}
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
+        isOperatorPortal={false}
+        operatorsList={operatorsList}
       />
     </main>
   );

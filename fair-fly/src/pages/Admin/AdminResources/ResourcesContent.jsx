@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { firestore, auth } from '../../../firebase';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import DataTable from '../../../components/UI/DataTable/DataTable';
 import Pagination from '../../../components/UI/Pagination/Pagination';
@@ -9,7 +8,9 @@ import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import ResourceModal from '../../../components/Admin/Modals/ResourceModal/ResourceModal';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchResources, createResource, updateResource, deleteResource, recordResourceDownload } from '../../../services/resourceService';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './admin-resources.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -45,12 +46,14 @@ function getCategoryClass(cat) {
 }
 
 export default function ResourcesContent() {
+  const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedVisibility, setSelectedVisibility] = useState('all');
 
@@ -65,29 +68,32 @@ export default function ResourcesContent() {
   const [resourceToDelete, setResourceToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Real-time Firestore sync
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(firestore, 'resources'),
-      (snapshot) => {
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+  // Load resources via GET
+  const loadResources = useCallback(() => {
+    if (!userToken) return;
+    setLoading(true);
+    fetchResources(
+      userToken,
+      (data) => {
+        const list = data || [];
         list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         setResources(list);
         setLoading(false);
       },
       (error) => {
         console.error('Error fetching resources:', error);
+        addToast('Failed to load resources', 'error');
         setLoading(false);
-      }
+      },
+      setLoading
     );
+  }, [userToken, addToast]);
 
-    return () => unsub();
-  }, []);
+  useEffect(() => {
+    loadResources();
+  }, [loadResources]);
 
-  // Filtered list
+  // Filtered list with debounced search
   const filteredResources = useMemo(() => {
     return resources.filter((item) => {
       if (selectedCategory !== 'all' && item.category !== selectedCategory) {
@@ -96,8 +102,8 @@ export default function ResourcesContent() {
       if (selectedVisibility !== 'all' && item.visibility !== selectedVisibility) {
         return false;
       }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase().trim();
         const matchesTitle = item.title?.toLowerCase().includes(q);
         const matchesDesc = item.description?.toLowerCase().includes(q);
         const matchesFileName = item.fileName?.toLowerCase().includes(q);
@@ -108,7 +114,7 @@ export default function ResourcesContent() {
       }
       return true;
     });
-  }, [resources, selectedCategory, selectedVisibility, searchQuery]);
+  }, [resources, selectedCategory, selectedVisibility, debouncedSearch]);
 
   // Paginated list
   const paginatedResources = useMemo(() => {
@@ -130,40 +136,45 @@ export default function ResourcesContent() {
 
   const handleOpenEditModal = (resource) => {
     setEditingResource(resource);
-    modalRef.current?.openModal();
+    modalRef.current?.openModal(resource);
   };
 
-  const handleSubmitResource = async (formData) => {
+  const handleFormSubmit = async (formData) => {
     setIsSubmitting(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
       const isEdit = Boolean(editingResource);
-      const url = isEdit
-        ? `${API_BASE_URL}/api/resources/${editingResource.id}`
-        : `${API_BASE_URL}/api/resources`;
-      const method = isEdit ? 'PATCH' : 'POST';
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to save resource');
+      if (isEdit) {
+        await updateResource(
+          userToken,
+          editingResource.id,
+          formData,
+          () => {
+            addToast('Resource updated successfully!', 'success');
+            loadResources();
+          },
+          (err) => {
+            addToast(toFriendlyMessage(err, 'Failed to update resource material.'), 'error');
+          },
+          setIsSubmitting
+        );
+      } else {
+        await createResource(
+          userToken,
+          formData,
+          () => {
+            addToast('Resource published successfully!', 'success');
+            loadResources();
+          },
+          (err) => {
+            addToast(toFriendlyMessage(err, 'Failed to publish resource material.'), 'error');
+          },
+          setIsSubmitting
+        );
       }
-
-      addToast(
-        isEdit ? 'Resource updated successfully!' : 'Resource published successfully!',
-        'success'
-      );
     } catch (error) {
       console.error('Error saving resource:', error);
-      addToast(error.message, 'error');
+      addToast(toFriendlyMessage(error, 'Failed to save resource material.'), 'error');
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -173,38 +184,25 @@ export default function ResourcesContent() {
   const handleDeleteConfirm = async () => {
     if (!resourceToDelete) return;
     setIsSubmitting(true);
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`${API_BASE_URL}/api/resources/${resourceToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to delete resource');
-      }
-
-      addToast('Resource deleted successfully', 'success');
-      setResourceToDelete(null);
-    } catch (error) {
-      console.error('Error deleting resource:', error);
-      addToast(error.message, 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+    deleteResource(
+      userToken,
+      resourceToDelete.id,
+      () => {
+        addToast('Resource deleted successfully', 'success');
+        setResourceToDelete(null);
+        loadResources();
+      },
+      (err) => {
+        addToast(toFriendlyMessage(err, 'Failed to delete resource.'), 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const handleDownload = async (resource) => {
     try {
-      const token = await auth.currentUser?.getIdToken();
       // Record download on backend
-      fetch(`${API_BASE_URL}/api/resources/${resource.id}/download`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      }).catch((e) => console.warn('Download tracking warning:', e));
+      recordResourceDownload(userToken, resource.id, () => {}, (e) => console.warn('Download tracking warning:', e));
 
       // Trigger download
       const link = document.createElement('a');
@@ -490,7 +488,7 @@ export default function ResourcesContent() {
       {/* Add / Edit Resource Modal */}
       <ResourceModal
         ref={modalRef}
-        onSubmit={handleSubmitResource}
+        onSubmit={handleFormSubmit}
         isLoading={isSubmitting}
         initialData={editingResource}
       />

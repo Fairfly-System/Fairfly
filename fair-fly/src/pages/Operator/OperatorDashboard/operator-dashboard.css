@@ -118,24 +118,40 @@
   color: #FFFFFF;
 }
 
-.op-view-btn {
-  display: flex;
+.op-perform-procedure-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 0.4375rem;
-  background: var(--purple);
-  color: #FFFFFF;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--purple, #7c3aed) 0%, var(--purple-dark, #5b21b6) 100%);
+  color: #FFFFFF !important;
+  text-decoration: none;
   border: none;
   font-size: 0.8125rem;
   font-weight: 600;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.125rem;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 2px 5px rgba(124, 58, 237, 0.22);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.op-view-btn:hover {
-  background: var(--purple-dark);
+.op-perform-procedure-btn:hover {
+  background: linear-gradient(135deg, var(--purple-dark, #6d28d9) 0%, #4c1d95 100%);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.32);
+  transform: translateY(-1px);
+  color: #FFFFFF !important;
+}
+
+.op-perform-procedure-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.2);
+}
+
+.op-perform-procedure-btn i {
+  font-size: 0.875rem;
 }
 
 .op-service-started {
@@ -193,8 +209,9 @@
     align-items: flex-start;
   }
 
-  .op-view-btn {
+  .op-perform-procedure-btn {
     width: 100%;
     justify-content: center;
+    margin-top: 0.5rem;
   }
 }

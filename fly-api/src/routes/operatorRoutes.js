@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { 
+  getOperators,
+  getOperatorById,
   getBranches,
   createOperator, 
   updateOperator, 
@@ -13,7 +15,9 @@ const { verifyFirebaseToken, requireRole, requireSuperAdmin } = require('../midd
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 const { allowedFields } = require('../middleware/allowedFields');
 
+router.get('/', performanceProfiler('GET /operators', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, getOperators));
 router.get('/branches', performanceProfiler('GET /operators/branches', apiRateLimiter, getBranches));
+router.get('/:id', performanceProfiler('GET /operators/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, getOperatorById));
 router.post('/', performanceProfiler('POST /operators', verifyFirebaseToken, requireSuperAdmin, allowedFields(['branchName', 'email', 'password', 'address', 'contactNumber']), apiRateLimiter, createOperator));
 router.post('/bulk-status', performanceProfiler('POST /operators/bulk-status', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, bulkStatusOperators));
 router.post('/bulk-delete', performanceProfiler('POST /operators/bulk-delete', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, bulkDeleteOperators));

@@ -15,6 +15,8 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 export default function FranchiseContent() {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ export default function FranchiseContent() {
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('pending');
 
   // Pagination state
@@ -43,7 +46,7 @@ export default function FranchiseContent() {
         addToast(`Application ${isApproved ? 'approved' : 'rejected'} successfully`, 'success');
       },
       (error) => {
-        addToast(`Failed to update application status: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Could not update application status. Please try again.'), 'error');
         console.error('Error updating application status:', error);
       },
       setIsLoading
@@ -54,10 +57,11 @@ export default function FranchiseContent() {
   const filteredApplications = useMemo(() => {
     if (!franchiseApplications) return [];
     return franchiseApplications.filter((app) => {
+      const q = debouncedSearch.toLowerCase();
       const matchesSearch =
-        (app.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (app.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (app.preferredBranchLocation || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (app.fullName || '').toLowerCase().includes(q) ||
+        (app.email || '').toLowerCase().includes(q) ||
+        (app.preferredBranchLocation || '').toLowerCase().includes(q);
 
       const matchesStatus =
         statusFilter === 'all' ||
@@ -65,7 +69,7 @@ export default function FranchiseContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [franchiseApplications, searchTerm, statusFilter]);
+  }, [franchiseApplications, debouncedSearch, statusFilter]);
 
   // Paginated slice
   const paginatedApplications = useMemo(() => {

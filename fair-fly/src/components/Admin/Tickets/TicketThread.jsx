@@ -109,17 +109,19 @@ export default function TicketThread({
 
           <div className="thread-meta-bar">
             <div className="thread-meta-item">
-              <i className="fa-solid fa-user-gear"></i>
-              <span>Operator ID: <strong>{ticket.operatorId || 'N/A'}</strong></span>
-            </div>
-            <div className="thread-meta-item">
               <i className="fa-solid fa-building"></i>
-              <span>Name: <strong>{ticket.operatorName || 'Operator'}</strong></span>
+              <span>Branch: <strong>{ticket.operatorName || 'Operator Branch'}</strong></span>
             </div>
             <div className="thread-meta-item">
-              <i className="fa-solid fa-envelope"></i>
-              <span>Email: <strong>{ticket.operatorEmail || 'N/A'}</strong></span>
+              <i className="fa-solid fa-id-badge"></i>
+              <span>Operator UID: <code className="ticket-uid-code">{ticket.operatorId || 'N/A'}</code></span>
             </div>
+            {ticket.operatorEmail && (
+              <div className="thread-meta-item">
+                <i className="fa-solid fa-envelope"></i>
+                <span>Email: <strong>{ticket.operatorEmail}</strong></span>
+              </div>
+            )}
             <div className="thread-meta-item">
               <i className="fa-solid fa-calendar-days"></i>
               <span>Created: <strong>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : 'N/A'}</strong></span>

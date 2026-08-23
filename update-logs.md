@@ -1,5 +1,151 @@
 # Update Logs
 
+## [2026-08-23] Fix: Landing Page Navbar Responsiveness & Mobile Slide Drawer
+
+### Files Modified
+- `fair-fly/src/components/Shared/Navbar/Navbar.jsx` (Added mobile drawer toggle state, route-change auto-closing, body scroll lock, compact "Apply" action button, and hamburger toggle button with FontAwesome icons)
+- `fair-fly/src/components/Shared/Navbar/navbar.css` (Added responsive layout rules for desktop vs tablet/mobile breakpoints `60rem`, styled `.nav-mobile-drawer`, `.nav-mobile-backdrop`, `.nav-mobile-links`, and smooth sliding transitions using REM tokens)
+
+### Summary of Changes
+- Resolved navbar overflow on smaller screens by transitioning desktop links into a slide-down mobile navigation drawer with backdrop blur.
+- Provided convenient quick-access to Services, Business System, Guidelines, Business Model, About, Login, and Franchise Application modal across all screen sizes.
+
+---
+
+## [2026-08-23] Landing Page: Integrated Business System Presentation (DO-52-000)
+
+### Files Created & Modified
+- **New Modular Components & Styles (`fair-fly`)**:
+  - `fair-fly/src/components/Landing/BusinessSystem/BusinessSystem.jsx` **[NEW]** & `business-system.css` **[NEW]** (Showcases ISO: 9001-2000 Ready Quality Management System standards, procedure manuals, online cloud database, virtual office capabilities, and scalable high-inquiry operations)
+  - `fair-fly/src/components/Landing/ServiceGuidelines/ServiceGuidelines.jsx` **[NEW]** & `service-guidelines.css` **[NEW]** (Interactive tabbed fulfillment pipelines detailing step-by-step guidelines, pricing breakdowns, and operator profit margins for Passport Processing, PSA/NSO Documents, Airline Ticketing, and Tour Packages)
+  - `fair-fly/src/components/Landing/BusinessModel/BusinessModel.jsx` **[NEW]** & `business-model.css` **[NEW]** (Illustrates the asset-light, zero-inventory business model, upfront cash-basis cashflow, skill-as-a-product philosophy ["Paper to Plane"], and FairFly modern office vs conventional retail comparison)
+  - `fair-fly/src/components/Landing/TrainingComparison/TrainingComparison.jsx` **[NEW]** & `training-comparison.css` **[NEW]** (Highlights the FairFly Academy transferring 29 years of industry expertise into an intensive 2-month training program vs costly trial-and-error)
+- **Landing Page & Navigation (`fair-fly`)**:
+  - `fair-fly/src/pages/Index/Landing/Landing.jsx` & `landing.css` (Assembled presentation sections, enhanced hero section with trust badges and metric trust strip)
+  - `fair-fly/src/components/FranchiseSection/FranchiseSection.jsx` (Enriched franchise value proposition, stats, and steps with ISO QMS and 2-month training academy highlights)
+  - `fair-fly/src/components/Shared/Navbar/Navbar.jsx` & `navbar.css` (Added smooth-scroll navigation links for Services, Business System, and Guidelines)
+  - `fair-fly/src/components/Shared/Services/Services.jsx` & `fair-fly/src/components/UI/FooterCard/FooterCard.jsx` (Converted class attributes to className)
+
+### Summary of Changes
+- Translated the entire 17-slide Business System Presentation into modern, responsive, and SEO-friendly landing page sections adhering strictly to `styleguide.md`.
+- Maintained zero emojis across all newly created UI elements (using FontAwesome icons and REM spacing throughout).
+
+---
+
+## [2026-08-23] Fix: Aligned Frontend Service Endpoints with Backend Routes
+
+### Files Modified
+- `fair-fly/src/services/adminService.js` (Updated `/api/admin/admins` to `/api/admins`)
+- `fair-fly/src/services/resourceService.js` (Updated `/api/services/resources` to `/api/resources`)
+- `fly-api/src/routes/index.js` (Added backward compatibility alias mappings for `/api/admin/admins` and `/api/services/resources`)
+
+### Summary of Changes
+- Resolved 404 Not Found errors when fetching admins (`GET /api/admins`) and resource materials (`GET /api/resources`). Added dual-route aliases in Express router for robustness.
+
+---
+
+## [2026-08-23] Fix: Undefined `handleSubmitResource` Reference in Admin Resources Page
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx` (Fixed `<ResourceModal onSubmit={handleFormSubmit} />` prop binding, restored `ResourceModal` import, and applied friendly error translation via `toFriendlyMessage`)
+
+### Summary of Changes
+- Resolved the runtime `ReferenceError: handleSubmitResource is not defined` error when opening or rendering the Admin Resources page by correctly passing the `handleFormSubmit` handler and using human-friendly error toasts.
+
+---
+
+## [2026-08-23] Service Store E-Commerce Product Page, Carousel Images, onSnapshot to GET Migration, Search Debouncing, and Friendly Toasts
+
+### Files Modified & Created
+- **Service & Product Page**:
+  - `fair-fly/src/pages/ClientSide/ClientServiceItem/ServiceItemPage.jsx` (NEW: Created full e-commerce service details page with multi-image gallery carousel, turnaround badges, requirement checklists with download links, procedure steps roadmap, and booking action CTAs)
+  - `fair-fly/src/pages/ClientSide/ClientServiceItem/service-item-page.css` (NEW: Added modern responsive styles for e-commerce product layout)
+  - `fair-fly/src/App.jsx` (Added `/client/services/:serviceId` route)
+  - `fair-fly/src/components/Client/ClientServicesMarketplace/ClientServicesMarketplace.jsx` (Updated cards to link directly to the service item page and support quick request action)
+  - `fair-fly/src/components/Admin/Modals/ServiceModal/ServiceForm.jsx` (Added multi-image carousel upload manager supporting up to 5 photos with preview badges and individual deletion)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Integrated `service_carousel` file uploads to backend storage)
+  - `fly-api/src/controllers/serviceController.js` & `fly-api/src/routes/serviceRoutes.js` (Added `GET /api/services/:id` and supported `carouselImages` array)
+  - `fly-api/src/controllers/operatorController.js` & `fly-api/src/routes/operatorRoutes.js` (Added `GET /api/operators` and `GET /api/operators/:id`)
+
+- **Services Layer & Firestore `onSnapshot` Migration**:
+  - `fair-fly/src/services/` (Created `adminService.js`, `serviceService.js`, `ticketService.js`, `resourceService.js`, `appointmentService.js`, `quotationService.js`, `quickLinkService.js`, `workflowService.js`)
+  - `fair-fly/src/pages/Admin/AdminAdmins/AdminsContent.jsx` & `AdminDetailPage.jsx` (Migrated from `onSnapshot` to `adminService` GET requests)
+  - `fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx` & `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` (Migrated to `resourceService` GET requests)
+  - `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` & `TicketDetailPage.jsx` (Migrated to `ticketService` GET requests)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` & `OperatorTicketDetailPage.jsx` (Migrated to `ticketService` GET requests)
+  - `fair-fly/src/components/Operator/AddServiceModal/AddServiceModal.jsx` (Migrated catalog dropdown from `onSnapshot` to `fetchServices`)
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx` (Migrated catalog listing from `onSnapshot` to `fetchServices`)
+  - `fair-fly/src/pages/ClientSide/ClientAppointments/ClientAppointmentsPage.jsx` (Migrated appointments list from `onSnapshot` to `fetchAppointments`)
+  - `fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx` (Migrated workflows selection from `onSnapshot` to `fetchWorkflowTemplates`)
+
+- **Search Debouncing & Chat Infinite Scroll**:
+  - `fair-fly/src/hooks/useDebounce.js` (NEW: Reusable 300ms debounce hook)
+  - `fair-fly/src/components/Shared/Messaging/NewChatModal/NewChatModal.jsx` (Added debounced contact search and infinite scroll pagination on scroll down)
+  - Applied search debouncing across `MessagesPage.jsx`, `ClientServicesMarketplace.jsx`, `OperatorTicketsContent.jsx`, `OperatorQuotations.jsx`, `OperatorAppointments.jsx`, `OperatorInquiryForms.jsx`, `OperatorsContent.jsx`, `ServiceContent.jsx`, `FranchiseContent.jsx`, `HistoryContent.jsx`, `QuickLinksContent.jsx`, and `AdminWorkflowTemplates.jsx`.
+
+- **Friendly User-Facing Error Messages**:
+  - `fair-fly/src/utils/friendlyErrors.js` (NEW: Maps technical Firebase auth and backend error codes into clear, polite messages)
+  - Applied friendly toast messages across `login.jsx`, `Register.jsx`, `ClientServiceRequestModal.jsx`, `ClientAppointmentForm.jsx`, `OperatorTicketsContent.jsx`, `OperatorTicketDetailPage.jsx`, `OperatorQuotations.jsx`, `OperatorAppointments.jsx`, and `OperatorsContent.jsx`.
+
+### Summary of Changes
+- Implemented an e-commerce style Service Product Page (`/client/services/:serviceId`) with an interactive image gallery carousel and booking actions.
+- Migrated all tabular and form catalog Firestore `onSnapshot` subscriptions to optimized REST GET endpoints while maintaining real-time listeners for live streams.
+- Introduced a central `/services` API layer, search debouncing, infinite scroll pagination, and friendly error toasts throughout the platform.
+
+---
+
+### Files Modified
+- `fair-fly/src/pages/ClientSide/ClientDashboard/client-dashboard.css` (Added vertical flex column with `2.25rem` gap to `.client-dashboard-page`, enlarged action cards padding and hover elevation, removed cramped margins)
+- `fair-fly/src/pages/ClientSide/ClientLayout/client-layout.css` (Increased `.client-portal-main` padding to `1.75rem 1.75rem 4rem` and gap to `2rem`)
+- `fair-fly/src/components/Client/ClientServicesMarketplace/client-services-marketplace.css` (Added clear section separation border-top and `1.75rem` padding-top for Travel Services Store)
+
+### Summary of Changes
+- Resolved cramped layout issues across the Client Portal by expanding vertical whitespace between the Welcome Hero header, Quick Action cards grid, and the Travel & Document Services Store catalog.
+
+---
+
+## [2026-08-23] Fix: "Perform Workflow Procedure" Button Styling in Operator Dashboard
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Updated button className to `.op-perform-procedure-btn` with icon styling)
+- `fair-fly/src/pages/Operator/OperatorDashboard/operator-dashboard.css` (Added dedicated gradient styling, padding, shadows, and hover animations for `.op-perform-procedure-btn`)
+- `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` (Renamed `.op-view-btn` to `.op-resources-view-btn` to prevent CSS class name collision)
+- `fair-fly/src/pages/Operator/OperatorResources/operator-resources.css` (Scoped grid/list view button rules to `.op-resources-view-btn`)
+
+### Summary of Changes
+- Fixed a CSS class collision where `.op-view-btn` from `operator-resources.css` overrode and collapsed the "Perform Workflow Procedure" button into a 2rem square. The action button is now styled with a primary purple gradient, proper padding, and hover elevation.
+
+---
+
+## [2026-08-23] Fix: Modal Auto-Closing via ApiCaller Callbacks
+
+### Files Modified
+- `fair-fly/src/components/UI/ModalBase/BaseModal.jsx` (Enabled programmatic `closeModal()` invocations from callbacks while protecting overlay backdrop clicks during loading)
+- `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Integrated `createModalRef.current.closeModal()` directly within `ApiCaller`'s `successCallback`)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Integrated `createModalRef.current.closeModal()` directly within `ApiCaller`'s `successCallback`)
+
+### Summary of Changes
+- Resolved the issue where ticket modals remained open after submission by utilizing `ApiCaller`'s native `successCallback`, `errorCallback`, and `setIsLoading` parameters.
+
+---
+
+## [2026-08-23] Operator Side Ticketing: Auto-Populate Operator UID & UI Refinements
+
+### Files Modified
+- `fly-api/src/controllers/ticketController.js` (Updated `createTicket` to resolve and store authentic operator account UIDs from `/users`, enriching tickets with real branch details from Firestore)
+- `fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx` (Removed manual Operator-ID and personal info fields on the operator side; added auto-populated Submitter Context banner displaying branch name, email, and UID badge; added registered operator dropdown for admins)
+- `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Auto-filled `operatorId` from authenticated user UID and updated branch ticket filtering and search queries)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Subscribed to registered operators from Firestore `/users` and wired dropdown data to `CreateTicketModal`)
+- `fair-fly/src/components/Admin/Tickets/TicketTable.jsx` (Refined Operator column to display branch name, initials avatar, and stylized monospaced UID badge with tooltip)
+- `fair-fly/src/components/Admin/Tickets/TicketThread.jsx` (Updated thread metadata header to display Branch name and Firestore Operator UID code chip)
+- `fair-fly/src/components/Admin/Tickets/tickets.css` (Added styles for `.operator-submitter-card`, `.ticket-op-uid-pill`, and `.ticket-uid-code`)
+
+### Summary of Changes
+- Streamlined operator ticket creation by eliminating manual ID entry and auto-populating tickets with the operator's authentic Firestore UID from `/users`.
+- Modernized ticket tables, modals, and thread headers to display branch identity and account UIDs consistently.
+
+---
+
 ## [2026-08-17] Breadcrumbs Navigation for Messages Page
 
 ### Files Modified

@@ -16,6 +16,7 @@ import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
 import { uploadFileToBackend } from "../../../utils/fileUploadApi";
+import useDebounce from "../../../hooks/useDebounce";
 
 export default function ServiceContent() {
   const UNIT_LABELS = {
@@ -50,6 +51,7 @@ export default function ServiceContent() {
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Selection state
@@ -82,7 +84,7 @@ export default function ServiceContent() {
   const filteredServices = useMemo(() => {
     if (!service) return [];
     return service.filter((item) => {
-      const term = searchTerm.toLowerCase();
+      const term = debouncedSearch.toLowerCase();
       const matchesSearch =
         (item.name || "").toLowerCase().includes(term) ||
         (item.category || "").toLowerCase().includes(term) ||
@@ -96,7 +98,7 @@ export default function ServiceContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [service, searchTerm, statusFilter]);
+  }, [service, debouncedSearch, statusFilter]);
 
   // Paginated slice
   const paginatedServices = useMemo(() => {
@@ -347,11 +349,32 @@ export default function ServiceContent() {
       );
     }
 
+    // Process Carousel Images
+    let updatedCarouselImages = [];
+    if (Array.isArray(serviceData.carouselImages)) {
+      updatedCarouselImages = await Promise.all(
+        serviceData.carouselImages.map(async (item) => {
+          if (item?.pendingFile) {
+            const { url: downloadUrl } = await uploadFileToBackend(
+              item.pendingFile,
+              'service_carousel',
+              userToken
+            );
+            return downloadUrl;
+          }
+          if (typeof item === 'string') return item;
+          return item?.url || '';
+        })
+      );
+      updatedCarouselImages = updatedCarouselImages.filter(Boolean);
+    }
+
     const { pendingCoverFile, coverImagePreview, ...cleanData } = serviceData;
 
     return {
       ...cleanData,
       coverImage: coverImageUrl,
+      carouselImages: updatedCarouselImages,
       requirements: updatedRequirements,
     };
   };

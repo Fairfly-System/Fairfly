@@ -54,6 +54,7 @@ function parseProcessingTime(processingTime) {
 export default function ServiceForm({ onSubmit, isLoading, initialData }) {
   const isEditMode = Boolean(initialData);
   const fileInputRef = useRef(null);
+  const carouselFileInputRef = useRef(null);
 
   // Determine initial category state
   const initialCategory = initialData?.category || "Visa & Embassy Assistance";
@@ -71,6 +72,13 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
     pendingCoverFile: null,
     coverImagePreview: initialData?.coverImage || initialData?.coverPhoto || initialData?.coverPhotoUrl || ""
   });
+
+  // Carousel Photos state (up to 5 images for client-side product detail page)
+  const [carouselImages, setCarouselImages] = useState(
+    Array.isArray(initialData?.carouselImages)
+      ? initialData.carouselImages.map((img) => (typeof img === 'string' ? { url: img, previewUrl: img } : img))
+      : []
+  );
 
   const [tags, setTags] = useState(
     Array.isArray(initialData?.tags) ? initialData.tags : []
@@ -122,6 +130,46 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
     }));
   };
 
+  // Carousel Photos Handlers
+  const handleCarouselPhotosChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const remainingSlots = 5 - carouselImages.length;
+    if (remainingSlots <= 0) {
+      alert("You can only upload up to 5 carousel images per service.");
+      return;
+    }
+
+    const selectedFiles = files.slice(0, remainingSlots);
+    const newItems = [];
+
+    for (const file of selectedFiles) {
+      if (!file.type.startsWith("image/")) {
+        alert(`Skipping ${file.name}: Not a valid image file.`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`Skipping ${file.name}: File size exceeds 10MB.`);
+        continue;
+      }
+      newItems.push({
+        pendingFile: file,
+        previewUrl: URL.createObjectURL(file)
+      });
+    }
+
+    setCarouselImages((prev) => [...prev, ...newItems].slice(0, 5));
+
+    if (carouselFileInputRef.current) {
+      carouselFileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveCarouselPhoto = (indexToRemove) => {
+    setCarouselImages((prev) => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   // Tag Handlers
   const handleAddTag = (tagToAdd) => {
     const cleanTag = (tagToAdd || tagInput).trim().replace(/^#/, '');
@@ -160,6 +208,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
       processingTime: formData.processingTime,
       coverImage: formData.coverImage,
       pendingCoverFile: formData.pendingCoverFile,
+      carouselImages,
       tags,
       requirements,
       workflowIds
@@ -177,10 +226,10 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
           <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>
               <i className="fa-regular fa-image" style={{ color: 'var(--purple)', marginRight: '0.375rem' }}></i>
-              Service Cover Photo
+              Service Card Thumbnail / Cover Photo
             </span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', fontWeight: 'normal' }}>
-              Recommended: 16:9 or 4:3 ratio (Max 10MB)
+              Used on Marketplace Cards (16:9 / 4:3)
             </span>
           </label>
 
@@ -236,7 +285,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                   disabled={isLoading}
                 >
                   <i className="fa-solid fa-camera" style={{ marginRight: '0.375rem' }}></i>
-                  Change Image
+                  Change Thumbnail
                 </button>
                 <button
                   type="button"
@@ -256,7 +305,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
               style={{
                 border: '2px dashed var(--border-color)',
                 borderRadius: 'var(--radius-md)',
-                padding: '1.5rem 1rem',
+                padding: '1.25rem 1rem',
                 textAlign: 'center',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
                 backgroundColor: 'var(--bg)',
@@ -264,34 +313,153 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.375rem'
               }}
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--purple)')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
             >
               <div
                 style={{
-                  width: '3rem',
-                  height: '3rem',
+                  width: '2.75rem',
+                  height: '2.75rem',
                   borderRadius: '50%',
                   backgroundColor: 'var(--purple-light-2)',
                   color: 'var(--purple)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.25rem'
+                  fontSize: '1.125rem'
                 }}
               >
                 <i className="fa-solid fa-cloud-arrow-up"></i>
               </div>
               <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)' }}>
-                Click to upload cover photo
+                Click to upload card thumbnail photo
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                 PNG, JPG, JPEG, WebP up to 10MB
               </span>
             </div>
           )}
+        </div>
+
+        {/* Carousel Photos Gallery (For E-Commerce Store Page) */}
+        <div className="formGroup">
+          <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>
+              <i className="fa-solid fa-images" style={{ color: 'var(--purple)', marginRight: '0.375rem' }}></i>
+              Store Carousel Photos ({carouselImages.length}/5)
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', fontWeight: 'normal' }}>
+              Displayed on client product page gallery (Max 5)
+            </span>
+          </label>
+
+          <input
+            type="file"
+            ref={carouselFileInputRef}
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleCarouselPhotosChange}
+            disabled={isLoading || carouselImages.length >= 5}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(6rem, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
+            {carouselImages.map((img, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '1',
+                  borderRadius: 'var(--radius-sm)',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg)'
+                }}
+              >
+                <img
+                  src={img.previewUrl || img.url}
+                  alt={`Carousel ${idx + 1}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '0.25rem',
+                    left: '0.25rem',
+                    background: 'rgba(26, 26, 46, 0.75)',
+                    color: '#ffffff',
+                    fontSize: '0.625rem',
+                    fontWeight: 700,
+                    padding: '0.125rem 0.375rem',
+                    borderRadius: 'var(--radius-xs)'
+                  }}
+                >
+                  #{idx + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveCarouselPhoto(idx)}
+                  disabled={isLoading}
+                  style={{
+                    position: 'absolute',
+                    top: '0.25rem',
+                    right: '0.25rem',
+                    width: '1.375rem',
+                    height: '1.375rem',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                    color: '#ffffff',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.6875rem',
+                    cursor: 'pointer'
+                  }}
+                  title="Remove image"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            ))}
+
+            {carouselImages.length < 5 && (
+              <button
+                type="button"
+                onClick={() => !isLoading && carouselFileInputRef.current?.click()}
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  aspectRatio: '1',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '2px dashed var(--border-color)',
+                  backgroundColor: 'var(--bg)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.25rem',
+                  cursor: 'pointer',
+                  color: 'var(--text-mid)',
+                  transition: 'border-color 0.2s, color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--purple)';
+                  e.currentTarget.style.color = 'var(--purple)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                  e.currentTarget.style.color = 'var(--text-mid)';
+                }}
+              >
+                <i className="fa-solid fa-plus" style={{ fontSize: '1.125rem' }}></i>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 600 }}>Add Photo</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Row 1: Service Name & Category */}

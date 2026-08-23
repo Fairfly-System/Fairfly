@@ -147,9 +147,9 @@ function DashboardContent() {
                       )}
                       <span className={`op-priority ${priorityType}`}>{priority}</span>
                     </div>
-                    <Link to={`/operator/services/${s.id}/procedure`} className="op-view-btn">
-                      <i className="fa-regular fa-file-lines"></i>
-                      Perform Workflow Procedure
+                    <Link to={`/operator/services/${s.id}/procedure`} className="op-perform-procedure-btn">
+                      <i className="fa-solid fa-play"></i>
+                      <span>Perform Workflow Procedure</span>
                     </Link>
                   </div>
 
