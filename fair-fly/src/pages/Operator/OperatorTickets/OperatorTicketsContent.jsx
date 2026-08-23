@@ -32,18 +32,23 @@ export default function OperatorTicketsContent() {
 
   const createModalRef = useRef(null);
 
-  // Active operator ID & details
-  const currentOperatorId = userDetails?.uid || user?.uid || 'OP-ACCOUNT';
-  const currentOperatorName = userDetails?.name || userDetails?.branchName || 'Operator Branch';
+  // Active operator ID & details (using real Firestore account UID)
+  const currentOperatorId = user?.uid || userDetails?.id || userDetails?.uid || '';
+  const currentOperatorName = userDetails?.branchName || userDetails?.name || 'Operator Branch';
   const currentOperatorEmail = userDetails?.email || user?.email || 'operator@fairfly.com';
 
-  // Filter operator-specific tickets or all branch tickets
+  // Filter operator-specific tickets for this branch
   const operatorTickets = useMemo(() => {
     if (!tickets) return [];
     return tickets.filter((t) => {
-      return true;
+      if (!currentOperatorId) return true;
+      return (
+        t.operatorId === currentOperatorId ||
+        t.operatorEmail?.toLowerCase() === currentOperatorEmail?.toLowerCase() ||
+        (t.operatorName && userDetails?.branchName && t.operatorName.toLowerCase() === userDetails.branchName.toLowerCase())
+      );
     });
-  }, [tickets]);
+  }, [tickets, currentOperatorId, currentOperatorEmail, userDetails?.branchName]);
 
   const activeTicket = useMemo(() => {
     if (!selectedTicketId || !operatorTickets) return null;
@@ -109,23 +114,20 @@ export default function OperatorTicketsContent() {
       operatorEmail: ticketData.operatorEmail || currentOperatorEmail,
     };
 
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets`,
-        'POST',
-        payload,
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Support ticket submitted to Head Office', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to submit ticket: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return ApiCaller(
+      `${API_BASE_URL}/api/tickets`,
+      'POST',
+      payload,
+      { Authorization: `Bearer ${userToken}` },
+      (res) => {
+        addToast('Support ticket submitted to Head Office', 'success');
+        createModalRef.current?.closeModal();
+      },
+      (error) => {
+        addToast(`Failed to submit ticket: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const handleSendMessage = async (ticketId, messageText) => {
@@ -268,6 +270,12 @@ export default function OperatorTicketsContent() {
         ref={createModalRef}
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
+        isOperatorPortal={true}
+        defaultOperator={{
+          operatorId: currentOperatorId,
+          operatorName: currentOperatorName,
+          operatorEmail: currentOperatorEmail,
+        }}
       />
     </main>
   );

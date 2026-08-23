@@ -27,7 +27,6 @@ const BaseModal = forwardRef(({
   };
 
   const closeModal = () => {
-    if (isLoading) return; // Prevent closing while processing
     setInternalIsOpen(false);
     setModalData(null);
     if (onClose) onClose();
@@ -47,7 +46,12 @@ const BaseModal = forwardRef(({
   if (width) containerStyle.width = width;
 
   return createPortal(
-    <div className="base-modal-overlay" onClick={closeModal}>
+    <div
+      className="base-modal-overlay"
+      onClick={() => {
+        if (!isLoading) closeModal();
+      }}
+    >
       <div
         className={`base-modal-container ${className}`.trim()}
         style={containerStyle}

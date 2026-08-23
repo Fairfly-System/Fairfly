@@ -1,5 +1,47 @@
 # Update Logs
 
+## [2026-08-23] Fix: "Perform Workflow Procedure" Button Styling in Operator Dashboard
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Updated button className to `.op-perform-procedure-btn` with icon styling)
+- `fair-fly/src/pages/Operator/OperatorDashboard/operator-dashboard.css` (Added dedicated gradient styling, padding, shadows, and hover animations for `.op-perform-procedure-btn`)
+- `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` (Renamed `.op-view-btn` to `.op-resources-view-btn` to prevent CSS class name collision)
+- `fair-fly/src/pages/Operator/OperatorResources/operator-resources.css` (Scoped grid/list view button rules to `.op-resources-view-btn`)
+
+### Summary of Changes
+- Fixed a CSS class collision where `.op-view-btn` from `operator-resources.css` overrode and collapsed the "Perform Workflow Procedure" button into a 2rem square. The action button is now styled with a primary purple gradient, proper padding, and hover elevation.
+
+---
+
+## [2026-08-23] Fix: Modal Auto-Closing via ApiCaller Callbacks
+
+### Files Modified
+- `fair-fly/src/components/UI/ModalBase/BaseModal.jsx` (Enabled programmatic `closeModal()` invocations from callbacks while protecting overlay backdrop clicks during loading)
+- `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Integrated `createModalRef.current.closeModal()` directly within `ApiCaller`'s `successCallback`)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Integrated `createModalRef.current.closeModal()` directly within `ApiCaller`'s `successCallback`)
+
+### Summary of Changes
+- Resolved the issue where ticket modals remained open after submission by utilizing `ApiCaller`'s native `successCallback`, `errorCallback`, and `setIsLoading` parameters.
+
+---
+
+## [2026-08-23] Operator Side Ticketing: Auto-Populate Operator UID & UI Refinements
+
+### Files Modified
+- `fly-api/src/controllers/ticketController.js` (Updated `createTicket` to resolve and store authentic operator account UIDs from `/users`, enriching tickets with real branch details from Firestore)
+- `fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx` (Removed manual Operator-ID and personal info fields on the operator side; added auto-populated Submitter Context banner displaying branch name, email, and UID badge; added registered operator dropdown for admins)
+- `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` (Auto-filled `operatorId` from authenticated user UID and updated branch ticket filtering and search queries)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Subscribed to registered operators from Firestore `/users` and wired dropdown data to `CreateTicketModal`)
+- `fair-fly/src/components/Admin/Tickets/TicketTable.jsx` (Refined Operator column to display branch name, initials avatar, and stylized monospaced UID badge with tooltip)
+- `fair-fly/src/components/Admin/Tickets/TicketThread.jsx` (Updated thread metadata header to display Branch name and Firestore Operator UID code chip)
+- `fair-fly/src/components/Admin/Tickets/tickets.css` (Added styles for `.operator-submitter-card`, `.ticket-op-uid-pill`, and `.ticket-uid-code`)
+
+### Summary of Changes
+- Streamlined operator ticket creation by eliminating manual ID entry and auto-populating tickets with the operator's authentic Firestore UID from `/users`.
+- Modernized ticket tables, modals, and thread headers to display branch identity and account UIDs consistently.
+
+---
+
 ## [2026-08-17] Breadcrumbs Navigation for Messages Page
 
 ### Files Modified

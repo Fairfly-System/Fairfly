@@ -29,9 +29,31 @@ const createTicket = async (req, res) => {
       return res.status(400).json({ error: 'Ticket title/subject is required' });
     }
 
-    const opId = operatorId || req.user?.uid || `OP-${Date.now().toString().slice(-6)}`;
-    const opName = operatorName || req.userDetails?.name || 'Operator Account';
-    const opEmail = operatorEmail || req.user?.email || 'operator@fairfly.com';
+    // Prioritize authenticated Operator UID from token
+    let opId = (req.userDetails?.role === 'operator' && req.user?.uid)
+      ? req.user.uid
+      : (operatorId || req.user?.uid);
+
+    let opName = operatorName || req.userDetails?.branchName || req.userDetails?.name || 'Operator Account';
+    let opEmail = operatorEmail || req.userDetails?.email || req.user?.email || 'operator@fairfly.com';
+
+    // If opId is available, verify and enrich with Firestore users document
+    if (opId) {
+      try {
+        const userDoc = await getFromDatabase(`users/${opId}`);
+        if (userDoc) {
+          opName = userDoc.branchName || userDoc.name || opName;
+          opEmail = userDoc.email || opEmail;
+        }
+      } catch (err) {
+        console.warn('User record lookup notice for operatorId:', opId, err.message);
+      }
+    }
+
+    if (!opId) {
+      return res.status(400).json({ error: 'Operator account UID is required to create a ticket' });
+    }
+
     const firstMsgText = initialMessage && initialMessage.trim() ? initialMessage.trim() : title.trim();
     const now = new Date().toISOString();
 

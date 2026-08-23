@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import './admin-tickets.css';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -29,8 +31,22 @@ export default function TicketsContent() {
 
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [operatorsList, setOperatorsList] = useState([]);
 
   const createModalRef = useRef(null);
+
+  // Subscribe to registered operators in Firestore
+  useEffect(() => {
+    const q = query(collection(firestore, 'users'), where('role', '==', 'operator'));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      setOperatorsList(list);
+    });
+    return () => unsub();
+  }, []);
 
   // Keep selected ticket object in sync with real-time Firestore updates
   const activeTicket = useMemo(() => {
@@ -98,23 +114,20 @@ export default function TicketsContent() {
 
   // API Handler: Create Ticket
   const handleCreateTicket = async (ticketData) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets`,
-        'POST',
-        ticketData,
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Support ticket created successfully', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to create ticket: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return ApiCaller(
+      `${API_BASE_URL}/api/tickets`,
+      'POST',
+      ticketData,
+      { Authorization: `Bearer ${userToken}` },
+      (res) => {
+        addToast('Support ticket created successfully', 'success');
+        createModalRef.current?.closeModal();
+      },
+      (error) => {
+        addToast(`Failed to create ticket: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   // API Handler: Send message in forum thread
@@ -300,6 +313,8 @@ export default function TicketsContent() {
         ref={createModalRef}
         onCreateTicket={handleCreateTicket}
         isLoading={isSubmitting}
+        isOperatorPortal={false}
+        operatorsList={operatorsList}
       />
     </main>
   );

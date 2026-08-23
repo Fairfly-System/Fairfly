@@ -191,7 +191,7 @@ export default function OperatorResources() {
         <div className="op-view-toggle">
           <button
             type="button"
-            className={`op-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+            className={`op-resources-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
             onClick={() => setViewMode('grid')}
             title="Grid view"
           >
@@ -199,7 +199,7 @@ export default function OperatorResources() {
           </button>
           <button
             type="button"
-            className={`op-view-btn ${viewMode === 'list' ? 'active' : ''}`}
+            className={`op-resources-view-btn ${viewMode === 'list' ? 'active' : ''}`}
             onClick={() => setViewMode('list')}
             title="List view"
           >
