@@ -7,7 +7,7 @@ const services = [
 
     icon: (
       <p>
-        <i class="fa-solid fa-plane-up"></i>
+        <i className="fa-solid fa-plane-up"></i>
       </p>
     ),
     iconBg: 'linear-gradient(135deg, #F97316, #FB923C)',
@@ -18,7 +18,7 @@ const services = [
   {
     icon: (
       <p>
-        <i class="fa-solid fa-passport"></i>
+        <i className="fa-solid fa-passport"></i>
       </p>
     ),
     iconBg: 'linear-gradient(135deg, #9B5CF6, #C084FC)',
@@ -28,7 +28,7 @@ const services = [
   {
     icon: (
       <p>
-        <i class="fa-solid fa-location-dot"></i>
+        <i className="fa-solid fa-location-dot"></i>
       </p>
     ),
     iconBg: 'linear-gradient(135deg, #22C55E, #16A34A)',
@@ -36,19 +36,19 @@ const services = [
     desc: 'Expert guidance for visa applications',
   },
   {
-  icon: (
-        <p>
-          <i class="fa-regular fa-file-lines"></i>
-        </p>
-      ),
-      iconBg: 'linear-gradient(135deg, #4B6FFF, #6B8FFF)',
-      title: 'PSA Birth Certificate',
-      desc: 'Fast processing of PSA documents',
-    },
+    icon: (
+      <p>
+        <i className="fa-regular fa-file-lines"></i>
+      </p>
+    ),
+    iconBg: 'linear-gradient(135deg, #4B6FFF, #6B8FFF)',
+    title: 'PSA Birth Certificate',
+    desc: 'Fast processing of PSA documents',
+  },
   {
     icon: (
       <p>
-        <i class="fa-solid fa-ticket"></i>
+        <i className="fa-solid fa-ticket"></i>
       </p>
     ),
     iconBg: 'linear-gradient(135deg, #EF4444, #DC2626)',
@@ -58,7 +58,7 @@ const services = [
   {
     icon: (
       <p>
-        <i class="fa-solid fa-file-circle-check"></i>
+        <i className="fa-solid fa-file-circle-check"></i>
       </p>
     ),
     iconBg: 'linear-gradient(135deg, #6B6FF5, #4B4FD5)',

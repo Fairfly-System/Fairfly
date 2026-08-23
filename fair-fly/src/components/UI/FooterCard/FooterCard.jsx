@@ -10,8 +10,8 @@ export default function FooterCard() {
         <p className="footer-sub">
           Join dozens of satisfied travelers who trust Fairfly for their travel needs
         </p>
-        <NavLink  to="/register" className="footer-btn">
-          Create an Account <i class="fa-solid fa-arrow-right"></i>
+        <NavLink to="/register" className="footer-btn">
+          Create an Account <i className="fa-solid fa-arrow-right"></i>
         </NavLink>
       </div>
     </section>
