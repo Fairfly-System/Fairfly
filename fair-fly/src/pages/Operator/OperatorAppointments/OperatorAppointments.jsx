@@ -7,8 +7,9 @@ import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGr
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { updateAppointmentStatus } from '../../../services/appointmentService';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-appointments.css';
 
 export function AppointmentContent() {
@@ -18,6 +19,7 @@ export function AppointmentContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Pagination state
@@ -30,7 +32,7 @@ export function AppointmentContent() {
       const nameStr = (appt.clientName || appt.name || '').toLowerCase();
       const emailStr = (appt.clientEmail || appt.email || '').toLowerCase();
       const serviceStr = (appt.serviceType || appt.service || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
+      const search = debouncedSearch.toLowerCase();
 
       const matchesSearch =
         nameStr.includes(search) ||
@@ -43,7 +45,7 @@ export function AppointmentContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [appointments, searchTerm, statusFilter]);
+  }, [appointments, debouncedSearch, statusFilter]);
 
   const paginatedAppointments = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -51,16 +53,15 @@ export function AppointmentContent() {
   }, [filteredAppointments, currentPage, pageSize]);
 
   const handleStatusChange = (id, newStatus) => {
-    ApiCaller(
-      `${API_BASE_URL}/api/appointments/${id}/status`,
-      'PATCH',
-      { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
+    updateAppointmentStatus(
+      userToken,
+      id,
+      newStatus,
       () => {
         addToast(`Appointment status updated to ${newStatus}`, 'success');
       },
       (error) => {
-        addToast(`Failed to update appointment: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Could not update appointment status. Please try again.'), 'error');
       },
       setIsSubmitting
     );

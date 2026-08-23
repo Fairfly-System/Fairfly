@@ -3,6 +3,7 @@ const { performanceProfiler } = require('../middleware/performanceProfiler');
 const router = express.Router();
 const { 
   getServices,
+  getServiceById,
   createService, 
   updateService, 
   deleteService,
@@ -33,7 +34,8 @@ const SERVICE_ALLOWED_FIELDS = [
   'tags',
   'category',
   'description',
-  'featured'
+  'featured',
+  'carouselImages'
 ];
 
 const activeServiceRoutes = require('./activeServiceRoutes');
@@ -43,6 +45,7 @@ router.use('/active', activeServiceRoutes);
 
 // Services Routes
 router.get('/', performanceProfiler('GET /services', apiRateLimiter, getServices));
+router.get('/:id', performanceProfiler('GET /services/:id', apiRateLimiter, getServiceById));
 router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), createService));
 router.post('/bulk-status', performanceProfiler('POST /services/bulk-status', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkStatusServices));
 router.post('/bulk-delete', performanceProfiler('POST /services/bulk-delete', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkDeleteServices));

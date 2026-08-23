@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import useDebounce from '../../../hooks/useDebounce';
 import './client-services-marketplace.css';
 
 const CATEGORY_ICON_MAP = {
@@ -67,8 +69,11 @@ export default function ClientServicesMarketplace({
   loading = false,
   onRequestService
 }) {
+  const navigate = useNavigate();
+
   // Search & Sorting state
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [sortBy, setSortBy] = useState('featured');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -171,8 +176,8 @@ export default function ClientServicesMarketplace({
     let result = [...services];
 
     // 1. Search Query Filter
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase().trim();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
       result = result.filter((s) => {
         const matchName = (s.name || '').toLowerCase().includes(q);
         const matchCat = (s.category || '').toLowerCase().includes(q);
@@ -789,7 +794,11 @@ export default function ClientServicesMarketplace({
                     className={`shopping-card ${viewMode === 'list' ? 'shopping-card--list' : ''}`}
                   >
                     {/* Media Header */}
-                    <div className="shopping-card-media">
+                    <div
+                      className="shopping-card-media"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/client/services/${service.id}`)}
+                    >
                       {coverUrl ? (
                         <img
                           src={coverUrl}
@@ -820,7 +829,13 @@ export default function ClientServicesMarketplace({
                     {/* Card Content Body */}
                     <div className="shopping-card-body">
                       <div className="shopping-card-header">
-                        <h4 className="shopping-card-title">{service.name}</h4>
+                        <h4
+                          className="shopping-card-title"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/client/services/${service.id}`)}
+                        >
+                          {service.name}
+                        </h4>
 
                         {/* Tags Badges */}
                         {Array.isArray(service.tags) && service.tags.length > 0 && (
@@ -856,7 +871,11 @@ export default function ClientServicesMarketplace({
 
                       {/* Description */}
                       {service.description && (
-                        <p className="shopping-card-desc">
+                        <p
+                          className="shopping-card-desc"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/client/services/${service.id}`)}
+                        >
                           {service.description}
                         </p>
                       )}
@@ -870,14 +889,25 @@ export default function ClientServicesMarketplace({
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          className="btn-primary shopping-request-btn"
-                          onClick={() => onRequestService && onRequestService(service)}
-                        >
-                          <i className="fa-solid fa-bag-shopping"></i>
-                          Request Service
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => navigate(`/client/services/${service.id}`)}
+                            title="View service details & gallery"
+                            style={{ padding: '0.5rem 0.75rem', fontSize: '0.8125rem' }}
+                          >
+                            <i className="fa-regular fa-eye"></i> Details
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-primary shopping-request-btn"
+                            onClick={() => onRequestService && onRequestService(service)}
+                          >
+                            <i className="fa-solid fa-bag-shopping"></i>
+                            Request
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>

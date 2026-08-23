@@ -5,12 +5,14 @@ import CreateInquiryFormModal from '../../../components/Operator/CreateInquiryFo
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import useDebounce from '../../../hooks/useDebounce';
 import './operator-inquiry-forms.css';
 
 export function InquiryContent() {
   const { data: inquiryForms, loading } = useOperatorContext();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,12 +20,13 @@ export function InquiryContent() {
 
   const filteredForms = useMemo(() => {
     if (!inquiryForms) return [];
+    const q = debouncedSearch.toLowerCase();
     return inquiryForms.filter((f) =>
-      (f.fullName || f.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (f.formNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (f.serviceType || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (f.fullName || f.title || '').toLowerCase().includes(q) ||
+      (f.formNo || '').toLowerCase().includes(q) ||
+      (f.serviceType || '').toLowerCase().includes(q)
     );
-  }, [inquiryForms, searchTerm]);
+  }, [inquiryForms, debouncedSearch]);
 
   const paginatedForms = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

@@ -1,64 +1,46 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
+import { fetchAppointments } from '../../../services/appointmentService';
+import useDebounce from '../../../hooks/useDebounce';
 import './client-appointments.css';
 
 export default function ClientAppointmentsPage() {
-  const { user, userDetails } = useAuthContext();
+  const { user, userDetails, userToken } = useAuthContext();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'confirmed' | 'pending' | 'cancelled'
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Subscribe to real-time appointments
+  // Fetch appointments via GET
+  const loadAppointments = useCallback(() => {
+    if (!userToken) return;
+    setLoading(true);
+    fetchAppointments(
+      userToken,
+      {},
+      (data) => {
+        const list = (data || []).map((doc) => ({
+          id: doc.id || doc._id,
+          ...doc
+        }));
+        list.sort((a, b) => new Date(b.createdAt || b.preferredDate || 0) - new Date(a.createdAt || a.preferredDate || 0));
+        setAppointments(list);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching client appointments:', error);
+        setLoading(false);
+      },
+      setLoading
+    );
+  }, [userToken]);
+
   useEffect(() => {
-    let unsubscribe;
-    try {
-      setLoading(true);
-      const appRef = collection(db, 'appointments');
-
-      let q = appRef;
-      if (user?.uid) {
-        q = query(appRef, where('clientUid', '==', user.uid));
-      }
-
-      unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const list = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          list.sort((a, b) => new Date(b.createdAt || b.preferredDate || 0) - new Date(a.createdAt || a.preferredDate || 0));
-          setAppointments(list);
-          setLoading(false);
-        },
-        (error) => {
-          console.error('Error fetching client appointments onSnapshot:', error);
-          // Fallback
-          onSnapshot(appRef, (snap) => {
-            const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-            const userEmail = userDetails?.email || user?.email;
-            const mine = user?.uid
-              ? all.filter((a) => a.clientUid === user.uid || (userEmail && a.clientEmail === userEmail))
-              : all;
-            setAppointments(mine);
-            setLoading(false);
-          });
-        }
-      );
-    } catch (err) {
-      console.error('Setup appointments onSnapshot error:', err);
-      setLoading(false);
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [user, userDetails]);
+    loadAppointments();
+  }, [loadAppointments]);
 
   // Compute KPI metrics
   const totalCount = appointments.length;
@@ -66,18 +48,8 @@ export default function ClientAppointmentsPage() {
   const pendingCount = appointments.filter((a) => (a.status || '').toLowerCase() === 'pending').length;
   const cancelledCount = appointments.filter((a) => (a.status || '').toLowerCase() === 'cancelled').length;
 
-  // Filter & search
+  // Filter & search with debouncedSearch
   const filteredAppointments = useMemo(() => {
-    let result = [...appointments];
-
-    if (activeTab === 'confirmed') {
-      result = result.filter((a) => (a.status || '').toLowerCase() === 'confirmed');
-    } else if (activeTab === 'pending') {
-      result = result.filter((a) => (a.status || '').toLowerCase() === 'pending');
-    } else if (activeTab === 'cancelled') {
-      result = result.filter((a) => (a.status || '').toLowerCase() === 'cancelled');
-    }
-
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter((a) => {
@@ -332,7 +304,10 @@ export default function ClientAppointmentsPage() {
       {/* Appointment Booking Modal Form */}
       <ClientAppointmentForm
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {
+          setIsFormOpen(false);
+          loadAppointments();
+        }}
       />
     </div>
   );

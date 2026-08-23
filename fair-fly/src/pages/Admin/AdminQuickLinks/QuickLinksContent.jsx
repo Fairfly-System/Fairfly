@@ -13,6 +13,8 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import { API_BASE_URL } from '../../../utils/config';
 import { useAdminContext } from '../../../context/AdminContext';
+import useDebounce from '../../../hooks/useDebounce';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 export default function QuickLinksContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,6 +26,7 @@ export default function QuickLinksContent() {
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Selection State
@@ -62,9 +65,10 @@ export default function QuickLinksContent() {
   // Filtered links
   const filteredLinks = useMemo(() => {
     return quickLinksList.filter((link) => {
+      const q = debouncedSearch.toLowerCase();
       const matchesSearch =
-        (link.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (link.url || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (link.title || '').toLowerCase().includes(q) ||
+        (link.url || '').toLowerCase().includes(q);
 
       const matchesCategory =
         categoryFilter === 'all' ||
@@ -73,7 +77,7 @@ export default function QuickLinksContent() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [quickLinksList, searchTerm, categoryFilter]);
+  }, [quickLinksList, debouncedSearch, categoryFilter]);
 
   // Paginated slice
   const paginatedLinks = useMemo(() => {

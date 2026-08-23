@@ -1,88 +1,90 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import TicketThread from '../../../components/Admin/Tickets/TicketThread';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchTicketById, sendMessageToTicket, closeTicket, updateTicketStatus } from '../../../services/ticketService';
 import './ticket-detail.css';
 
 export default function TicketDetailPage() {
   const { id } = useParams();
-  console.log('[TicketDetailPage] Rendering detail page, ID =', id);
   const navigate = useNavigate();
-  const { data: tickets, loading } = useAdminContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
+  const [ticket, setTicket] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync with Firestore context data
-  const ticket = useMemo(() => {
-    if (!tickets || !id) return null;
-    return tickets.find((t) => t.id === id) || null;
-  }, [tickets, id]);
+  const loadTicket = useCallback(() => {
+    if (!id || !userToken) return;
+    setLoading(true);
+    fetchTicketById(
+      userToken,
+      id,
+      (data) => {
+        setTicket(data || null);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching ticket detail:', err);
+        addToast('Failed to load ticket details', 'error');
+        setLoading(false);
+      },
+      setLoading
+    );
+  }, [id, userToken, addToast]);
+
+  useEffect(() => {
+    loadTicket();
+  }, [loadTicket]);
 
   const handleSendMessage = async (ticketId, messageText) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/messages`,
-        'POST',
-        { message: messageText, senderRole: 'admin' },
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Response posted to support thread', 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to send message: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return sendMessageToTicket(
+      userToken,
+      ticketId,
+      messageText,
+      (res) => {
+        addToast('Response posted to support thread', 'success');
+        loadTicket();
+      },
+      (error) => {
+        addToast(`Failed to send message: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const handleCloseTicket = async (ticketId) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/close`,
-        'POST',
-        {},
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast('Support forum thread has been closed', 'info');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to close ticket: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return closeTicket(
+      userToken,
+      ticketId,
+      (res) => {
+        addToast('Support forum thread has been closed', 'info');
+        loadTicket();
+      },
+      (error) => {
+        addToast(`Failed to close ticket: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const handleStatusChange = async (ticketId, newStatus) => {
-    return new Promise((resolve, reject) => {
-      ApiCaller(
-        `${API_BASE_URL}/api/tickets/${ticketId}/status`,
-        'PATCH',
-        { status: newStatus },
-        { Authorization: `Bearer ${userToken}` },
-        (res) => {
-          addToast(`Ticket status updated to ${newStatus}`, 'success');
-          resolve(res);
-        },
-        (error) => {
-          addToast(`Failed to update status: ${error.message}`, 'error');
-          reject(error);
-        },
-        setIsSubmitting
-      );
-    });
+    return updateTicketStatus(
+      userToken,
+      ticketId,
+      newStatus,
+      (res) => {
+        addToast(`Ticket status updated to ${newStatus}`, 'success');
+        loadTicket();
+      },
+      (error) => {
+        addToast(`Failed to update status: ${error.message}`, 'error');
+      },
+      setIsSubmitting
+    );
   };
 
   const breadcrumbs = [

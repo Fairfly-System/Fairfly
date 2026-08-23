@@ -12,6 +12,9 @@ import DataTable from "../../../components/UI/DataTable/DataTable";
 import PageHeader from "../../../components/UI/PageHeader/PageHeader";
 import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
 import KpiCard from "../../../components/UI/KpiCard/KpiCard";
+import { createOperator, updateOperator, deleteOperator } from "../../../services/adminService";
+import useDebounce from "../../../hooks/useDebounce";
+import toFriendlyMessage from "../../../utils/friendlyErrors";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
 import { useAdminContext } from "../../../context/AdminContext";
@@ -34,6 +37,7 @@ export default function OperatorsContent() {
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Selection state
@@ -67,7 +71,7 @@ export default function OperatorsContent() {
   const filteredOperators = useMemo(() => {
     if (!operators) return [];
     return operators.filter((op) => {
-      const q = searchTerm.toLowerCase().trim();
+      const q = debouncedSearch.toLowerCase().trim();
       const matchesSearch =
         !q ||
         (op.branchName || "").toLowerCase().includes(q) ||
@@ -80,7 +84,7 @@ export default function OperatorsContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [operators, searchTerm, statusFilter]);
+  }, [operators, debouncedSearch, statusFilter]);
 
   // Paginated operators slice
   const paginatedOperators = useMemo(() => {
@@ -242,7 +246,7 @@ export default function OperatorsContent() {
       },
       (error) => {
         console.error("Error creating operator:", error);
-        addToast("Failed to create operator: " + error.message, "error");
+        addToast(toFriendlyMessage(error, "Failed to create operator branch account."), "error");
       },
       setIsSubmitting
     );
@@ -262,7 +266,7 @@ export default function OperatorsContent() {
       },
       (error) => {
         console.error("Error updating operator:", error);
-        addToast("Failed to update operator: " + error.message, "error");
+        addToast(toFriendlyMessage(error, "Failed to update operator details."), "error");
       },
       setIsSubmitting
     );
@@ -280,7 +284,7 @@ export default function OperatorsContent() {
       },
       (error) => {
         console.error("Error deleting operator:", error);
-        addToast("Failed to delete operator: " + error.message, "error");
+        addToast(toFriendlyMessage(error, "Failed to delete operator."), "error");
       },
       setIsConfirmLoading
     );
@@ -299,7 +303,7 @@ export default function OperatorsContent() {
       },
       (error) => {
         console.error("Error updating operator status:", error);
-        addToast("Failed to update operator status: " + error.message, "error");
+        addToast(toFriendlyMessage(error, "Failed to update operator status."), "error");
       },
       setIsConfirmLoading
     );

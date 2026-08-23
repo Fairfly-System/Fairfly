@@ -6,6 +6,7 @@ import logo from "/FairflyLogo.png";
 import {auth} from "../../../firebase";
 import {signInWithEmailAndPassword} from "firebase/auth";
 import { useToast } from '../../../components/UI/toast/ToastProvider';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,10 +20,10 @@ export default function Login() {
     signInWithEmailAndPassword(auth, email, password)
       .then(() => {
         navigate("/client");
-        addToast("Login successful!", "success");
+        addToast("Welcome back! You have successfully signed in.", "success");
       })
       .catch((error) => {
-        addToast(error.message, "error");
+        addToast(toFriendlyMessage(error, "Incorrect email or password. Please double-check and try again."), "error");
       });
   };
 

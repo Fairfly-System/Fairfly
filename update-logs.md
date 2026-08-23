@@ -1,5 +1,6 @@
 # Update Logs
 
+<<<<<<< HEAD
 ## [2026-08-23] Fix: Landing Page Navbar Responsiveness & Mobile Slide Drawer
 
 ### Files Modified
@@ -29,6 +30,77 @@
 ### Summary of Changes
 - Translated the entire 17-slide Business System Presentation into modern, responsive, and SEO-friendly landing page sections adhering strictly to `styleguide.md`.
 - Maintained zero emojis across all newly created UI elements (using FontAwesome icons and REM spacing throughout).
+=======
+## [2026-08-23] Fix: Aligned Frontend Service Endpoints with Backend Routes
+
+### Files Modified
+- `fair-fly/src/services/adminService.js` (Updated `/api/admin/admins` to `/api/admins`)
+- `fair-fly/src/services/resourceService.js` (Updated `/api/services/resources` to `/api/resources`)
+- `fly-api/src/routes/index.js` (Added backward compatibility alias mappings for `/api/admin/admins` and `/api/services/resources`)
+
+### Summary of Changes
+- Resolved 404 Not Found errors when fetching admins (`GET /api/admins`) and resource materials (`GET /api/resources`). Added dual-route aliases in Express router for robustness.
+
+---
+
+## [2026-08-23] Fix: Undefined `handleSubmitResource` Reference in Admin Resources Page
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx` (Fixed `<ResourceModal onSubmit={handleFormSubmit} />` prop binding, restored `ResourceModal` import, and applied friendly error translation via `toFriendlyMessage`)
+
+### Summary of Changes
+- Resolved the runtime `ReferenceError: handleSubmitResource is not defined` error when opening or rendering the Admin Resources page by correctly passing the `handleFormSubmit` handler and using human-friendly error toasts.
+
+---
+
+## [2026-08-23] Service Store E-Commerce Product Page, Carousel Images, onSnapshot to GET Migration, Search Debouncing, and Friendly Toasts
+
+### Files Modified & Created
+- **Service & Product Page**:
+  - `fair-fly/src/pages/ClientSide/ClientServiceItem/ServiceItemPage.jsx` (NEW: Created full e-commerce service details page with multi-image gallery carousel, turnaround badges, requirement checklists with download links, procedure steps roadmap, and booking action CTAs)
+  - `fair-fly/src/pages/ClientSide/ClientServiceItem/service-item-page.css` (NEW: Added modern responsive styles for e-commerce product layout)
+  - `fair-fly/src/App.jsx` (Added `/client/services/:serviceId` route)
+  - `fair-fly/src/components/Client/ClientServicesMarketplace/ClientServicesMarketplace.jsx` (Updated cards to link directly to the service item page and support quick request action)
+  - `fair-fly/src/components/Admin/Modals/ServiceModal/ServiceForm.jsx` (Added multi-image carousel upload manager supporting up to 5 photos with preview badges and individual deletion)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Integrated `service_carousel` file uploads to backend storage)
+  - `fly-api/src/controllers/serviceController.js` & `fly-api/src/routes/serviceRoutes.js` (Added `GET /api/services/:id` and supported `carouselImages` array)
+  - `fly-api/src/controllers/operatorController.js` & `fly-api/src/routes/operatorRoutes.js` (Added `GET /api/operators` and `GET /api/operators/:id`)
+
+- **Services Layer & Firestore `onSnapshot` Migration**:
+  - `fair-fly/src/services/` (Created `adminService.js`, `serviceService.js`, `ticketService.js`, `resourceService.js`, `appointmentService.js`, `quotationService.js`, `quickLinkService.js`, `workflowService.js`)
+  - `fair-fly/src/pages/Admin/AdminAdmins/AdminsContent.jsx` & `AdminDetailPage.jsx` (Migrated from `onSnapshot` to `adminService` GET requests)
+  - `fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx` & `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` (Migrated to `resourceService` GET requests)
+  - `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` & `TicketDetailPage.jsx` (Migrated to `ticketService` GET requests)
+  - `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx` & `OperatorTicketDetailPage.jsx` (Migrated to `ticketService` GET requests)
+  - `fair-fly/src/components/Operator/AddServiceModal/AddServiceModal.jsx` (Migrated catalog dropdown from `onSnapshot` to `fetchServices`)
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx` (Migrated catalog listing from `onSnapshot` to `fetchServices`)
+  - `fair-fly/src/pages/ClientSide/ClientAppointments/ClientAppointmentsPage.jsx` (Migrated appointments list from `onSnapshot` to `fetchAppointments`)
+  - `fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx` (Migrated workflows selection from `onSnapshot` to `fetchWorkflowTemplates`)
+
+- **Search Debouncing & Chat Infinite Scroll**:
+  - `fair-fly/src/hooks/useDebounce.js` (NEW: Reusable 300ms debounce hook)
+  - `fair-fly/src/components/Shared/Messaging/NewChatModal/NewChatModal.jsx` (Added debounced contact search and infinite scroll pagination on scroll down)
+  - Applied search debouncing across `MessagesPage.jsx`, `ClientServicesMarketplace.jsx`, `OperatorTicketsContent.jsx`, `OperatorQuotations.jsx`, `OperatorAppointments.jsx`, `OperatorInquiryForms.jsx`, `OperatorsContent.jsx`, `ServiceContent.jsx`, `FranchiseContent.jsx`, `HistoryContent.jsx`, `QuickLinksContent.jsx`, and `AdminWorkflowTemplates.jsx`.
+
+- **Friendly User-Facing Error Messages**:
+  - `fair-fly/src/utils/friendlyErrors.js` (NEW: Maps technical Firebase auth and backend error codes into clear, polite messages)
+  - Applied friendly toast messages across `login.jsx`, `Register.jsx`, `ClientServiceRequestModal.jsx`, `ClientAppointmentForm.jsx`, `OperatorTicketsContent.jsx`, `OperatorTicketDetailPage.jsx`, `OperatorQuotations.jsx`, `OperatorAppointments.jsx`, and `OperatorsContent.jsx`.
+
+### Summary of Changes
+- Implemented an e-commerce style Service Product Page (`/client/services/:serviceId`) with an interactive image gallery carousel and booking actions.
+- Migrated all tabular and form catalog Firestore `onSnapshot` subscriptions to optimized REST GET endpoints while maintaining real-time listeners for live streams.
+- Introduced a central `/services` API layer, search debouncing, infinite scroll pagination, and friendly error toasts throughout the platform.
+
+---
+
+### Files Modified
+- `fair-fly/src/pages/ClientSide/ClientDashboard/client-dashboard.css` (Added vertical flex column with `2.25rem` gap to `.client-dashboard-page`, enlarged action cards padding and hover elevation, removed cramped margins)
+- `fair-fly/src/pages/ClientSide/ClientLayout/client-layout.css` (Increased `.client-portal-main` padding to `1.75rem 1.75rem 4rem` and gap to `2rem`)
+- `fair-fly/src/components/Client/ClientServicesMarketplace/client-services-marketplace.css` (Added clear section separation border-top and `1.75rem` padding-top for Travel Services Store)
+
+### Summary of Changes
+- Resolved cramped layout issues across the Client Portal by expanding vertical whitespace between the Welcome Hero header, Quick Action cards grid, and the Travel & Document Services Store catalog.
+>>>>>>> c93376162053ae9cc4a61fd3c24535a3a7e45412
 
 ---
 
