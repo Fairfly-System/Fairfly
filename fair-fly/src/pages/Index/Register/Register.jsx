@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Mail, Lock, User, Phone, ArrowLeft } from "lucide-react";
+import { Mail, Lock, User, Phone, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import "./register.css";
 import logo from "/FairflyLogo.png";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import { auth, firestore } from "../../../firebase";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
+import { useAuthContext } from "../../../context/AuthContext";
 
 export default function Register() {
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { setIsRegistering } = useAuthContext();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -22,6 +24,8 @@ export default function Register() {
 
   const [errors, setErrors] = useState({});
   const [disabled, setDisabled] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // -----------------------
   // INPUT HANDLER
@@ -141,6 +145,8 @@ export default function Register() {
     e.preventDefault();
     if (disabled) return;
 
+    setIsRegistering(true);
+
     createUserWithEmailAndPassword(auth, formData.email, formData.password)
       .then(async () => {
         const { password, confirmPassword, ...userWithoutPassword } = formData;
@@ -151,10 +157,13 @@ export default function Register() {
           role: "client",
         });
 
-        navigate("/home");
-        addToast("Registration successful!", "success");
+        await signOut(auth);
+        setIsRegistering(false);
+        navigate("/login");
+        addToast("Registration successful! Please sign in.", "success");
       })
       .catch((error) => {
+        setIsRegistering(false);
         addToast(error.message, "error");
       });
   };
@@ -235,7 +244,7 @@ export default function Register() {
               <div className="input-wrapper">
                 <Lock size={18} className="icon" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "password");
@@ -243,6 +252,14 @@ export default function Register() {
                   }}
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               {errors.password && <p className="error">{errors.password}</p>}
             </div>
@@ -253,7 +270,7 @@ export default function Register() {
               <div className="input-wrapper">
                 <Lock size={18} className="icon" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={formData.confirmPassword}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "confirmPassword");
@@ -261,6 +278,14 @@ export default function Register() {
                   }}
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               {errors.confirmPassword && (
                 <p className="error">{errors.confirmPassword}</p>

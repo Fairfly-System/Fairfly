@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem 2.5rem;
+  padding: 0.75rem 1.25rem;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(107, 111, 245, 0.08);
@@ -25,6 +25,12 @@
   justify-content: center;
 }
 
+.logoIcon img {
+  height: 64px;
+  width: auto;
+}
+
+
 .right {
   display: flex;
   align-items: center;
@@ -41,7 +47,9 @@
 }
 
 .linkAbout:hover,
-.linkLogin:hover { color: #6B6FF5; }
+.linkLogin:hover {
+  color: #6B6FF5;
+}
 
 .btnFranchise {
   display: flex;
@@ -63,7 +71,15 @@
 }
 
 @media (max-width: 640px) {
-  .nav { padding: 0.8rem 1.2rem; }
-  .right { gap: 1rem; }
-  .btnFranchise span:first-child { display: none; }
+  .nav {
+    padding: 0.8rem 1.2rem;
+  }
+
+  .right {
+    gap: 1rem;
+  }
+
+  .btnFranchise span:first-child {
+    display: none;
+  }
 }
