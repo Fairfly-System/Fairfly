@@ -189,8 +189,8 @@ const updateAdmin = async (req, res) => {
     if (updates.status !== undefined) sanitizedUpdates.status = updates.status;
     if (updates.assignedOperators !== undefined) sanitizedUpdates.assignedOperators = updates.assignedOperators;
 
-    await updateToDatabase(COLLECTIONS.USERS, id, sanitizedUpdates);
-    userCache.del(id); // Clear cache
+    await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, sanitizedUpdates);
+    userCache.delete(id); // Clear cache
 
     return res.status(200).json({ message: 'Administrator updated successfully', id, ...sanitizedUpdates });
   } catch (error) {
@@ -225,8 +225,8 @@ const deleteAdmin = async (req, res) => {
     }
 
     // Delete Firestore document
-    await deleteFromDatabase(COLLECTIONS.USERS, id);
-    userCache.del(id);
+    await deleteFromDatabase(`${COLLECTIONS.USERS}/${id}`);
+    userCache.delete(id);
 
     return res.status(200).json({ message: 'Administrator deleted successfully', id });
   } catch (error) {

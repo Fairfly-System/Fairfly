@@ -242,6 +242,8 @@ export default function ServiceDetailPage() {
       subtitle={service?.category || 'Standard Services Category'}
       status={service?.status}
       statusType={service?.status === 'Active' ? 'success' : 'danger'}
+      thumbnail={coverUrl}
+      avatarIcon={getCategoryIcon(service?.category)}
       breadcrumbs={breadcrumbs}
       backTo="/admin/services"
       backLabel="Back to Services"
@@ -261,19 +263,26 @@ export default function ServiceDetailPage() {
 
           {/* Hero Cover Banner */}
           <div className="service-hero-banner">
-            {coverUrl ? (
+            {coverUrl && (
               <img
                 src={coverUrl}
                 alt={service.name}
                 className="service-hero-img"
                 loading="eager"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.parentElement?.querySelector('.service-hero-fallback');
+                  if (fallback) fallback.style.display = 'flex';
+                }}
               />
-            ) : (
-              <div className="service-hero-fallback">
-                <i className={`${getCategoryIcon(service.category)} service-hero-fallback-icon`}></i>
-                <span className="service-hero-fallback-text">{service.category || 'Travel & Document Service'}</span>
-              </div>
             )}
+            <div
+              className="service-hero-fallback"
+              style={{ display: coverUrl ? 'none' : 'flex' }}
+            >
+              <i className={`${getCategoryIcon(service.category)} service-hero-fallback-icon`}></i>
+              <span className="service-hero-fallback-text">{service.category || 'Travel & Document Service'}</span>
+            </div>
 
             {/* Overlays on Hero */}
             <div className="service-hero-overlay">

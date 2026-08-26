@@ -799,19 +799,26 @@ export default function ClientServicesMarketplace({
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/client/services/${service.id}`)}
                     >
-                      {coverUrl ? (
+                      {coverUrl && (
                         <img
                           src={coverUrl}
                           alt={service.name}
                           className="shopping-cover-img"
                           loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.parentElement?.querySelector('.shopping-cover-fallback');
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
                         />
-                      ) : (
-                        <div className="shopping-cover-fallback">
-                          <i className={`${getCategoryFallbackIcon(service.category)} shopping-fallback-icon`}></i>
-                          <span className="shopping-fallback-text">{service.category || 'Travel Service'}</span>
-                        </div>
                       )}
+                      <div
+                        className="shopping-cover-fallback"
+                        style={{ display: coverUrl ? 'none' : 'flex' }}
+                      >
+                        <i className={`${getCategoryFallbackIcon(service.category)} shopping-fallback-icon`}></i>
+                        <span className="shopping-fallback-text">{service.category || 'Travel Service'}</span>
+                      </div>
 
                       {/* Top Badges */}
                       <div className="shopping-overlay-top">

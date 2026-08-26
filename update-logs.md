@@ -1,5 +1,63 @@
 # Update Logs
 
+## [2026-08-26] Enhancement: Service Thumbnail in Admin View Service Header
+
+### Files Modified
+- `fair-fly/src/components/UI/RecordDetailLayout/RecordDetailLayout.jsx` (Added `thumbnail` and `avatarIcon` props with image error handling and category fallback rendering)
+- `fair-fly/src/components/UI/RecordDetailLayout/record-detail-layout.css` (Added styling for `.record-header-thumbnail-wrapper`, thumbnail image, and gradient fallback icon container)
+- `fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx` (Passed service cover image thumbnail and category icon to `RecordDetailLayout`)
+
+### Summary of Changes
+- Enhanced the Admin View Service page (`/admin/services/:id`) to display the service's cover thumbnail directly in the page header next to the service title and category badge, with graceful fallback to the category icon if no image is present.
+
+---
+
+## [2026-08-26] Fix: Firebase Storage Download Tokens & Resilient Image Fallbacks
+
+### Files Modified
+- `fly-api/src/controllers/uploadController.js` (Added `firebaseStorageDownloadTokens` UUID token generation and tokenized `&token=` download URLs to grant public access on buckets with uniform bucket-level access)
+- `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Added graceful `onError` fallback on service table thumbnails)
+- `fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx` (Added graceful `onError` fallback on hero banner cover image)
+- `fair-fly/src/components/Client/ClientServicesMarketplace/ClientServicesMarketplace.jsx` (Added graceful `onError` fallback on marketplace product cards)
+- `fair-fly/src/pages/ClientSide/ClientServiceItem/ServiceItemPage.jsx` (Added graceful `onError` fallback on product detail gallery images)
+
+### Summary of Changes
+- Fixed 403 Forbidden permissions on uploaded documents/images by generating standard Firebase Storage download tokens during Admin SDK upload.
+- Added graceful `onError` fallback handling across all service card images, banners, and thumbnails so broken/legacy images seamlessly display category fallback icons rather than broken `alt` text.
+
+---
+
+## [2026-08-26] Fix: Cache Method Name in Admin Controller and Added `del` Alias
+
+### Files Modified
+- `fly-api/src/services/cacheService.js` (Added `.del()` method alias to the `Cache` class pointing to `.delete()`)
+- `fly-api/src/controllers/adminController.js` (Updated cache invalidation calls to `userCache.delete(id)`)
+
+### Summary of Changes
+- Resolved runtime `userCache.del is not a function` error when updating administrator details or deleting accounts.
+
+---
+
+## [2026-08-26] Fix: Document Path Format in Admin Controller
+
+### Files Modified
+- `fly-api/src/controllers/adminController.js` (Corrected `updateToDatabase` and `deleteFromDatabase` path arguments from separated `(collection, id)` to full document path string `${COLLECTIONS.USERS}/${id}`)
+
+### Summary of Changes
+- Resolved 500 Internal Server Error when updating or deleting administrator accounts (`Value for argument "documentPath" must point to a document, but was "users"`).
+
+---
+
+## [2026-08-26] Enhancement: Debounced Search & Infinite Scroll for Assigned Branch Operators
+
+### Files Modified
+- `fair-fly/src/components/Admin/Modals/AdminModal/AdminForm.jsx` (Added 300ms search debouncing, 5-records-per-batch infinite scrolling on scroll down, load more indicator with manual trigger button, and clear search action)
+
+### Summary of Changes
+- Limited displayed operator records to 5 at a time with social-media-style infinite scroll loading when scrolling through the branch operators assignment list in the Admin modal, preserving all selection states across filters and paginated slices.
+
+---
+
 ## [2026-08-26] Fix: Undefined `result` in Client Appointments Page Filter
 
 ### Files Modified

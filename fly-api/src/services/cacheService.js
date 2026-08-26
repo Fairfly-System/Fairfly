@@ -51,6 +51,14 @@ class Cache {
   }
 
   /**
+   * Alias for delete
+   * @param {string} key 
+   */
+  del(key) {
+    this.delete(key);
+  }
+
+  /**
    * Clear all items in the cache.
    */
   clear() {

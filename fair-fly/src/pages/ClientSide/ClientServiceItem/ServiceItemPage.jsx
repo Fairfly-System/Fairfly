@@ -179,18 +179,25 @@ export default function ServiceItemPage() {
         {/* Left Column: Interactive Media Gallery */}
         <section className="service-gallery-card card">
           <div className="service-main-image-viewport">
-            {galleryImages.length > 0 ? (
+            {galleryImages.length > 0 && (
               <img
                 src={galleryImages[activeImageIndex]}
                 alt={`${service.name} preview ${activeImageIndex + 1}`}
                 className="service-main-display-img"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.parentElement?.querySelector('.service-gallery-fallback');
+                  if (fallback) fallback.style.display = 'flex';
+                }}
               />
-            ) : (
-              <div className="service-gallery-fallback">
-                <i className={`${categoryIcon} service-fallback-icon`}></i>
-                <span>{service.category || 'Travel Service'}</span>
-              </div>
             )}
+            <div
+              className="service-gallery-fallback"
+              style={{ display: galleryImages.length > 0 ? 'none' : 'flex' }}
+            >
+              <i className={`${categoryIcon} service-fallback-icon`}></i>
+              <span>{service.category || 'Travel Service'}</span>
+            </div>
 
             {/* Overlaid Badges */}
             <div className="service-gallery-badges">

@@ -16,6 +16,8 @@ export default function RecordDetailLayout({
   backTo,
   backLabel = 'Back',
   actions = [], // Array of { label, icon, onClick, className, disabled }
+  thumbnail, // Image URL string or React element
+  avatarIcon, // Fallback icon class if thumbnail fails to load or is not provided
   isLoading = false,
   isNotFound = false,
   notFoundMessage = 'The requested record could not be found or has been removed.',
@@ -90,6 +92,32 @@ export default function RecordDetailLayout({
         {/* Record Header Card */}
         <header className="record-detail-header-card card">
           <div className="record-header-left">
+            {(thumbnail || avatarIcon) && (
+              <div className="record-header-thumbnail-wrapper">
+                {typeof thumbnail === 'string' && thumbnail ? (
+                  <img
+                    src={thumbnail}
+                    alt={title || 'Thumbnail'}
+                    className="record-header-thumbnail-img"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextElementSibling) {
+                        e.currentTarget.nextElementSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : (
+                  React.isValidElement(thumbnail) ? thumbnail : null
+                )}
+                <div
+                  className="record-header-thumbnail-fallback"
+                  style={{ display: typeof thumbnail === 'string' && thumbnail ? 'none' : 'flex' }}
+                >
+                  <i className={`${avatarIcon || 'fa-solid fa-layer-group'} record-header-thumbnail-icon`}></i>
+                </div>
+              </div>
+            )}
+
             <div className="record-header-info">
               <h1>{title}</h1>
               {subtitle && <p className="record-subtitle">{subtitle}</p>}

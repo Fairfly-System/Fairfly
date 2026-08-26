@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { bucket } = require('../config/firebase');
 
 const PROHIBITED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.hta', '.cpl', '.msc'];
@@ -28,10 +29,14 @@ const uploadFile = async (req, res) => {
     const destination = `${folder}/${Date.now()}_${safeName}`;
 
     const fileRef = bucket.file(destination);
+    const downloadToken = crypto.randomUUID();
 
     await fileRef.save(req.file.buffer, {
       metadata: {
         contentType: req.file.mimetype,
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        }
       },
       resumable: false,
     });
@@ -40,11 +45,12 @@ const uploadFile = async (req, res) => {
     try {
       await fileRef.makePublic();
     } catch (makePublicErr) {
-      console.warn('Note: makePublic error (bucket uniform access enabled):', makePublicErr.message);
+      // makePublic may fail if bucket has Uniform Bucket-Level Access enabled,
+      // but firebaseStorageDownloadTokens ensures it is accessible via token URL
     }
 
-    // Construct Firebase Storage download URL format
-    const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media`;
+    // Construct Firebase Storage download URL format with public download token
+    const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media&token=${downloadToken}`;
 
     return res.status(200).json({
       success: true,

@@ -135,10 +135,22 @@ export default function ServiceContent() {
                   alt={item.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextElementSibling) {
+                      e.currentTarget.nextElementSibling.style.display = 'inline-block';
+                    }
+                  }}
                 />
-              ) : (
-                <i className="fa-regular fa-image" style={{ color: 'var(--text-light)', fontSize: '1rem' }}></i>
-              )}
+              ) : null}
+              <i
+                className="fa-regular fa-image"
+                style={{
+                  color: 'var(--text-light)',
+                  fontSize: '1rem',
+                  display: item.coverImage ? 'none' : 'inline-block'
+                }}
+              ></i>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>

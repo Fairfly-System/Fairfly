@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { firestore } from '../../../../firebase';
 import { useToast } from '../../../UI/toast/ToastProvider';
+import useDebounce from '../../../../hooks/useDebounce';
+
+const OPERATORS_PAGE_SIZE = 5;
 
 export default function AdminForm({ onSubmit, isLoading, initialData }) {
   const { addToast } = useToast();
@@ -16,6 +19,8 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
   const [availableOperators, setAvailableOperators] = useState([]);
   const [loadingOperators, setLoadingOperators] = useState(true);
   const [operatorSearch, setOperatorSearch] = useState('');
+  const debouncedOperatorSearch = useDebounce(operatorSearch, 300);
+  const [visibleCount, setVisibleCount] = useState(OPERATORS_PAGE_SIZE);
 
   // Fetch all active operators
   useEffect(() => {
@@ -42,6 +47,11 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
     fetchOperators();
   }, []);
 
+  // Reset pagination when debounced search query changes
+  useEffect(() => {
+    setVisibleCount(OPERATORS_PAGE_SIZE);
+  }, [debouncedOperatorSearch]);
+
   const handleToggleOperator = (opId) => {
     setAssignedOperators((prev) => {
       if (prev.includes(opId)) {
@@ -60,15 +70,30 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
     setAssignedOperators([]);
   };
 
-  const filteredOperators = availableOperators.filter((op) => {
-    if (!operatorSearch.trim()) return true;
-    const q = operatorSearch.toLowerCase().trim();
-    return (
-      op.branchName?.toLowerCase().includes(q) ||
-      op.name?.toLowerCase().includes(q) ||
-      op.email?.toLowerCase().includes(q)
+  const filteredOperators = useMemo(() => {
+    if (!debouncedOperatorSearch.trim()) return availableOperators;
+    const q = debouncedOperatorSearch.toLowerCase().trim();
+    return availableOperators.filter(
+      (op) =>
+        op.branchName?.toLowerCase().includes(q) ||
+        op.name?.toLowerCase().includes(q) ||
+        op.fullName?.toLowerCase().includes(q) ||
+        op.email?.toLowerCase().includes(q)
     );
-  });
+  }, [availableOperators, debouncedOperatorSearch]);
+
+  const visibleOperators = useMemo(() => {
+    return filteredOperators.slice(0, visibleCount);
+  }, [filteredOperators, visibleCount]);
+
+  const hasMore = visibleCount < filteredOperators.length;
+
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 40 && hasMore) {
+      setVisibleCount((prev) => Math.min(prev + OPERATORS_PAGE_SIZE, filteredOperators.length));
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -242,20 +267,43 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
           Assign branch operators this administrator is responsible for monitoring and supporting.
         </p>
 
-        {availableOperators.length > 4 && (
-          <div style={{ marginBottom: '0.5rem' }}>
-            <input
-              type="text"
-              className="form-input"
-              style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
-              placeholder="Filter branches by name..."
-              value={operatorSearch}
-              onChange={(e) => setOperatorSearch(e.target.value)}
-            />
-          </div>
-        )}
+        {/* Search Filter */}
+        <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+          <input
+            type="text"
+            className="form-input"
+            style={{ padding: '0.45rem 2rem 0.45rem 0.75rem', fontSize: '0.8125rem' }}
+            placeholder="Search branch name, operator name, or email..."
+            value={operatorSearch}
+            onChange={(e) => setOperatorSearch(e.target.value)}
+          />
+          {operatorSearch && (
+            <button
+              type="button"
+              onClick={() => setOperatorSearch('')}
+              style={{
+                position: 'absolute',
+                right: '0.625rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-light)',
+                cursor: 'pointer',
+                padding: '0.25rem'
+              }}
+              aria-label="Clear search"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
 
-        <div className="admin-form-operators-grid">
+        <div
+          className="admin-form-operators-grid"
+          onScroll={handleScroll}
+          style={{ maxHeight: '13.5rem', overflowY: 'auto' }}
+        >
           {loadingOperators ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: 'var(--text-light)', fontSize: '0.8125rem' }}>
               <i className="fa-solid fa-circle-notch fa-spin"></i> Loading operators...
@@ -265,28 +313,60 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
               No branch operators found.
             </div>
           ) : (
-            filteredOperators.map((op) => {
-              const isChecked = assignedOperators.includes(op.id);
-              return (
-                <label
-                  key={op.id}
-                  className={`admin-operator-checkbox-card ${isChecked ? 'selected' : ''}`}
+            <>
+              {visibleOperators.map((op) => {
+                const isChecked = assignedOperators.includes(op.id);
+                return (
+                  <label
+                    key={op.id}
+                    className={`admin-operator-checkbox-card ${isChecked ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggleOperator(op.id)}
+                      style={{ accentColor: 'var(--purple)', width: '1rem', height: '1rem' }}
+                    />
+                    <div className="admin-op-card-info">
+                      <span className="admin-op-card-name">
+                        {op.branchName || op.name || op.fullName || 'Branch Operator'}
+                      </span>
+                      <span className="admin-op-card-email">{op.email}</span>
+                    </div>
+                  </label>
+                );
+              })}
+
+              {hasMore && (
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(124, 58, 237, 0.04)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px dashed var(--purple-light)',
+                    marginTop: '0.25rem'
+                  }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => handleToggleOperator(op.id)}
-                    style={{ accentColor: 'var(--purple)', width: '1rem', height: '1rem' }}
-                  />
-                  <div className="admin-op-card-info">
-                    <span className="admin-op-card-name">
-                      {op.branchName || op.name || op.fullName || 'Branch Operator'}
-                    </span>
-                    <span className="admin-op-card-email">{op.email}</span>
-                  </div>
-                </label>
-              );
-            })
+                  <span style={{ fontSize: '0.75rem', color: 'var(--purple)', fontWeight: 600 }}>
+                    <i className="fa-solid fa-angles-down" style={{ marginRight: '0.25rem' }}></i>
+                    Showing {visibleOperators.length} of {filteredOperators.length} • Scroll down or
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ fontSize: '0.6875rem', padding: '0.125rem 0.45rem', color: 'var(--purple)', fontWeight: 700 }}
+                    onClick={() => setVisibleCount((prev) => Math.min(prev + OPERATORS_PAGE_SIZE, filteredOperators.length))}
+                  >
+                    Load More (+{Math.min(OPERATORS_PAGE_SIZE, filteredOperators.length - visibleCount)})
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
