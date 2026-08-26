@@ -32,6 +32,8 @@ export default function OperatorsContent() {
   const [editingOperator, setEditingOperator] = useState(null);
   const { userToken, user, userDetails } = useAuthContext();
   const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
+  const assignedOperators = useMemo(() => userDetails?.assignedOperators || [], [userDetails]);
+  const [assignmentScope, setAssignmentScope] = useState('all'); // 'all' | 'assigned'
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -71,6 +73,13 @@ export default function OperatorsContent() {
   const filteredOperators = useMemo(() => {
     if (!operators) return [];
     return operators.filter((op) => {
+      // Assignment scope filter
+      if (assignmentScope === 'assigned' && assignedOperators.length > 0) {
+        if (!assignedOperators.includes(op.id)) {
+          return false;
+        }
+      }
+
       const q = debouncedSearch.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -84,7 +93,7 @@ export default function OperatorsContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [operators, debouncedSearch, statusFilter]);
+  }, [operators, debouncedSearch, statusFilter, assignmentScope, assignedOperators]);
 
   // Paginated operators slice
   const paginatedOperators = useMemo(() => {
@@ -99,22 +108,45 @@ export default function OperatorsContent() {
         key: "branchName",
         header: "Operator / Branch",
         sortable: true,
-        render: (op) => (
-          <div>
-            <span style={{ fontWeight: 600, color: "var(--text-dark)" }}>
-              {op.branchName}
-            </span>
-            <span
-              style={{
-                display: "block",
-                fontSize: "0.75rem",
-                color: "var(--text-light)",
-              }}
-            >
-              {op.email}
-            </span>
-          </div>
-        ),
+        render: (op) => {
+          const isAssignedToMe = assignedOperators.includes(op.id);
+          return (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, color: "var(--text-dark)" }}>
+                  {op.branchName}
+                </span>
+                {isAssignedToMe && (
+                  <span
+                    style={{
+                      background: 'var(--purple-light-2)',
+                      color: 'var(--purple-dark)',
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      padding: '0.125rem 0.45rem',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                    title="You are assigned as the direct support lead for this branch"
+                  >
+                    <i className="fa-solid fa-shield-halved" style={{ fontSize: '0.625rem' }}></i> Assigned to You
+                  </span>
+                )}
+              </div>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  color: "var(--text-light)",
+                }}
+              >
+                {op.email}
+              </span>
+            </div>
+          );
+        },
       },
       {
         key: "address",
@@ -382,25 +414,40 @@ export default function OperatorsContent() {
   ];
 
   const totalOperators = Array.isArray(operators) ? operators.length : 0;
-  const activeCount = Array.isArray(operators) ? operators.filter((o) => o.status === "Active").length : 0;
-  const inactiveCount = totalOperators - activeCount;
+  const activeCount = useMemo(
+    () => (operators ? operators.filter((op) => op.status === "Active").length : 0),
+    [operators]
+  );
+  const inactiveCount = useMemo(
+    () => (operators ? operators.filter((op) => op.status === "Disabled").length : 0),
+    [operators]
+  );
+  const assignedOperatorsCount = useMemo(
+    () => (Array.isArray(operators) && assignedOperators.length > 0 ? operators.filter((op) => assignedOperators.includes(op.id)).length : 0),
+    [operators, assignedOperators]
+  );
 
   return (
     <main className="operators-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
-        title="Operator Management"
-        subtitle={isSuperAdmin ? "Create, configure, and monitor franchise operator accounts" : "Monitor franchise operator accounts and branch locations"}
+        title="Branch Operators & Franchises"
+        subtitle="Manage branch locations, operator credentials, and operational status"
         illustrationSrc="/pageImages/admin/operators.png"
-        primaryAction={isSuperAdmin ? {
-          label: "Add Operator",
-          icon: "fa-solid fa-user-plus",
-          onClick: handleOpenAddModal,
-        } : null}
+        primaryAction={
+          isSuperAdmin
+            ? {
+                label: "Add Operator",
+                icon: "fa-solid fa-plus",
+                onClick: handleOpenAddModal,
+              }
+            : undefined
+        }
       />
 
-      <section className="services-summary-grid">
+      {/* KPI Cards Row */}
+      <section className="kpi-grid-4">
         <KpiCard
           title="Total Operators"
           value={totalOperators}
@@ -419,10 +466,36 @@ export default function OperatorsContent() {
           icon="fa-solid fa-ban"
           iconColor="var(--error-red-dark)"
         />
+        <KpiCard
+          title="My Assigned"
+          value={assignedOperatorsCount}
+          icon="fa-solid fa-user-check"
+          iconColor="var(--blue)"
+        />
       </section>
 
       <section className="card operators-table-card">
         <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+
+        {/* Scope Filter for Admins with Assigned Operators */}
+        {assignedOperators.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-mid)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <i className="fa-solid fa-filter" style={{ color: 'var(--purple)' }}></i> Operator View Scope:
+            </span>
+            <FilterChipGroup
+              chips={[
+                { label: "All Branch Operators", value: "all", count: totalOperators },
+                { label: "My Assigned Branches", value: "assigned", count: assignedOperatorsCount },
+              ]}
+              activeChip={assignmentScope}
+              onChipChange={(val) => {
+                setAssignmentScope(val);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        )}
 
         {/* Toolbar Filter Row */}
         <div className="table-toolbar">

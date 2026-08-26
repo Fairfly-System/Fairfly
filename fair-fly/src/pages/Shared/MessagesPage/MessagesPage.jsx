@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -85,6 +86,7 @@ function formatDayDivider(isoString) {
 export default function MessagesPage() {
   const { user, userDetails } = useAuthContext();
   const { addToast } = useToast();
+  const location = useLocation();
 
   const currentUid = user?.uid;
   const currentRole = userDetails?.role || 'client';
@@ -106,6 +108,25 @@ export default function MessagesPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Handle direct navigation to a specific contact
+  useEffect(() => {
+    if (!currentUid || !location.state?.partnerId) return;
+
+    const partnerId = location.state.partnerId;
+
+    const openChat = async () => {
+      try {
+        const conv = await getOrCreateDirectChat(partnerId);
+        setActiveConversation(conv);
+      } catch (err) {
+        console.error('Error opening direct chat with partner:', err);
+        addToast(err.message || 'Could not open chat', 'error');
+      }
+    };
+
+    openChat();
+  }, [currentUid, location.state?.partnerId]);
 
   // Real-time subscription to conversations list
   useEffect(() => {

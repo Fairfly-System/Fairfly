@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
+import { useAuthContext } from '../../../../context/AuthContext';
 import { getEligibleContacts } from '../../../../services/chatService';
 import useDebounce from '../../../../hooks/useDebounce';
 import './new-chat-modal.css';
@@ -7,6 +8,9 @@ import './new-chat-modal.css';
 const PAGE_SIZE = 10;
 
 export default function NewChatModal({ isOpen, onClose, onSelectContact, currentUserRole }) {
+  const { userDetails } = useAuthContext();
+  const assignedOperators = useMemo(() => userDetails?.assignedOperators || [], [userDetails]);
+
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -40,15 +44,28 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, current
   };
 
   const filteredContacts = useMemo(() => {
-    if (!debouncedSearch.trim()) return contacts;
+    let list = [...contacts];
+
+    // If current user is an admin with assigned operators, prioritize them at top
+    if (currentUserRole === 'admin' && assignedOperators.length > 0) {
+      list.sort((a, b) => {
+        const aAssigned = assignedOperators.includes(a.id);
+        const bAssigned = assignedOperators.includes(b.id);
+        if (aAssigned && !bAssigned) return -1;
+        if (!aAssigned && bAssigned) return 1;
+        return 0;
+      });
+    }
+
+    if (!debouncedSearch.trim()) return list;
     const q = debouncedSearch.toLowerCase().trim();
-    return contacts.filter(
+    return list.filter(
       (c) =>
         c.name?.toLowerCase().includes(q) ||
         c.email?.toLowerCase().includes(q) ||
         c.branchName?.toLowerCase().includes(q)
     );
-  }, [contacts, debouncedSearch]);
+  }, [contacts, debouncedSearch, currentUserRole, assignedOperators]);
 
   const visibleContacts = useMemo(() => {
     return filteredContacts.slice(0, visibleCount);
@@ -163,6 +180,21 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, current
                     <div className="new-chat-contact-info">
                       <div className="new-chat-contact-name-row">
                         <span className="new-chat-contact-name">{contact.name}</span>
+                        {currentUserRole === 'admin' && assignedOperators.includes(contact.id) && (
+                          <span
+                            className="new-chat-contact-role-badge"
+                            style={{
+                              background: '#ede9fe',
+                              color: '#6d28d9',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            <i className="fa-solid fa-shield-halved" style={{ fontSize: '0.625rem' }}></i> Assigned Branch
+                          </span>
+                        )}
                         <span className={`new-chat-contact-role-badge ${contact.role}`}>
                           {contact.role === 'admin' && contact.isSuperAdmin ? 'Super Admin' : contact.role}
                         </span>

@@ -150,11 +150,32 @@ export default function ServiceDetailPage() {
         );
       }
 
+      // Process Carousel Images
+      let updatedCarouselImages = [];
+      if (Array.isArray(serviceData.carouselImages)) {
+        updatedCarouselImages = await Promise.all(
+          serviceData.carouselImages.map(async (item) => {
+            if (item?.pendingFile) {
+              const { url: downloadUrl } = await uploadFileToBackend(
+                item.pendingFile,
+                'service_carousel',
+                userToken
+              );
+              return downloadUrl;
+            }
+            if (typeof item === 'string') return item;
+            return item?.url || '';
+          })
+        );
+        updatedCarouselImages = updatedCarouselImages.filter(Boolean);
+      }
+
       const { pendingCoverFile, coverImagePreview, ...cleanData } = serviceData;
 
       const payload = {
         ...cleanData,
         coverImage: coverImageUrl,
+        carouselImages: updatedCarouselImages,
         requirements: updatedRequirements,
       };
 
@@ -430,10 +451,12 @@ export default function ServiceDetailPage() {
               <div className="detail-requirements-list">
                 {service.requirements && service.requirements.length > 0 ? (
                   service.requirements.map((req, rIdx) => {
-                    const reqName = typeof req === 'string' ? req : req.name || req.title;
-                    const reqType = typeof req === 'object' ? req.inputType : 'text';
+                    const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
+                    const reqType = typeof req === 'object' ? (req.inputType || req.type || 'text') : 'text';
                     const isRequired = typeof req === 'object' ? req.required !== false : true;
-                    const hasAttachment = typeof req === 'object' && req.attachment?.url;
+                    const hasAttachment = typeof req === 'object' && Boolean(req.attachment?.url || req.attachmentUrl || req.fileUrl);
+                    const attachmentUrl = typeof req === 'object' ? (req.attachment?.url || req.attachmentUrl || req.fileUrl) : '';
+                    const attachmentName = typeof req === 'object' ? (req.attachment?.name || req.attachmentName || req.fileName || 'Sample Document') : 'Sample Document';
 
                     return (
                       <div key={rIdx} className="req-item-pill">
@@ -442,7 +465,7 @@ export default function ServiceDetailPage() {
                           {reqType === 'file' && <i className="fa-regular fa-file-lines"></i>}
                           {reqType === 'date' && <i className="fa-regular fa-calendar"></i>}
                           {reqType === 'number' && <i className="fa-solid fa-hashtag"></i>}
-                          {reqType === 'text' && <i className="fa-solid fa-pen-to-square"></i>}
+                          {(!['image', 'file', 'date', 'number'].includes(reqType)) && <i className="fa-solid fa-pen-to-square"></i>}
                         </span>
                         <div className="req-item-details">
                           <div className="req-item-header">
@@ -454,16 +477,16 @@ export default function ServiceDetailPage() {
                             )}
                           </div>
                           <div className="req-item-meta">
-                            <span className="req-item-type">Type: {reqType.toUpperCase()}</span>
+                            <span className="req-item-type">Type: {String(reqType || 'text').toUpperCase()}</span>
                             {hasAttachment && (
                               <a
-                                href={req.attachment.url}
+                                href={attachmentUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="req-attachment-link"
                               >
                                 <i className="fa-solid fa-paperclip"></i>
-                                {req.attachment.name || 'Sample Document'}
+                                {attachmentName}
                               </a>
                             )}
                           </div>

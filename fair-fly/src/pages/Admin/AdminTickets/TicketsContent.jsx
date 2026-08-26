@@ -18,11 +18,14 @@ import useDebounce from '../../../hooks/useDebounce';
 
 export default function TicketsContent() {
   const navigate = useNavigate();
-  const { userToken } = useAuthContext();
+  const { userToken, userDetails } = useAuthContext();
   const { addToast } = useToast();
 
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
+
+  const assignedOperators = useMemo(() => userDetails?.assignedOperators || [], [userDetails]);
+  const [assignmentScope, setAssignmentScope] = useState('all'); // 'all' | 'assigned'
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -78,10 +81,17 @@ export default function TicketsContent() {
     return tickets.find((t) => t.id === selectedTicketId) || null;
   }, [selectedTicketId, tickets]);
 
-  // Filtered tickets with debounced search
+  // Filtered tickets with debounced search and assignment scope
   const filteredTickets = useMemo(() => {
     if (!tickets) return [];
     return tickets.filter((ticket) => {
+      // Assignment scope filter
+      if (assignmentScope === 'assigned' && assignedOperators.length > 0) {
+        if (!assignedOperators.includes(ticket.operatorId)) {
+          return false;
+        }
+      }
+
       const titleStr = (ticket.title || '').toLowerCase();
       const opIdStr = (ticket.operatorId || '').toLowerCase();
       const opNameStr = (ticket.operatorName || '').toLowerCase();
@@ -106,7 +116,7 @@ export default function TicketsContent() {
       const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [tickets, debouncedSearch, statusFilter]);
+  }, [tickets, debouncedSearch, statusFilter, assignmentScope, assignedOperators]);
 
   // Paginated tickets slice
   const paginatedTickets = useMemo(() => {
@@ -212,27 +222,33 @@ export default function TicketsContent() {
   const pendingCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'pending').length : 0;
   const ongoingCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'ongoing').length : 0;
   const closedCount = Array.isArray(tickets) ? tickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length : 0;
+  const assignedTicketsCount = useMemo(
+    () => (Array.isArray(tickets) && assignedOperators.length > 0 ? tickets.filter((t) => assignedOperators.includes(t.operatorId)).length : 0),
+    [tickets, assignedOperators]
+  );
 
   return (
     <main className="tickets-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
-        title="Support Tickets & Forum Threads"
-            subtitle="Manage and respond to operator support requests across all branches"
-            illustrationSrc="/pageImages/admin/tickets.png"
-            primaryAction={{
-              label: 'New Ticket',
-              icon: 'fa-solid fa-plus',
-              onClick: () => createModalRef.current?.openModal(),
-            }}
-          />
+        title="Branch Support Forum & Ticketing"
+        subtitle="Manage, track, and resolve operational issues submitted by branch operators"
+        illustrationSrc="/pageImages/admin/tickets.png"
+        primaryAction={{
+          label: 'Create Ticket',
+          icon: 'fa-solid fa-plus',
+          onClick: () => createModalRef.current?.openModal(),
+        }}
+      />
 
-          <section className="services-summary-grid">
+      <div className="tickets-layout-single">
+        <section className="tickets-left-pane">
+          <section className="kpi-grid-4">
             <KpiCard
               title="Total Tickets"
               value={totalTickets}
-              icon="fa-solid fa-headset"
+              icon="fa-solid fa-ticket"
               iconColor="var(--purple)"
             />
             <KpiCard
@@ -257,6 +273,26 @@ export default function TicketsContent() {
 
           <section className="card tickets-table-card">
             <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
+
+            {/* Scope Filter for Admins with Assigned Operators */}
+            {assignedOperators.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-mid)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <i className="fa-solid fa-filter" style={{ color: 'var(--purple)' }}></i> Ticket View Scope:
+                </span>
+                <FilterChipGroup
+                  chips={[
+                    { value: 'all', label: `All Branch Tickets (${totalTickets})` },
+                    { value: 'assigned', label: `My Assigned Branches (${assignedTicketsCount})` },
+                  ]}
+                  activeChip={assignmentScope}
+                  onChipChange={(val) => {
+                    setAssignmentScope(val);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+            )}
 
             {/* Toolbar Search & Filter Chips */}
             <div className="table-toolbar">
@@ -318,6 +354,8 @@ export default function TicketsContent() {
               onPageSizeChange={setPageSize}
             />
           </section>
+        </section>
+      </div>
 
       <CreateTicketModal
         ref={createModalRef}

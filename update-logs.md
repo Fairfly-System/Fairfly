@@ -1,5 +1,31 @@
 # Update Logs
 
+## [2026-08-26] Feature: Extended Admin-to-Operator Assignment Workflow
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Added dynamic fetching and rendering of the Dedicated Support Contact Card for branch operators with direct chat action)
+- `fair-fly/src/pages/Operator/OperatorDashboard/operator-dashboard.css` (Added responsive styling for `.op-support-lead-card`, avatars, online badges, and CTA button)
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Added deep-linking support for `location.state.partnerId` to automatically open or create direct conversation threads from external triggers)
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx` (Added "Ticket View Scope" filter chips to toggle between all branch tickets and tickets belonging specifically to the admin's assigned branch operators)
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Added "Operator View Scope" filter chips to filter the operators table, plus "Assigned to You" branch badges)
+- `fair-fly/src/components/Shared/Messaging/NewChatModal/NewChatModal.jsx` (Prioritized assigned branch operators to the top of the contact list for admins and rendered dedicated "Assigned Branch" indicator badges)
+
+### Summary of Changes
+- Operators now have immediate visibility of their designated Head Office Support Lead directly on their dashboard with 1-click direct messaging.
+- Admins with assigned branch operators can quickly isolate tickets, operators, and chat contacts scoped to their assigned franchises.
+
+---
+
+## [2026-08-23] Fix: Safe Input Type Fallback in Admin Service Detail Page
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx` (Safely resolved requirement `inputType`, `type`, and attachment fields with resilient fallbacks before string capitalization; added support for updating carousel images on edit)
+
+### Summary of Changes
+- Resolved `TypeError: Cannot read properties of undefined (reading 'toUpperCase')` when viewing services that have legacy requirements or undefined `inputType` values.
+
+---
+
 ## [2026-08-23] Fix: Aligned Frontend Service Endpoints with Backend Routes
 
 ### Files Modified

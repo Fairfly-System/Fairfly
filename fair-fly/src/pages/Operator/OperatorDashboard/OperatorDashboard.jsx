@@ -1,23 +1,84 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import AddServiceModal from '../../../components/Operator/AddServiceModal/AddServiceModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
+import useDebounce from '../../../hooks/useDebounce';
 import './operator-dashboard.css';
 
 function DashboardContent() {
   const { data: dbServices, loading } = useOperatorContext();
   const { user, userDetails } = useAuthContext();
+  const navigate = useNavigate();
   const [showAddService, setShowAddService] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [priorityFilter, setPriorityFilter] = useState('all');
+
+  // Assigned Support Lead state
+  const [assignedAdmin, setAssignedAdmin] = useState(null);
+  const [loadingAdmin, setLoadingAdmin] = useState(true);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const fetchAssignedAdmin = async () => {
+      setLoadingAdmin(true);
+      try {
+        const q = query(
+          collection(firestore, 'users'),
+          where('role', '==', 'admin'),
+          where('assignedOperators', 'array-contains', user.uid)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const docData = snapshot.docs[0].data();
+          setAssignedAdmin({ id: snapshot.docs[0].id, ...docData });
+        } else {
+          // Fallback to central admin
+          const fallbackQuery = query(
+            collection(firestore, 'users'),
+            where('role', '==', 'admin')
+          );
+          const allAdminsSnap = await getDocs(fallbackQuery);
+          const superAdminDoc = allAdminsSnap.docs.find(
+            (d) => d.data()?.isSuperAdmin || d.data()?.email === 'admin@gmail.com'
+          ) || allAdminsSnap.docs[0];
+          if (superAdminDoc) {
+            setAssignedAdmin({ id: superAdminDoc.id, ...superAdminDoc.data() });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching assigned admin support lead:', err);
+      } finally {
+        setLoadingAdmin(false);
+      }
+    };
+
+    fetchAssignedAdmin();
+  }, [user?.uid]);
+
+  const handleMessageSupportLead = () => {
+    if (assignedAdmin?.id) {
+      navigate('/operator/messages', {
+        state: {
+          partnerId: assignedAdmin.id,
+          partnerName: assignedAdmin.fullName || assignedAdmin.name || assignedAdmin.username || 'Admin Support',
+          partnerRole: 'admin',
+        }
+      });
+    } else {
+      navigate('/operator/messages');
+    }
+  };
 
   const filteredServices = useMemo(() => {
     if (!dbServices) return [];
@@ -37,7 +98,7 @@ function DashboardContent() {
       const nameStr = (s.clientName || s.name || '').toLowerCase();
       const typeStr = (s.serviceType || s.type || '').toLowerCase();
       const branchStr = (s.branchName || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
+      const search = debouncedSearch.toLowerCase();
 
       const matchesSearch = nameStr.includes(search) || typeStr.includes(search) || branchStr.includes(search);
       const matchesPriority =
@@ -45,7 +106,7 @@ function DashboardContent() {
 
       return matchesSearch && matchesPriority;
     });
-  }, [dbServices, user, userDetails, searchTerm, priorityFilter]);
+  }, [dbServices, user, userDetails, debouncedSearch, priorityFilter]);
 
   const paginatedServices = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -59,6 +120,49 @@ function DashboardContent() {
         subtitle="Real-time processing status & step-by-step guided procedures for client services"
         illustrationSrc="/pageImages/operator/dashboard.png"
       />
+
+      {/* Assigned Support Lead Banner */}
+      <section className="card op-support-lead-card">
+        <div className="op-support-lead-left">
+          <div className="op-support-avatar">
+            <i className="fa-solid fa-headset"></i>
+          </div>
+          <div className="op-support-info">
+            <div className="op-support-title-row">
+              <span className="op-support-badge">
+                <i className="fa-solid fa-shield-halved"></i> Dedicated Support Contact
+              </span>
+              <span className="op-support-role">Head Office Support</span>
+            </div>
+            <h3 className="op-support-name">
+              {assignedAdmin ? (assignedAdmin.fullName || assignedAdmin.name || assignedAdmin.username || 'Assigned Admin Lead') : 'FairFly Central Administration'}
+            </h3>
+            <div className="op-support-contacts">
+              <span className="op-support-contact-item">
+                <i className="fa-solid fa-envelope"></i> {assignedAdmin?.email || 'admin@fairfly.ph'}
+              </span>
+              {assignedAdmin?.phone && (
+                <span className="op-support-contact-item">
+                  <i className="fa-solid fa-phone"></i> {assignedAdmin.phone}
+                </span>
+              )}
+              <span className="op-support-status">
+                <span className="status-dot-online"></span> Active Branch Liaison
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="op-support-lead-actions">
+          <button
+            type="button"
+            className="btn-primary op-message-lead-btn"
+            onClick={handleMessageSupportLead}
+          >
+            <i className="fa-regular fa-comment-dots"></i>
+            <span>Message Support Lead</span>
+          </button>
+        </div>
+      </section>
 
       <section className="card op-dashboard">
         <div className="op-dashboard-header">
