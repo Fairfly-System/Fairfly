@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ──────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isOperator() {
+      return isSignedIn() && (getUserData().role == 'operator' || getUserData().role == 'branch_operator');
+    }
+
+    function isAdminOrOperator() {
+      return isAdmin() || isOperator();
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── Public Facing Catalog: Services ───────────────────────────
+    // Anyone (clients, operators, admins, guests) can browse available services
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Public / Shared: Quick Links ──────────────────────────────
+    match /quick_links/{linkId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /quickLinks/{linkId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Branches Directory ────────────────────────────────────────
+    // Publicly readable so client forms & directory selectors can populate
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── User Profiles ─────────────────────────────────────────────
+    // Users can read/edit their own profile; Admins & Operators can read profiles for operations
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdminOrOperator();
+      allow create: if isSignedIn();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Shared Materials & Resources Hub ──────────────────────────
+    // Internal resources shared between Admin & Operators.
+    // Clients can ONLY access items explicitly marked with visibility == 'all'.
+    match /resources/{resourceId} {
+      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.visibility == 'all');
+      allow write: if isAdmin();
+    }
+
+    // ── Workflow Templates & SOPs ─────────────────────────────────
+    // Internal process workflows accessible only to Admins & Operators
+    match /workflow_templates/{templateId} {
+      allow read: if isAdminOrOperator();
+      allow write: if isAdmin();
+    }
+    match /workflow_instances/{instanceId} {
+      allow read: if isAdminOrOperator();
+      allow write: if isAdminOrOperator();
+    }
+
+    // ── Active Client Services / Processing Requests ──────────────
+    match /active_services/{activeId} {
+      allow read: if isAdmin() 
+        || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // ── Appointments ──────────────────────────────────────────────
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin() 
+        || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // ── Support Tickets ───────────────────────────────────────────
+    match /tickets/{ticketId} {
+      allow read: if isAdmin() 
+        || (isSignedIn() && (resource.data.operatorId == request.auth.uid || resource.data.operatorUid == request.auth.uid || resource.data.clientUid == request.auth.uid || resource.data.createdBy == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update: if isAdminOrOperator() || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.createdBy == request.auth.uid));
+      allow delete: if isAdmin();
+
+      // Ticket replies / messages subcollection
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // ── Conversations & Direct Messaging ──────────────────────────
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // ── Notifications ─────────────────────────────────────────────
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && (resource.data.recipientUid == request.auth.uid || resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && (resource.data.recipientUid == request.auth.uid || resource.data.userId == request.auth.uid || isAdmin());
+      allow create, delete: if isSignedIn();
+    }
+
+    // ── Quotations ────────────────────────────────────────────────
+    match /quotations/{quotationId} {
+      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow write: if isAdminOrOperator();
+    }
+    match /quotation_requests/{requestId} {
+      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isAdminOrOperator();
+    }
+
+    // ── Franchise Applications ────────────────────────────────────
+    match /franchise_applications/{appId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /franchiseApplications/{appId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

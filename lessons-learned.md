@@ -35,3 +35,8 @@
 - **Problem**: `ReferenceError: getFileTypeInfo is not defined` in `OperatorResources.jsx`.
 - **Root Cause**: The helper was defined as `getFileMeta`, but invoked as `getFileTypeInfo` within the card rendering loop. Additionally, `handlePreview` was referenced in the preview button onClick without an implementation.
 - **Prevention**: Ensure all component-level helper functions and action handlers referenced in JSX render callbacks are defined in the module scope and have matching identifiers.
+
+## [2026-08-26] Missing Component Import in Routing Element
+- **Problem**: `ReferenceError: Link is not defined` in `OperatorQuotations.jsx`.
+- **Root Cause**: `Link` was used in the card view action button, but only `Outlet` was imported from `react-router`.
+- **Prevention**: Verify all router components (`Link`, `NavLink`, `Outlet`, `useNavigate`) used in JSX are explicitly included in module imports.

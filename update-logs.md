@@ -1,5 +1,28 @@
 # Update Logs
 
+## [2026-08-26] Fix: Missing Link Import in Operator Quotations
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Imported `Link` from `react-router` for quotation detail navigation)
+
+### Summary of Changes
+- Resolved runtime crash on Operator Quotations page (`Uncaught ReferenceError: Link is not defined`).
+
+---
+
+## [2026-08-26] Security: Firestore & Storage Rules Configuration and Removal of makePublic
+
+### Files Modified
+- `firestore.rules` (Configured rules allowing public reads for catalog services, quick links, and branches; restricted internal resources and workflow templates strictly to Admins and Operators unless visibility is explicitly set to 'all'; enforced client/operator participant ownership on appointments, active services, chats, and tickets)
+- `storage.rules` (Configured storage access rules permitting public access to public service media, restricting internal resource files and workflow documents to Admins/Operators, and scoping chat/requirement attachments to authenticated participants)
+- `firebase.json` (Linked `firestore.rules` and `storage.rules` configurations)
+- `fly-api/src/controllers/uploadController.js` (Removed legacy `makePublic` invocation in favor of secure token-based storage authentication)
+
+### Summary of Changes
+- Established fine-grained Firestore and Storage security rules enforcing the principle of least privilege, protecting internal operator and admin assets while leaving public service offerings accessible to clients.
+
+---
+
 ## [2026-08-26] Enhancement: Unified Secure Backend Uploads with Access Tokens Across All Features
 
 ### Files Modified
