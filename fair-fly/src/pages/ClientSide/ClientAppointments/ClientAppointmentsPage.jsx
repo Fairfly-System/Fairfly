@@ -50,8 +50,14 @@ export default function ClientAppointmentsPage() {
 
   // Filter & search with debouncedSearch
   const filteredAppointments = useMemo(() => {
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+    let result = appointments || [];
+
+    if (activeTab !== 'all') {
+      result = result.filter((a) => (a.status || '').toLowerCase() === activeTab.toLowerCase());
+    }
+
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
       result = result.filter((a) => {
         const service = (a.serviceType || '').toLowerCase();
         const branch = (a.branchName || a.preferredBranchLocation || '').toLowerCase();
@@ -62,7 +68,7 @@ export default function ClientAppointmentsPage() {
     }
 
     return result;
-  }, [appointments, activeTab, searchQuery]);
+  }, [appointments, activeTab, debouncedSearch]);
 
   return (
     <div className="client-appointments-page">

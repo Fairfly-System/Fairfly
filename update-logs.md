@@ -1,5 +1,15 @@
 # Update Logs
 
+## [2026-08-26] Fix: Undefined `result` in Client Appointments Page Filter
+
+### Files Modified
+- `fair-fly/src/pages/ClientSide/ClientAppointments/ClientAppointmentsPage.jsx` (Fixed `ReferenceError: result is not defined` by restoring variable initialization and `activeTab` filter checks inside `useMemo`)
+
+### Summary of Changes
+- Resolved runtime crash on Client Appointments page when filtering or rendering appointments.
+
+---
+
 ## [2026-08-26] Feature: Extended Admin-to-Operator Assignment Workflow
 
 ### Files Modified

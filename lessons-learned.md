@@ -10,3 +10,8 @@
 - **Problem**: `TypeError: Cannot read properties of undefined (reading 'toUpperCase')` in `ServiceDetailPage.jsx` when mapping service requirements.
 - **Root Cause**: Requirements in Firestore can be strings or objects with varying field naming conventions (`inputType`, `type`, or omitted altogether). Calling `.toUpperCase()` directly on `req.inputType` without a fallback default caused the crash when `req.inputType` was undefined.
 - **Prevention**: Always sanitize and provide safe fallbacks for nested object properties before invoking string transformation methods (e.g. `String(req.inputType || req.type || 'text').toUpperCase()`).
+
+## [2026-08-26] Undefined Result Variable in Component Filter Memoization
+- **Problem**: `ReferenceError: result is not defined` in `ClientAppointmentsPage.jsx` when filtering appointments.
+- **Root Cause**: During the search debouncing refactor, the initial assignment `let result = appointments || [];` and the `activeTab` filter check were accidentally truncated in the `useMemo` body.
+- **Prevention**: Always verify variable declarations inside `useMemo` hooks and ensure test builds cover client-side rendering pathways.
