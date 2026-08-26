@@ -76,8 +76,8 @@ export default function AppNavbar({
                   src="/fairfly_logo.png"
                   alt="FairFly Logo"
                   className="app-nav-logo"
-                  width="36"
-                  height="36"
+                  width="42"
+                  height="42"
                   loading="eager"
                 />
               </NavLink>

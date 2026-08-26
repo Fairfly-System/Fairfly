@@ -68,7 +68,7 @@ import MessagesPage from './pages/Shared/MessagesPage/MessagesPage';
 
 function App() {
 
-  const { user, userDetails, userLoading } = useAuthContext();
+  const { user, userDetails, userLoading, isRegistering } = useAuthContext();
 
   const roleRoutes = {
     client: (
@@ -156,7 +156,7 @@ function App() {
       <BrowserRouter>
         <ScrollToTop />
 
-        {userLoading ? (
+        {userLoading || isRegistering ? (
           <Loading />
         ) : (
           <Routes>

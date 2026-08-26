@@ -19,6 +19,8 @@ const AuthProvider = ({ children }) => {
     //Check if Loading
     const [userLoading, setUserLoading] = useState(true);
     const [userToken, setUserToken] = useState(null);
+    //Flag to suppress auth routing during registration flow
+    const [isRegistering, setIsRegistering] = useState(false);
 
     //UseEffect for firestore user details and Auth
     useEffect(() => {
@@ -100,7 +102,7 @@ const AuthProvider = ({ children }) => {
 
     return (
         //Return the provider with the user and userDetails with  .Provider
-        <AuthContext.Provider value={{ user, userDetails, userLoading, userToken }}>
+        <AuthContext.Provider value={{ user, userDetails, userLoading, userToken, isRegistering, setIsRegistering }}>
             {children}
         </AuthContext.Provider>
     );
