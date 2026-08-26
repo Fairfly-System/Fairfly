@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../../../firebase';
+import { useAuthContext } from '../../../../context/AuthContext';
+import { uploadFileToBackend } from '../../../../utils/fileUploadApi';
 import { useToast } from '../../../UI/toast/ToastProvider';
 import './resource-modal.css';
 
@@ -24,8 +24,8 @@ const SUGGESTED_TAGS = [
   'Template'
 ];
 
-const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20MB
-const MAX_DEFAULT_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_DEFAULT_SIZE = 25 * 1024 * 1024; // 25MB
 
 function formatFileSize(bytes) {
   if (!bytes) return '0 B';
@@ -48,6 +48,7 @@ function getFileTypeIcon(ext) {
 }
 
 export default function ResourceForm({ onSubmit, isLoading, initialData, onCancel }) {
+  const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const fileInputRef = useRef(null);
 
@@ -156,39 +157,18 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
       let fileType = initialData?.fileType || 'application/octet-stream';
       let fileExtension = initialData?.fileExtension || '';
 
-      // If a new file is chosen, upload to Firebase Storage
+      // If a new file is chosen, upload securely via backend upload service
       if (selectedFile) {
         setIsUploading(true);
-        const ext = selectedFile.name.split('.').pop().toLowerCase();
-        const safeName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const storagePath = `resources/${Date.now()}_${safeName}`;
-        const storageRef = ref(storage, storagePath);
+        setUploadProgress(40);
+        const uploadRes = await uploadFileToBackend(selectedFile, 'resources', userToken);
+        setUploadProgress(100);
 
-        const uploadTask = uploadBytesResumable(storageRef, selectedFile);
-
-        await new Promise((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              const progress = Math.round(
-                (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-              );
-              setUploadProgress(progress);
-            },
-            (error) => {
-              console.error('Upload failed:', error);
-              reject(error);
-            },
-            async () => {
-              fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              fileName = selectedFile.name;
-              fileSize = selectedFile.size;
-              fileType = selectedFile.type || 'application/octet-stream';
-              fileExtension = ext;
-              resolve();
-            }
-          );
-        });
+        fileUrl = uploadRes.url;
+        fileName = uploadRes.fileName || selectedFile.name;
+        fileSize = uploadRes.fileSize || selectedFile.size;
+        fileType = selectedFile.type || 'application/octet-stream';
+        fileExtension = selectedFile.name.split('.').pop().toLowerCase();
       }
 
       await onSubmit({

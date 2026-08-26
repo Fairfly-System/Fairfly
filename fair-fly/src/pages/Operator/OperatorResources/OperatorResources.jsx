@@ -40,6 +40,8 @@ function getFileMeta(fileName) {
   return { icon: 'fa-solid fa-file-lines', className: 'other', isPreviewable: false };
 }
 
+const getFileTypeInfo = getFileMeta;
+
 function formatFileSize(bytes) {
   if (!bytes) return '0 B';
   const k = 1024;
@@ -111,6 +113,14 @@ export default function OperatorResources() {
       return true;
     });
   }, [resources, activeCategory, debouncedSearch]);
+
+  const handlePreview = (resource) => {
+    if (!resource || !resource.fileUrl) {
+      addToast('No preview available for this file.', 'warning');
+      return;
+    }
+    window.open(resource.fileUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleDownload = async (resource) => {
     try {
@@ -221,9 +231,9 @@ export default function OperatorResources() {
           </p>
         </div>
       ) : (
-        <div className="op-resources-grid">
+        <div className={`op-resources-grid ${viewMode === 'list' ? 'op-resources-grid--list' : ''}`}>
           {filteredResources.map((item) => {
-            const fileInfo = getFileTypeInfo(item.fileExtension || item.fileName?.split('.').pop());
+            const fileInfo = getFileMeta(item.fileName || item.fileExtension || '');
             return (
               <div key={item.id} className="op-resource-card">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

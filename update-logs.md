@@ -1,5 +1,42 @@
 # Update Logs
 
+## [2026-08-26] Enhancement: Unified Secure Backend Uploads with Access Tokens Across All Features
+
+### Files Modified
+- `fair-fly/src/components/Admin/Modals/ResourceModal/ResourceForm.jsx` (Migrated direct client-side Firebase storage uploads to `uploadFileToBackend` with authentication, increased upload limit to 25MB, and fixed permission access for operators and admins)
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Migrated chat attachments and image uploads from direct client Firebase storage to `uploadFileToBackend`)
+- `fly-api/src/routes/uploadRoutes.js` (Increased multer upload limit from 10MB to 25MB to accommodate larger document and video resources)
+- `fly-api/src/controllers/uploadController.js` (Updated backend size validation to 25MB and verified `firebaseStorageDownloadTokens` generation)
+
+### Summary of Changes
+- Replaced all legacy client-side `firebase/storage` uploads (`uploadBytesResumable`) in Admin Resource management and Shared Chat Messaging with the unified backend `/api/upload` endpoint.
+- Ensured all uploaded materials (resources, documents, videos, chat images, workflow files) are stamped with `firebaseStorageDownloadTokens` metadata and return tokenized URLs, resolving permission errors when operators and admins access files.
+
+---
+
+## [2026-08-26] Fix: Undefined Function Reference in Operator Resources Hub
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx` (Fixed `getFileTypeInfo` reference error by aliasing to `getFileMeta`, added `handlePreview` handler for quick document previewing in a new tab, and ensured proper list view CSS class binding)
+
+### Summary of Changes
+- Resolved runtime crash on the Operator Resources Hub page (`Uncaught ReferenceError: getFileTypeInfo is not defined`).
+
+---
+
+## [2026-08-26] Enhancement: Debouncing & Infinite Scroll Load More in Client Service Store
+
+### Files Modified
+- `fair-fly/src/components/Client/ClientServicesMarketplace/ClientServicesMarketplace.jsx` (Added 300ms search debouncing, progressive 6-records-per-batch loading with IntersectionObserver infinite scroll on scroll down, progress indicator bar, manual load more button, and renamed "Service Fee" label to "Fee")
+- `fair-fly/src/components/Client/ClientServicesMarketplace/client-services-marketplace.css` (Added styles for `.shopping-load-more-section`, progress bar track/fill, load more button, infinite sentinel, and end-reached badge)
+
+### Summary of Changes
+- Implemented responsive debounced search (300ms) and Facebook-style automatic infinite scroll loading for services in the Client Service Marketplace.
+- Added catalog progress indicator displaying `Showing X of Y services` with a progress bar and manual load button fallback.
+- Renamed the service card price label from "Service Fee" to "Fee".
+
+---
+
 ## [2026-08-26] Enhancement: Service Thumbnail in Admin View Service Header
 
 ### Files Modified

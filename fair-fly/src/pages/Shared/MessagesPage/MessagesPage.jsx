@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../../firebase';
+import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import {
   subscribeToConversations,
   subscribeToMessages,
@@ -237,16 +236,17 @@ export default function MessagesPage() {
     try {
       if (selectedFile) {
         setIsUploading(true);
-        const safeName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const storageRef = ref(storage, `chat_files/${activeConversation.id}/${safeName}`);
-        const uploadTask = await uploadBytesResumable(storageRef, selectedFile);
-        const downloadUrl = await getDownloadURL(uploadTask.ref);
+        const uploadRes = await uploadFileToBackend(
+          selectedFile,
+          `chat_files/${activeConversation.id}`,
+          userToken
+        );
 
         fileMetadata = {
-          fileName: selectedFile.name,
-          fileSize: selectedFile.size,
+          fileName: uploadRes.fileName || selectedFile.name,
+          fileSize: uploadRes.fileSize || selectedFile.size,
           fileType: selectedFile.type,
-          fileUrl: downloadUrl
+          fileUrl: uploadRes.url
         };
         setIsUploading(false);
       }

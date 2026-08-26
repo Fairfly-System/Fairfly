@@ -30,3 +30,8 @@
 - **Problem**: Uploaded files/images returned 403 Forbidden ("no perms") and service images failed to render (displaying only broken alt text).
 - **Root Cause**: When uploading through Firebase Admin SDK on buckets with Uniform Bucket-Level Access enabled, `makePublic()` is blocked, and generating a media URL without a `firebaseStorageDownloadTokens` metadata token results in access denied errors for public clients.
 - **Prevention**: Always generate a UUID `downloadToken` (via `crypto.randomUUID()`) and attach it to the file's custom metadata `metadata: { firebaseStorageDownloadTokens: downloadToken }` when saving to the bucket, and include `&token=${downloadToken}` in the returned download URL. Additionally, always equip frontend `<img>` tags with `onError` handlers that swap broken image elements for semantic category fallback containers.
+
+## [2026-08-26] Undefined Helper Function in Resource Card Mapping
+- **Problem**: `ReferenceError: getFileTypeInfo is not defined` in `OperatorResources.jsx`.
+- **Root Cause**: The helper was defined as `getFileMeta`, but invoked as `getFileTypeInfo` within the card rendering loop. Additionally, `handlePreview` was referenced in the preview button onClick without an implementation.
+- **Prevention**: Ensure all component-level helper functions and action handlers referenced in JSX render callbacks are defined in the module scope and have matching identifiers.

@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import useDebounce from '../../../hooks/useDebounce';
 import './client-services-marketplace.css';
+
+const PAGE_SIZE = 6;
 
 const CATEGORY_ICON_MAP = {
   'visa & embassy assistance': 'fa-solid fa-passport',
@@ -78,6 +80,10 @@ export default function ClientServicesMarketplace({
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
+  // Load More / Progressive Pagination state
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreObserverRef = useRef(null);
+
   // Aside Filter state
   const [selectedCategories, setSelectedCategories] = useState([]); // Array of checked category names
   const [selectedTags, setSelectedTags] = useState([]); // Array of checked tag names
@@ -90,6 +96,21 @@ export default function ClientServicesMarketplace({
   // Expander toggles for aside sections if many
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
+
+  // Reset pagination whenever search query or filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [
+    debouncedSearch,
+    selectedCategories,
+    selectedTags,
+    priceTier,
+    customMinPrice,
+    customMaxPrice,
+    speedFilters,
+    featuredOnly,
+    sortBy
+  ]);
 
   // Extract unique categories & counts
   const categoriesWithCounts = useMemo(() => {
@@ -141,9 +162,9 @@ export default function ClientServicesMarketplace({
   };
 
   // Handle Speed checkbox toggle
-  const handleToggleSpeed = (speedKey) => {
+  const handleToggleSpeed = (speedId) => {
     setSpeedFilters((prev) =>
-      prev.includes(speedKey) ? prev.filter((s) => s !== speedKey) : [...prev, speedKey]
+      prev.includes(speedId) ? prev.filter((s) => s !== speedId) : [...prev, speedId]
     );
   };
 
@@ -175,7 +196,7 @@ export default function ClientServicesMarketplace({
   const filteredAndSortedServices = useMemo(() => {
     let result = [...services];
 
-    // 1. Search Query Filter
+    // 1. Search Query Filter (Debounced)
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase().trim();
       result = result.filter((s) => {
@@ -220,18 +241,18 @@ export default function ClientServicesMarketplace({
       });
     } else if (priceTier === 'above5000') {
       result = result.filter((s) => parseNumericPrice(s.price) > 5000);
+    } else if (priceTier === 'custom') {
+      const min = parseFloat(customMinPrice);
+      const max = parseFloat(customMaxPrice);
+      if (!isNaN(min)) {
+        result = result.filter((s) => parseNumericPrice(s.price) >= min);
+      }
+      if (!isNaN(max)) {
+        result = result.filter((s) => parseNumericPrice(s.price) <= max);
+      }
     }
 
-    if (customMinPrice !== '') {
-      const min = parseFloat(customMinPrice) || 0;
-      result = result.filter((s) => parseNumericPrice(s.price) >= min);
-    }
-    if (customMaxPrice !== '') {
-      const max = parseFloat(customMaxPrice) || Infinity;
-      result = result.filter((s) => parseNumericPrice(s.price) <= max);
-    }
-
-    // 5. Speed / Turnaround Filter
+    // 5. Processing Speed Filter
     if (speedFilters.length > 0) {
       result = result.filter((s) => {
         const days = getTurnaroundDays(s.processingTime);
@@ -277,7 +298,7 @@ export default function ClientServicesMarketplace({
     return result;
   }, [
     services,
-    searchTerm,
+    debouncedSearch,
     selectedCategories,
     selectedTags,
     priceTier,
@@ -287,6 +308,38 @@ export default function ClientServicesMarketplace({
     featuredOnly,
     sortBy
   ]);
+
+  // Sliced batch for load-more pagination
+  const displayedServices = useMemo(() => {
+    return filteredAndSortedServices.slice(0, visibleCount);
+  }, [filteredAndSortedServices, visibleCount]);
+
+  const hasMore = visibleCount < filteredAndSortedServices.length;
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredAndSortedServices.length));
+  };
+
+  // Facebook-style Infinite Scroll trigger on scroll down
+  useEffect(() => {
+    if (!hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredAndSortedServices.length));
+        }
+      },
+      { rootMargin: '250px' }
+    );
+
+    const currentSentinel = loadMoreObserverRef.current;
+    if (currentSentinel) observer.observe(currentSentinel);
+
+    return () => {
+      if (currentSentinel) observer.unobserve(currentSentinel);
+    };
+  }, [hasMore, filteredAndSortedServices.length]);
 
   const getCategoryFallbackIcon = (category) => {
     const key = (category || '').toLowerCase();
@@ -781,7 +834,7 @@ export default function ClientServicesMarketplace({
                 </button>
               </div>
             ) : (
-              filteredAndSortedServices.map((service) => {
+              displayedServices.map((service) => {
                 const reqCount = Array.isArray(service.requirements)
                   ? service.requirements.length
                   : (Array.isArray(service.actions) ? service.actions.length : 0);
@@ -890,7 +943,7 @@ export default function ClientServicesMarketplace({
                       {/* Card Footer with Price and Action */}
                       <div className="shopping-card-footer">
                         <div className="shopping-price-box">
-                          <span className="shopping-price-label">Service Fee</span>
+                          <span className="shopping-price-label">Fee</span>
                           <span className="shopping-price-val">
                             {formatPriceDisplay(service.price)}
                           </span>
@@ -920,6 +973,45 @@ export default function ClientServicesMarketplace({
                   </article>
                 );
               })
+            )}
+
+            {/* Load More Section & Infinite Scroll Trigger */}
+            {filteredAndSortedServices.length > PAGE_SIZE && (
+              <div className="shopping-load-more-section">
+                <div className="shopping-load-more-progress">
+                  <span className="shopping-progress-text">
+                    Showing <strong>{displayedServices.length}</strong> of <strong>{filteredAndSortedServices.length}</strong> services
+                  </span>
+                  <div className="shopping-progress-bar-track">
+                    <div
+                      className="shopping-progress-bar-fill"
+                      style={{
+                        width: `${Math.round((displayedServices.length / filteredAndSortedServices.length) * 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {hasMore ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-secondary shopping-load-more-btn"
+                      onClick={handleLoadMore}
+                    >
+                      <i className="fa-solid fa-arrow-down"></i>
+                      Load More Services ({Math.min(PAGE_SIZE, filteredAndSortedServices.length - displayedServices.length)} more)
+                    </button>
+                    {/* Sentinel for infinite scroll */}
+                    <div ref={loadMoreObserverRef} className="shopping-infinite-sentinel" />
+                  </>
+                ) : (
+                  <div className="shopping-end-reached">
+                    <i className="fa-solid fa-circle-check"></i>
+                    <span>All {filteredAndSortedServices.length} services loaded</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

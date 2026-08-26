@@ -7,7 +7,7 @@ const { apiRateLimiter } = require('../middleware/rateLimiter');
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 25 * 1024 * 1024 }
 });
 
 // Endpoint: POST /api/upload

@@ -19,9 +19,9 @@ const uploadFile = async (req, res) => {
       return res.status(400).json({ error: 'Executable files (.exe, .bat, .sh, etc.) are prohibited for security.' });
     }
 
-    // Max 10MB limit
-    if (req.file.size > 10 * 1024 * 1024) {
-      return res.status(400).json({ error: 'File size exceeds 10MB limit.' });
+    // Max 25MB limit
+    if (req.file.size > 25 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File size exceeds 25MB limit.' });
     }
 
     const folder = req.body.folder || req.query.folder || 'uploads';
