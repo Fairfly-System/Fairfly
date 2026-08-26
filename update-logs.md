@@ -1,5 +1,17 @@
 # Update Logs
 
+## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
+
+### Files Modified
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Added local cache lookup to immediately switch to existing conversations before calling backend API, and cleared route navigation history state to prevent redundant conversation triggers)
+- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Prioritized existing admin conversation threads when resolving the assigned Support Lead card)
+- `fly-api/src/controllers/chatController.js` (Enhanced `getOrCreateConversation` with bidirectional participant queries to ensure existing conversations are always retrieved and never duplicated)
+
+### Summary of Changes
+- Fixed issue where clicking "Message Support Lead" or selecting a contact created a new duplicate conversation instead of selecting the existing conversation thread.
+
+---
+
 ## [2026-08-26] Fix: Missing Link Import in Operator Quotations
 
 ### Files Modified

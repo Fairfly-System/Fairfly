@@ -40,3 +40,8 @@
 - **Problem**: `ReferenceError: Link is not defined` in `OperatorQuotations.jsx`.
 - **Root Cause**: `Link` was used in the card view action button, but only `Outlet` was imported from `react-router`.
 - **Prevention**: Verify all router components (`Link`, `NavLink`, `Outlet`, `useNavigate`) used in JSX are explicitly included in module imports.
+
+## [2026-08-26] Chat Conversation Deduplication & Route State Persistence
+- **Problem**: Starting a conversation with an existing contact or support lead opened a duplicate conversation instead of selecting the existing conversation thread.
+- **Root Cause**: Route navigation with `location.state` left `partnerId` in browser history without clearing it, causing repeated creation calls; and frontend creation/selection did not check the loaded `conversations` list first before requesting a new conversation from the backend API.
+- **Prevention**: Always perform client-side cache lookups against loaded conversations before invoking creation APIs, clear one-time navigation state using `navigate(location.pathname, { replace: true, state: {} })`, and enhance backend lookup queries to search bidirectional array containment.
