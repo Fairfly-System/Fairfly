@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import Login from './pages/Index/Login/login';
 import Register from './pages/Index/Register/Register';
+import ResetPassword from './pages/Index/ResetPassword/ResetPassword';
 import ScrollToTop from './components/UI/ScrollToTop/ScrollToTop';
 import Loading from './components/UI/Loading/Loading';
 import Index from './pages/Index/Index';
@@ -177,6 +178,8 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ResetPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Route>
             )}
