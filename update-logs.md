@@ -1,5 +1,6 @@
 # Update Logs
 
+<<<<<<< HEAD
 ## [2026-08-27] Feature: Centered Navbar Navigation with Active Highlighting & Client Password Reset Verification
 
 ### Files Created & Modified
@@ -22,6 +23,40 @@
 - Implemented real-time active button highlighting when clicked, during route changes, and while scrolling down sections on the landing page via `IntersectionObserver`.
 - Created a dedicated client-only Password Reset interface (`/forgot-password` and `/reset-password`) that enforces backend role validation to ensure only client accounts can request password resets, sending a verification email with a reset link.
 - Resolved "Endpoint not found" error by restarting the `fly-api` server under `nodemon` and adding endpoint aliases.
+=======
+## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
+
+### Files Modified
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Added local cache lookup to immediately switch to existing conversations before calling backend API, and cleared route navigation history state to prevent redundant conversation triggers)
+- `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Prioritized existing admin conversation threads when resolving the assigned Support Lead card)
+- `fly-api/src/controllers/chatController.js` (Enhanced `getOrCreateConversation` with bidirectional participant queries to ensure existing conversations are always retrieved and never duplicated)
+
+### Summary of Changes
+- Fixed issue where clicking "Message Support Lead" or selecting a contact created a new duplicate conversation instead of selecting the existing conversation thread.
+
+---
+
+## [2026-08-26] Fix: Missing Link Import in Operator Quotations
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Imported `Link` from `react-router` for quotation detail navigation)
+
+### Summary of Changes
+- Resolved runtime crash on Operator Quotations page (`Uncaught ReferenceError: Link is not defined`).
+
+---
+
+## [2026-08-26] Security: Firestore & Storage Rules Configuration and Removal of makePublic
+
+### Files Modified
+- `firestore.rules` (Configured rules allowing public reads for catalog services, quick links, and branches; restricted internal resources and workflow templates strictly to Admins and Operators unless visibility is explicitly set to 'all'; enforced client/operator participant ownership on appointments, active services, chats, and tickets)
+- `storage.rules` (Configured storage access rules permitting public access to public service media, restricting internal resource files and workflow documents to Admins/Operators, and scoping chat/requirement attachments to authenticated participants)
+- `firebase.json` (Linked `firestore.rules` and `storage.rules` configurations)
+- `fly-api/src/controllers/uploadController.js` (Removed legacy `makePublic` invocation in favor of secure token-based storage authentication)
+
+### Summary of Changes
+- Established fine-grained Firestore and Storage security rules enforcing the principle of least privilege, protecting internal operator and admin assets while leaving public service offerings accessible to clients.
+>>>>>>> a23b06cccad46ed6f2b7d07b53c4ebb0402179fb
 
 ---
 

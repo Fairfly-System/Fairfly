@@ -1,0 +1,70 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Helper Functions ──────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isOperator() {
+      return isSignedIn() && (getUserData().role == 'operator' || getUserData().role == 'branch_operator');
+    }
+
+    function isAdminOrOperator() {
+      return isAdmin() || isOperator();
+    }
+
+    // ── Public Catalog Media: Services ────────────────────────────
+    // Service cover images, photos, thumbnails readable by everyone
+    match /services/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Shared Operator Resources ─────────────────────────────────
+    // Internal resources shared strictly between Admin & Operators
+    match /resources/{allPaths=**} {
+      allow read: if isAdminOrOperator();
+      allow write: if isAdmin();
+    }
+
+    // ── Workflow SOPs & Documents ─────────────────────────────────
+    match /workflow_documents/{allPaths=**} {
+      allow read: if isAdminOrOperator();
+      allow write: if isAdminOrOperator();
+    }
+
+    // ── Chat Attachments ──────────────────────────────────────────
+    match /chat_files/{conversationId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── Client Service Requirement Uploads ────────────────────────
+    match /service_requirements/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── General Uploads ───────────────────────────────────────────
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Fallback: Default deny for everything else unless authenticated
+    match /{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

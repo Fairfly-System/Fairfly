@@ -43,7 +43,32 @@ function DashboardContent() {
           const docData = snapshot.docs[0].data();
           setAssignedAdmin({ id: snapshot.docs[0].id, ...docData });
         } else {
-          // Fallback to central admin
+          // Check if the operator already has an ongoing conversation with an admin
+          const convQ = query(
+            collection(firestore, 'conversations'),
+            where('participants', 'array-contains', user.uid)
+          );
+          const convSnap = await getDocs(convQ);
+          const adminConv = convSnap.docs.find((d) => {
+            const data = d.data();
+            const roles = data.participantRoles || {};
+            return Object.entries(roles).some(([uid, role]) => uid !== user.uid && role === 'admin');
+          });
+
+          if (adminConv) {
+            const data = adminConv.data();
+            const adminId = data.participants?.find((p) => p !== user.uid);
+            const adminDetail = data.participantDetails?.[adminId];
+            if (adminId && adminDetail) {
+              setAssignedAdmin({
+                id: adminId,
+                ...adminDetail
+              });
+              return;
+            }
+          }
+
+          // Fallback to central super admin
           const fallbackQuery = query(
             collection(firestore, 'users'),
             where('role', '==', 'admin')

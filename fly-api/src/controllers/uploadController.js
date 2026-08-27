@@ -41,15 +41,7 @@ const uploadFile = async (req, res) => {
       resumable: false,
     });
 
-    // Make public so Firebase Storage URL works
-    try {
-      await fileRef.makePublic();
-    } catch (makePublicErr) {
-      // makePublic may fail if bucket has Uniform Bucket-Level Access enabled,
-      // but firebaseStorageDownloadTokens ensures it is accessible via token URL
-    }
-
-    // Construct Firebase Storage download URL format with public download token
+    // Construct Firebase Storage download URL format with secure download token
     const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media&token=${downloadToken}`;
 
     return res.status(200).json({

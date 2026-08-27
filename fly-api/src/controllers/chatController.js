@@ -158,15 +158,31 @@ const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // Check if conversation already exists between these 2 users
+    // Check if conversation already exists between these 2 users (check array-contains for both users)
+    const currentUidStr = String(currentUid).trim();
+    const recipientIdStr = String(recipientId).trim();
+
     const existingSnaps = await db.collection(COLLECTIONS.CONVERSATIONS)
-      .where('participants', 'array-contains', currentUid)
+      .where('participants', 'array-contains', currentUidStr)
       .get();
 
-    const existingConv = existingSnaps.docs.find(doc => {
-      const parts = doc.data().participants || [];
-      return parts.includes(recipientId);
+    let existingConv = existingSnaps.docs.find(doc => {
+      const data = doc.data();
+      const parts = Array.isArray(data.participants) ? data.participants.map(p => String(p).trim()) : [];
+      return parts.includes(recipientIdStr);
     });
+
+    if (!existingConv) {
+      const recipientSnaps = await db.collection(COLLECTIONS.CONVERSATIONS)
+        .where('participants', 'array-contains', recipientIdStr)
+        .get();
+
+      existingConv = recipientSnaps.docs.find(doc => {
+        const data = doc.data();
+        const parts = Array.isArray(data.participants) ? data.participants.map(p => String(p).trim()) : [];
+        return parts.includes(currentUidStr);
+      });
+    }
 
     if (existingConv) {
       return res.status(200).json({

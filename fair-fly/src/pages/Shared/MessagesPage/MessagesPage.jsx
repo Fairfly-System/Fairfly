@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
@@ -86,6 +86,7 @@ export default function MessagesPage() {
   const { user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const currentUid = user?.uid;
   const currentRole = userDetails?.role || 'client';
@@ -114,10 +115,23 @@ export default function MessagesPage() {
 
     const partnerId = location.state.partnerId;
 
+    // Check if we already have an existing conversation with this partner in the local conversations list
+    const existing = conversations.find((c) => {
+      const parts = c.participants || [];
+      return parts.includes(partnerId);
+    });
+
+    if (existing) {
+      setActiveConversation(existing);
+      navigate(location.pathname, { replace: true, state: {} });
+      return;
+    }
+
     const openChat = async () => {
       try {
         const conv = await getOrCreateDirectChat(partnerId);
         setActiveConversation(conv);
+        navigate(location.pathname, { replace: true, state: {} });
       } catch (err) {
         console.error('Error opening direct chat with partner:', err);
         addToast(err.message || 'Could not open chat', 'error');
@@ -125,7 +139,7 @@ export default function MessagesPage() {
     };
 
     openChat();
-  }, [currentUid, location.state?.partnerId]);
+  }, [currentUid, location.state?.partnerId, conversations, navigate, location.pathname, addToast]);
 
   // Real-time subscription to conversations list
   useEffect(() => {
@@ -203,6 +217,17 @@ export default function MessagesPage() {
   // Start chat with contact from NewChatModal
   const handleSelectContact = async (contact) => {
     try {
+      const existing = conversations.find((c) => {
+        const parts = c.participants || [];
+        return parts.includes(contact.id);
+      });
+
+      if (existing) {
+        setActiveConversation(existing);
+        addToast(`Switched to chat with ${contact.name}`, 'info');
+        return;
+      }
+
       const conv = await getOrCreateDirectChat(contact.id);
       setActiveConversation(conv);
       addToast(`Chat opened with ${contact.name}`, 'info');
