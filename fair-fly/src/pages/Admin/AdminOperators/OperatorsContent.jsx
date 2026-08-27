@@ -124,6 +124,25 @@ export default function OperatorsContent() {
     setEditingOperator(null);
   };
 
+  // KPI Calculations
+  const totalOperators = Array.isArray(operators) ? operators.length : 0;
+  const activeCount = useMemo(
+    () => (operators ? operators.filter((op) => op.status === "Active").length : 0),
+    [operators]
+  );
+  const inactiveCount = useMemo(
+    () => (operators ? operators.filter((op) => op.status === "Disabled").length : 0),
+    [operators]
+  );
+  const qualifiedCount = useMemo(
+    () => (operators ? operators.filter((op) => op.isQualified === true).length : 0),
+    [operators]
+  );
+  const assignedOperatorsCount = useMemo(
+    () => (Array.isArray(operators) && assignedOperators.length > 0 ? operators.filter((op) => assignedOperators.includes(op.id)).length : 0),
+    [operators, assignedOperators]
+  );
+
   // Filtered operators
   const filteredOperators = useMemo(() => {
     if (!operators) return [];
@@ -144,7 +163,12 @@ export default function OperatorsContent() {
       
       const opStatus = (op.status || "Active").toLowerCase();
       const filter = (statusFilter || "all").toLowerCase();
-      const matchesStatus = filter === "all" || opStatus === filter;
+      let matchesStatus = true;
+      if (filter === "active" || filter === "disabled") {
+        matchesStatus = opStatus === filter;
+      } else if (filter === "qualified") {
+        matchesStatus = op.isQualified === true;
+      }
 
       return matchesSearch && matchesStatus;
     });
@@ -171,6 +195,25 @@ export default function OperatorsContent() {
                 <span style={{ fontWeight: 600, color: "var(--text-dark)" }}>
                   {op.branchName}
                 </span>
+                {op.isQualified && (
+                  <span
+                    style={{
+                      background: 'var(--purple-soft, #ede9fe)',
+                      color: 'var(--purple, #7c3aed)',
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      padding: '0.125rem 0.45rem',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      border: '1px solid #ddd6fe'
+                    }}
+                    title="Qualified to create and manage custom branch services"
+                  >
+                    <i className="fa-solid fa-certificate" style={{ fontSize: '0.625rem' }}></i> Qualified
+                  </span>
+                )}
                 {isAssignedToMe && (
                   <span
                     style={{
@@ -451,20 +494,6 @@ export default function OperatorsContent() {
     { label: "Operators" },
   ];
 
-  const totalOperators = Array.isArray(operators) ? operators.length : 0;
-  const activeCount = useMemo(
-    () => (operators ? operators.filter((op) => op.status === "Active").length : 0),
-    [operators]
-  );
-  const inactiveCount = useMemo(
-    () => (operators ? operators.filter((op) => op.status === "Disabled").length : 0),
-    [operators]
-  );
-  const assignedOperatorsCount = useMemo(
-    () => (Array.isArray(operators) && assignedOperators.length > 0 ? operators.filter((op) => assignedOperators.includes(op.id)).length : 0),
-    [operators, assignedOperators]
-  );
-
   return (
     <main className="operators-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
@@ -485,7 +514,7 @@ export default function OperatorsContent() {
       />
 
       {/* KPI Cards Row */}
-      <section className="kpi-grid-4">
+      <section className="services-summary-grid">
         <KpiCard
           title="Total Operators"
           value={totalOperators}
@@ -563,6 +592,7 @@ export default function OperatorsContent() {
               { label: "All", value: "all", count: totalOperators },
               { label: "Active", value: "active", count: activeCount },
               { label: "Disabled", value: "disabled", count: inactiveCount },
+              { label: "Qualified", value: "qualified", count: qualifiedCount },
             ]}
             activeChip={statusFilter}
             onChipChange={(val) => {

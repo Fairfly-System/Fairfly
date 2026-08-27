@@ -152,6 +152,9 @@ const createActiveService = async (req, res) => {
     let finalServiceTitle = serviceType || 'General Service';
     let serviceRequirements = [];
     let price = 'Standard Fee';
+    let isBranchExclusive = false;
+    let exclusiveBranchUid = null;
+    let exclusiveBranchName = null;
 
     if (serviceId) {
       const adminService = await getFromDatabase(`${COLLECTIONS.SERVICES}/${serviceId}`);
@@ -159,14 +162,22 @@ const createActiveService = async (req, res) => {
         finalServiceTitle = adminService.name || finalServiceTitle;
         serviceRequirements = adminService.requirements || adminService.actions || [];
         price = adminService.price || price;
+        isBranchExclusive = Boolean(adminService.isBranchExclusive);
+        exclusiveBranchUid = adminService.branchUid || adminService.createdByOperatorId || null;
+        exclusiveBranchName = adminService.branchName || null;
       }
     }
 
     const compiledSteps = await compileWorkflowStepsForService(serviceId, finalServiceTitle, workflowIds);
     const now = new Date().toISOString();
 
-    const targetBranchUid = operatorId || branchUid || req.user?.uid || 'OP-ACCOUNT';
-    let resolvedBranchName = branchName || '';
+    let targetBranchUid = isBranchExclusive && exclusiveBranchUid
+      ? exclusiveBranchUid
+      : (operatorId || branchUid || req.user?.uid || 'OP-ACCOUNT');
+
+    let resolvedBranchName = isBranchExclusive && exclusiveBranchName
+      ? exclusiveBranchName
+      : (branchName || '');
 
     if (!resolvedBranchName && targetBranchUid !== 'OP-ACCOUNT') {
       const branchUser = await getFromDatabase(`users/${targetBranchUid}`);

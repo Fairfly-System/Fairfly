@@ -102,6 +102,27 @@ export default function OperatorDetailPage() {
     );
   };
 
+  const handleToggleQualification = async () => {
+    if (!operator) return;
+    const newQualifiedState = !operator.isQualified;
+    ApiCaller(
+      `${API_BASE_URL}/api/operators/${operator.id}`,
+      'PATCH',
+      { isQualified: newQualifiedState },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast(
+          `Operator qualification ${newQualifiedState ? 'granted' : 'revoked'} successfully`,
+          newQualifiedState ? 'success' : 'info'
+        );
+      },
+      (error) => {
+        addToast(`Failed to update qualification: ${error.message}`, 'error');
+      },
+      setIsConfirmLoading
+    );
+  };
+
   const handleDelete = async () => {
     if (!operator) return;
     deleteOperator(
@@ -266,6 +287,50 @@ export default function OperatorDetailPage() {
                 <div className="detail-item">
                   <span className="detail-label">Registered Role</span>
                   <span className="detail-value">Operator Partner</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Service Qualification</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: 'var(--radius-full, 9999px)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        backgroundColor: operator.isQualified ? 'var(--purple-soft, #ede9fe)' : 'var(--bg-muted, #f1f5f9)',
+                        color: operator.isQualified ? 'var(--purple, #7c3aed)' : 'var(--text-mid, #64748b)',
+                        border: `1px solid ${operator.isQualified ? '#ddd6fe' : '#e2e8f0'}`
+                      }}
+                    >
+                      <i className={`fa-solid ${operator.isQualified ? 'fa-certificate text-purple' : 'fa-circle-xmark'}`}></i>
+                      {operator.isQualified ? 'Qualified Operator' : 'Standard Operator'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleToggleQualification}
+                      disabled={isConfirmLoading}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        borderRadius: 'var(--radius-sm, 0.375rem)',
+                        border: '1px solid var(--border-color, #e2e8f0)',
+                        background: operator.isQualified ? '#fff1f2' : '#f0fdf4',
+                        color: operator.isQualified ? '#e11d48' : '#16a34a',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem'
+                      }}
+                      title={operator.isQualified ? 'Revoke custom service creation rights' : 'Grant ability to create custom branch services'}
+                    >
+                      <i className={`fa-solid ${operator.isQualified ? 'fa-user-xmark' : 'fa-user-check'}`}></i>
+                      {operator.isQualified ? 'Revoke Qualification' : 'Grant Qualification'}
+                    </button>
+                  </div>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Branch Account ID</span>

@@ -6,7 +6,7 @@ const {
   deleteFromDatabase,
   addToDocumentWithId
 } = require('../services/firebaseService');
-const { staticDataCache } = require('../services/cacheService');
+const { staticDataCache, userCache } = require('../services/cacheService');
 const admin = require('firebase-admin');
 const COLLECTIONS = {
   USERS: 'users',
@@ -37,6 +37,7 @@ const createOperator = async (req, res) => {
       await addToDocumentWithId(COLLECTIONS.USERS, uid, {
         ...operatorData,
         role: 'operator',
+        isQualified: Boolean(operatorData.isQualified) || false,
         status: operatorData.status || 'Active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -72,10 +73,21 @@ const updateOperator = async (req, res) => {
       return res.status(404).json({ error: 'Operator not found' });
     }
 
-    await updateToDatabase(dbPath, {
+    const sanitizedUpdates = {
       ...updates,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    if (updates.isQualified !== undefined) {
+      sanitizedUpdates.isQualified = Boolean(updates.isQualified);
+    }
+
+    await updateToDatabase(dbPath, sanitizedUpdates);
+
+    // Invalidate userCache
+    if (userCache) {
+      userCache.del(id);
+    }
 
     return res.status(200).json({ message: 'Operator updated successfully' });
   } catch (error) {
@@ -232,7 +244,8 @@ const getBranches = async (req, res) => {
         branchName: op.branchName || op.name || 'Branch Operator',
         address: op.address || '',
         email: op.email || '',
-        contactNumber: op.contactNumber || ''
+        contactNumber: op.contactNumber || '',
+        isQualified: op.isQualified === true
       }));
 
     return res.status(200).json(activeBranches);

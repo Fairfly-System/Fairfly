@@ -35,7 +35,11 @@ const SERVICE_ALLOWED_FIELDS = [
   'category',
   'description',
   'featured',
-  'carouselImages'
+  'carouselImages',
+  'createdByOperatorId',
+  'branchUid',
+  'branchName',
+  'isBranchExclusive'
 ];
 
 const activeServiceRoutes = require('./activeServiceRoutes');
@@ -46,12 +50,12 @@ router.use('/active', activeServiceRoutes);
 // Services Routes
 router.get('/', performanceProfiler('GET /services', apiRateLimiter, getServices));
 router.get('/:id', performanceProfiler('GET /services/:id', apiRateLimiter, getServiceById));
-router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), createService));
+router.post('/', performanceProfiler('POST /services', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), createService));
 router.post('/bulk-status', performanceProfiler('POST /services/bulk-status', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkStatusServices));
 router.post('/bulk-delete', performanceProfiler('POST /services/bulk-delete', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkDeleteServices));
-router.put('/:id', performanceProfiler('PUT /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), updateService));
-router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), updateService));
-router.delete('/:id', performanceProfiler('DELETE /services/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteService));
+router.put('/:id', performanceProfiler('PUT /services/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), updateService));
+router.patch('/:id', performanceProfiler('PATCH /services/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, allowedFields(SERVICE_ALLOWED_FIELDS), updateService));
+router.delete('/:id', performanceProfiler('DELETE /services/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, deleteService));
 
 // Quick Links Routes
 router.get('/quicklinks', performanceProfiler('GET /services/quicklinks', apiRateLimiter, getQuickLinks));

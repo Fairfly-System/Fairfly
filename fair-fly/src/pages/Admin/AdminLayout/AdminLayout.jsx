@@ -15,6 +15,7 @@ const baseAdminLinks = [
   { to: '/admin/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },
   { to: '/admin/messages', icon: 'fa-solid fa-comments', label: 'Messages' },
   { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
+  { to: '/admin/qualifications', icon: 'fa-solid fa-certificate', label: 'Qualifications' },
   { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
   { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },
   { to: '/admin/quick-links', icon: 'fa-solid fa-link', label: 'Quick Links' },

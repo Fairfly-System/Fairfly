@@ -11,7 +11,9 @@ export default function ClientServiceRequestModal({
   isOpen,
   onClose,
   onRequestSuccess,
-  initialServiceId
+  initialServiceId,
+  lockedBranchUid,
+  lockedBranchName
 }) {
   const { user, userToken, userDetails } = useAuthContext();
   const { addToast } = useToast();
@@ -154,6 +156,17 @@ export default function ClientServiceRequestModal({
   // Selected Service object
   const selectedService = servicesList.find((s) => s.id === selectedServiceId);
   const serviceRequirements = selectedService?.requirements || selectedService?.actions || [];
+
+  const isBranchExclusive = Boolean(selectedService?.isBranchExclusive && selectedService?.branchUid);
+  const effectiveLockedBranchUid = isBranchExclusive ? selectedService.branchUid : lockedBranchUid;
+  const effectiveLockedBranchName = isBranchExclusive ? (selectedService.branchName || 'Assigned Branch') : lockedBranchName;
+
+  // Auto-lock branch UID if service is branch exclusive or prop provided
+  useEffect(() => {
+    if (effectiveLockedBranchUid) {
+      setSelectedBranchUid(effectiveLockedBranchUid);
+    }
+  }, [effectiveLockedBranchUid]);
 
   // Handle Requirement Text/Value change
   const handleReqTextChange = (index, value) => {
@@ -375,7 +388,9 @@ export default function ClientServiceRequestModal({
                 value={selectedBranchUid}
                 onChange={(e) => setSelectedBranchUid(e.target.value)}
                 required
+                disabled={Boolean(effectiveLockedBranchUid)}
                 className="form-select"
+                style={effectiveLockedBranchUid ? { backgroundColor: 'var(--bg-muted, #f1f5f9)', cursor: 'not-allowed' } : {}}
               >
                 {branchesList.length === 0 ? (
                   <option value="">No active branches available</option>
@@ -387,6 +402,11 @@ export default function ClientServiceRequestModal({
                   ))
                 )}
               </select>
+              {effectiveLockedBranchUid && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem', fontWeight: 600 }}>
+                  <i className="fa-solid fa-lock"></i> Exclusively serviced by {effectiveLockedBranchName}
+                </span>
+              )}
             </div>
           </div>
 

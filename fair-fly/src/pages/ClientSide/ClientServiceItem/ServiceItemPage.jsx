@@ -310,6 +310,32 @@ export default function ServiceItemPage() {
             </span>
           </div>
 
+          {/* Branch Exclusivity Banner */}
+          {service.isBranchExclusive && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                background: 'var(--purple-soft, #ede9fe)',
+                border: '1px solid #ddd6fe',
+                borderRadius: 'var(--radius-md, 0.5rem)',
+                padding: '0.875rem 1rem',
+                margin: '1.25rem 0'
+              }}
+            >
+              <i className="fa-solid fa-store" style={{ color: 'var(--purple)', fontSize: '1.25rem' }}></i>
+              <div>
+                <strong style={{ color: 'var(--text-dark)', fontSize: '0.875rem', display: 'block' }}>
+                  Branch Exclusive Service
+                </strong>
+                <span style={{ color: 'var(--text-mid)', fontSize: '0.8125rem' }}>
+                  This specialized service package is exclusively fulfilled by our <strong>{service.branchName || 'designated branch'}</strong> operator.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Description Section */}
           <div className="service-section-box">
             <h3 className="service-section-title">
@@ -405,6 +431,8 @@ export default function ServiceItemPage() {
           navigate('/client/tracking');
         }}
         initialServiceId={service.id}
+        lockedBranchUid={service.isBranchExclusive ? service.branchUid : undefined}
+        lockedBranchName={service.isBranchExclusive ? service.branchName : undefined}
       />
 
       {/* Appointment Booking Modal */}
@@ -416,6 +444,9 @@ export default function ServiceItemPage() {
           addToast('Appointment scheduled successfully!', 'success');
           navigate('/client/appointments');
         }}
+        lockedBranchUid={service.isBranchExclusive ? service.branchUid : undefined}
+        lockedBranchName={service.isBranchExclusive ? service.branchName : undefined}
+        initialServiceType={service.name}
       />
     </main>
   );

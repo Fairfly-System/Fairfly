@@ -1,5 +1,6 @@
 # Update Logs
 
+<<<<<<< HEAD
 ## [2026-08-27] Feature: Terms & Privacy Modal, Admin Operator Tab Loading Fix, and Client Navbar Logo Fix
 
 ### Files Created & Modified
@@ -21,6 +22,59 @@
 - Users can now review the complete **Terms of Service** and **Privacy Policy** by clicking the links on the Login and Registration cards; the popup can be closed via backdrop click, top close button, or "I Understand" action.
 - Resolved the issue where clicking the **Operators** tab in the Admin portal failed to load by shifting data retrieval to authenticated backend REST endpoints.
 - Restored the FairFly logo rendering on the Client portal top navigation bar across desktop and mobile screens.
+=======
+## [2026-08-27] Feature: Qualified Operator Services, Branch Exclusivity & Marketplace Branch Filtering
+
+### Files Created & Modified
+- **Backend Services & Qualification System (`fly-api`)**:
+  - `fly-api/src/controllers/qualificationController.js` **[NEW]** (Implemented `submitQualificationApplication` for operators to apply, `getQualificationApplications`, `getQualificationApplicationById`, and `reviewQualificationApplication` for Super Admins to approve/reject and toggle `isQualified` on operator users with cache invalidation)
+  - `fly-api/src/routes/qualificationRoutes.js` **[NEW]** (Created `/api/qualifications` routes with RBAC protection: operators submit, admins list, super admins review)
+  - `fly-api/src/routes/index.js` (Mounted `/qualifications` routes)
+  - `fly-api/src/controllers/serviceController.js` (Enforced operator qualification check on service creation, tagged operator-created services with `isBranchExclusive: true` and branch UID/name, enforced operator ownership on edit/delete, and added `branchUid` query filtering)
+  - `fly-api/src/routes/serviceRoutes.js` (Allowed `operator` role on `POST`, `PUT`, `PATCH`, `DELETE` endpoints and updated `SERVICE_ALLOWED_FIELDS`)
+  - `fly-api/src/controllers/operatorController.js` (Added `isQualified` support to operator creation and update endpoints, invalidated user cache on changes, and returned `isQualified` in `getBranches`)
+  - `fly-api/src/routes/operatorRoutes.js` (Allowed `isQualified` in operator update payload)
+  - `fly-api/src/controllers/activeServiceController.js` (Locked `branchUid` and `branchName` to the service's owning branch for branch-exclusive active service requests)
+  - `firestore.rules` (Added security rules for `qualificationApplications` collection)
+- **Admin Frontend Portal (`fair-fly`)**:
+  - `fair-fly/src/pages/Admin/AdminQualifications/AdminQualifications.jsx` **[NEW]** (Created AdminProvider context wrapper for `qualificationApplications`)
+  - `fair-fly/src/pages/Admin/AdminQualifications/QualificationsContent.jsx` **[NEW]** (Created qualification management interface with horizontal KPI stats flex grid, search, status filter chips, applications DataTable, and Super Admin review modal)
+  - `fair-fly/src/pages/Admin/AdminQualifications/admin-qualifications.css` **[NEW]** (Added styles for qualifications management view including horizontal `.services-summary-grid`)
+  - `fair-fly/src/index.css` (Added `.kpi-grid-4` alongside `.services-summary-grid` for responsive horizontal KPI cards flex layout)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorDetailPage.jsx` (Added Service Qualification badge and one-click "Grant Qualification" / "Revoke Qualification" action toggle button)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Added "Qualified" badge to operator table rows and "Qualified" filter chip)
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx` (Added "Branch Exclusive" badge with branch name to service rows and filter chip)
+  - `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx` (Added "Qualifications" navigation link to admin sidebar)
+  - `fair-fly/src/App.jsx` (Mounted `/admin/qualifications` route)
+- **Operator Frontend Portal (`fair-fly`)**:
+  - `fair-fly/src/components/Operator/QualificationApplicationModal/QualificationApplicationModal.jsx` **[NEW]** (Created modal for non-qualified operators to submit qualification applications with justification details)
+  - `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` (Added dynamic qualification status banner offering qualification application or direct navigation to branch service catalog)
+  - `fair-fly/src/pages/Operator/OperatorServices/OperatorServices.jsx` **[NEW]** (AdminProvider wrapper for operator branch services)
+  - `fair-fly/src/pages/Operator/OperatorServices/OperatorServicesContent.jsx` **[NEW]** (Created branch services catalog interface allowing qualified operators to create, edit, toggle status, and delete their own branch-exclusive services with media uploads)
+  - `fair-fly/src/pages/Operator/OperatorServices/operator-services.css` **[NEW]** (Added styles for operator services management view)
+  - `fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx` (Added "My Services" navigation link in operator sidebar)
+  - `fair-fly/src/App.jsx` (Mounted `/operator/services` route)
+- **Client Marketplace & Booking Enforcement (`fair-fly`)**:
+  - `fair-fly/src/components/Client/ClientServicesMarketplace/ClientServicesMarketplace.jsx` (Added Branch Location sidebar filter with dynamic branch options & service count badges, active filter pills, and "Branch Exclusive" badge on service cards)
+  - `fair-fly/src/pages/ClientSide/ClientServiceItem/ServiceItemPage.jsx` (Added Branch Exclusivity Banner and passed locked branch props to booking modals)
+  - `fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx` (Enforced branch locking on service request modal: automatically preselects and disables branch dropdown for branch-exclusive services with an explanatory note)
+  - `fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx` (Enforced branch locking on appointment scheduling form: preselects and disables branch selection when booking for a branch-exclusive service)
+
+### Summary of Changes
+- Implemented an end-to-end Qualified Operator subsystem enabling operators to apply for qualification, Super Admins to review and approve/revoke qualifications, and qualified operators to publish branch-exclusive services.
+- Added comprehensive Branch Location filtering in the Client Services Marketplace to allow clients to filter services by branch while clearly badging branch-exclusive offerings.
+- Enforced strict branch booking and active service assignment on both client modals and backend controllers, guaranteeing client requests for branch-exclusive services are locked exclusively to the owning operator.
+
+---
+
+## [2026-08-26] Fix: Chat Attachment Upload Token Reference
+
+### Files Modified
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Destructured `userToken` from `useAuthContext()` and added safe fallback to `user.getIdToken()` for chat attachment uploads)
+
+### Summary of Changes
+- Resolved `ReferenceError: userToken is not defined` when uploading files or images in the chat messaging module.
+>>>>>>> 9db8a74c359953f71a219e1370975e552cfe86a7
 
 ---
 
@@ -48,7 +102,10 @@
 - Resolved "Endpoint not found" error by restarting the `fly-api` server under `nodemon` and adding endpoint aliases.
 
 ---
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9db8a74c359953f71a219e1370975e552cfe86a7
 ## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
 
 ### Files Modified

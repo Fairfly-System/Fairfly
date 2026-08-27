@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import useDebounce from '../../../hooks/useDebounce';
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
 import './client-services-marketplace.css';
 
 const PAGE_SIZE = 6;
@@ -87,6 +89,8 @@ export default function ClientServicesMarketplace({
   // Aside Filter state
   const [selectedCategories, setSelectedCategories] = useState([]); // Array of checked category names
   const [selectedTags, setSelectedTags] = useState([]); // Array of checked tag names
+  const [branchesList, setBranchesList] = useState([]); // Array of branch objects from backend
+  const [selectedBranches, setSelectedBranches] = useState([]); // Array of checked branchUid strings
   const [priceTier, setPriceTier] = useState('all'); // 'all' | 'under1000' | '1000-3000' | '3000-5000' | 'above5000' | 'custom'
   const [customMinPrice, setCustomMinPrice] = useState('');
   const [customMaxPrice, setCustomMaxPrice] = useState('');
@@ -96,6 +100,29 @@ export default function ClientServicesMarketplace({
   // Expander toggles for aside sections if many
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
+  const [showAllBranches, setShowAllBranches] = useState(false);
+
+  // Fetch branches list on mount
+  useEffect(() => {
+    let isMounted = true;
+    ApiCaller(
+      `${API_BASE_URL}/api/operators/branches`,
+      'GET',
+      null,
+      {},
+      (data) => {
+        if (isMounted && Array.isArray(data)) {
+          setBranchesList(data);
+        }
+      },
+      (err) => {
+        console.warn('Could not fetch branches for marketplace filter:', err);
+      }
+    );
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Reset pagination whenever search query or filters change
   useEffect(() => {
@@ -104,6 +131,7 @@ export default function ClientServicesMarketplace({
     debouncedSearch,
     selectedCategories,
     selectedTags,
+    selectedBranches,
     priceTier,
     customMinPrice,
     customMaxPrice,
@@ -147,6 +175,23 @@ export default function ClientServicesMarketplace({
     })).sort((a, b) => b.count - a.count);
   }, [services]);
 
+  // Map branches with service counts
+  const branchesWithCounts = useMemo(() => {
+    const branchCounts = {};
+    services.forEach((s) => {
+      if (s.branchUid) {
+        branchCounts[s.branchUid] = (branchCounts[s.branchUid] || 0) + 1;
+      }
+    });
+
+    return (branchesList || []).map((b) => ({
+      uid: b.uid,
+      name: b.branchName || b.name || 'Branch Operator',
+      count: branchCounts[b.uid] || 0,
+      isQualified: b.isQualified
+    }));
+  }, [branchesList, services]);
+
   // Handle Category checkbox toggle
   const handleToggleCategory = (catName) => {
     setSelectedCategories((prev) =>
@@ -161,6 +206,13 @@ export default function ClientServicesMarketplace({
     );
   };
 
+  // Handle Branch checkbox toggle
+  const handleToggleBranch = (branchUid) => {
+    setSelectedBranches((prev) =>
+      prev.includes(branchUid) ? prev.filter((b) => b !== branchUid) : [...prev, branchUid]
+    );
+  };
+
   // Handle Speed checkbox toggle
   const handleToggleSpeed = (speedId) => {
     setSpeedFilters((prev) =>
@@ -172,6 +224,7 @@ export default function ClientServicesMarketplace({
   const handleResetAllFilters = () => {
     setSelectedCategories([]);
     setSelectedTags([]);
+    setSelectedBranches([]);
     setPriceTier('all');
     setCustomMinPrice('');
     setCustomMaxPrice('');
@@ -185,6 +238,7 @@ export default function ClientServicesMarketplace({
   const hasActiveFilters =
     selectedCategories.length > 0 ||
     selectedTags.length > 0 ||
+    selectedBranches.length > 0 ||
     priceTier !== 'all' ||
     customMinPrice !== '' ||
     customMaxPrice !== '' ||
@@ -226,7 +280,17 @@ export default function ClientServicesMarketplace({
       });
     }
 
-    // 4. Price Tier / Custom Range Filter
+    // 4. Branch Location Checkbox Filter
+    if (selectedBranches.length > 0) {
+      result = result.filter((s) => {
+        // Global services are available across all branches
+        if (!s.isBranchExclusive && !s.branchUid) return true;
+        // Branch-exclusive services are matched against selected branches
+        return selectedBranches.includes(s.branchUid);
+      });
+    }
+
+    // 5. Price Tier / Custom Range Filter
     if (priceTier === 'under1000') {
       result = result.filter((s) => parseNumericPrice(s.price) < 1000);
     } else if (priceTier === '1000-3000') {
@@ -252,7 +316,7 @@ export default function ClientServicesMarketplace({
       }
     }
 
-    // 5. Processing Speed Filter
+    // 6. Processing Speed Filter
     if (speedFilters.length > 0) {
       result = result.filter((s) => {
         const days = getTurnaroundDays(s.processingTime);
@@ -265,12 +329,12 @@ export default function ClientServicesMarketplace({
       });
     }
 
-    // 6. Featured Only Filter
+    // 7. Featured Only Filter
     if (featuredOnly) {
       result = result.filter((s) => Boolean(s.featured));
     }
 
-    // 7. Sorting
+    // 8. Sorting
     result.sort((a, b) => {
       if (sortBy === 'featured') {
         if (a.featured && !b.featured) return -1;
@@ -301,6 +365,7 @@ export default function ClientServicesMarketplace({
     debouncedSearch,
     selectedCategories,
     selectedTags,
+    selectedBranches,
     priceTier,
     customMinPrice,
     customMaxPrice,
@@ -355,6 +420,11 @@ export default function ClientServicesMarketplace({
   const displayedTags = showAllTags
     ? tagsWithCounts
     : tagsWithCounts.slice(0, 6);
+
+  // Determine branches to show (top 5 or all)
+  const displayedBranches = showAllBranches
+    ? branchesWithCounts
+    : branchesWithCounts.slice(0, 5);
 
   return (
     <section className="shopping-ui-wrapper">
@@ -470,6 +540,71 @@ export default function ClientServicesMarketplace({
               </button>
             )}
           </div>
+
+          {/* 2. Branch Location Filter Section */}
+          {branchesWithCounts.length > 0 && (
+            <div className="filter-group">
+              <h4 className="filter-group-title">
+                <span>Branch Location</span>
+                {selectedBranches.length > 0 && (
+                  <span style={{ color: 'var(--purple)', fontSize: '0.75rem' }}>
+                    ({selectedBranches.length})
+                  </span>
+                )}
+              </h4>
+
+              {branchesWithCounts.length > 5 && (
+                <select
+                  className="filter-select-dropdown"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleToggleBranch(e.target.value);
+                    }
+                  }}
+                >
+                  <option value="">+ Select Branch Dropdown...</option>
+                  {branchesWithCounts.map((b) => (
+                    <option key={b.uid} value={b.uid}>
+                      {b.name} ({b.count})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <div className="filter-options-list">
+                {displayedBranches.map((branch) => {
+                  const isChecked = selectedBranches.includes(branch.uid);
+                  return (
+                    <label key={branch.uid} className="filter-checkbox-label">
+                      <input
+                        type="checkbox"
+                        className="filter-checkbox-input"
+                        checked={isChecked}
+                        onChange={() => handleToggleBranch(branch.uid)}
+                      />
+                      <span className="filter-option-name" title={branch.name}>
+                        <i className="fa-solid fa-location-dot" style={{ marginRight: '0.375rem', color: 'var(--purple)', fontSize: '0.75rem' }}></i>
+                        {branch.name}
+                      </span>
+                      <span className="filter-count-badge">{branch.count}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {branchesWithCounts.length > 5 && (
+                <button
+                  type="button"
+                  className="filter-toggle-more-btn"
+                  onClick={() => setShowAllBranches(!showAllBranches)}
+                >
+                  <i className={`fa-solid ${showAllBranches ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+                  {showAllBranches ? 'Show Less' : `Show All Branches (${branchesWithCounts.length})`}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 2. Price Range Filter Section */}
           <div className="filter-group">
@@ -744,6 +879,18 @@ export default function ClientServicesMarketplace({
                   </span>
                 ))}
 
+                {selectedBranches.map((bUid) => {
+                  const bObj = branchesWithCounts.find((b) => b.uid === bUid);
+                  return (
+                    <span key={bUid} className="active-filter-pill">
+                      Branch: {bObj?.name || 'Branch'}
+                      <button type="button" onClick={() => handleToggleBranch(bUid)}>
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </span>
+                  );
+                })}
+
                 {selectedTags.map((t) => (
                   <span key={t} className="active-filter-pill">
                     #{t}
@@ -878,6 +1025,28 @@ export default function ClientServicesMarketplace({
                         <span className="shopping-category-tag">
                           {service.category || 'General'}
                         </span>
+                        {service.isBranchExclusive && (
+                          <span
+                            className="shopping-branch-badge"
+                            style={{
+                              background: 'rgba(124, 58, 237, 0.9)',
+                              backdropFilter: 'blur(4px)',
+                              color: '#ffffff',
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: 'var(--radius-sm, 0.25rem)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                            }}
+                            title={`Branch Exclusive: ${service.branchName || 'Local Branch'}`}
+                          >
+                            <i className="fa-solid fa-store" style={{ fontSize: '0.625rem' }}></i>
+                            {service.branchName ? `${service.branchName}` : 'Branch Exclusive'}
+                          </span>
+                        )}
                         {service.featured && (
                           <span className="shopping-featured-badge">
                             <i className="fa-solid fa-star"></i> Featured

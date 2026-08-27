@@ -7,16 +7,23 @@ import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './client-appointment-form.css';
 
-export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCreated }) {
+export default function ClientAppointmentForm({
+  isOpen,
+  onClose,
+  onAppointmentCreated,
+  lockedBranchUid,
+  lockedBranchName,
+  initialServiceType
+}) {
   const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
 
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
-  const [serviceType, setServiceType] = useState('Passport Processing');
-  const [branchUid, setBranchUid] = useState('');
-  const [branchName, setBranchName] = useState('');
+  const [serviceType, setServiceType] = useState(initialServiceType || 'Passport Processing');
+  const [branchUid, setBranchUid] = useState(lockedBranchUid || '');
+  const [branchName, setBranchName] = useState(lockedBranchName || '');
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTime, setPreferredTime] = useState('10:00 AM');
   const [purpose, setPurpose] = useState('');
@@ -53,8 +60,14 @@ export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCr
             const list = Array.isArray(data) ? data : [];
             if (list.length > 0) {
               setBranchesList(list);
-              setBranchUid(list[0].uid);
-              setBranchName(list[0].branchName || list[0].name || 'Main Branch');
+              if (lockedBranchUid) {
+                setBranchUid(lockedBranchUid);
+                const found = list.find((b) => b.uid === lockedBranchUid);
+                setBranchName(lockedBranchName || found?.branchName || found?.name || 'Selected Branch');
+              } else {
+                setBranchUid(list[0].uid);
+                setBranchName(list[0].branchName || list[0].name || 'Main Branch');
+              }
             } else {
               fetchBranchesFirestore();
             }
@@ -73,7 +86,11 @@ export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCr
             const activeOnly = list.filter((s) => s.status !== 'Disabled' && s.status !== 'Inactive');
             if (activeOnly.length > 0) {
               setServicesList(activeOnly);
-              setServiceType(activeOnly[0].name);
+              if (initialServiceType) {
+                setServiceType(initialServiceType);
+              } else {
+                setServiceType(activeOnly[0].name);
+              }
             }
           },
           null,
@@ -268,6 +285,8 @@ export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCr
                 value={branchUid}
                 onChange={handleBranchChange}
                 required
+                disabled={Boolean(lockedBranchUid)}
+                style={lockedBranchUid ? { backgroundColor: 'var(--bg-muted, #f1f5f9)', cursor: 'not-allowed' } : {}}
               >
                 {branchesList.length > 0 ? (
                   branchesList.map((b) => (
@@ -276,9 +295,14 @@ export default function ClientAppointmentForm({ isOpen, onClose, onAppointmentCr
                     </option>
                   ))
                 ) : (
-                  <option value="">Main Branch</option>
+                  <option value="">{branchName || 'Main Branch'}</option>
                 )}
               </select>
+              {lockedBranchUid && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem', fontWeight: 600 }}>
+                  <i className="fa-solid fa-lock"></i> Exclusively serviced by {branchName || lockedBranchName || 'Selected Branch'}
+                </span>
+              )}
             </div>
           </div>
 
