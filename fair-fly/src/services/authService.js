@@ -19,3 +19,23 @@ export function requestClientPasswordReset(email, successCallback, errorCallback
     setIsLoading
   );
 }
+
+/**
+ * Register a new Client account via backend API
+ * @param {object} userData - { fullName, email, phone, password }
+ * @param {function} successCallback - Success callback handler
+ * @param {function} errorCallback - Error callback handler
+ * @param {function} setIsLoading - Loading state setter
+ */
+export function registerClient(userData, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/register`,
+    'POST',
+    userData,
+    {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+

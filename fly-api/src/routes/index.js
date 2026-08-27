@@ -16,9 +16,11 @@ const notificationRoutes = require('./notificationRoutes');
 const resourceRoutes = require('./resourceRoutes');
 const authRoutes = require('./authRoutes');
 const qualificationRoutes = require('./qualificationRoutes');
+const clientRoutes = require('./clientRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/qualifications', qualificationRoutes);
+router.use('/clients', clientRoutes);
 router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
 router.use('/operators', operatorRoutes);

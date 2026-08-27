@@ -12,11 +12,12 @@ const baseAdminLinks = [
   { to: '/admin/services', icon: 'fa-regular fa-file-lines', label: 'Services' },
   { to: '/admin/workflow-templates', icon: 'fa-solid fa-diagram-project', label: 'Workflows' },
   { to: '/admin/operators', icon: 'fa-solid fa-users', label: 'Operators' },
+  { to: '/admin/clients', icon: 'fa-solid fa-user-group', label: 'Clients' },
   { to: '/admin/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },
   { to: '/admin/messages', icon: 'fa-solid fa-comments', label: 'Messages' },
-  { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
   { to: '/admin/qualifications', icon: 'fa-solid fa-certificate', label: 'Qualifications' },
   { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
+  { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
   { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },
   { to: '/admin/quick-links', icon: 'fa-solid fa-link', label: 'Quick Links' },
 ];
@@ -27,9 +28,8 @@ export default function AdminLayout() {
 
   const navLinks = useMemo(() => {
     if (isSuperAdmin) {
-      // Insert Admins link right after Operators (index 3)
       const links = [...baseAdminLinks];
-      links.splice(4, 0, {
+      links.splice(5, 0, {
         to: '/admin/admins',
         icon: 'fa-solid fa-user-shield',
         label: 'Admins'

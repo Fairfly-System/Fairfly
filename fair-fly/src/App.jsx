@@ -67,13 +67,16 @@ import QualificationsContent from './pages/Admin/AdminQualifications/Qualificati
 import AdminAdmins from './pages/Admin/AdminAdmins/AdminAdmins';
 import AdminsContent from './pages/Admin/AdminAdmins/AdminsContent';
 import AdminDetailPage from './pages/Admin/AdminAdmins/AdminDetailPage';
+import AdminClients from './pages/Admin/AdminClients/AdminClients';
+import ClientsContent from './pages/Admin/AdminClients/ClientsContent';
+import ClientDetailPage from './pages/Admin/AdminClients/ClientDetailPage';
 import AdminResources from './pages/Admin/AdminResources/AdminResources';
 import OperatorResources from './pages/Operator/OperatorResources/OperatorResources';
 import MessagesPage from './pages/Shared/MessagesPage/MessagesPage';
 
 function App() {
 
-  const { user, userDetails, userLoading, isRegistering } = useAuthContext();
+  const { user, userDetails, userLoading } = useAuthContext();
 
   const roleRoutes = {
     client: (
@@ -100,6 +103,10 @@ function App() {
           <Route path="operators" element={<AdminOperators />}>
             <Route index element={<OperatorsContent />} />
             <Route path=":id" element={<OperatorDetailPage />} />
+          </Route>
+          <Route path="clients" element={<AdminClients />}>
+            <Route index element={<ClientsContent />} />
+            <Route path=":id" element={<ClientDetailPage />} />
           </Route>
           <Route path="admins" element={<AdminAdmins />}>
             <Route index element={<AdminsContent />} />
@@ -167,7 +174,7 @@ function App() {
       <BrowserRouter>
         <ScrollToTop />
 
-        {userLoading || isRegistering ? (
+        {userLoading ? (
           <Loading />
         ) : (
           <Routes>

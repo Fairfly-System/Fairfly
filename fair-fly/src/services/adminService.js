@@ -158,3 +158,53 @@ export function bulkDeleteOperators(token, ids, successCallback, errorCallback, 
     setIsLoading
   );
 }
+
+// ── Client Accounts ───────────────────────────────────────────────────────
+export function fetchClients(token, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients`,
+    'GET',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function fetchClientById(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/${id}`,
+    'GET',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function updateClient(token, id, clientData, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/${id}`,
+    'PATCH',
+    clientData,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function deleteClient(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/${id}`,
+    'DELETE',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+

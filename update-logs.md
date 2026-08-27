@@ -1,6 +1,38 @@
 # Update Logs
 
-<<<<<<< HEAD
+## [2026-08-27] Feature: Admin Client Management System & Backend Registration Auth Migration
+
+### Files Created & Modified
+- **Backend API & Security (`fly-api`)**:
+  - `fly-api/src/controllers/clientController.js` **[NEW]** (Implemented `getClients`, `getClientById` with related activity summary, `updateClient` with non-sensitive field protection, and `deleteClient` removing from Auth and Firestore with cache eviction)
+  - `fly-api/src/routes/clientRoutes.js` **[NEW]** (Created `/api/clients` routes protected with `verifyFirebaseToken`, `requireRole('admin')`, `allowedFields`, and `apiRateLimiter`)
+  - `fly-api/src/controllers/authController.js` (Implemented `registerClient` for public client registration on the backend, enforcing input validation, password complexity, hardcoded `role: 'client'`, and rollback on Firestore failure)
+  - `fly-api/src/routes/authRoutes.js` (Added public rate-limited `POST /api/auth/register` endpoint)
+  - `fly-api/src/routes/index.js` (Mounted `/clients` routes)
+  - `firestore.rules` (Hardened `/users/{userId}` security rules: set `allow create: if false;`, ensuring all user creations pass through the backend API to prevent client-side privilege escalation; restricted `update` and `delete` to `isAdmin()`)
+- **Frontend Services & Auth Context (`fair-fly`)**:
+  - `fair-fly/src/services/authService.js` (Added `registerClient` using `ApiCaller` to track loading and handle callbacks)
+  - `fair-fly/src/services/adminService.js` (Added `fetchClients`, `fetchClientById`, `updateClient`, and `deleteClient` using `ApiCaller`)
+  - `fair-fly/src/pages/Index/Register/Register.jsx` (Migrated registration flow to backend `registerClient` via `ApiCaller`, removing client-side Firebase Auth user creation and Firestore writes)
+  - `fair-fly/src/context/AuthContext.jsx` (Removed unused `isRegistering` / `setIsRegistering` state)
+  - `fair-fly/src/App.jsx` (Cleaned up `isRegistering` and mounted `/admin/clients` routes)
+- **Admin Frontend Portal (`fair-fly`)**:
+  - `fair-fly/src/components/Admin/Modals/ClientEditModal/ClientEditModal.jsx` **[NEW]** (Created Client Edit Modal dialog)
+  - `fair-fly/src/components/Admin/Modals/ClientEditModal/ClientEditForm.jsx` **[NEW]** (Created edit form allowing admins to modify `fullName`, `phone`, `status`, and `address`; strictly displaying email as read-only and disallowing password changes)
+  - `fair-fly/src/pages/Admin/AdminClients/AdminClients.jsx` **[NEW]** (Created clean `<Outlet />` wrapper for client management)
+  - `fair-fly/src/pages/Admin/AdminClients/ClientsContent.jsx` **[NEW]** (Created client accounts table view with horizontal KPI cards, debounce search, filter chips, DataTable, system-standard `icon-btn` action buttons matching Operators and Admins tables, status toggling, and deletion confirmation)
+  - `fair-fly/src/pages/Admin/AdminClients/ClientDetailPage.jsx` **[NEW]** (Integrated standard `RecordDetailLayout` for graceful inner content loading without page shell reloading, displaying full profile, status badge, contact/address fields, and related activity stats)
+  - `fair-fly/src/pages/Admin/AdminClients/admin-clients.css` **[NEW]** (Added responsive REM styling, avatar bubbles, and accessible status badges for client management)
+  - `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx` (Added "Clients" link with `fa-user-group` icon to Admin navigation sidebar)
+
+### Summary of Changes
+- Admins can now manage client accounts at `/admin/clients` (viewing details, editing contact information, activating/deactivating, and deleting accounts).
+- Action buttons across the Client table are standardized with the system's `icon-btn` design (`view`, `edit`, `ban`/`check`, `delete`).
+- `ClientDetailPage` now uses `RecordDetailLayout` so only the inner content loads rather than triggering a full page reload/shell unmount when viewing client profiles.
+- Strict security constraints applied: Admins cannot change client emails or passwords.
+- Client registration is migrated completely to the backend (`POST /api/auth/register`), preventing any client-side privilege escalation.
+- Firestore security rules updated so that user creation directly from the client is disabled (`allow create: if false`).
+
 ## [2026-08-27] Feature: Terms & Privacy Modal, Admin Operator Tab Loading Fix, and Client Navbar Logo Fix
 
 ### Files Created & Modified
@@ -22,7 +54,6 @@
 - Users can now review the complete **Terms of Service** and **Privacy Policy** by clicking the links on the Login and Registration cards; the popup can be closed via backdrop click, top close button, or "I Understand" action.
 - Resolved the issue where clicking the **Operators** tab in the Admin portal failed to load by shifting data retrieval to authenticated backend REST endpoints.
 - Restored the FairFly logo rendering on the Client portal top navigation bar across desktop and mobile screens.
-=======
 ## [2026-08-27] Feature: Qualified Operator Services, Branch Exclusivity & Marketplace Branch Filtering
 
 ### Files Created & Modified

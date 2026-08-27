@@ -1,0 +1,237 @@
+/* ==========================================================================
+   Admin Client Management Styles
+   ========================================================================== */
+
+.admin-clients-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.clients-table-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.client-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.client-avatar-bubble {
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 50%;
+  background: #ede9fe;
+  color: #6b21a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  border: 1px solid #ddd6fe;
+}
+
+.client-avatar-bubble.deactivated {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+.client-user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.client-user-name {
+  font-weight: 700;
+  color: var(--text-dark, #0f172a);
+  font-size: 0.875rem;
+}
+
+.client-user-email {
+  font-size: 0.75rem;
+  color: var(--text-light, #64748b);
+}
+
+/* Status Badges */
+.client-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.71875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.client-status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.client-status-badge.deactivated {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Detail Page */
+.client-detail-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.client-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 64rem) {
+  .client-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.client-info-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.client-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.client-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.client-avatar-large {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #ede9fe;
+  color: #6b21a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  border: 2px solid #ddd6fe;
+}
+
+.client-avatar-large.deactivated {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+.client-hero-text h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-dark, #0f172a);
+}
+
+.client-hero-text p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-light, #64748b);
+}
+
+.client-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 40rem) {
+  .client-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.client-field-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--bg, #f8fafc);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.client-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-light, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.client-field-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-dark, #0f172a);
+  word-break: break-word;
+}
+
+.client-activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.8125rem;
+}
+
+.client-activity-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.client-activity-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md, 0.5rem);
+  background: #ede9fe;
+  color: #6b21a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}

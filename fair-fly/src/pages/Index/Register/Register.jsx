@@ -3,18 +3,14 @@ import { Link, useNavigate } from "react-router";
 import { Mail, Lock, User, Phone, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import "./register.css";
 import logo from "/FairflyLogo.png";
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { setDoc, doc } from "firebase/firestore";
-import { auth, firestore } from "../../../firebase";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
-import { useAuthContext } from "../../../context/AuthContext";
-import toFriendlyMessage from "../../../utils/friendlyErrors";
+import { registerClient } from "../../../services/authService";
 import TermsPrivacyModal from "../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal";
 
 export default function Register() {
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { setIsRegistering } = useAuthContext();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -152,29 +148,25 @@ export default function Register() {
   // -----------------------
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (disabled) return;
+    if (disabled || isSubmitting) return;
 
-    setIsRegistering(true);
-
-    createUserWithEmailAndPassword(auth, formData.email, formData.password)
-      .then(async () => {
-        const { password, confirmPassword, ...userWithoutPassword } = formData;
-
-        await setDoc(doc(firestore, "users", auth.currentUser.uid), {
-          ...userWithoutPassword,
-          createdAt: new Date().toISOString(),
-          role: "client",
-        });
-
-        await signOut(auth);
-        setIsRegistering(false);
+    registerClient(
+      {
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      },
+      (res) => {
+        addToast(res?.message || "Registration successful! Please sign in.", "success");
         navigate("/login");
-        addToast("Registration successful! Please sign in.", "success");
-      })
-      .catch((error) => {
-        setIsRegistering(false);
-        addToast(toFriendlyMessage(error, "Could not create your account. Please check your details and try again."), "error");
-      });
+      },
+      (error) => {
+        addToast(error?.message || "Could not create your account. Please check your details and try again.", "error");
+      },
+      setIsSubmitting
+    );
   };
 
   return (
@@ -301,8 +293,15 @@ export default function Register() {
               )}
             </div>
 
-            <button type="submit" className="submit-button" disabled={disabled}>
-              Create Account
+            <button type="submit" className="submit-button" disabled={disabled || isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: "0.5rem" }}></i>
+                  Creating Account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
           </form>
 
