@@ -45,3 +45,8 @@
 - **Problem**: Starting a conversation with an existing contact or support lead opened a duplicate conversation instead of selecting the existing conversation thread.
 - **Root Cause**: Route navigation with `location.state` left `partnerId` in browser history without clearing it, causing repeated creation calls; and frontend creation/selection did not check the loaded `conversations` list first before requesting a new conversation from the backend API.
 - **Prevention**: Always perform client-side cache lookups against loaded conversations before invoking creation APIs, clear one-time navigation state using `navigate(location.pathname, { replace: true, state: {} })`, and enhance backend lookup queries to search bidirectional array containment.
+
+## [2026-08-26] Missing Context Property Destructuring for Upload Auth
+- **Problem**: `ReferenceError: userToken is not defined` when uploading files or images in chat messaging.
+- **Root Cause**: `userToken` was omitted during `useAuthContext()` destructuring at the top of `MessagesPage.jsx`.
+- **Prevention**: Destructure `userToken` from `useAuthContext()` and provide a defensive fallback to `await user?.getIdToken()` for async backend requests.

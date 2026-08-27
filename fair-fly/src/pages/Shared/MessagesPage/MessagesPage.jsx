@@ -83,7 +83,7 @@ function formatDayDivider(isoString) {
 }
 
 export default function MessagesPage() {
-  const { user, userDetails } = useAuthContext();
+  const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -261,10 +261,11 @@ export default function MessagesPage() {
     try {
       if (selectedFile) {
         setIsUploading(true);
+        const authToken = userToken || (await user?.getIdToken());
         const uploadRes = await uploadFileToBackend(
           selectedFile,
           `chat_files/${activeConversation.id}`,
-          userToken
+          authToken
         );
 
         fileMetadata = {

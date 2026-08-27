@@ -1,5 +1,15 @@
 # Update Logs
 
+## [2026-08-26] Fix: Chat Attachment Upload Token Reference
+
+### Files Modified
+- `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` (Destructured `userToken` from `useAuthContext()` and added safe fallback to `user.getIdToken()` for chat attachment uploads)
+
+### Summary of Changes
+- Resolved `ReferenceError: userToken is not defined` when uploading files or images in the chat messaging module.
+
+---
+
 ## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
 
 ### Files Modified
