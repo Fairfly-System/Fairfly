@@ -35,3 +35,8 @@
 - **Problem**: `ReferenceError: getFileTypeInfo is not defined` in `OperatorResources.jsx`.
 - **Root Cause**: The helper was defined as `getFileMeta`, but invoked as `getFileTypeInfo` within the card rendering loop. Additionally, `handlePreview` was referenced in the preview button onClick without an implementation.
 - **Prevention**: Ensure all component-level helper functions and action handlers referenced in JSX render callbacks are defined in the module scope and have matching identifiers.
+
+## [2026-08-27] Stale Express Server Instance Serving Old Routing Table
+- **Problem**: Frontend returned 404 `Endpoint not found` when sending requests to new endpoints (`/api/auth/client-forgot-password`).
+- **Root Cause**: The Express backend (`fly-api`) was running via a static `node server.js` process started prior to adding the new routes, which did not hot-reload new route modules.
+- **Prevention**: Always verify that the API server is actively running with `nodemon` (e.g. `npm run dev`) or restart the running background process when adding or modifying backend controllers and routes. Also provide route aliases for common path variations.

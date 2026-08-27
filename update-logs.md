@@ -1,5 +1,30 @@
 # Update Logs
 
+## [2026-08-27] Feature: Centered Navbar Navigation with Active Highlighting & Client Password Reset Verification
+
+### Files Created & Modified
+- **Frontend Navigation & Password Reset (`fair-fly`)**:
+  - `fair-fly/src/components/Shared/Navbar/Navbar.jsx` (Restructured desktop navbar into 3 sections: left brand logo, centered navigation links between Services and About (`Services`, `Business System`, `Guidelines`, `Model`, `About`), and right actions (`Login` beside `Apply for Franchise`); added scroll-spy with `IntersectionObserver` on `/home` and active highlight classes on click and scroll)
+  - `fair-fly/src/components/Shared/Navbar/navbar.css` (Added styling for `.nav-left`, `.nav-center`, `.nav-right`, `.linkNav.active`, `.linkAbout.active`, `.linkLogin.active`, and mobile drawer `.nav-mobile-item.active`)
+  - `fair-fly/src/pages/Index/Login/login.jsx` (Updated "Forgot password?" link to navigate to `/forgot-password`)
+  - `fair-fly/src/pages/Index/ResetPassword/ResetPassword.jsx` **[NEW]** (Created dedicated password reset page strictly for Client accounts with live email format validation, client-only notice callout, and a verification confirmation view with a 60-second resend cooldown timer)
+  - `fair-fly/src/pages/Index/ResetPassword/reset-password.css` **[NEW]** (Added modern SaaS styling using REM tokens, cards, and accessible focus states)
+  - `fair-fly/src/services/authService.js` **[NEW]** (Added `requestClientPasswordReset` calling backend `/api/auth/client-forgot-password`)
+  - `fair-fly/src/App.jsx` (Mounted `/forgot-password` and `/reset-password` unauthenticated routes)
+- **Backend Authentication & Role Verification (`fly-api`)**:
+  - `fly-api/src/controllers/authController.js` **[NEW]** (Implemented `requestClientPasswordReset` validating email format, verifying user existence in Firestore `users`, enforcing client-only role check rejecting non-client accounts with clear notices, and validating Firebase Auth credentials)
+  - `fly-api/src/routes/authRoutes.js` **[NEW]** (Created `/client-forgot-password`, `/forgot-password`, and `/reset-password` route aliases protected with `publicRateLimiter`)
+  - `fly-api/src/routes/index.js` (Mounted `/auth` routes)
+  - Restarted `fly-api` server with `nodemon` to reload active in-memory routing table on port 5001.
+
+### Summary of Changes
+- Centered the main navigation buttons (`Services`, `Business System`, `Guidelines`, `Model`, `About`) in the navbar while positioning the `Login` button directly adjacent to the `Apply for Franchise` button.
+- Implemented real-time active button highlighting when clicked, during route changes, and while scrolling down sections on the landing page via `IntersectionObserver`.
+- Created a dedicated client-only Password Reset interface (`/forgot-password` and `/reset-password`) that enforces backend role validation to ensure only client accounts can request password resets, sending a verification email with a reset link.
+- Resolved "Endpoint not found" error by restarting the `fly-api` server under `nodemon` and adding endpoint aliases.
+
+---
+
 ## [2026-08-26] Enhancement: Unified Secure Backend Uploads with Access Tokens Across All Features
 
 ### Files Modified

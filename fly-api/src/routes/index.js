@@ -14,7 +14,9 @@ const appointmentRoutes = require('./appointmentRoutes');
 const adminRoutes = require('./adminRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const resourceRoutes = require('./resourceRoutes');
+const authRoutes = require('./authRoutes');
 
+router.use('/auth', authRoutes);
 router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
 router.use('/operators', operatorRoutes);
