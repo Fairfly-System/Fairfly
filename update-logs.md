@@ -1,6 +1,19 @@
 # Update Logs
 
-<<<<<<< HEAD
+## [2026-08-27] Feature: Recreate Landing Page Services with Live Operator Catalog, Filters & Avail Action
+
+### Files Modified
+- **Landing Page (`fair-fly`)**:
+  - `fair-fly/src/components/Shared/Services/Services.jsx` (Recreated component from static vague cards into a stateful, interactive showcase connected to Firestore `services` collection and backend API with rich fallback data; added category filter tabs (*Passport*, *PSA*, *Visa*, *Flight Tickets*, *Tour Packages*), live keyword search with count badges, and an "Avail Service" action button that navigates directly to the login portal with pre-selected service details)
+  - `fair-fly/src/components/Shared/Services/services.css` (Rebuilt CSS using REM tokens, flat color system, responsive grid layout, card hover elevation, category badges, operational highlight pills for turnaround and requirements, and accessible primary action buttons)
+
+### Summary of Changes
+- Replaced vague, hardcoded service boxes with realistic, transparent service cards showcasing what FairFly certified operators process (turnaround days, requirement counts, branch fulfillment, starting fees).
+- Added interactive category filter pills and live search bar.
+- Added "Avail Service" button directing clients to `/login` to sign in and initiate processing.
+
+---
+
 ## [2026-08-27] Feature: Terms & Privacy Modal, Admin Operator Tab Loading Fix, and Client Navbar Logo Fix
 
 ### Files Created & Modified
@@ -22,7 +35,8 @@
 - Users can now review the complete **Terms of Service** and **Privacy Policy** by clicking the links on the Login and Registration cards; the popup can be closed via backdrop click, top close button, or "I Understand" action.
 - Resolved the issue where clicking the **Operators** tab in the Admin portal failed to load by shifting data retrieval to authenticated backend REST endpoints.
 - Restored the FairFly logo rendering on the Client portal top navigation bar across desktop and mobile screens.
-=======
+
+---
 ## [2026-08-27] Feature: Qualified Operator Services, Branch Exclusivity & Marketplace Branch Filtering
 
 ### Files Created & Modified
