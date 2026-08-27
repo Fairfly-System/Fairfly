@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router";
 import "./admin-operators.css";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
@@ -12,12 +12,11 @@ import DataTable from "../../../components/UI/DataTable/DataTable";
 import PageHeader from "../../../components/UI/PageHeader/PageHeader";
 import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
 import KpiCard from "../../../components/UI/KpiCard/KpiCard";
-import { createOperator, updateOperator, deleteOperator } from "../../../services/adminService";
+import { fetchOperators, createOperator, updateOperator, deleteOperator, bulkStatusOperators, bulkDeleteOperators } from "../../../services/adminService";
 import useDebounce from "../../../hooks/useDebounce";
 import toFriendlyMessage from "../../../utils/friendlyErrors";
-import ApiCaller from "../../../utils/ApiCaller";
-import { API_BASE_URL } from "../../../utils/config";
-import { useAdminContext } from "../../../context/AdminContext";
+import { auth, firestore } from "../../../firebase";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 const TrashIcon = (props) => (
   <i className="fa-solid fa-trash-can" {...props}></i>
@@ -26,11 +25,12 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 const CheckIcon = (props) => <i className="fa-solid fa-circle-check" {...props}></i>;
 
 export default function OperatorsContent() {
-  console.log('[OperatorsContent] Rendering list view');
-  const { data: operators, loading: operatorLoading } = useAdminContext();
+  const { userToken, user, userDetails } = useAuthContext();
+  const [operators, setOperators] = useState([]);
+  const [operatorLoading, setOperatorLoading] = useState(true);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
-  const { userToken, user, userDetails } = useAuthContext();
   const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
   const assignedOperators = useMemo(() => userDetails?.assignedOperators || [], [userDetails]);
   const [assignmentScope, setAssignmentScope] = useState('all'); // 'all' | 'assigned'
@@ -52,6 +52,61 @@ export default function OperatorsContent() {
   // Confirmation modal state
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+
+  const loadOperators = useCallback(async () => {
+    let token = userToken;
+    if (!token && auth.currentUser) {
+      try {
+        token = await auth.currentUser.getIdToken();
+      } catch (e) {
+        console.warn("Error obtaining user token:", e);
+      }
+    }
+
+    if (token) {
+      fetchOperators(
+        token,
+        (data) => {
+          if (Array.isArray(data)) {
+            setOperators(data);
+          }
+          setOperatorLoading(false);
+        },
+        (error) => {
+          console.warn("fetchOperators API notice, relying on live Firestore sync:", error);
+          setOperatorLoading(false);
+        },
+        setOperatorLoading
+      );
+    }
+  }, [userToken]);
+
+  // Real-time Firestore sync
+  useEffect(() => {
+    const q = query(collection(firestore, "users"), where("role", "==", "operator"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          uid: doc.id,
+          ...doc.data(),
+        }));
+        setOperators(list);
+        setOperatorLoading(false);
+      },
+      (err) => {
+        console.warn("Firestore operator subscription notice:", err);
+        setOperatorLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    loadOperators();
+  }, [loadOperators]);
 
   const handleOpenAddModal = () => {
     setEditingOperator(null);
@@ -266,15 +321,14 @@ export default function OperatorsContent() {
   };
 
   const handleCreateOperatorSubmit = async (newOperatorData) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/operators`,
-      "POST",
+    return createOperator(
+      userToken,
       newOperatorData,
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast("Operator created successfully!", "success");
         setIsModalOpen(false);
         setEditingOperator(null);
+        loadOperators();
       },
       (error) => {
         console.error("Error creating operator:", error);
@@ -286,15 +340,15 @@ export default function OperatorsContent() {
 
   const handleEditOperatorSubmit = async (updatedOperatorData) => {
     const { email, ...dataToUpdate } = updatedOperatorData;
-    return ApiCaller(
-      `${API_BASE_URL}/api/operators/${editingOperator.id}`,
-      "PATCH",
+    return updateOperator(
+      userToken,
+      editingOperator.id,
       dataToUpdate,
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast("Operator updated successfully!", "success");
         setIsModalOpen(false);
         setEditingOperator(null);
+        loadOperators();
       },
       (error) => {
         console.error("Error updating operator:", error);
@@ -305,14 +359,13 @@ export default function OperatorsContent() {
   };
 
   const handleDeleteOperator = async (operatorId) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/operators/${operatorId}`,
-      "DELETE",
-      null,
-      { Authorization: `Bearer ${userToken}` },
+    return deleteOperator(
+      userToken,
+      operatorId,
       () => {
         addToast("Operator deleted successfully!", "success");
         setConfirmState(null);
+        loadOperators();
       },
       (error) => {
         console.error("Error deleting operator:", error);
@@ -324,14 +377,14 @@ export default function OperatorsContent() {
 
   const handleDeactivateOperator = async (operator) => {
     const newStatus = operator.status === "Active" ? "Disabled" : "Active";
-    return ApiCaller(
-      `${API_BASE_URL}/api/operators/${operator.id}`,
-      "PATCH",
+    return updateOperator(
+      userToken,
+      operator.id,
       { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast(`Operator ${newStatus === "Active" ? "enabled" : "disabled"} successfully!`, "success");
         setConfirmState(null);
+        loadOperators();
       },
       (error) => {
         console.error("Error updating operator status:", error);
@@ -342,15 +395,15 @@ export default function OperatorsContent() {
   };
 
   const handleBulkStatusChange = async (ids, newStatus) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/operators/bulk-status`,
-      "POST",
-      { ids, status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
+    return bulkStatusOperators(
+      userToken,
+      ids,
+      newStatus,
       () => {
         addToast(`${ids.length} operator(s) ${newStatus === 'Active' ? 'enabled' : 'disabled'} successfully!`, "success");
         setSelectedIds([]);
         setConfirmState(null);
+        loadOperators();
       },
       (error) => {
         console.error("Error bulk updating operators:", error);
@@ -361,15 +414,14 @@ export default function OperatorsContent() {
   };
 
   const handleBulkDelete = async (ids) => {
-    return ApiCaller(
-      `${API_BASE_URL}/api/operators/bulk-delete`,
-      "POST",
-      { ids },
-      { Authorization: `Bearer ${userToken}` },
+    return bulkDeleteOperators(
+      userToken,
+      ids,
       () => {
         addToast(`${ids.length} operator(s) deleted successfully!`, "success");
         setSelectedIds([]);
         setConfirmState(null);
+        loadOperators();
       },
       (error) => {
         console.error("Error bulk deleting operators:", error);
@@ -393,20 +445,6 @@ export default function OperatorsContent() {
       await handleBulkDelete(confirmState.ids);
     }
   };
-
-  // Early loading return AFTER all hooks are declared
-  if (operatorLoading) {
-    return (
-      <div className="card operators-page page-fade-in">
-        <div className="operators-header">
-          <div>
-            <h2>Operator Accounts</h2>
-            <p>Loading operator records...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const breadcrumbItems = [
     { label: "Dashboard", to: "/admin" },

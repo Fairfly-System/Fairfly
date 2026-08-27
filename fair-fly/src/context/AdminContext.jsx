@@ -31,7 +31,10 @@ export default function AdminProvider({
                         ...doc.data()
                     }))
                 );
-
+                setLoading(false);
+            },
+            (error) => {
+                console.error(`[AdminProvider] Error listening to ${targetCollection}:`, error);
                 setLoading(false);
             }
         );

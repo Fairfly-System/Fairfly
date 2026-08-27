@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -8,8 +7,10 @@ import OperatorModal from '../../../components/Admin/Modals/OperatorModal/Operat
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import ApiCaller from '../../../utils/ApiCaller';
-import { API_BASE_URL } from '../../../utils/config';
+import { fetchOperatorById, updateOperator, deleteOperator } from '../../../services/adminService';
+import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { auth, firestore } from '../../../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import './operator-detail.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -17,39 +18,85 @@ const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
 
 export default function OperatorDetailPage() {
   const { id } = useParams();
-  console.log('[OperatorDetailPage] Rendering detail page, ID =', id);
   const navigate = useNavigate();
-  const { data: operators, loading } = useAdminContext();
   const { userToken, user, userDetails } = useAuthContext();
   const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
   const { addToast } = useToast();
 
+  const [operator, setOperator] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Find this specific operator
-  const operator = useMemo(() => {
-    if (!operators || !id) return null;
-    return operators.find((op) => op.id === id) || null;
-  }, [operators, id]);
+  const loadOperator = useCallback(async () => {
+    if (!id) return;
+    let token = userToken;
+    if (!token && auth.currentUser) {
+      try {
+        token = await auth.currentUser.getIdToken();
+      } catch (e) {
+        console.warn('Error fetching token:', e);
+      }
+    }
+
+    if (token) {
+      fetchOperatorById(
+        token,
+        id,
+        (data) => {
+          if (data) setOperator(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.warn('fetchOperatorById API notice, relying on live Firestore doc:', error);
+          setLoading(false);
+        },
+        setLoading
+      );
+    }
+  }, [userToken, id]);
+
+  // Live Firestore document listener
+  useEffect(() => {
+    if (!id) return;
+    const unsubscribe = onSnapshot(
+      doc(firestore, 'users', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setOperator({ id: docSnap.id, uid: docSnap.id, ...docSnap.data() });
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('Firestore doc subscription error:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [id]);
+
+  useEffect(() => {
+    loadOperator();
+  }, [loadOperator]);
 
   const handleDeactivate = async () => {
     if (!operator) return;
     const newStatus = operator.status === 'Active' ? 'Disabled' : 'Active';
-    ApiCaller(
-      `${API_BASE_URL}/api/operators/${operator.id}`,
-      'PATCH',
+    updateOperator(
+      userToken,
+      operator.id,
       { status: newStatus },
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast(`Operator account ${newStatus === 'Active' ? 'enabled' : 'disabled'} successfully`, 'success');
         setConfirmState(null);
+        loadOperator();
       },
       (error) => {
-        addToast(`Failed to update status: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Failed to update status'), 'error');
       },
       setIsConfirmLoading
     );
@@ -57,17 +104,15 @@ export default function OperatorDetailPage() {
 
   const handleDelete = async () => {
     if (!operator) return;
-    ApiCaller(
-      `${API_BASE_URL}/api/operators/${operator.id}`,
-      'DELETE',
-      null,
-      { Authorization: `Bearer ${userToken}` },
+    deleteOperator(
+      userToken,
+      operator.id,
       () => {
         addToast('Operator deleted successfully', 'success');
         navigate('/admin/operators');
       },
       (error) => {
-        addToast(`Failed to delete operator: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Failed to delete operator'), 'error');
       },
       setIsConfirmLoading
     );
@@ -75,17 +120,17 @@ export default function OperatorDetailPage() {
 
   const handleFormSubmit = async (operatorData) => {
     const { email, ...dataToUpdate } = operatorData;
-    ApiCaller(
-      `${API_BASE_URL}/api/operators/${operator.id}`,
-      'PATCH',
+    updateOperator(
+      userToken,
+      operator.id,
       dataToUpdate,
-      { Authorization: `Bearer ${userToken}` },
       () => {
         addToast('Operator details updated successfully', 'success');
         setIsModalOpen(false);
+        loadOperator();
       },
       (error) => {
-        addToast(`Failed to update operator: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Failed to update operator'), 'error');
       },
       setIsSubmitting
     );

@@ -7,6 +7,7 @@ import {auth} from "../../../firebase";
 import {signInWithEmailAndPassword} from "firebase/auth";
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import TermsPrivacyModal from '../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,6 +16,13 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState("terms");
+
+  const openLegalModal = (tab = "terms") => {
+    setLegalTab(tab);
+    setIsLegalModalOpen(true);
+  };
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -107,10 +115,32 @@ export default function Login() {
         </div>
 
         <div className="footer-text">
-          By signing in, you agree to Terms and Privacy Policy
+          By signing in, you agree to{" "}
+          <button
+            type="button"
+            className="legal-link-btn"
+            onClick={() => openLegalModal("terms")}
+          >
+            Terms
+          </button>{" "}
+          and{" "}
+          <button
+            type="button"
+            className="legal-link-btn"
+            onClick={() => openLegalModal("privacy")}
+          >
+            Privacy Policy
+          </button>
         </div>
 
       </div>
+
+      {/* Terms and Privacy Policy Popup Modal */}
+      <TermsPrivacyModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        initialTab={legalTab}
+      />
     </div>
   );
 }

@@ -61,6 +61,20 @@
   color: var(--purple-dark);
 }
 
+.app-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.app-nav-logo {
+  height: 2.375rem;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
 .app-logoIcon {
   display: flex;
   align-items: center;

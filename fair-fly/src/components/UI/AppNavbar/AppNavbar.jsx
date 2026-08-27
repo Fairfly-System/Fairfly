@@ -73,12 +73,14 @@ export default function AppNavbar({
             <>
               <NavLink to="/client" className="app-nav-brand" aria-label="Fairfly Client Home">
                 <img
-                  src="/fairfly_logo.png"
+                  src="/FairflyLogo.png"
                   alt="FairFly Logo"
                   className="app-nav-logo"
-                  width="42"
-                  height="42"
                   loading="eager"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/favicon1.png";
+                  }}
                 />
               </NavLink>
 

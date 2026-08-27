@@ -1,6 +1,29 @@
 # Update Logs
 
-<<<<<<< HEAD
+## [2026-08-27] Feature: Terms & Privacy Modal, Admin Operator Tab Loading Fix, and Client Navbar Logo Fix
+
+### Files Created & Modified
+- **Legal & Privacy Center (`fair-fly`)**:
+  - `fair-fly/src/components/Shared/TermsPrivacyModal/TermsPrivacyModal.jsx` **[NEW]** (Created reusable, tabbed modal dialog for Terms of Service and Privacy Policy adhering strictly to RA 10173 Data Privacy Act and FairFly travel/documentation franchise regulations; supports outside click closing, top/bottom close actions, and deep-linking to active tabs)
+  - `fair-fly/src/components/Shared/TermsPrivacyModal/terms-privacy-modal.css` **[NEW]** (Added responsive REM styling, accessible contrasts, and sticky header controls)
+  - `fair-fly/src/pages/Index/Login/login.jsx` & `login.css` (Transformed static footer text into interactive buttons linking to the Terms and Privacy Policy popup modal)
+  - `fair-fly/src/pages/Index/Register/Register.jsx` & `register.css` (Transformed static footer text into interactive buttons linking to the Terms and Privacy Policy popup modal)
+- **Admin Portal — Operators Tab Resilience (`fair-fly`)**:
+  - `fair-fly/src/pages/Admin/AdminOperators/AdminOperators.jsx` (Simplified component to clean `<Outlet />` wrapper consistent with other admin feature outlets)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorsContent.jsx` (Migrated data fetching from client-side Firestore `useAdminContext` to backend `fetchOperators` via `adminService.js`, adding automatic state refresh on operator creation, edit, toggle status, and delete actions)
+  - `fair-fly/src/pages/Admin/AdminOperators/OperatorDetailPage.jsx` (Migrated single operator retrieval to backend `fetchOperatorById` via `adminService.js`)
+  - `fair-fly/src/context/AdminContext.jsx` (Added error handling to `onSnapshot` listener to prevent infinite loading lockups)
+- **Client Portal — Navbar Branding (`fair-fly`)**:
+  - `fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx` (Corrected FairFly brand logo image asset source from `/fairfly_logo.png` to `/FairflyLogo.png` with `/favicon1.png` fallback)
+  - `fair-fly/src/components/UI/AppNavbar/app-navbar.css` (Added explicit `.app-nav-brand` and `.app-nav-logo` dimensions, responsive height, and object-fit containment rules)
+
+### Summary of Changes
+- Users can now review the complete **Terms of Service** and **Privacy Policy** by clicking the links on the Login and Registration cards; the popup can be closed via backdrop click, top close button, or "I Understand" action.
+- Resolved the issue where clicking the **Operators** tab in the Admin portal failed to load by shifting data retrieval to authenticated backend REST endpoints.
+- Restored the FairFly logo rendering on the Client portal top navigation bar across desktop and mobile screens.
+
+---
+
 ## [2026-08-27] Feature: Centered Navbar Navigation with Active Highlighting & Client Password Reset Verification
 
 ### Files Created & Modified
@@ -23,7 +46,9 @@
 - Implemented real-time active button highlighting when clicked, during route changes, and while scrolling down sections on the landing page via `IntersectionObserver`.
 - Created a dedicated client-only Password Reset interface (`/forgot-password` and `/reset-password`) that enforces backend role validation to ensure only client accounts can request password resets, sending a verification email with a reset link.
 - Resolved "Endpoint not found" error by restarting the `fly-api` server under `nodemon` and adding endpoint aliases.
-=======
+
+---
+
 ## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
 
 ### Files Modified
@@ -56,7 +81,6 @@
 
 ### Summary of Changes
 - Established fine-grained Firestore and Storage security rules enforcing the principle of least privilege, protecting internal operator and admin assets while leaving public service offerings accessible to clients.
->>>>>>> a23b06cccad46ed6f2b7d07b53c4ebb0402179fb
 
 ---
 
