@@ -1,5 +1,19 @@
 # Update Logs
 
+## [2026-08-27] Fix: Operator Quotation & Inquiry Form Page Vertical Spacing
+
+### Files Modified
+- **Operator Portal (`fair-fly`)**:
+  - `fair-fly/src/pages/Operator/OperatorQuotations/operator-quotations.css` (Added `.operator-quotations-page` flex column container rule with `1.5rem` gap to provide vertical spacing between Breadcrumbs, PageHeader, and Quotations table card)
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/operator-inquiry-forms.css` (Added `.operator-inquiries-page` flex column container rule with `1.5rem` gap to provide vertical spacing between Breadcrumbs, PageHeader, and Inquiry forms container)
+  - `fair-fly/src/pages/Operator/OperatorAppointments/operator-appointments.css` (Added `.operator-appointments-page` flex column container rule)
+  - `fair-fly/src/pages/Operator/OperatorHistory/operator-history.css` (Added `.operator-history-page` flex column container rule)
+  - `fair-fly/src/pages/Operator/OperatorQuickLinks/operator-quick-links.css` (Added `.operator-quick-links-page` flex column container rule)
+
+### Summary of Changes
+- Resolved the missing vertical spacing between the `PageHeader` and the table cards in the Operator Quotation and Inquiry Form pages by declaring the container class rules scoped strictly to their respective page stylesheets.
+- Preserved existing layout structure of all other pages across the application.
+
 ## [2026-08-27] Feature: Admin Client Management System & Backend Registration Auth Migration
 
 ### Files Created & Modified

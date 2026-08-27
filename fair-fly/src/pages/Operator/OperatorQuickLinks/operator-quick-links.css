@@ -1,3 +1,10 @@
+.operator-quick-links-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
 .op-quicklinks {
   padding: 1.75rem;
   display: flex;
