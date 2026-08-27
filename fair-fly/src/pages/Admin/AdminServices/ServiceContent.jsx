@@ -94,7 +94,8 @@ export default function ServiceContent() {
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "active" && item.status === "Active") ||
-        (statusFilter === "disabled" && item.status === "Disabled");
+        (statusFilter === "disabled" && item.status === "Disabled") ||
+        (statusFilter === "branch" && Boolean(item.isBranchExclusive));
 
       return matchesSearch && matchesStatus;
     });
@@ -158,6 +159,25 @@ export default function ServiceContent() {
                 {item.featured && (
                   <span title="Featured on Client Marketplace" style={{ color: 'var(--warning-yellow)', fontSize: '0.875rem' }}>
                     <i className="fa-solid fa-star"></i>
+                  </span>
+                )}
+                {item.isBranchExclusive && (
+                  <span
+                    style={{
+                      background: 'var(--purple-soft, #ede9fe)',
+                      color: 'var(--purple, #7c3aed)',
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      padding: '0.125rem 0.45rem',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      border: '1px solid #ddd6fe'
+                    }}
+                    title={`Branch-exclusive service created by ${item.branchName || 'Branch Operator'}`}
+                  >
+                    <i className="fa-solid fa-store" style={{ fontSize: '0.625rem' }}></i> {item.branchName || 'Branch Exclusive'}
                   </span>
                 )}
               </div>
@@ -565,6 +585,7 @@ export default function ServiceContent() {
   const totalServices = Array.isArray(service) ? service.length : 0;
   const activeCount = Array.isArray(service) ? service.filter((s) => s.status === "Active").length : 0;
   const inactiveCount = totalServices - activeCount;
+  const branchCount = Array.isArray(service) ? service.filter((s) => Boolean(s.isBranchExclusive)).length : 0;
   const categoriesCount = Array.isArray(service)
     ? new Set(service.map((s) => s.category).filter(Boolean)).size
     : 0;
@@ -645,6 +666,7 @@ export default function ServiceContent() {
               { value: "all", label: `All (${totalServices})` },
               { value: "active", label: `Active (${activeCount})` },
               { value: "disabled", label: `Disabled (${inactiveCount})` },
+              { value: "branch", label: `Branch Exclusive (${branchCount})` },
             ]}
             activeChip={statusFilter}
             onChipChange={(val) => {

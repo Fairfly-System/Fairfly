@@ -59,7 +59,11 @@ import { QuotationsContent } from './pages/Operator/OperatorQuotations/OperatorQ
 import QuotationDetailPage from './pages/Operator/OperatorQuotations/QuotationDetailPage';
 import { InquiryContent } from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';
 import InquiryFormDetailPage from './pages/Operator/OperatorInquiryForms/InquiryFormDetailPage';
+import OperatorServices from './pages/Operator/OperatorServices/OperatorServices';
+import OperatorServicesContent from './pages/Operator/OperatorServices/OperatorServicesContent';
 
+import AdminQualifications from './pages/Admin/AdminQualifications/AdminQualifications';
+import QualificationsContent from './pages/Admin/AdminQualifications/QualificationsContent';
 import AdminAdmins from './pages/Admin/AdminAdmins/AdminAdmins';
 import AdminsContent from './pages/Admin/AdminAdmins/AdminsContent';
 import AdminDetailPage from './pages/Admin/AdminAdmins/AdminDetailPage';
@@ -107,6 +111,9 @@ function App() {
             <Route index element={<FranchiseContent />} />
             <Route path=":id" element={<FranchiseAppDetailPage />} />
           </Route>
+          <Route path="qualifications" element={<AdminQualifications />}>
+            <Route index element={<QualificationsContent />} />
+          </Route>
           <Route path="tickets" element={<AdminTickets />}>
             <Route index element={<TicketsContent />} />
             <Route path=":id" element={<TicketDetailPage />} />
@@ -129,6 +136,9 @@ function App() {
           <Route path="appointments" element={<OperatorAppointments />}>
             <Route index element={<AppointmentContent />} />
             <Route path=":id" element={<AppointmentDetailPage />} />
+          </Route>
+          <Route path="services" element={<OperatorServices />}>
+            <Route index element={<OperatorServicesContent />} />
           </Route>
           <Route path="workflows" element={<Navigate to="/operator" replace />} />
           <Route path="resources" element={<OperatorResources />} />

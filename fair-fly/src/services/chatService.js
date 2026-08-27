@@ -3,8 +3,7 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
-  doc
+  onSnapshot
 } from 'firebase/firestore';
 import { firestore, auth } from '../firebase';
 import { API_BASE_URL } from '../utils/config';
@@ -112,7 +111,7 @@ export const markChatAsRead = async (conversationId) => {
  * Real-time listener for user's conversations list
  */
 export const subscribeToConversations = (userUid, callback) => {
-  if (!userUid) return () => {};
+  if (!userUid) return () => { };
 
   try {
     const q = query(
@@ -140,7 +139,7 @@ export const subscribeToConversations = (userUid, callback) => {
     return unsubscribe;
   } catch (error) {
     console.error('Error setting up conversations listener:', error);
-    return () => {};
+    return () => { };
   }
 };
 
@@ -148,7 +147,7 @@ export const subscribeToConversations = (userUid, callback) => {
  * Real-time listener for messages in a specific conversation
  */
 export const subscribeToMessages = (conversationId, callback) => {
-  if (!conversationId) return () => {};
+  if (!conversationId) return () => { };
 
   try {
     const messagesRef = collection(firestore, 'conversations', conversationId, 'messages');
@@ -172,7 +171,7 @@ export const subscribeToMessages = (conversationId, callback) => {
     return unsubscribe;
   } catch (error) {
     console.error('Error setting up messages listener:', error);
-    return () => {};
+    return () => { };
   }
 };
 
@@ -204,7 +203,7 @@ export const subscribeToAnnouncements = (callback) => {
     return unsubscribe;
   } catch (error) {
     console.error('Error setting up announcements listener:', error);
-    return () => {};
+    return () => { };
   }
 };
 

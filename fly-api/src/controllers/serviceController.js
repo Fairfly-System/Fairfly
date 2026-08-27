@@ -31,14 +31,32 @@ const createService = async (req, res) => {
       return res.status(400).json({ error: 'Invalid service data' });
     }
 
+    const isOperator = req.userDetails?.role === 'operator';
+    if (isOperator) {
+      if (!req.userDetails?.isQualified) {
+        return res.status(403).json({ error: 'Forbidden: Only qualified operators can create branch-exclusive services' });
+      }
+    }
+
+    const createdByOperatorId = isOperator ? req.user.uid : (serviceData.createdByOperatorId || null);
+    const branchUid = isOperator ? req.user.uid : (serviceData.branchUid || null);
+    const branchName = isOperator
+      ? (req.userDetails?.branchName || req.userDetails?.name || 'Branch Operator')
+      : (serviceData.branchName || null);
+    const isBranchExclusive = isOperator ? true : Boolean(serviceData.isBranchExclusive);
+
     const docId = await addToDatabase(COLLECTIONS.SERVICES, {
       ...serviceData,
+      createdByOperatorId,
+      branchUid,
+      branchName,
+      isBranchExclusive,
       category: serviceData.category || 'General Services',
       tags: Array.isArray(serviceData.tags) ? serviceData.tags.map(t => String(t).trim()).filter(Boolean) : [],
       coverImage: serviceData.coverImage || serviceData.coverPhoto || serviceData.coverPhotoUrl || '',
       carouselImages: Array.isArray(serviceData.carouselImages) ? serviceData.carouselImages.filter(Boolean) : [],
       description: serviceData.description || '',
-      featured: Boolean(serviceData.featured),
+      featured: isOperator ? false : Boolean(serviceData.featured),
       requirements: Array.isArray(serviceData.requirements) ? serviceData.requirements : (serviceData.actions || []),
       workflowIds: Array.isArray(serviceData.workflowIds) ? serviceData.workflowIds : [],
       status: serviceData.status || 'Active',
@@ -69,6 +87,16 @@ const updateService = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) {
       return res.status(404).json({ error: 'Service not found' });
+    }
+
+    const isOperator = req.userDetails?.role === 'operator';
+    if (isOperator) {
+      if (!req.userDetails?.isQualified) {
+        return res.status(403).json({ error: 'Forbidden: Only qualified operators can update services' });
+      }
+      if (existing.createdByOperatorId !== req.user.uid) {
+        return res.status(403).json({ error: 'Forbidden: You can only edit services created by your branch' });
+      }
     }
 
     const sanitizedUpdates = {
@@ -103,7 +131,7 @@ const updateService = async (req, res) => {
     }
 
     if (updates.featured !== undefined) {
-      sanitizedUpdates.featured = Boolean(updates.featured);
+      sanitizedUpdates.featured = isOperator ? false : Boolean(updates.featured);
     }
 
     if (updates.requirements) {
@@ -112,6 +140,18 @@ const updateService = async (req, res) => {
 
     if (updates.workflowIds) {
       sanitizedUpdates.workflowIds = updates.workflowIds;
+    }
+
+    if (updates.isBranchExclusive !== undefined && !isOperator) {
+      sanitizedUpdates.isBranchExclusive = Boolean(updates.isBranchExclusive);
+    }
+
+    if (updates.branchUid !== undefined && !isOperator) {
+      sanitizedUpdates.branchUid = updates.branchUid;
+    }
+
+    if (updates.branchName !== undefined && !isOperator) {
+      sanitizedUpdates.branchName = updates.branchName;
     }
 
     await updateToDatabase(dbPath, sanitizedUpdates);
@@ -137,6 +177,13 @@ const deleteService = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) {
       return res.status(404).json({ error: 'Service not found' });
+    }
+
+    const isOperator = req.userDetails?.role === 'operator';
+    if (isOperator) {
+      if (existing.createdByOperatorId !== req.user.uid) {
+        return res.status(403).json({ error: 'Forbidden: You can only delete services created by your branch' });
+      }
     }
 
     await deleteFromDatabase(dbPath);
@@ -329,17 +376,21 @@ const bulkDeleteQuickLinks = async (req, res) => {
 
 const getServices = async (req, res) => {
   try {
-    const cachedData = staticDataCache.get(CACHE_KEYS.SERVICES);
-    if (cachedData) {
-      return res.status(200).json(cachedData);
+    const { branchUid } = req.query;
+
+    let servicesList = staticDataCache.get(CACHE_KEYS.SERVICES);
+    if (!servicesList) {
+      const rawData = await getAllFromDatabase(COLLECTIONS.SERVICES);
+      servicesList = rawData 
+        ? Object.entries(rawData).map(([id, val]) => ({ id, ...val }))
+        : [];
+      staticDataCache.set(CACHE_KEYS.SERVICES, servicesList, 300);
     }
 
-    const rawData = await getAllFromDatabase(COLLECTIONS.SERVICES);
-    const servicesList = rawData 
-      ? Object.entries(rawData).map(([id, val]) => ({ id, ...val }))
-      : [];
-
-    staticDataCache.set(CACHE_KEYS.SERVICES, servicesList, 300);
+    if (branchUid) {
+      const filtered = servicesList.filter((s) => !s.isBranchExclusive || s.branchUid === branchUid);
+      return res.status(200).json(filtered);
+    }
 
     return res.status(200).json(servicesList);
   } catch (error) {

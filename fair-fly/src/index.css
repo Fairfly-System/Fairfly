@@ -474,14 +474,16 @@ tbody tr:hover td {
 }
 
 /* --- KPI / Summary Flex Grid --- */
-.services-summary-grid {
+.services-summary-grid,
+.kpi-grid-4 {
   display: flex;
   flex-wrap: wrap;
   gap: 1.25rem;
   width: 100%;
 }
 
-.services-summary-grid > * {
+.services-summary-grid > *,
+.kpi-grid-4 > * {
   flex: 1 1 18rem;
   min-width: 15rem;
 }

@@ -1,0 +1,32 @@
+.admin-qualifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.qualifications-table-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.admin-qualifications-page .services-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.admin-qualifications-page .services-summary-grid > * {
+  flex: 1 1 15rem;
+  min-width: 13rem;
+}
+
+.review-modal-content {
+  color: var(--text-dark);
+}
