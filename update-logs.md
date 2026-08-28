@@ -1,5 +1,39 @@
 # Update Logs
 
+## [2026-08-27] Feature: Quotation PDF Mirror, Dynamic Inquiries with Document Uploads & Confirmation Workflow, Admin Branch Inquiry History, Form Builder, and Storage Photo Diffing
+
+### Files Created & Modified
+- **Storage Photo Diffing (`fly-api`)**:
+  - `fly-api/src/controllers/serviceController.js` (Implemented Firebase Storage photo diffing in `updateService`: compares existing URLs vs updated URLs and automatically deletes removed cover photos, carousel images, and requirement attachments from Firebase Storage via `deleteFilesFromStorage`).
+- **Quotation Form & PDF Export (`fair-fly` & `fly-api`)**:
+  - `fly-api/src/controllers/quotationController.js` (Extended `createQuotation` and `updateQuotation` to support structured fields matching official FairFly document: `contactPerson`, `requirements`, `tourDates`, `inclusions`, `exclusions`, `rateBreakdown`, `taxAmount`, `totalAmount`, `preparedByName`, `preparedByTitle`, `preparedByContact`, `quotationDate`, `branchUid`, `branchName`, `inquiryId`).
+  - `fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx` **[NEW]** (Created A4 printable preview and 1-click PDF download component using `html2pdf.js`, perfectly rendering FairFly letterhead, quotation table, signatures, and DOT accreditation footer).
+  - `fair-fly/src/components/Shared/PdfDocument/pdf-document.css` **[NEW]** (Responsive styling and `@media print` rules for PDF generation).
+  - `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Updated `CreateQuotationModal` to dynamically fetch active services from catalog, auto-populate base rate directly from selected service schema without requiring manual input, auto-populate requirements, calculate rate breakdowns with optional custom tax/surcharges, compute totals, and collect sign-off information).
+  - `fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx` (Added "Export to PDF" button and full inline editing and display of all PDF mirror fields).
+- **Dynamic Services, Requirement Uploads & Confirmation Workflow (`fly-api` & `fair-fly`)**:
+  - `fly-api/src/controllers/inquiryController.js` (Enhanced `createInquiry`, `getInquiries`, and implemented `confirmInquiry` which validates client document uploads, auto-generates a formatted Quotation in `quotations`, auto-initializes an ongoing active service in `activeServices` with compiled workflow step templates, and links cross references; implemented dynamic schema getter/setter).
+  - `fly-api/src/routes/inquiryRoutes.js` (Mounted `/schema`, `/:id/confirm`, and RBAC routes).
+  - `fair-fly/src/services/inquiryService.js` **[NEW]** (Centralized API service for inquiries CRUD, confirmation, file uploads, and dynamic schemas).
+  - `fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx` (Replaced static services and requirements with dynamic catalog services, interactive requirement checklist dropzones for uploading client documents on their behalf via backend storage, and dynamic custom field support).
+  - `fair-fly/src/components/Operator/CreateInquiryFormModal/create-inquiry-form-modal.css` (Added requirement checklist and document upload styles).
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx` (Added "Confirm Inquiry" button with requirement gate, in-place document uploads, cross-reference links to created Quotation & Ongoing Active Service, and "Export to PDF").
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/inquiry-form-detail.css` (Added confirmation banner and requirement item card styling).
+- **Admin Side Inquiry Requests History & Dynamic Form Builder (`fair-fly`)**:
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryHistory.jsx` (Configured `AdminProvider targetCollection="inquiries"` for live single-source-of-truth syncing).
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx` (Replaced legacy franchise content with complete Inquiry Requests History table, branch categorization filter, status chips, KPIs, and form customizer button).
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx` **[NEW]** (Comprehensive inquiry record view with branch attribution, uploaded document links, and PDF export).
+  - `fair-fly/src/components/Admin/Modals/InquiryFormBuilderModal/InquiryFormBuilderModal.jsx` **[NEW]** (Interactive drag/add/edit form builder for Admins to add/remove custom fields and dynamically configure inquiry intake forms without breaking existing data).
+  - `fair-fly/src/components/Admin/Modals/InquiryFormBuilderModal/inquiry-form-builder.css` **[NEW]** (Styling for form builder).
+  - `fair-fly/src/App.jsx` (Updated routing for `/admin/inquiry-history/:id` to `AdminInquiryDetailPage`).
+
+### Summary of Changes
+- **Firebase Storage Photo Diffing**: Services updated in Admin automatically diff image URLs and remove deleted photos from Firebase Storage.
+- **Quotation Form Redesign**: Matches official FairFly document structure with 1-click client-side PDF export.
+- **Dynamic Inquiry Intake**: Services and requirements are dynamically loaded from catalog, operators can upload requirement documents on behalf of clients, and confirming an inquiry automatically generates a linked Quotation and initializes an Ongoing Active Service with workflow steps.
+- **Admin Inquiry History**: Single source of truth for all inquiries categorized by branch with branch filters, status filters, and search.
+- **Dynamic Form Builder**: Admins can customize inquiry intake fields dynamically in real-time.
+
 ## [2026-08-27] Fix: Operator Quotation & Inquiry Form Page Vertical Spacing
 
 ### Files Modified

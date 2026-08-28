@@ -1,15 +1,28 @@
 import ApiCaller from '../utils/ApiCaller';
 import { API_BASE_URL } from '../utils/config';
 
-export function fetchServices(successCallback, errorCallback, setIsLoading) {
+export function fetchServices(branchUidOrSuccess, successCallback, errorCallback, setIsLoading) {
+  let url = `${API_BASE_URL}/api/services`;
+  let successCb = successCallback;
+  let errorCb = errorCallback;
+  let setLoad = setIsLoading;
+
+  if (typeof branchUidOrSuccess === 'string') {
+    url += `?branchUid=${encodeURIComponent(branchUidOrSuccess)}`;
+  } else if (typeof branchUidOrSuccess === 'function') {
+    successCb = branchUidOrSuccess;
+    errorCb = successCallback;
+    setLoad = errorCallback;
+  }
+
   return ApiCaller(
-    `${API_BASE_URL}/api/services`,
+    url,
     'GET',
     null,
     {},
-    successCallback,
-    errorCallback,
-    setIsLoading
+    successCb,
+    errorCb,
+    setLoad
   );
 }
 

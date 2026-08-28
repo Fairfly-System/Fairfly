@@ -300,5 +300,6 @@ const updateStepStatus = async (req, res) => {
 module.exports = {
   getActiveServices,
   createActiveService,
-  updateStepStatus
+  updateStepStatus,
+  compileWorkflowStepsForService
 };

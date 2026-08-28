@@ -17,35 +17,62 @@ const createQuotation = async (req, res) => {
   try {
     const { 
       clientName, 
+      contactPerson,
       clientEmail, 
       clientPhone, 
+      serviceId,
       serviceTitle, 
+      requirements,
       tourDates, 
       inclusions, 
       exclusions, 
+      rateBreakdown,
       rate, 
+      taxAmount,
       totalAmount, 
-      preparedBy, 
-      remarks 
+      preparedByName,
+      preparedByTitle,
+      preparedByContact,
+      preparedBy,
+      remarks,
+      quotationDate,
+      branchUid,
+      branchName,
+      inquiryId
     } = req.body;
 
-    if (!clientName || !serviceTitle || rate === undefined) {
-      return res.status(400).json({ error: 'Client name, service title, and rate are required' });
+    if (!clientName || (!serviceTitle && !serviceId)) {
+      return res.status(400).json({ error: 'Client name and service title are required' });
     }
 
     const now = new Date().toISOString();
+    const effectiveBranchUid = branchUid || req.userDetails?.branchUid || req.user?.uid || null;
+    const effectiveBranchName = branchName || req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
+
     const newQuotation = {
       clientName: clientName.trim(),
+      contactPerson: (contactPerson || '').trim(),
       clientEmail: clientEmail ? clientEmail.trim() : '',
       clientPhone: clientPhone ? clientPhone.trim() : '',
-      serviceTitle: serviceTitle.trim(),
-      tourDates: tourDates || 'N/A',
-      inclusions: inclusions || 'As requested',
-      exclusions: exclusions || 'Personal expenses',
+      serviceId: serviceId || null,
+      serviceTitle: (serviceTitle || 'General Service').trim(),
+      requirements: requirements || '',
+      tourDates: tourDates || '',
+      inclusions: inclusions || '',
+      exclusions: exclusions || '',
+      rateBreakdown: rateBreakdown || '',
       rate: Number(rate) || 0,
+      taxAmount: Number(taxAmount) || 0,
       totalAmount: Number(totalAmount || rate) || 0,
-      preparedBy: preparedBy || req.userDetails?.name || 'Operator',
+      preparedByName: preparedByName || preparedBy || req.userDetails?.name || 'Operator',
+      preparedByTitle: preparedByTitle || req.userDetails?.title || (req.userDetails?.role === 'admin' ? 'Business Head' : 'Branch Operator'),
+      preparedByContact: preparedByContact || req.userDetails?.phoneNumber || req.userDetails?.phone || '',
+      preparedBy: preparedByName || preparedBy || req.userDetails?.name || 'Operator',
       remarks: remarks || '',
+      quotationDate: quotationDate || now.split('T')[0],
+      branchUid: effectiveBranchUid,
+      branchName: effectiveBranchName,
+      inquiryId: inquiryId || null,
       quoteNo: `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       status: 'Draft',
       createdAt: now,
@@ -143,6 +170,7 @@ const updateQuotation = async (req, res) => {
 
     // Handle number conversions if sent
     if (updates.rate !== undefined) updates.rate = Number(updates.rate) || 0;
+    if (updates.taxAmount !== undefined) updates.taxAmount = Number(updates.taxAmount) || 0;
     if (updates.totalAmount !== undefined) updates.totalAmount = Number(updates.totalAmount) || 0;
 
     await updateToDatabase(dbPath, {

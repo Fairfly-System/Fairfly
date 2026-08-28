@@ -50,6 +50,7 @@ import FranchiseAppDetailPage from './pages/Admin/AdminFranchiseApps/FranchiseAp
 import TicketsContent from './pages/Admin/AdminTickets/TicketsContent';
 import TicketDetailPage from './pages/Admin/AdminTickets/TicketDetailPage';
 import HistoryContent from './pages/Admin/AdminInquiryHistory/HistoryContent';
+import AdminInquiryDetailPage from './pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage';
 
 import { AppointmentContent } from './pages/Operator/OperatorAppointments/OperatorAppointments';
 import AppointmentDetailPage from './pages/Operator/OperatorAppointments/AppointmentDetailPage';
@@ -127,7 +128,7 @@ function App() {
           </Route>
           <Route path="inquiry-history" element={<AdminInquiryHistory />}>
             <Route index element={<HistoryContent />} />
-            <Route path=":id" element={<FranchiseAppDetailPage isHistoryMode={true} />} />
+            <Route path=":id" element={<AdminInquiryDetailPage />} />
           </Route>
           <Route path="quick-links" element={<AdminQuickLinks />} />
           <Route path="workflow-templates" element={<AdminWorkflowTemplates />} />

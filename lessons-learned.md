@@ -55,3 +55,10 @@
 - **Problem**: `Error: Rendered more hooks than during the previous render` in `OperatorsContent.jsx`.
 - **Root Cause**: `useMemo` hooks for calculating KPI counts were placed below an early conditional return `if (operatorLoading) return (...)`, violating the Rules of Hooks by running different numbers of hooks depending on the loading state.
 - **Prevention**: Strictly declare all React hooks (`useState`, `useMemo`, `useEffect`, `useCallback`, etc.) at the very top of the functional component before any conditional returns or branching logic.
+
+## [2026-08-27] Rendering Heterogeneous / Legacy Inquiry Data and String Concatenation
+- **Problem**: In Admin / Operator Inquiry Detail pages, "Service Requirements & Uploaded Attachments" and "Remarks & Internal Notes" displayed `[object Object]` or duplicate concatenated text like `Stuffs | Remarks: none`.
+- **Root Cause**: 
+  1. Older inquiry records in Firestore stored `requirements`, `notes`, or `remarks` as raw Objects or Arrays of objects. When JSX evaluated `{inquiry.notes}` or `{inquiry.remarks}`, rendering an object resulted in `[object Object]`.
+  2. Legacy versions of `CreateInquiryFormModal.jsx` concatenated user input into a single `notes: form.requirements + ' | Remarks: ' + form.remarks` string. When either field fell back to `notes`, both cards showed the identical concatenated string `Stuffs | Remarks: none`.
+- **Prevention**: Always pass heterogeneous/legacy document fields through a centralized parser (like `parseInquiryData`) that inspects types, safely extracts text from objects/arrays, parses legacy delimiter strings (` | Remarks: `), and never renders raw objects directly in JSX.

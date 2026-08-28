@@ -1,130 +1,155 @@
-import { useAdminContext } from "../../../context/AdminContext";
-import { useState, useRef, useMemo } from "react";
-import { useNavigate } from "react-router";
-import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
-import ApplicationModal from "../../../components/Admin/Modals/ApplicationModal/ApplicationModal";
-import FranchiseCard from "../../../components/Admin/FranchiseeApplication/FranchiseeCard";
-import Pagination from "../../../components/UI/Pagination/Pagination";
-import AlertBar from "../../../components/UI/AlertBar/AlertBar";
-import PageHeader from "../../../components/UI/PageHeader/PageHeader";
-import Breadcrumbs from "../../../components/UI/Breadcrumbs/Breadcrumbs";
-import KpiCard from "../../../components/UI/KpiCard/KpiCard";
-import useDebounce from "../../../hooks/useDebounce";
-import "./admin-inquiry-history.css";
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import { useAdminContext } from '../../../context/AdminContext';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
+import Pagination from '../../../components/UI/Pagination/Pagination';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import KpiCard from '../../../components/UI/KpiCard/KpiCard';
+import useDebounce from '../../../hooks/useDebounce';
+import InquiryFormBuilderModal from '../../../components/Admin/Modals/InquiryFormBuilderModal/InquiryFormBuilderModal';
+import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import './admin-inquiry-history.css';
 
 export default function HistoryContent() {
   const navigate = useNavigate();
-  const { data: franchiseApplications, loading: franchiseLoading } = useAdminContext();
-  const modalRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: rawInquiries, loading } = useAdminContext();
 
-  // Search & Filter state
-  const [searchTerm, setSearchTerm] = useState("");
+  // Search, Branch & Filter state
+  const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedBranch, setSelectedBranch] = useState('all');
+
+  // Modals state
+  const [showBuilderModal, setShowBuilderModal] = useState(false);
+  const [pdfModalData, setPdfModalData] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(10);
 
-  // Non-pending history applications
-  const historyApplications = useMemo(() => {
-    if (!franchiseApplications) return [];
-    return franchiseApplications.filter((app) => app.status !== "pending");
-  }, [franchiseApplications]);
+  const inquiries = useMemo(() => {
+    return Array.isArray(rawInquiries) ? rawInquiries : [];
+  }, [rawInquiries]);
 
-  const filteredHistory = useMemo(() => {
-    return historyApplications.filter((app) => {
-      const q = debouncedSearch.toLowerCase();
-      const matchesSearch =
-        (app.fullName || "").toLowerCase().includes(q) ||
-        (app.email || "").toLowerCase().includes(q) ||
-        (app.preferredBranchLocation || "").toLowerCase().includes(q);
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        (app.status || "").toLowerCase() === statusFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus;
+  // Extract unique branches from inquiries
+  const uniqueBranches = useMemo(() => {
+    const branches = new Set();
+    inquiries.forEach((inq) => {
+      const bName = inq.branchName || inq.preferredBranchLocation;
+      if (bName && bName.trim()) {
+        branches.add(bName.trim());
+      }
     });
-  }, [historyApplications, debouncedSearch, statusFilter]);
+    return Array.from(branches).sort();
+  }, [inquiries]);
 
-  const paginatedHistory = useMemo(() => {
+  // KPIs
+  const totalCount = inquiries.length;
+  const confirmedCount = inquiries.filter((i) => (i.status || '').toLowerCase() === 'confirmed').length;
+  const pendingCount = inquiries.filter((i) => (i.status || '').toLowerCase() === 'pending').length;
+  const branchCount = uniqueBranches.length;
+
+  // Filtered inquiries
+  const filteredInquiries = useMemo(() => {
+    return inquiries.filter((inq) => {
+      const q = debouncedSearch.toLowerCase();
+      const client = (inq.fullName || inq.clientName || '').toLowerCase();
+      const contact = (inq.contactPerson || '').toLowerCase();
+      const phone = (inq.phoneNumber || inq.cellphone || '').toLowerCase();
+      const email = (inq.email || '').toLowerCase();
+      const service = (inq.serviceType || '').toLowerCase();
+      const formNo = (inq.formNo || '').toLowerCase();
+      const branch = (inq.branchName || inq.preferredBranchLocation || '').toLowerCase();
+
+      const matchesSearch =
+        !q ||
+        client.includes(q) ||
+        contact.includes(q) ||
+        phone.includes(q) ||
+        email.includes(q) ||
+        service.includes(q) ||
+        formNo.includes(q) ||
+        branch.includes(q);
+
+      const inqStatus = (inq.status || 'pending').toLowerCase();
+      const matchesStatus = statusFilter === 'all' || inqStatus === statusFilter.toLowerCase();
+
+      const inqBranch = inq.branchName || inq.preferredBranchLocation || '';
+      const matchesBranch = selectedBranch === 'all' || inqBranch === selectedBranch;
+
+      return matchesSearch && matchesStatus && matchesBranch;
+    });
+  }, [inquiries, debouncedSearch, statusFilter, selectedBranch]);
+
+  const paginatedInquiries = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredHistory.slice(start, start + pageSize);
-  }, [filteredHistory, currentPage, pageSize]);
-
-  // ── AlertBar logic ────────────────────────────────────────────────────────
-  const alertBarProps = useMemo(() => {
-    const total = historyApplications.length;
-    const approved = historyApplications.filter(a => a.status === 'approved').length;
-    const rejected = historyApplications.filter(a => a.status === 'rejected').length;
-
-    if (total === 0) {
-      return { message: 'No processed applications yet. History will appear here after franchise applications are reviewed.', type: 'info' };
-    }
-    if (rejected === 0) {
-      return {
-        message: `All ${total} processed application${total !== 1 ? 's' : ''} were approved.`,
-        type: 'success',
-      };
-    }
-    return {
-      message: `${approved} approved and ${rejected} rejected out of ${total} total processed application${total !== 1 ? 's' : ''}.`,
-      type: 'info',
-    };
-  }, [historyApplications]);
+    return filteredInquiries.slice(start, start + pageSize);
+  }, [filteredInquiries, currentPage, pageSize]);
 
   const breadcrumbItems = [
-    { label: "Dashboard", to: "/admin" },
-    { label: "Inquiry History" },
+    { label: 'Dashboard', to: '/admin' },
+    { label: 'Inquiry Requests History' },
   ];
-
-  const totalHistory = Array.isArray(historyApplications) ? historyApplications.length : 0;
-  const approvedCount = Array.isArray(historyApplications) ? historyApplications.filter((a) => a.status === "approved").length : 0;
-  const rejectedCount = Array.isArray(historyApplications) ? historyApplications.filter((a) => a.status === "rejected").length : 0;
 
   return (
     <main className="inquiry-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
-        title="Franchising Inquiry History"
-        subtitle="Complete record of processed (approved and rejected) franchise applications"
+        title="Service Inquiry Requests History"
+        subtitle="Centralized single source of truth for all client inquiries categorized across branches"
         illustrationSrc="/pageImages/admin/inquiry-history.png"
-      />
+      >
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setShowBuilderModal(true)}
+          style={{ background: 'var(--purple, #7c3aed)', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}
+        >
+          <i className="fa-solid fa-sliders"></i>
+          <span>Customize Inquiry Form</span>
+        </button>
+      </PageHeader>
 
+      {/* KPI Metrics */}
       <section className="services-summary-grid">
         <KpiCard
-          title="Total Processed"
-          value={totalHistory}
-          icon="fa-solid fa-clock-rotate-left"
-          iconColor="var(--purple)"
+          title="Total Inquiries"
+          value={totalCount}
+          icon="fa-solid fa-file-lines"
+          iconColor="var(--purple, #7c3aed)"
         />
         <KpiCard
-          title="Approved"
-          value={approvedCount}
+          title="Confirmed & Transferred"
+          value={confirmedCount}
           icon="fa-regular fa-circle-check"
-          iconColor="var(--complete-green-dark)"
+          iconColor="var(--complete-green-dark, #059669)"
         />
         <KpiCard
-          title="Rejected"
-          value={rejectedCount}
-          icon="fa-solid fa-ban"
-          iconColor="var(--error-red-dark)"
+          title="Pending Inquiries"
+          value={pendingCount}
+          icon="fa-regular fa-clock"
+          iconColor="var(--amber, #d97706)"
+        />
+        <KpiCard
+          title="Active Branches"
+          value={branchCount}
+          icon="fa-solid fa-code-branch"
+          iconColor="var(--indigo, #4f46e5)"
         />
       </section>
 
+      {/* Main Table Card */}
       <section className="card inquiry-table-card">
-        <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
-
-        {/* Toolbar Search & Filter */}
-        <div className="table-toolbar">
-          <div className="search-box">
+        {/* Toolbar */}
+        <div className="inquiry-toolbar-row">
+          <div className="search-box" style={{ maxWidth: '24rem', flex: 1 }}>
             <i className="fa-solid fa-magnifying-glass search-icon"></i>
             <input
               type="text"
-              placeholder="Search by name, email, or location..."
+              placeholder="Search by client, service, branch, or form no..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -135,7 +160,7 @@ export default function HistoryContent() {
               <button
                 className="clear-search-btn"
                 onClick={() => {
-                  setSearchTerm("");
+                  setSearchTerm('');
                   setCurrentPage(1);
                 }}
               >
@@ -144,11 +169,32 @@ export default function HistoryContent() {
             )}
           </div>
 
+          <div className="inquiry-branch-select-box">
+            <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-dark)' }}>
+              <i className="fa-solid fa-code-branch" style={{ color: 'var(--purple)', marginRight: '0.25rem' }}></i> Branch:
+            </label>
+            <select
+              className="inquiry-branch-select"
+              value={selectedBranch}
+              onChange={(e) => {
+                setSelectedBranch(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">All Branches ({totalCount})</option>
+              {uniqueBranches.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <FilterChipGroup
             chips={[
-              { value: "all", label: `All History (${totalHistory})` },
-              { value: "approved", label: `Approved (${approvedCount})` },
-              { value: "rejected", label: `Rejected (${rejectedCount})` },
+              { value: 'all', label: `All (${totalCount})` },
+              { value: 'confirmed', label: `Confirmed (${confirmedCount})` },
+              { value: 'pending', label: `Pending (${pendingCount})` },
             ]}
             activeChip={statusFilter}
             onChipChange={(val) => {
@@ -158,52 +204,146 @@ export default function HistoryContent() {
           />
         </div>
 
-        {/* Cards Grid */}
-        {franchiseLoading ? (
+        {/* Inquiries Table */}
+        {loading ? (
           <div className="empty-state-box">
-            <p>Loading inquiry history...</p>
+            <p>Loading inquiry requests history...</p>
           </div>
-        ) : paginatedHistory.length === 0 ? (
+        ) : paginatedInquiries.length === 0 ? (
           <div className="empty-state-box">
-            <i className="fa-solid fa-clock-rotate-left empty-icon"></i>
-            <p>No historical records match your criteria</p>
+            <i className="fa-solid fa-file-circle-question empty-icon"></i>
+            <p>No inquiry records match your search or filter criteria.</p>
           </div>
         ) : (
-          <div className="franchise-cards-list">
-            {paginatedHistory.map((application) => (
-              <FranchiseCard
-                key={application.id}
-                avatar={`https://placehold.co/400x400/6B6FF5/FFFFFF?text=` + (application.fullName || 'F').substring(0, 1).toUpperCase()}
-                name={application.fullName}
-                email={application.email}
-                status={(application.status || 'PROCESSED').toUpperCase()}
-                contactNumber={application.phoneNumber}
-                address={application.preferredBranchLocation}
-                experience={application.businessExperience + " year(s)"}
-                investmentCapacity={"PHP " + application.investmentCapacity}
-                preferredMeetingDate={
-                  application.preferredMeetingDate
-                    ? new Date(application.preferredMeetingDate).toLocaleDateString()
-                    : 'N/A'
-                }
-                additionalMessage={application.additionalMessage}
-                onView={() => navigate(`/admin/inquiry-history/${application.id}`)}
-              />
-            ))}
+          <div className="inquiry-table-responsive">
+            <table className="inquiry-data-table">
+              <thead>
+                <tr>
+                  <th>Form No. / Date</th>
+                  <th>Client / Company Name</th>
+                  <th>Service Requested</th>
+                  <th>Branch Received From</th>
+                  <th>Requirements</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedInquiries.map((inq) => {
+                  const isConf = (inq.status || '').toLowerCase() === 'confirmed';
+                  const reqs = Array.isArray(inq.requirements) ? inq.requirements : [];
+                  const uploadedCount = reqs.filter(r => r.file?.url || r.value).length;
+                  const totalReqs = reqs.length;
+
+                  return (
+                    <tr key={inq.id}>
+                      <td>
+                        <div style={{ fontWeight: 700, color: 'var(--purple)' }}>{inq.formNo || 'N/A'}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {inq.dateInquired || (inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : 'N/A')}
+                        </div>
+                      </td>
+
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                          {inq.fullName || inq.clientName || 'N/A'}
+                        </div>
+                        {inq.contactPerson && (
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            Attn: {inq.contactPerson}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {inq.phoneNumber || inq.cellphone || inq.email || ''}
+                        </div>
+                      </td>
+
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{inq.serviceType || 'General Inquiry'}</div>
+                        {inq.servicePrice && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--purple)', fontWeight: 600 }}>
+                            {inq.servicePrice}
+                          </div>
+                        )}
+                      </td>
+
+                      <td>
+                        <span className="inquiry-branch-badge">
+                          <i className="fa-solid fa-location-dot"></i>
+                          {inq.branchName || inq.preferredBranchLocation || 'Main Branch'}
+                        </span>
+                      </td>
+
+                      <td>
+                        {totalReqs > 0 ? (
+                          <span className={`inquiry-reqs-pill ${uploadedCount === totalReqs ? 'complete' : 'incomplete'}`}>
+                            <i className={`fa-solid ${uploadedCount === totalReqs ? 'fa-circle-check' : 'fa-clock'}`}></i>
+                            {uploadedCount}/{totalReqs} Uploaded
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>None</span>
+                        )}
+                      </td>
+
+                      <td>
+                        <span className={`inquiry-status-pill ${isConf ? 'confirmed' : 'pending'}`}>
+                          {isConf ? 'CONFIRMED' : 'PENDING'}
+                        </span>
+                      </td>
+
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => setPdfModalData(inq)}
+                            title="Export PDF"
+                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                          >
+                            <i className="fa-solid fa-file-pdf"></i>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => navigate(`/admin/inquiry-history/${inq.id}`)}
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', background: 'var(--purple)' }}
+                          >
+                            <span>View</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
 
         {/* Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredHistory.length}
+          totalItems={filteredInquiries.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
       </section>
 
-      <ApplicationModal ref={modalRef} isLoading={isLoading} showButtons={false} />
+      {/* Dynamic Form Builder Modal for Admin */}
+      <InquiryFormBuilderModal
+        isOpen={showBuilderModal}
+        onClose={() => setShowBuilderModal(false)}
+      />
+
+      {/* PDF Export Preview Modal */}
+      <PdfDocumentView
+        isOpen={Boolean(pdfModalData)}
+        onClose={() => setPdfModalData(null)}
+        type="inquiry"
+        data={pdfModalData}
+      />
     </main>
   );
 }

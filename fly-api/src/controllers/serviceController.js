@@ -6,7 +6,7 @@ const {
   deleteFromDatabase 
 } = require('../services/firebaseService');
 const { staticDataCache } = require('../services/cacheService');
-const { deleteRecordStorageFiles } = require('../services/storageService');
+const { deleteRecordStorageFiles, extractStorageUrls, deleteFilesFromStorage } = require('../services/storageService');
 
 const COLLECTIONS = {
   SERVICES: 'services',
@@ -154,7 +154,18 @@ const updateService = async (req, res) => {
       sanitizedUpdates.branchName = updates.branchName;
     }
 
+    // Extract existing vs updated storage file URLs to perform diffing cleanup
+    const existingStorageUrls = extractStorageUrls(existing);
+    const updatedStorageUrls = extractStorageUrls(sanitizedUpdates);
+    const removedStorageUrls = existingStorageUrls.filter((url) => !updatedStorageUrls.includes(url));
+
     await updateToDatabase(dbPath, sanitizedUpdates);
+
+    // Delete removed photos and attachments from Firebase Storage
+    if (removedStorageUrls.length > 0) {
+      console.log(`[StorageDiff] Detected ${removedStorageUrls.length} removed file(s) on service update (${id}). Cleaning up from Firebase Storage...`, removedStorageUrls);
+      await deleteFilesFromStorage(removedStorageUrls);
+    }
 
     // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.SERVICES);
