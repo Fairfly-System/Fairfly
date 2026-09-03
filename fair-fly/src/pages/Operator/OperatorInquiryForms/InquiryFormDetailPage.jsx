@@ -225,12 +225,14 @@ export default function InquiryFormDetailPage() {
   };
 
 
+  const isConfirmed = ['confirmed', 'accepted', 'quotation_created', 'quotation_sent'].includes((form?.status || '').toLowerCase());
+
   return (
     <RecordDetailLayout
       title={form?.fullName || form?.clientName || 'Client Inquiry Intake'}
       subtitle={form?.serviceType || 'Service Inquiry'}
       status={(form?.status || 'PENDING').toUpperCase()}
-      statusType={isConfirmed ? 'success' : 'warning'}
+      statusType={getStatusBadgeType()}
       breadcrumbs={breadcrumbs}
       backTo="/operator/inquiry-forms"
       backLabel="Back to Inquiry Forms"
