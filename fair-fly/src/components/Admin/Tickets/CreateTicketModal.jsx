@@ -2,6 +2,15 @@ import React, { useState, useImperativeHandle, forwardRef, useRef } from 'react'
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import './tickets.css';
 
+const CATEGORIES = [
+  'Technical Support',
+  'Billing & Payments',
+  'Fleet Management',
+  'General Inquiry',
+];
+
+const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
+
 const CreateTicketModal = forwardRef(
   ({ onCreateTicket, isLoading, isOperatorPortal = false, defaultOperator = null, operatorsList = [] }, ref) => {
     const baseModalRef = useRef(null);
@@ -214,10 +223,11 @@ const CreateTicketModal = forwardRef(
                 disabled={isLoading}
                 className="form-select"
               >
-                <option value="Technical Support">Technical Support</option>
-                <option value="Billing & Payments">Billing & Payments</option>
-                <option value="Fleet Management">Fleet Management</option>
-                <option value="General Inquiry">General Inquiry</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -230,6 +240,7 @@ const CreateTicketModal = forwardRef(
                 value={formData.priority}
                 onChange={handleChange}
                 disabled={isLoading}
+                className="form-select"
               >
                 {PRIORITIES.map((p) => (
                   <option key={p} value={p}>
