@@ -1,5 +1,24 @@
 # Update Logs
 
+## [2026-09-03] Refactor: Migrated Inline CSS Styles to Dedicated Stylesheets and Semantic Classes
+
+### Overview
+Moved inline styles (`style={{ ... }}`) across Inquiry, Quotation, Qualification, Tracking, and Service Request interfaces into their corresponding CSS files following FairFly component and design system standards.
+
+### Files Modified
+- **Operator Inquiry Details (`InquiryFormDetailPage.jsx` & `inquiry-form-detail.css`)**:
+  - Extracted cross-reference action links, badge indicators, service offered tags wrap/badges, panel title headers, SAF-01-002 section badges, specified requirements box, and attachment actions to `.inquiry-action-link`, `.inquiry-service-badge`, `.inquiry-specs-box`, etc.
+- **Admin Inquiry Details (`AdminInquiryDetailPage.jsx`)**:
+  - Shared `.inquiry-form-detail.css` stylesheet classes replacing all inline styles in the intake metadata and specified requirements panels.
+- **Operator Quotation Details (`QuotationDetailPage.jsx` & `quotation-detail.css`)**:
+  - Extracted accepted banner styles, inquiry cross-reference bar, total amount inputs, and multi-line text blocks to `.quote-accepted-banner`, `.quote-inquiry-bar`, `.quote-total-input`, etc.
+- **Client Tracking Portal (`ClientTrackingPage.jsx` & `client-tracking.css`)**:
+  - Extracted header action bar, live sync pill, loading/empty state containers, and secondary inquiry action headers to `.tracking-header-actions`, `.tracking-empty-title`, etc.
+- **Operator Qualification Modal (`QualificationApplicationModal.jsx` & `qualification-application-modal.css`)**:
+  - Created dedicated `qualification-application-modal.css` and replaced all inline modal styles with semantic BEM classes (`.qualification-modal-form`, `.qualification-info-callout`, etc.).
+- **Client & Operator Modals (`ClientInquiryModal.jsx`, `CreateQuotationModal.jsx`, `CreateInquiryFormModal.jsx`, `CreateTicketModal.jsx`, `ClientServiceRequestModal.jsx`)**:
+  - Moved inline button and input styles into their respective CSS files (`client-inquiry-modal.css`, `create-quotation-modal.css`, `create-inquiry-form-modal.css`, `tickets.css`, and `client-service-request-modal.css`).
+
 ## [2026-09-03] Fix: Resolved ReferenceError for isConfirmed in InquiryFormDetailPage
 
 ### Files Modified

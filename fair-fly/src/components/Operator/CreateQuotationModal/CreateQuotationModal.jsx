@@ -514,9 +514,8 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary quote-modal-submit-btn"
             disabled={isSubmitting || !isFormValid}
-            style={{ background: 'var(--purple, #7c3aed)', minWidth: '160px' }}
           >
             {isSubmitting ? (
               <>

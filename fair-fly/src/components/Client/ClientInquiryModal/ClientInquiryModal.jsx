@@ -168,7 +168,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       onClose={onClose}
       title={
         <div className="modal-title-with-badge">
-          <i className="fa-solid fa-file-signature modal-title-icon" style={{ color: 'var(--purple, #7c3aed)' }}></i>
+          <i className="fa-solid fa-file-signature modal-title-icon inquiry-modal-title-icon"></i>
           <span>Official Service Inquiry Form</span>
           <span className="form-standard-tag">SAF-01-002</span>
         </div>
@@ -371,9 +371,8 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary inquiry-modal-submit-btn"
             disabled={isSubmitting || !isFormValid}
-            style={{ background: 'var(--purple, #7c3aed)', minWidth: '160px' }}
           >
             {isSubmitting ? (
               <>

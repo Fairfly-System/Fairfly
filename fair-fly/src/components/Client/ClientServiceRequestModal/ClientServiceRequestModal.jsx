@@ -365,17 +365,17 @@ export default function ClientServiceRequestModal({
       isLoading={isSubmitting}
     >
       {loadingOptions ? (
-        <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-light)' }}>
-          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
+        <div className="client-req-loading-box">
+          <i className="fa-solid fa-spinner fa-spin client-req-loading-spinner"></i>
           <p>Loading available services and branches...</p>
         </div>
       ) : (
-        <form className="client-request-form form-column" onSubmit={handleSubmit} style={{ gap: '1.25rem' }}>
+        <form className="client-request-form form-column client-req-form-spaced" onSubmit={handleSubmit}>
           <div className="form-grid-2">
             {/* Select Service */}
             <div className="form-column">
               <label htmlFor="serviceSelect" className="form-label">
-                <i className="fa-solid fa-concierge-bell" style={{ color: 'var(--purple)', marginRight: '0.35rem' }}></i>
+                <i className="fa-solid fa-concierge-bell client-req-purple-icon"></i>
                 Requested Service <span className="req-star">*</span>
               </label>
               <select
@@ -403,7 +403,7 @@ export default function ClientServiceRequestModal({
             {/* Select Branch Operator */}
             <div className="form-column">
               <label htmlFor="branchSelect" className="form-label">
-                <i className="fa-solid fa-building" style={{ color: 'var(--purple)', marginRight: '0.35rem' }}></i>
+                <i className="fa-solid fa-building client-req-purple-icon"></i>
                 Select Processing Branch <span className="req-star">*</span>
               </label>
               <select
@@ -412,8 +412,7 @@ export default function ClientServiceRequestModal({
                 onChange={(e) => setSelectedBranchUid(e.target.value)}
                 required
                 disabled={Boolean(effectiveLockedBranchUid)}
-                className="form-select"
-                style={effectiveLockedBranchUid ? { backgroundColor: 'var(--bg-muted, #f1f5f9)', cursor: 'not-allowed' } : {}}
+                className={`form-select ${effectiveLockedBranchUid ? 'locked-branch-select' : ''}`}
               >
                 {branchesList.length === 0 ? (
                   <option value="">No active branches available</option>
@@ -426,7 +425,7 @@ export default function ClientServiceRequestModal({
                 )}
               </select>
               {effectiveLockedBranchUid && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--purple)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem', fontWeight: 600 }}>
+                <span className="client-req-branch-hint">
                   <i className="fa-solid fa-lock"></i> Exclusively serviced by {effectiveLockedBranchName}
                 </span>
               )}
@@ -435,72 +434,35 @@ export default function ClientServiceRequestModal({
 
           {/* Selected Service Preview Summary Card */}
           {selectedService && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                padding: '0.875rem 1.125rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--bg)',
-                border: '1px solid var(--border-color)',
-              }}
-            >
+            <div className="client-req-service-details-box">
               {selectedService.coverImage || selectedService.coverPhoto ? (
                 <img
                   src={selectedService.coverImage || selectedService.coverPhoto}
                   alt={selectedService.name}
-                  style={{
-                    width: '4.5rem',
-                    height: '3.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    objectFit: 'cover',
-                    border: '1px solid var(--border-color)',
-                    flexShrink: 0
-                  }}
+                  className="client-req-service-details-img"
                 />
               ) : (
-                <div
-                  style={{
-                    width: '4.5rem',
-                    height: '3.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--purple-light-2)',
-                    color: 'var(--purple)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.5rem',
-                    flexShrink: 0
-                  }}
-                >
+                <div className="client-req-service-details-placeholder">
                   <i className="fa-solid fa-passport"></i>
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <strong style={{ fontSize: '0.9375rem', color: 'var(--text-dark)' }}>{selectedService.name}</strong>
-                  <span style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--purple)' }}>
+              <div className="client-req-service-meta-col">
+                <div className="client-req-service-header-row">
+                  <strong className="client-req-service-name">{selectedService.name}</strong>
+                  <span className="client-req-service-price">
                     {selectedService.price ? (selectedService.price.startsWith('₱') || selectedService.price.startsWith('PHP') ? selectedService.price : `₱${Number(selectedService.price).toLocaleString('en-US')}`) : 'Standard Fee'}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--purple)' }}>
+                <div className="client-req-tags-row">
+                  <span className="client-req-category-tag">
                     {selectedService.category || 'General Services'}
                   </span>
                   {Array.isArray(selectedService.tags) && selectedService.tags.map((t, idx) => (
                     <span
                       key={idx}
-                      style={{
-                        fontSize: '0.6875rem',
-                        padding: '0.0625rem 0.375rem',
-                        borderRadius: 'var(--radius-xs)',
-                        background: 'var(--card-bg)',
-                        border: '1px solid var(--border-color)',
-                        color: 'var(--text-mid)',
-                      }}
+                      className="client-req-type-pill"
                     >
                       #{t}
                     </span>
@@ -514,7 +476,7 @@ export default function ClientServiceRequestModal({
             {serviceRequirements.length > 0 && (
               <div className="client-req-section">
                 <h3 className="client-req-title">
-                  <i className="fa-solid fa-clipboard-check" style={{ color: 'var(--purple)' }}></i>
+                  <i className="fa-solid fa-clipboard-check client-req-purple-icon"></i>
                   Service Requirements ({serviceRequirements.length})
                 </h3>
 
@@ -532,11 +494,11 @@ export default function ClientServiceRequestModal({
                             {reqName} {isReq && <span className="req-star">*</span>}
                           </span>
                           <span className="client-req-type-tag">
-                            {inputType === 'image' && <><i className="fa-regular fa-image" style={{ marginRight: '0.25rem' }}></i> Image Upload</>}
-                            {inputType === 'file' && <><i className="fa-regular fa-file-lines" style={{ marginRight: '0.25rem' }}></i> Document File</>}
-                            {inputType === 'text' && <><i className="fa-solid fa-pen-to-square" style={{ marginRight: '0.25rem' }}></i> Text Input</>}
-                            {inputType === 'date' && <><i className="fa-regular fa-calendar" style={{ marginRight: '0.25rem' }}></i> Date Input</>}
-                            {inputType === 'number' && <><i className="fa-solid fa-hashtag" style={{ marginRight: '0.25rem' }}></i> Number Input</>}
+                            {inputType === 'image' && <><i className="fa-regular fa-image client-req-icon-margin"></i> Image Upload</>}
+                            {inputType === 'file' && <><i className="fa-regular fa-file-lines client-req-icon-margin"></i> Document File</>}
+                            {inputType === 'text' && <><i className="fa-solid fa-pen-to-square client-req-icon-margin"></i> Text Input</>}
+                            {inputType === 'date' && <><i className="fa-regular fa-calendar client-req-icon-margin"></i> Date Input</>}
+                            {inputType === 'number' && <><i className="fa-solid fa-hashtag client-req-icon-margin"></i> Number Input</>}
                           </span>
                         </div>
 
@@ -547,7 +509,7 @@ export default function ClientServiceRequestModal({
                               type="file"
                               id={`req-file-${idx}`}
                               accept={inputType === 'image' ? 'image/*' : '.pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx'}
-                              style={{ display: 'none' }}
+                              className="client-req-hidden-input"
                               onChange={(e) => handleReqFileChange(idx, e.target.files[0])}
                             />
 
@@ -555,7 +517,7 @@ export default function ClientServiceRequestModal({
                               <label htmlFor={`req-file-${idx}`} className="client-upload-label">
                                 <i className={inputType === 'image' ? 'fa-solid fa-camera' : 'fa-solid fa-cloud-arrow-up'}></i>
                                 <span>Click to select {inputType === 'image' ? 'Image photo' : 'Document file'}</span>
-                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                <span className="client-req-format-hint">
                                   {inputType === 'image' ? 'PNG, JPG, JPEG (Max 10MB)' : 'PDF, DOCX, XLSX, PNG (Max 10MB)'}
                                 </span>
                               </label>
@@ -564,7 +526,7 @@ export default function ClientServiceRequestModal({
                                 {userState.previewUrl ? (
                                   <img src={userState.previewUrl} alt="Preview" className="client-img-thumbnail" />
                                 ) : (
-                                  <i className="fa-solid fa-file-lines" style={{ fontSize: '1.5rem', color: '#4f46e5' }}></i>
+                                  <i className="fa-solid fa-file-lines client-req-file-preview-icon"></i>
                                 )}
                                 <div className="client-file-details">
                                   <span className="client-file-name">{userState.file.name}</span>
@@ -680,7 +642,7 @@ export default function ClientServiceRequestModal({
               />
             </div>
 
-            <div className="client-request-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <div className="client-request-actions client-req-actions-bar">
               <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </button>

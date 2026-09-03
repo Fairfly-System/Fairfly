@@ -53,3 +53,9 @@
   padding-top: 0.5rem;
   border-top: 1px solid #e2e8f0;
 }
+
+.quote-modal-submit-btn {
+  background: var(--purple, #7c3aed);
+  min-width: 160px;
+}
+

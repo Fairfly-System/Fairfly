@@ -289,25 +289,24 @@ export default function QuotationDetailPage() {
         <div className="quotation-detail-wrapper">
           {/* Active Custom Service / Accepted Banner */}
           {isAccepted && (
-            <div className="inquiry-confirmed-banner" style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '0.75rem', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
+            <div className="inquiry-confirmed-banner quote-accepted-banner">
+              <div className="quote-accepted-info">
+                <div className="quote-accepted-icon">
                   <i className="fa-solid fa-circle-check"></i>
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 800, color: '#14532d' }}>Quotation Accepted · Custom Service Active</h4>
-                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8125rem', color: '#166534' }}>
+                  <h4 className="quote-accepted-title">Quotation Accepted · Custom Service Active</h4>
+                  <p className="quote-accepted-sub">
                     This quotation has been officially accepted and converted into an active tracking service with sequential milestones.
                   </p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div className="quote-accepted-actions">
                 {quotation.activeServiceId && (
                   <Link
                     to={`/operator/ongoing-services/${quotation.activeServiceId}`}
-                    className="btn btn-primary btn-sm"
-                    style={{ background: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    className="btn btn-primary btn-sm quote-link-btn ongoing"
                   >
                     <i className="fa-solid fa-gears"></i>
                     <span>View Ongoing Service</span>
@@ -316,8 +315,7 @@ export default function QuotationDetailPage() {
                 {quotation.inquiryId && (
                   <Link
                     to={`/operator/inquiry-forms/${quotation.inquiryId}`}
-                    className="btn btn-secondary btn-sm"
-                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    className="btn btn-secondary btn-sm quote-link-btn"
                   >
                     <i className="fa-solid fa-file-signature"></i>
                     <span>Originating Inquiry</span>
@@ -329,14 +327,14 @@ export default function QuotationDetailPage() {
 
           {/* Originating Inquiry Reference (if not yet accepted) */}
           {!isAccepted && quotation.inquiryId && (
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.65rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-              <span style={{ color: '#475569' }}>
-                <i className="fa-solid fa-link" style={{ color: 'var(--purple)', marginRight: '0.4rem' }}></i>
+            <div className="quote-inquiry-bar">
+              <span className="quote-inquiry-bar-label">
+                <i className="fa-solid fa-link quote-inquiry-bar-icon"></i>
                 Originating from client inquiry: <strong>{quotation.inquiryId}</strong>
               </span>
               <Link
                 to={`/operator/inquiry-forms/${quotation.inquiryId}`}
-                style={{ color: 'var(--purple, #7c3aed)', fontWeight: 600, textDecoration: 'underline' }}
+                className="quote-inquiry-bar-link"
               >
                 View Inquiry Form (SAF-01-002) →
               </Link>
@@ -353,7 +351,7 @@ export default function QuotationDetailPage() {
 
               <div className="panel-details-list">
                 <div className="detail-item">
-                  <span className="detail-label">Name of Client / Company</span>
+                  <span className="detail-label">Client / Company Name</span>
                   {isEditing ? (
                     <input
                       type="text"
@@ -363,7 +361,7 @@ export default function QuotationDetailPage() {
                       className="form-input inline-edit-input"
                     />
                   ) : (
-                    <span className="detail-value" style={{ fontWeight: 700 }}>{quotation.clientName || 'N/A'}</span>
+                    <span className="detail-value font-bold">{quotation.clientName || 'N/A'}</span>
                   )}
                 </div>
 
@@ -376,10 +374,24 @@ export default function QuotationDetailPage() {
                       value={formData.contactPerson}
                       onChange={handleInputChange}
                       className="form-input inline-edit-input"
-                      placeholder="e.g. Ms. Marichu Kalalang"
                     />
                   ) : (
-                    <span className="detail-value">{quotation.contactPerson || 'N/A'}</span>
+                    <span className="detail-value">{quotation.contactPerson || quotation.clientName || 'N/A'}</span>
+                  )}
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Telephone / Cellphone</span>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="contactNumber"
+                      value={formData.contactNumber}
+                      onChange={handleInputChange}
+                      className="form-input inline-edit-input"
+                    />
+                  ) : (
+                    <span className="detail-value">{quotation.contactNumber || quotation.cellphone || quotation.telNo || 'N/A'}</span>
                   )}
                 </div>
 
@@ -394,35 +406,61 @@ export default function QuotationDetailPage() {
                       className="form-input inline-edit-input"
                     />
                   ) : (
-                    <span className="detail-value">{quotation.clientEmail || 'N/A'}</span>
+                    <span className="detail-value">{quotation.clientEmail || quotation.email || 'N/A'}</span>
                   )}
                 </div>
 
                 <div className="detail-item">
-                  <span className="detail-label">Phone / Mobile</span>
+                  <span className="detail-label">Complete Address</span>
                   {isEditing ? (
                     <input
                       type="text"
-                      name="clientPhone"
-                      value={formData.clientPhone}
+                      name="clientAddress"
+                      value={formData.clientAddress}
                       onChange={handleInputChange}
                       className="form-input inline-edit-input"
                     />
                   ) : (
-                    <span className="detail-value">{quotation.clientPhone || 'N/A'}</span>
+                    <span className="detail-value">{quotation.clientAddress || quotation.address || 'N/A'}</span>
                   )}
                 </div>
               </div>
             </article>
 
-            {/* Price & Tour Config */}
+            {/* Quotation Metadata Section */}
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-solid fa-money-bill-wave"></i> Rate Breakdown & Totals
+                <i className="fa-solid fa-file-invoice"></i> Quotation Specifications
               </h2>
+
               <div className="panel-details-list">
                 <div className="detail-item">
-                  <span className="detail-label">Service / Tour Title</span>
+                  <span className="detail-label">Document Code</span>
+                  <span className="detail-value text-mono font-bold text-purple">{quotation.code || 'ADF-07-001'}</span>
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Branch Office</span>
+                  <span className="detail-value font-medium">{quotation.branchName || 'FairFly Travel'}</span>
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Quotation Date</span>
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      name="quotationDate"
+                      value={formData.quotationDate}
+                      onChange={handleInputChange}
+                      className="form-input inline-edit-input"
+                    />
+                  ) : (
+                    <span className="detail-value">{quotation.quotationDate || (quotation.createdAt ? new Date(quotation.createdAt).toLocaleDateString() : 'N/A')}</span>
+                  )}
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Service Title / Package</span>
                   {isEditing ? (
                     <input
                       type="text"
@@ -432,12 +470,12 @@ export default function QuotationDetailPage() {
                       className="form-input inline-edit-input"
                     />
                   ) : (
-                    <span className="detail-value font-medium">{quotation.serviceTitle || 'N/A'}</span>
+                    <span className="detail-value font-bold">{quotation.serviceTitle || quotation.serviceName || 'Custom Service'}</span>
                   )}
                 </div>
 
                 <div className="detail-item">
-                  <span className="detail-label">Base Rate (PHP)</span>
+                  <span className="detail-label">Rate / Bus / Base Price</span>
                   {isEditing ? (
                     <input
                       type="number"
@@ -447,25 +485,8 @@ export default function QuotationDetailPage() {
                       className="form-input inline-edit-input"
                     />
                   ) : (
-                    <span className="detail-value">
+                    <span className="detail-value font-bold text-mono">
                       ₱{Number(quotation.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  )}
-                </div>
-
-                <div className="detail-item">
-                  <span className="detail-label">Tax / Surcharge (PHP)</span>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      name="taxAmount"
-                      value={formData.taxAmount}
-                      onChange={handleInputChange}
-                      className="form-input inline-edit-input"
-                    />
-                  ) : (
-                    <span className="detail-value">
-                      ₱{Number(quotation.taxAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   )}
                 </div>
@@ -478,11 +499,10 @@ export default function QuotationDetailPage() {
                       name="totalAmount"
                       value={formData.totalAmount}
                       onChange={handleInputChange}
-                      className="form-input inline-edit-input"
-                      style={{ fontWeight: 700, color: 'var(--purple)' }}
+                      className="form-input inline-edit-input quote-total-input"
                     />
                   ) : (
-                    <span className="detail-value text-purple font-large" style={{ fontWeight: 800 }}>
+                    <span className="detail-value text-purple font-large quote-total-display">
                       ₱{Number(quotation.totalAmount || quotation.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   )}
@@ -499,7 +519,7 @@ export default function QuotationDetailPage() {
                       className="form-input inline-edit-input"
                     />
                   ) : (
-                    <span className="detail-value" style={{ fontSize: '0.8125rem', color: '#4b5563' }}>
+                    <span className="detail-value quote-rate-note">
                       {quotation.rateBreakdown || 'N/A'}
                     </span>
                   )}
@@ -524,7 +544,7 @@ export default function QuotationDetailPage() {
                   placeholder="• (1) Unit Tourist Bus&#10;• Equipped with video and audio entertainment system&#10;• 49 Regular seats&#10;• 3D/2N – QC-Bolinao-Alaminos-QC"
                 />
               ) : (
-                <p className="description-text" style={{ whiteSpace: 'pre-line' }}>
+                <p className="description-text quote-preline-text">
                   {quotation.requirements || 'No specific unit requirements noted.'}
                 </p>
               )}
@@ -544,7 +564,7 @@ export default function QuotationDetailPage() {
                   placeholder="April 29, 2023: Pick up QC to Bolinao&#10;April 30, 2023: Bolinao to Alaminos&#10;May 1, 2023: Alaminos to QC"
                 />
               ) : (
-                <p className="description-text" style={{ whiteSpace: 'pre-line' }}>
+                <p className="description-text quote-preline-text">
                   {quotation.tourDates || 'Tour schedule to be arranged upon confirmation.'}
                 </p>
               )}
@@ -566,7 +586,7 @@ export default function QuotationDetailPage() {
                   className="form-textarea inline-edit-textarea"
                 />
               ) : (
-                <p className="description-text" style={{ whiteSpace: 'pre-line' }}>
+                <p className="description-text quote-preline-text">
                   {quotation.inclusions || 'No inclusions specified.'}
                 </p>
               )}
@@ -585,7 +605,7 @@ export default function QuotationDetailPage() {
                   className="form-textarea inline-edit-textarea"
                 />
               ) : (
-                <p className="description-text" style={{ whiteSpace: 'pre-line' }}>
+                <p className="description-text quote-preline-text">
                   {quotation.exclusions || 'No exclusions specified.'}
                 </p>
               )}
@@ -608,7 +628,7 @@ export default function QuotationDetailPage() {
                   placeholder="- Initial payment of Php 10,000.00 for reservation upon confirmation&#10;- Full payment on or before April 29, 2023"
                 />
               ) : (
-                <p className="description-text" style={{ whiteSpace: 'pre-line' }}>
+                <p className="description-text quote-preline-text">
                   {quotation.remarks || 'Standard terms and conditions apply.'}
                 </p>
               )}

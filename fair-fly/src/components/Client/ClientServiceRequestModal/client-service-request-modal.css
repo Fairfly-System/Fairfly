@@ -146,3 +146,142 @@
   background: #fca5a5;
   color: var(--error-red-dark);
 }
+
+/* ==========================================================================
+   Migrated Classes from Inline CSS
+   ========================================================================== */
+
+.client-req-loading-box {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--text-light);
+}
+
+.client-req-loading-spinner {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.client-req-form-spaced {
+  gap: 1.25rem;
+}
+
+.client-req-purple-icon {
+  color: var(--purple, #7c3aed);
+  margin-right: 0.35rem;
+}
+
+.client-req-branch-hint {
+  font-size: 0.75rem;
+  color: var(--purple, #7c3aed);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+
+.client-req-service-details-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.client-req-service-details-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+
+.client-req-service-details-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: var(--purple, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.client-req-service-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.client-req-service-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.client-req-service-name {
+  font-size: 0.9375rem;
+  color: var(--text-dark);
+}
+
+.client-req-service-price {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--purple, #7c3aed);
+}
+
+.client-req-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.client-req-category-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--purple, #7c3aed);
+}
+
+.client-req-type-pill {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.client-req-icon-margin {
+  margin-right: 0.25rem;
+}
+
+.client-req-hidden-input {
+  display: none;
+}
+
+.client-req-format-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.client-req-file-preview-icon {
+  font-size: 1.5rem;
+  color: #4f46e5;
+}
+
+.client-req-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+

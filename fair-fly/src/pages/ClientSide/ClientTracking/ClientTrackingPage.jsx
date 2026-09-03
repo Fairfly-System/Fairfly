@@ -238,7 +238,7 @@ export default function ClientTrackingPage() {
       <div className="tracking-header-row">
         <div>
           <h2 className="tracking-header-title">
-            <i className="fa-solid fa-compass" style={{ color: 'var(--purple)' }}></i>
+            <i className="fa-solid fa-compass tracking-title-icon-purple"></i>
             Client Requests & Tracking Portal
           </h2>
           <p className="tracking-header-subtitle">
@@ -246,7 +246,7 @@ export default function ClientTrackingPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="tracking-header-actions">
           <span className="tracking-realtime-badge">
             <i className="fa-solid fa-bolt"></i>
             Live Real-Time Sync
@@ -254,9 +254,8 @@ export default function ClientTrackingPage() {
 
           <button
             type="button"
-            className="btn-primary"
+            className="btn-primary tracking-primary-purple-btn"
             onClick={() => setIsInquiryModalOpen(true)}
-            style={{ background: 'var(--purple, #7c3aed)' }}
           >
             <i className="fa-solid fa-file-circle-plus"></i>
             Submit New Inquiry
@@ -377,9 +376,9 @@ export default function ClientTrackingPage() {
           <div className="tracking-cards-list">
             {loadingServices ? (
               <div className="tracking-empty-card">
-                <i className="fa-solid fa-spinner fa-spin tracking-empty-icon" style={{ fontSize: '2.5rem' }}></i>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Connecting to Live Tracker...</h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', margin: 0 }}>
+                <i className="fa-solid fa-spinner fa-spin tracking-empty-icon tracking-loading-spinner"></i>
+                <h3 className="tracking-loading-title">Connecting to Live Tracker...</h3>
+                <p className="tracking-loading-subtitle">
                   Retrieving your active service request statuses from Firestore.
                 </p>
               </div>
@@ -388,19 +387,18 @@ export default function ClientTrackingPage() {
                 <div className="tracking-empty-icon">
                   <i className="fa-solid fa-box-open"></i>
                 </div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>
+                <h3 className="tracking-empty-title">
                   {searchQuery ? 'No Matching Service Requests' : 'No Active Services In Progress'}
                 </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', maxWidth: '28rem', margin: 0 }}>
+                <p className="tracking-empty-desc">
                   {searchQuery
                     ? 'Try refining your search keyword to locate your active requests.'
                     : 'Submit a custom inquiry or accept an operator quotation to begin service fulfillment.'}
                 </p>
                 <button
                   type="button"
-                  className="btn-primary"
+                  className="btn-primary tracking-empty-action-btn"
                   onClick={() => setIsInquiryModalOpen(true)}
-                  style={{ display: 'inline-flex', background: 'var(--purple, #7c3aed)' }}
                 >
                   <i className="fa-solid fa-file-circle-plus"></i>
                   Submit Custom Inquiry
@@ -425,7 +423,7 @@ export default function ClientTrackingPage() {
             <div className="portal-sub-header">
               <div>
                 <h3 className="portal-sub-title">
-                  <i className="fa-solid fa-file-invoice-dollar" style={{ color: 'var(--purple)' }}></i>
+                  <i className="fa-solid fa-file-invoice-dollar tracking-title-icon-purple"></i>
                   Official Quotations Received (ADF-07-001)
                 </h3>
                 <p className="portal-sub-desc">
@@ -564,11 +562,11 @@ export default function ClientTrackingPage() {
           </div>
 
           {/* Section 2B: My Inquiries Intake Forms */}
-          <div className="portal-sub-section" style={{ marginTop: '2rem' }}>
+          <div className="portal-sub-section portal-sub-section-spaced">
             <div className="portal-sub-header">
               <div>
                 <h3 className="portal-sub-title">
-                  <i className="fa-solid fa-file-signature" style={{ color: 'var(--purple)' }}></i>
+                  <i className="fa-solid fa-file-signature tracking-title-icon-purple"></i>
                   My Submitted Inquiries (SAF-01-002)
                 </h3>
                 <p className="portal-sub-desc">

@@ -183,7 +183,7 @@ export default function AdminInquiryDetailPage() {
               </div>
 
               <div className="inquiry-confirmed-actions">
-                <span className="inquiry-status-pill confirmed" style={{ fontSize: '0.8125rem', padding: '0.4rem 0.85rem' }}>
+                <span className="inquiry-status-pill confirmed inquiry-status-pill-padded">
                   <i className="fa-solid fa-circle-check"></i> Transferred to Ongoing Service
                 </span>
               </div>
@@ -200,7 +200,7 @@ export default function AdminInquiryDetailPage() {
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Client / Company Name</span>
-                  <span className="detail-value" style={{ fontWeight: 700 }}>{inquiry.fullName || inquiry.clientName || 'N/A'}</span>
+                  <span className="detail-value detail-value-bold">{inquiry.fullName || inquiry.clientName || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Contact Person</span>
@@ -233,26 +233,26 @@ export default function AdminInquiryDetailPage() {
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Branch Received From</span>
-                  <span className="detail-value" style={{ fontWeight: 700, color: 'var(--purple)' }}>
-                    <i className="fa-solid fa-location-dot" style={{ marginRight: '0.35rem' }}></i>
+                  <span className="detail-value detail-value-purple">
+                    <i className="fa-solid fa-location-dot inquiry-icon-margin"></i>
                     {inquiry.branchName || inquiry.preferredBranchLocation || 'Main Branch Office'}
                   </span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Form Reference No.</span>
-                  <span className="detail-value text-mono" style={{ fontWeight: 700, color: 'var(--purple)' }}>{inquiry.formNo || 'SAF-01-002'}</span>
+                  <span className="detail-value text-mono detail-value-purple">{inquiry.formNo || 'SAF-01-002'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Control No.</span>
-                  <span className="detail-value text-mono" style={{ fontWeight: 700 }}>{inquiry.controlNo || 'N/A'}</span>
+                  <span className="detail-value text-mono detail-value-bold">{inquiry.controlNo || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Services Offered</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.2rem' }}>
+                  <div className="inquiry-services-tags-wrap">
                     {Array.isArray(inquiry.servicesOffered) && inquiry.servicesOffered.length > 0 ? (
                       inquiry.servicesOffered.map((svc) => (
-                        <span key={svc} style={{ background: '#f5f3ff', color: 'var(--purple, #7c3aed)', border: '1px solid #ddd6fe', borderRadius: '4px', padding: '0.15rem 0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                          <i className="fa-solid fa-check" style={{ marginRight: '0.25rem', fontSize: '0.65rem' }}></i>
+                        <span key={svc} className="inquiry-service-badge">
+                          <i className="fa-solid fa-check"></i>
                           {svc}
                         </span>
                       ))
@@ -263,7 +263,7 @@ export default function AdminInquiryDetailPage() {
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Service Title / Catalog Link</span>
-                  <span className="detail-value" style={{ fontWeight: 600 }}>{inquiry.serviceType || 'Custom Request'}</span>
+                  <span className="detail-value detail-value-semibold">{inquiry.serviceType || 'Custom Request'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Date Inquired</span>
@@ -278,26 +278,26 @@ export default function AdminInquiryDetailPage() {
           </div>
 
           {/* Specified Requirements of Client (SAF-01-002 Col 2) */}
-          <article className="card detail-panel" style={{ borderLeft: '4px solid var(--purple, #7c3aed)' }}>
-            <h2 className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <article className="card detail-panel inquiry-specs-card">
+            <h2 className="panel-title inquiry-panel-title-row">
               <span>
-                <i className="fa-solid fa-clipboard-list" style={{ color: 'var(--purple)', marginRight: '0.4rem' }}></i>
+                <i className="fa-solid fa-clipboard-list inquiry-panel-title-icon"></i>
                 Specified Requirements of Client (What the Client Wants)
               </span>
-              <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#f5f3ff', color: 'var(--purple)', borderRadius: '4px', fontWeight: 600 }}>
+              <span className="inquiry-saf-badge">
                 SAF-01-002 Col 2
               </span>
             </h2>
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', marginTop: '0.75rem' }}>
-              <p className="inquiry-text" style={{ whiteSpace: 'pre-line', margin: 0, fontSize: '0.9375rem', lineHeight: '1.6', color: '#1e293b' }}>
+            <div className="inquiry-specs-box">
+              <p className="inquiry-specs-text">
                 {inquiry.specifiedRequirements || parsedData.requirementsText}
               </p>
             </div>
 
             {/* Optional Attachments if any */}
             {parsedData.requirementsList.length > 0 && (
-              <div style={{ marginTop: '1.25rem' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8125rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div className="inquiry-attachments-container">
+                <h4 className="inquiry-attachments-header">
                   Document Attachments
                 </h4>
                 <div className="inquiry-reqs-list">
@@ -319,8 +319,7 @@ export default function AdminInquiryDetailPage() {
                               href={req.file.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inquiry-doc-badge valid"
-                              style={{ textDecoration: 'none' }}
+                              className="inquiry-doc-badge valid inquiry-action-link"
                             >
                               <i className="fa-solid fa-file-check"></i>
                               <span>{req.file.fileName || 'View Client Document'}</span>
@@ -345,7 +344,7 @@ export default function AdminInquiryDetailPage() {
               <h2 className="panel-title">
                 <i className="fa-regular fa-comment-dots"></i> Remarks & Internal Notes
               </h2>
-              <p className="inquiry-text" style={{ whiteSpace: 'pre-line' }}>
+              <p className="inquiry-text inquiry-preline-text">
                 {parsedData.remarksText}
               </p>
             </article>

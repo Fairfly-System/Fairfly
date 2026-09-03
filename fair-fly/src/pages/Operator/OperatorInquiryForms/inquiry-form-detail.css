@@ -126,3 +126,150 @@
     gap: 0.75rem;
   }
 }
+
+/* ==========================================================================
+   Inquiry Detail UI Classes (Migrated from Inline Styles)
+   ========================================================================== */
+
+.inquiry-action-link {
+  font-size: 0.8125rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+}
+
+.inquiry-action-link.primary {
+  background: var(--purple, #7c3aed);
+}
+
+.inquiry-icon-purple {
+  color: var(--purple, #7c3aed);
+}
+
+.detail-value-bold {
+  font-weight: 700;
+}
+
+.detail-value-semibold {
+  font-weight: 600;
+}
+
+.detail-value-purple {
+  font-weight: 700;
+  color: var(--purple, #7c3aed);
+}
+
+.detail-value-indigo {
+  font-weight: 600;
+  color: #4338ca;
+}
+
+.inquiry-services-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.inquiry-service-badge {
+  background: #f5f3ff;
+  color: var(--purple, #7c3aed);
+  border: 1px solid #ddd6fe;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.inquiry-service-badge i {
+  font-size: 0.65rem;
+}
+
+.inquiry-panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inquiry-panel-title-icon {
+  color: var(--purple, #7c3aed);
+  margin-right: 0.4rem;
+}
+
+.inquiry-saf-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  background: #f5f3ff;
+  color: var(--purple, #7c3aed);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.inquiry-specs-card {
+  border-left: 4px solid var(--purple, #7c3aed);
+}
+
+.inquiry-specs-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.inquiry-specs-text {
+  white-space: pre-line;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #1e293b;
+}
+
+.inquiry-attachments-container {
+  margin-top: 1.25rem;
+}
+
+.inquiry-attachments-header {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inquiry-attach-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inquiry-attach-label {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inquiry-attach-btn-label {
+  margin-left: 0.3rem;
+}
+
+.inquiry-file-hidden {
+  display: none;
+}
+
+.inquiry-preline-text {
+  white-space: pre-line;
+}
+
+.inquiry-icon-margin {
+  margin-right: 0.35rem;
+}
+
+.inquiry-status-pill-padded {
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.85rem;
+}

@@ -251,3 +251,55 @@
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Migrated Classes from Inline CSS
+   ========================================================================== */
+
+.cif-services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .cif-services-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cif-service-check-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.cif-service-check-card.checked {
+  border: 1.5px solid var(--purple, #7c3aed);
+  background: #f5f3ff;
+  font-weight: 700;
+}
+
+.cif-field-mb {
+  margin-bottom: 0.75rem;
+}
+
+.cif-field-mt {
+  margin-top: 0.875rem;
+}
+
+.cif-help-text {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.775rem;
+  color: #64748b;
+}
+

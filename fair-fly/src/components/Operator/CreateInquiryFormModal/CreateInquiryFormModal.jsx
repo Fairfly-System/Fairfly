@@ -244,22 +244,11 @@ export default function CreateInquiryFormModal({ onClose }) {
           <i className="fa-solid fa-list-check"></i> 2. Services Offered (SAF-01-002)
         </h3>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem', marginBottom: '0.75rem' }}>
+        <div className="cif-services-grid">
           {OFFICIAL_SERVICES.map((srv) => {
             const isChecked = (form.servicesOffered || []).includes(srv);
             return (
-              <label key={srv} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 0.75rem',
-                border: isChecked ? '1.5px solid var(--purple, #7c3aed)' : '1px solid #e2e8f0',
-                background: isChecked ? '#f5f3ff' : '#ffffff',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.8125rem',
-                fontWeight: isChecked ? 700 : 500
-              }}>
+              <label key={srv} className={`cif-service-check-card ${isChecked ? 'checked' : ''}`}>
                 <input
                   type="checkbox"
                   checked={isChecked}
@@ -272,7 +261,7 @@ export default function CreateInquiryFormModal({ onClose }) {
         </div>
 
         {activeServices.length > 0 && (
-          <div className="cif-field" style={{ marginBottom: '0.75rem' }}>
+          <div className="cif-field cif-field-mb">
             <label>Link Active Catalog Service (Optional)</label>
             <select
               value={form.serviceId}
@@ -292,7 +281,7 @@ export default function CreateInquiryFormModal({ onClose }) {
         <h3 className="cif-section-title">
           <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span>*</span>
         </h3>
-        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.775rem', color: '#64748b' }}>
+        <p className="cif-help-text">
           What does the client want? Describe vehicles, passenger count, itinerary, destinations, target tour dates, lodging preferences, and specific requests.
         </p>
         <div className="cif-field">
@@ -308,7 +297,7 @@ export default function CreateInquiryFormModal({ onClose }) {
           />
         </div>
 
-        <div className="cif-field" style={{ marginTop: '0.875rem' }}>
+        <div className="cif-field cif-field-mt">
           <label>Remarks & Notes</label>
           <textarea
             name="remarks"

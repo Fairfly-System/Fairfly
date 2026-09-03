@@ -106,7 +106,7 @@ const CreateTicketModal = forwardRef(
         }
         isLoading={isLoading}
       >
-        <form onSubmit={handleSubmit} className="form-column" style={{ gap: '1.125rem' }}>
+        <form onSubmit={handleSubmit} className="form-column ticket-modal-form">
           {/* Operator Context Banner (Auto-assigned via Firestore Account UID) */}
           {isOperatorPortal ? (
             <div className="operator-submitter-card">
@@ -230,35 +230,35 @@ const CreateTicketModal = forwardRef(
                 value={formData.priority}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="form-select"
               >
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Urgent">Urgent</option>
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {p} Priority
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* Initial Message */}
-          <div className="form-column">
-            <label className="form-label">
-              Initial Message Request *
+          {/* Initial Message / Problem Description */}
+          <div className="form-group">
+            <label htmlFor="initialMessage">
+              Detailed Description <span className="text-danger">*</span>
             </label>
             <textarea
+              id="initialMessage"
               name="initialMessage"
+              rows={4}
+              className="form-textarea"
+              placeholder="Please provide full details, error logs, or client references to help support resolve this issue promptly..."
               value={formData.initialMessage}
               onChange={handleChange}
-              placeholder="Describe the issue or inquiry in detail..."
-              rows={4}
               required
-              disabled={isLoading}
-              className="form-textarea"
-            ></textarea>
+            />
           </div>
 
           {/* Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <div className="ticket-modal-actions">
             <button
               type="button"
               className="btn-secondary"
@@ -274,11 +274,11 @@ const CreateTicketModal = forwardRef(
             >
               {isLoading ? (
                 <>
-                  <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i> Submitting...
+                  <i className="fa-solid fa-spinner fa-spin ticket-btn-icon"></i> Submitting...
                 </>
               ) : (
                 <>
-                  <i className="fa-solid fa-paper-plane" style={{ marginRight: '0.375rem' }}></i>{' '}
+                  <i className="fa-solid fa-paper-plane ticket-btn-icon"></i>{' '}
                   {isOperatorPortal ? 'Submit Ticket' : 'Create Ticket'}
                 </>
               )}
