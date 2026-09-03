@@ -29,9 +29,11 @@ export default function QuickLinkForm({ onSubmit, isLoading, initialData = null 
     }
   }, [initialData]);
 
+  const isFormValid = Boolean(formData.title.trim() && formData.url.trim() && formData.category);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.title && formData.url && formData.category) {
+    if (isFormValid) {
       onSubmit(formData);
     }
   };
@@ -90,7 +92,7 @@ export default function QuickLinkForm({ onSubmit, isLoading, initialData = null 
         <button
           type="submit"
           className="btn-primary"
-          disabled={isLoading}
+          disabled={isLoading || !isFormValid}
           style={{ width: '100%', justifyContent: 'center' }}
         >
           {isLoading ? (

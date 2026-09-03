@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, Link } from 'react-router';
 import { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -8,6 +8,7 @@ import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModa
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import { acceptQuotation } from '../../../services/quotationService';
 import './quotation-detail.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -22,6 +23,7 @@ export default function QuotationDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
 
@@ -164,11 +166,35 @@ export default function QuotationDetailPage() {
     );
   };
 
+  const handleAcceptOnBehalf = () => {
+    if (!quotation?.id) return;
+    if (!window.confirm(`Accept this quotation on behalf of ${quotation.clientName}? This will immediately initialize the Custom Service in activeServices.`)) {
+      return;
+    }
+
+    setIsAccepting(true);
+    acceptQuotation(
+      userToken,
+      quotation.id,
+      () => {
+        setIsAccepting(false);
+        addToast('Quotation accepted on behalf of client! Custom Service has been created.', 'success');
+      },
+      (err) => {
+        setIsAccepting(false);
+        console.error('Error accepting quotation on behalf:', err);
+        addToast(err?.message || 'Failed to accept quotation', 'danger');
+      }
+    );
+  };
+
   const breadcrumbs = [
     { label: 'Dashboard', to: '/operator' },
     { label: 'Quotations', to: '/operator/quotations' },
     { label: quotation ? (quotation.quoteNo || 'Quotation Details') : 'Loading...' },
   ];
+
+  const isAccepted = quotation?.status === 'Accepted';
 
   const actions = useMemo(() => {
     if (!quotation) return [];
@@ -193,26 +219,36 @@ export default function QuotationDetailPage() {
 
     return [
       {
-        label: 'Export to PDF',
+        label: 'Export to PDF (ADF-07-001)',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
-        className: 'btn-primary',
-        disabled: isSaving || isDeleting,
+        className: 'btn-secondary',
+        disabled: isSaving || isDeleting || isAccepting,
       },
       {
         label: 'Edit Fields',
         icon: 'fa-solid fa-pen-to-square',
         onClick: () => setIsEditing(true),
         className: 'btn-secondary',
-        disabled: isSaving || isDeleting,
+        disabled: isSaving || isDeleting || isAccepting || isAccepted,
       },
       ...(quotation.status === 'Draft' ? [
         {
-          label: 'Mark as Sent',
+          label: 'Send to Client',
           icon: 'fa-solid fa-paper-plane',
           onClick: () => handleStatusChange('Sent'),
-          className: 'btn-secondary',
-          disabled: isSaving || isDeleting,
+          className: 'btn-primary',
+          disabled: isSaving || isDeleting || isAccepting,
+        }
+      ] : []),
+      ...(!isAccepted ? [
+        {
+          label: isAccepting ? 'Accepting...' : 'Accept on Behalf of Client (On-Site)',
+          icon: isAccepting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-handshake',
+          onClick: handleAcceptOnBehalf,
+          className: 'btn-primary',
+          disabled: isSaving || isDeleting || isAccepting,
+          style: { background: 'var(--green, #16a34a)' }
         }
       ] : []),
       {
@@ -220,18 +256,20 @@ export default function QuotationDetailPage() {
         icon: 'fa-solid fa-trash',
         onClick: () => setShowDeleteConfirm(true),
         className: 'btn-danger',
-        disabled: isSaving || isDeleting,
+        disabled: isSaving || isDeleting || isAccepting,
       },
     ];
-  }, [quotation, isEditing, isSaving, isDeleting, formData]);
+  }, [quotation, isEditing, isSaving, isDeleting, isAccepting, isAccepted, formData]);
 
   const getStatusType = () => {
     if (!quotation) return 'neutral';
     const status = (quotation.status || '').toLowerCase();
-    if (status === 'confirmed' || status === 'sent') return 'success';
-    if (status === 'cancelled') return 'danger';
-    return 'warning';
+    if (status === 'accepted' || status === 'confirmed') return 'success';
+    if (status === 'sent') return 'warning';
+    if (status === 'cancelled' || status === 'rejected') return 'danger';
+    return 'neutral';
   };
+
 
   return (
     <RecordDetailLayout
@@ -249,6 +287,62 @@ export default function QuotationDetailPage() {
     >
       {quotation && (
         <div className="quotation-detail-wrapper">
+          {/* Active Custom Service / Accepted Banner */}
+          {isAccepted && (
+            <div className="inquiry-confirmed-banner" style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '0.75rem', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
+                  <i className="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 800, color: '#14532d' }}>Quotation Accepted · Custom Service Active</h4>
+                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8125rem', color: '#166534' }}>
+                    This quotation has been officially accepted and converted into an active tracking service with sequential milestones.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {quotation.activeServiceId && (
+                  <Link
+                    to={`/operator/ongoing-services/${quotation.activeServiceId}`}
+                    className="btn btn-primary btn-sm"
+                    style={{ background: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <i className="fa-solid fa-gears"></i>
+                    <span>View Ongoing Service</span>
+                  </Link>
+                )}
+                {quotation.inquiryId && (
+                  <Link
+                    to={`/operator/inquiry-forms/${quotation.inquiryId}`}
+                    className="btn btn-secondary btn-sm"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <i className="fa-solid fa-file-signature"></i>
+                    <span>Originating Inquiry</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Originating Inquiry Reference (if not yet accepted) */}
+          {!isAccepted && quotation.inquiryId && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.65rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+              <span style={{ color: '#475569' }}>
+                <i className="fa-solid fa-link" style={{ color: 'var(--purple)', marginRight: '0.4rem' }}></i>
+                Originating from client inquiry: <strong>{quotation.inquiryId}</strong>
+              </span>
+              <Link
+                to={`/operator/inquiry-forms/${quotation.inquiryId}`}
+                style={{ color: 'var(--purple, #7c3aed)', fontWeight: 600, textDecoration: 'underline' }}
+              >
+                View Inquiry Form (SAF-01-002) →
+              </Link>
+            </div>
+          )}
+
           {/* Top Client & Service Row */}
           <div className="details-grid-2">
             {/* Client Metadata Section */}
@@ -256,6 +350,7 @@ export default function QuotationDetailPage() {
               <h2 className="panel-title">
                 <i className="fa-solid fa-building"></i> Client / Company Information
               </h2>
+
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Name of Client / Company</span>

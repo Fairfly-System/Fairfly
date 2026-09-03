@@ -193,6 +193,13 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
     }
   };
 
+  const isFormValid = Boolean(
+    formData.name.trim() &&
+    (formData.category !== "Other" || formData.customCategory.trim()) &&
+    formData.price.trim() &&
+    String(formData.processingTime?.min || '').trim() !== ""
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const finalCategory = formData.category === "Other" 
@@ -774,7 +781,7 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
           <button
             type="submit"
             className="btn-primary"
-            disabled={isLoading}
+            disabled={isLoading || !isFormValid}
             style={{ width: '100%', justifyContent: 'center' }}
           >
             {isLoading ? (

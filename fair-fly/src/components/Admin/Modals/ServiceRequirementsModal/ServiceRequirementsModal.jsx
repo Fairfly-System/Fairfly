@@ -362,10 +362,10 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
           type="button"
           className="modalSubmitBtn btnBlue"
           onClick={handleAddRequirement}
-          disabled={!newReqName.trim() || (attachmentType === 'file' && !selectedFile)}
+          disabled={!newReqName.trim() || (attachmentType === 'file' && !selectedFile) || (attachmentType === 'link' && !attachmentUrl.trim())}
           style={{
-            opacity: (!newReqName.trim() || (attachmentType === 'file' && !selectedFile)) ? 0.6 : 1,
-            cursor: (!newReqName.trim() || (attachmentType === 'file' && !selectedFile)) ? 'not-allowed' : 'pointer',
+            opacity: (!newReqName.trim() || (attachmentType === 'file' && !selectedFile) || (attachmentType === 'link' && !attachmentUrl.trim())) ? 0.6 : 1,
+            cursor: (!newReqName.trim() || (attachmentType === 'file' && !selectedFile) || (attachmentType === 'link' && !attachmentUrl.trim())) ? 'not-allowed' : 'pointer',
             marginTop: '0.5rem'
           }}
         >

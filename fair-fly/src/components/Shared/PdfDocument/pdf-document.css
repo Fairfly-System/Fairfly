@@ -62,29 +62,37 @@
   background-color: #ffffff;
   width: 210mm;
   min-height: 297mm;
-  padding: 15mm 18mm 12mm 18mm;
+  padding: 12mm 16mm 10mm 16mm;
   box-sizing: border-box;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #111827;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   position: relative;
 }
 
-/* Header Section */
-.pdf-header {
+/* ============================================================ */
+/* OFFICIAL QUOTATION STYLING (ADF-07-001)                      */
+/* ============================================================ */
+.quotation-pdf-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 270mm;
+}
+
+.quotation-pdf-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .pdf-logo-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
 }
 
 .pdf-logo-img {
@@ -93,31 +101,14 @@
   object-fit: contain;
 }
 
-.pdf-logo-sub {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: #f0653e;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.pdf-meta-box {
-  text-align: right;
-  font-size: 0.8125rem;
-  color: #4b5563;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.pdf-meta-ref {
-  font-weight: 700;
-  color: #1e1b4b;
+.quotation-date-text {
   font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  padding-top: 0.5rem;
 }
 
-/* Document Title */
-.pdf-doc-title {
+.quotation-pdf-title {
   text-align: center;
   font-size: 1.35rem;
   font-weight: 900;
@@ -125,153 +116,325 @@
   color: #111827;
   text-transform: uppercase;
   margin: 0.75rem 0 1.25rem 0;
-  padding-bottom: 0.25rem;
 }
 
-/* Main Quotation / Inquiry Table */
-.pdf-table {
+.quotation-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
   font-size: 0.8125rem;
-  line-height: 1.45;
 }
 
-.pdf-table th,
-.pdf-table td {
-  border: 1.5px solid #1f2937;
+.quotation-th,
+.quotation-td {
+  border: 1.5px solid #111827;
   padding: 0.65rem 0.85rem;
   vertical-align: top;
 }
 
-.pdf-table th {
-  background-color: #f9fafb;
+.quotation-th {
   width: 32%;
   font-weight: 800;
   color: #111827;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   font-size: 0.775rem;
+  background-color: #ffffff;
 }
 
-.pdf-table td {
+.quotation-bold-text {
+  font-weight: 800;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.quotation-multiline {
+  white-space: pre-line;
+  line-height: 1.45;
   color: #1f2937;
 }
 
-.pdf-client-name {
-  font-weight: 800;
-  font-size: 0.9375rem;
-  color: #111827;
-  text-transform: uppercase;
-  margin-bottom: 0.2rem;
+.quotation-prepared-by-block {
+  margin-top: 1rem;
+  margin-bottom: 2rem;
 }
 
-.pdf-contact-person {
+.prepared-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 1.5rem;
+}
+
+.prepared-sig-space {
+  height: 0.5rem;
+}
+
+.prepared-name {
+  font-weight: 800;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.prepared-sub {
+  font-size: 0.775rem;
+  color: #4b5563;
+  margin-top: 0.1rem;
+}
+
+.quotation-pdf-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid #111827;
+  padding-top: 0.75rem;
+  margin-top: auto;
+}
+
+.quotation-accreditation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dot-badge-icon {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.accreditation-code {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.quotation-address {
+  text-align: right;
+  font-size: 0.725rem;
+  line-height: 1.4;
+  color: #374151;
+}
+
+/* ============================================================ */
+/* OFFICIAL INQUIRY FORM STYLING (SAF-01-002)                   */
+/* ============================================================ */
+.inquiry-official-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 270mm;
+}
+
+.inquiry-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.inquiry-brand-logo {
+  height: 3.25rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.inquiry-form-center-title {
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #111827;
+}
+
+.inquiry-control-box {
+  border: 1.5px solid #111827;
+  padding: 0.35rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 140px;
+}
+
+.inquiry-control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.inquiry-control-row.highlight .ctrl-val {
+  font-weight: 900;
+  color: #111827;
+}
+
+.ctrl-label {
   font-weight: 600;
   color: #374151;
 }
 
-.pdf-bullet-list {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.pdf-bullet-list li {
-  margin-bottom: 0.25rem;
-}
-
-.pdf-multiline-text {
-  white-space: pre-line;
-}
-
-.pdf-rate-highlight {
-  font-size: 1.05rem;
+.ctrl-val {
   font-weight: 800;
   color: #111827;
 }
 
-/* Prepared By / Sign-off */
-.pdf-sign-off-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-top: 1rem;
-  padding-top: 0.5rem;
+/* Info Grid Table */
+.inquiry-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.85rem;
 }
 
-.pdf-prepared-by-box {
+.info-cell {
+  border: 1.5px solid #111827;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.775rem;
+  vertical-align: middle;
+}
+
+.cell-label {
+  font-weight: 700;
+  color: #111827;
+  margin-right: 0.4rem;
+}
+
+.cell-value {
+  color: #1f2937;
+}
+
+.cell-value.bold {
+  font-weight: 800;
+  color: #111827;
+}
+
+/* 3-Column Table */
+.inquiry-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.85rem;
+  flex: 1;
+}
+
+.inquiry-spec-table th {
+  border: 1.5px solid #111827;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.775rem;
+  font-weight: 800;
+  text-align: left;
+  background-color: #f8fafc;
+  color: #111827;
+}
+
+.inquiry-spec-table td {
+  border: 1.5px solid #111827;
+  padding: 0.75rem;
+  vertical-align: top;
+  font-size: 0.775rem;
+}
+
+.services-checkboxes-cell {
+  min-height: 200px;
+}
+
+.services-check-list {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.65rem;
+}
+
+.pdf-check-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.8125rem;
 }
 
-.pdf-prepared-label {
+.pdf-check-box {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.75rem;
-  color: #4b5563;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pdf-check-box.checked {
+  background-color: #111827;
+  color: #ffffff;
+}
+
+.pdf-check-label {
+  font-weight: 600;
+  color: #111827;
+}
+
+.spec-reqs-content,
+.remarks-content {
+  white-space: pre-line;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+/* Signatures Table */
+.inquiry-sign-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
   margin-bottom: 0.5rem;
 }
 
-.pdf-signature-line {
+.sign-cell {
+  border: 1.5px solid #111827;
+  padding: 0.65rem 0.85rem;
+  vertical-align: top;
+}
+
+.sign-title {
+  font-weight: 700;
+  font-size: 0.775rem;
+  color: #111827;
+}
+
+.sign-signature-area {
+  height: 2.25rem;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 0.25rem;
+}
+
+.sign-placeholder {
   font-family: 'Brush Script MT', 'Dancing Script', cursive, sans-serif;
   font-size: 1.35rem;
   color: #1e1b4b;
-  margin-bottom: -0.25rem;
 }
 
-.pdf-prepared-name {
-  font-weight: 800;
-  color: #111827;
-  font-size: 0.875rem;
-}
-
-.pdf-prepared-title {
-  font-size: 0.775rem;
-  color: #4b5563;
-  font-weight: 500;
-}
-
-.pdf-prepared-contact {
-  font-size: 0.775rem;
-  color: #4b5563;
-  font-weight: 600;
-}
-
-/* Footer Section */
-.pdf-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 0.75rem;
-  margin-top: 1.5rem;
-  font-size: 0.75rem;
-  color: #4b5563;
-}
-
-.pdf-accreditation-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.pdf-badge-img {
-  height: 2.25rem;
-  width: auto;
-  object-fit: contain;
-  margin-bottom: 0.15rem;
-}
-
-.pdf-accreditation-code {
-  font-weight: 800;
-  font-size: 0.75rem;
+.sign-digital {
+  font-family: 'Brush Script MT', cursive, sans-serif;
+  font-size: 1.35rem;
   color: #1e1b4b;
 }
 
-.pdf-address-box {
-  text-align: right;
-  line-height: 1.4;
+.sign-sub {
   font-size: 0.725rem;
+  color: #4b5563;
+  border-top: 1px solid #9ca3af;
+  padding-top: 0.25rem;
+  text-align: center;
+}
+
+.inquiry-form-footer {
+  text-align: right;
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 0.5rem;
 }
 
 /* Print Specific Rules */
@@ -289,7 +452,8 @@
     top: 0;
     width: 100%;
     margin: 0;
-    padding: 10mm 15mm;
+    padding: 8mm 12mm;
     box-shadow: none;
   }
 }
+

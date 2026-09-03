@@ -457,6 +457,7 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
           type="button"
           className="modalSubmitBtn btnBlue"
           onClick={handleSave}
+          disabled={steps.length === 0}
         >
           <i className="fa-solid fa-floppy-disk" style={{ marginRight: '0.5rem' }}></i>
           Save Steps
@@ -495,6 +496,12 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const isWorkflowValid = Boolean(
+    formData.name.trim() &&
+    formData.description.trim() &&
+    steps.length > 0
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -583,7 +590,7 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
         <button
           type="submit"
           className="btn-primary"
-          disabled={isLoading}
+          disabled={isLoading || !isWorkflowValid}
         >
           {isLoading ? (
             <>

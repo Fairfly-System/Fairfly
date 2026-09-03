@@ -12,8 +12,17 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
     password: ''
   });
 
+  const isFormValid = Boolean(
+    formData.branchName.trim() &&
+    formData.contactNumber.trim() &&
+    formData.address.trim() &&
+    formData.email.trim() &&
+    (isEditMode || formData.password.trim())
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
     onSubmit(formData);
   };
 
@@ -91,7 +100,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-        <button type="submit" className="btn-primary" disabled={isLoading} style={{ width: '100%', justifyContent: 'center' }}>
+        <button type="submit" className="btn-primary" disabled={isLoading || !isFormValid} style={{ width: '100%', justifyContent: 'center' }}>
           {isLoading ? (
             <>
               <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.375rem' }}></i>

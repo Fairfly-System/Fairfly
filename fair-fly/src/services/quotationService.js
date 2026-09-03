@@ -72,3 +72,16 @@ export function updateQuotationStatus(token, id, status, successCallback, errorC
     setIsLoading
   );
 }
+
+export function acceptQuotation(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/quotations/${id}/accept`,
+    'POST',
+    null,
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+

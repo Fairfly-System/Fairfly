@@ -103,7 +103,7 @@ export default function ClientEditForm({ onSubmit, isLoading, initialData }) {
         <button
           type="submit"
           className="btn-primary"
-          disabled={isLoading}
+          disabled={isLoading || !fullName.trim()}
         >
           <i className="fa-solid fa-floppy-disk" style={{ marginRight: '0.35rem' }}></i>
           {isLoading ? 'Saving Changes...' : 'Save Client Details'}

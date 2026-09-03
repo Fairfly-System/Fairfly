@@ -15,6 +15,7 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalTab, setLegalTab] = useState("terms");
@@ -24,14 +25,21 @@ export default function Login() {
     setIsLegalModalOpen(true);
   };
 
+  const isFormValid = Boolean(email.trim() && password);
+
   const handleLogin = (e) => {
     e.preventDefault();
-    signInWithEmailAndPassword(auth, email, password)
+    if (!isFormValid || isLoading) return;
+
+    setIsLoading(true);
+    signInWithEmailAndPassword(auth, email.trim(), password)
       .then(() => {
+        setIsLoading(false);
         navigate("/client");
         addToast("Welcome back! You have successfully signed in.", "success");
       })
       .catch((error) => {
+        setIsLoading(false);
         addToast(toFriendlyMessage(error, "Incorrect email or password. Please double-check and try again."), "error");
       });
   };
@@ -102,8 +110,8 @@ export default function Login() {
               </Link>
             </div>
 
-            <button type="submit" className="login-button">
-              Sign In
+            <button type="submit" className="login-button" disabled={!isFormValid || isLoading}>
+              {isLoading ? "Signing In..." : "Sign In"}
             </button>
           </form>
 

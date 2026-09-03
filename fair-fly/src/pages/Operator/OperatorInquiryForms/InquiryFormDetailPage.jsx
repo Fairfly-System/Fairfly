@@ -6,7 +6,8 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
-import { confirmInquiry, updateInquiry, deleteInquiry } from '../../../services/inquiryService';
+import CreateQuotationModal from '../../../components/Operator/CreateQuotationModal/CreateQuotationModal';
+import { updateInquiry, deleteInquiry } from '../../../services/inquiryService';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './inquiry-form-detail.css';
@@ -18,7 +19,7 @@ function parseInquiryData(inquiry) {
   if (!inquiry) return { requirementsList: [], requirementsText: '', remarksText: '' };
 
   let requirementsList = [];
-  let requirementsText = '';
+  let requirementsText = inquiry.specifiedRequirements || '';
   let remarksText = '';
 
   // 1. Parse Requirements
@@ -38,22 +39,8 @@ function parseInquiryData(inquiry) {
       }
       return { id: `req_${idx}`, name: String(req), required: true, file: null, value: '' };
     });
-  } else if (typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
+  } else if (!requirementsText && typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
     requirementsText = inquiry.requirements.trim();
-  } else if (typeof inquiry.requirements === 'object' && inquiry.requirements !== null) {
-    if (inquiry.requirements.name || inquiry.requirements.title) {
-      requirementsList = [{
-        id: inquiry.requirements.id || 'req_0',
-        name: inquiry.requirements.name || inquiry.requirements.title,
-        required: inquiry.requirements.required !== false,
-        file: inquiry.requirements.file || null,
-        value: typeof inquiry.requirements.value === 'object' ? JSON.stringify(inquiry.requirements.value) : (inquiry.requirements.value || '')
-      }];
-    } else {
-      requirementsText = Object.entries(inquiry.requirements)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n');
-    }
   }
 
   // 2. Parse Remarks
@@ -65,7 +52,7 @@ function parseInquiryData(inquiry) {
       .join('\n');
   }
 
-  // 3. Fallback to notes / details (Legacy format parser: "Requirements | Remarks: ...")
+  // 3. Fallback to notes / details (Legacy format parser)
   const legacyRaw = typeof inquiry.notes === 'string' ? inquiry.notes : typeof inquiry.details === 'string' ? inquiry.details : '';
   if (legacyRaw) {
     if (legacyRaw.includes(' | Remarks: ')) {
@@ -89,17 +76,11 @@ function parseInquiryData(inquiry) {
         requirementsText = legacyRaw.trim();
       }
     }
-  } else if (typeof inquiry.notes === 'object' && inquiry.notes !== null) {
-    if (!requirementsText && requirementsList.length === 0) {
-      requirementsText = Object.entries(inquiry.notes)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n');
-    }
   }
 
   return {
     requirementsList,
-    requirementsText: requirementsText || (requirementsList.length === 0 ? 'Standard service requirements.' : ''),
+    requirementsText: requirementsText || (requirementsList.length === 0 ? 'No specific client requirements provided.' : ''),
     remarksText: remarksText || 'No additional remarks recorded.'
   };
 }
@@ -112,8 +93,8 @@ export default function InquiryFormDetailPage() {
   const { addToast } = useToast();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCreateQuoteModal, setShowCreateQuoteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [uploadingReqId, setUploadingReqId] = useState(null);
 
@@ -140,40 +121,6 @@ export default function InquiryFormDetailPage() {
         addToast(toFriendlyMessage(error, 'Failed to delete inquiry form'), 'error');
       },
       setIsDeleting
-    );
-  };
-
-  const handleConfirmInquiry = () => {
-    if (!form) return;
-
-    // Check mandatory requirements
-    const reqs = parsedData.requirementsList;
-    const missing = reqs.filter(r => {
-      if (r.required !== false) {
-        return !r.file?.url && (!r.value || !r.value.trim());
-      }
-      return false;
-    });
-
-    if (missing.length > 0) {
-      const names = missing.map(m => m.name || m.title || 'Required Document').join(', ');
-      addToast(`Cannot confirm: Please upload or complete the required document(s): ${names}`, 'error');
-      return;
-    }
-
-    setIsConfirming(true);
-    confirmInquiry(
-      userToken,
-      form.id,
-      (res) => {
-        setIsConfirming(false);
-        addToast('Inquiry confirmed successfully! Quotation created and Active Service initialized.', 'success');
-      },
-      (err) => {
-        setIsConfirming(false);
-        addToast(toFriendlyMessage(err, 'Failed to confirm inquiry'), 'error');
-      },
-      setIsConfirming
     );
   };
 
@@ -223,40 +170,60 @@ export default function InquiryFormDetailPage() {
   const breadcrumbs = [
     { label: 'Dashboard', to: '/operator' },
     { label: 'Inquiry Forms', to: '/operator/inquiry-forms' },
-    { label: form ? (form.formNo || 'Inquiry Details') : 'Loading...' },
+    { label: form ? (form.controlNo || form.formNo || 'Inquiry Details') : 'Loading...' },
   ];
 
-  const isConfirmed = (form?.status || '').toLowerCase() === 'confirmed';
+  const hasQuotation = Boolean(form?.confirmedQuotationId);
+  const hasActiveService = Boolean(form?.confirmedActiveServiceId);
 
   const actions = useMemo(() => {
     if (!form) return [];
     return [
       {
-        label: 'Export to PDF',
+        label: 'Export to PDF (SAF-01-002)',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-secondary',
-        disabled: isDeleting || isConfirming,
+        disabled: isDeleting,
       },
-      ...(!isConfirmed ? [
+      ...(hasQuotation ? [
         {
-          label: isConfirming ? 'Confirming...' : 'Confirm Inquiry',
-          icon: isConfirming ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check-circle',
-          onClick: handleConfirmInquiry,
+          label: 'View Quotation',
+          icon: 'fa-solid fa-file-invoice-dollar',
+          onClick: () => navigate(`/operator/quotations/${form.confirmedQuotationId}`),
           className: 'btn-primary',
-          disabled: isDeleting || isConfirming,
+          disabled: isDeleting,
           style: { background: 'var(--purple, #7c3aed)' }
         }
-      ] : []),
+      ] : [
+        {
+          label: 'Create Quotation',
+          icon: 'fa-solid fa-file-invoice-dollar',
+          onClick: () => setShowCreateQuoteModal(true),
+          className: 'btn-primary',
+          disabled: isDeleting,
+          style: { background: 'var(--purple, #7c3aed)' }
+        }
+      ]),
       {
         label: 'Delete Inquiry',
         icon: 'fa-solid fa-trash',
         onClick: () => setShowDeleteConfirm(true),
         className: 'btn-danger',
-        disabled: isDeleting || isConfirming,
+        disabled: isDeleting,
       },
     ];
-  }, [form, isDeleting, isConfirming, isConfirmed]);
+  }, [form, isDeleting, hasQuotation, navigate]);
+
+  const getStatusBadgeType = () => {
+    const st = (form?.status || '').toLowerCase();
+    if (st === 'accepted' || st === 'confirmed') return 'success';
+    if (st === 'quotation_created' || st === 'quotation_sent') return 'purple';
+    if (st === 'submitted') return 'warning';
+    if (st === 'rejected' || st === 'cancelled') return 'danger';
+    return 'neutral';
+  };
+
 
   return (
     <RecordDetailLayout
@@ -274,17 +241,21 @@ export default function InquiryFormDetailPage() {
     >
       {form && (
         <div className="inquiry-detail-wrapper">
-          {/* Confirmed Cross-Reference Banner */}
-          {isConfirmed && (
+          {/* Status / Cross-Reference Banner */}
+          {(hasQuotation || hasActiveService) && (
             <div className="inquiry-confirmed-banner">
               <div className="inquiry-confirmed-info">
                 <div className="inquiry-confirmed-icon">
                   <i className="fa-solid fa-check"></i>
                 </div>
                 <div>
-                  <h3 className="inquiry-confirmed-title">Inquiry Confirmed & Transferred</h3>
+                  <h3 className="inquiry-confirmed-title">
+                    {hasActiveService ? 'Inquiry Accepted & Active Service In Progress' : 'Quotation Prepared & Linked'}
+                  </h3>
                   <p className="inquiry-confirmed-sub">
-                    This inquiry has been converted to an official Quotation and an Active Ongoing Service has been initialized in your branch.
+                    {hasActiveService
+                      ? 'This inquiry has been accepted and converted into an active tracking service with sequential milestones.'
+                      : 'An official quotation (ADF-07-001) has been created from this inquiry.'}
                   </p>
                 </div>
               </div>
@@ -297,7 +268,7 @@ export default function InquiryFormDetailPage() {
                     style={{ fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}
                   >
                     <i className="fa-solid fa-file-invoice-dollar" style={{ color: 'var(--purple)' }}></i>
-                    <span>View Quotation</span>
+                    <span>View Quotation (ADF-07-001)</span>
                   </Link>
                 )}
 
@@ -353,24 +324,35 @@ export default function InquiryFormDetailPage() {
             {/* Service & Branch Attribution Card */}
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-solid fa-file-invoice"></i> Service & Intake Meta
+                <i className="fa-solid fa-file-invoice"></i> Service & Intake Meta (SAF-01-002)
               </h2>
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Form Reference No.</span>
-                  <span className="detail-value text-mono" style={{ fontWeight: 700, color: 'var(--purple)' }}>{form.formNo || 'N/A'}</span>
+                  <span className="detail-value text-mono" style={{ fontWeight: 700, color: 'var(--purple)' }}>{form.formNo || 'SAF-01-002'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Control No.</span>
-                  <span className="detail-value text-mono">{form.controlNo || 'N/A'}</span>
+                  <span className="detail-value text-mono" style={{ fontWeight: 700 }}>{form.controlNo || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
-                  <span className="detail-label">Service Requested</span>
-                  <span className="detail-value" style={{ fontWeight: 700 }}>{form.serviceType || 'General Inquiry'}</span>
+                  <span className="detail-label">Services Offered</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.2rem' }}>
+                    {Array.isArray(form.servicesOffered) && form.servicesOffered.length > 0 ? (
+                      form.servicesOffered.map((svc) => (
+                        <span key={svc} style={{ background: '#f5f3ff', color: 'var(--purple, #7c3aed)', border: '1px solid #ddd6fe', borderRadius: '4px', padding: '0.15rem 0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                          <i className="fa-solid fa-check" style={{ marginRight: '0.25rem', fontSize: '0.65rem' }}></i>
+                          {svc}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="detail-value">{form.serviceType || 'General Inquiry'}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="detail-item">
-                  <span className="detail-label">Package Fee / Price</span>
-                  <span className="detail-value text-purple">{form.servicePrice || 'N/A'}</span>
+                  <span className="detail-label">Service Title / Catalog Link</span>
+                  <span className="detail-value" style={{ fontWeight: 600 }}>{form.serviceType || 'Custom Request'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Branch Received From</span>
@@ -390,37 +372,45 @@ export default function InquiryFormDetailPage() {
             </article>
           </div>
 
-          {/* Requirements Checklist & Document Attachments */}
-          <article className="card detail-panel">
-            <h2 className="panel-title">
-              <i className="fa-solid fa-list-check"></i> Service Requirements & Uploaded Documents
+          {/* Specified Requirements of Client (SAF-01-002 Section 2) */}
+          <article className="card detail-panel" style={{ borderLeft: '4px solid var(--purple, #7c3aed)' }}>
+            <h2 className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>
+                <i className="fa-solid fa-clipboard-list" style={{ color: 'var(--purple)', marginRight: '0.4rem' }}></i>
+                Specified Requirements of Client (What the Client Wants)
+              </span>
+              <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#f5f3ff', color: 'var(--purple)', borderRadius: '4px', fontWeight: 600 }}>
+                SAF-01-002 Col 2
+              </span>
             </h2>
-            
-            {parsedData.requirementsList.length > 0 ? (
-              <div className="inquiry-reqs-list">
-                {parsedData.requirementsList.map((req, idx) => {
-                  const reqKey = req.id || `req_${idx}`;
-                  const hasFile = Boolean(req.file?.url);
-                  const isTextDone = Boolean(req.value);
-                  const isComplete = hasFile || isTextDone;
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', marginTop: '0.75rem' }}>
+              <p className="inquiry-text" style={{ whiteSpace: 'pre-line', margin: 0, fontSize: '0.9375rem', lineHeight: '1.6', color: '#1e293b' }}>
+                {form.specifiedRequirements || parsedData.requirementsText}
+              </p>
+            </div>
 
-                  return (
-                    <div key={reqKey} className={`inquiry-req-card ${isComplete ? 'is-uploaded' : ''}`}>
-                      <div>
-                        <div className="inquiry-req-title">
-                          <span>{req.name || `Requirement ${idx + 1}`}</span>
-                          {req.required !== false && <span style={{ color: 'var(--red)', fontSize: '0.75rem' }}>(Required)</span>}
-                        </div>
-                        {req.value && (
-                          <div style={{ fontSize: '0.8125rem', color: '#475569', marginTop: '0.2rem' }}>
-                            <strong>Value:</strong> {req.value}
+            {/* Optional Uploaded Document Attachments if present */}
+            {parsedData.requirementsList.length > 0 && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8125rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Document Attachments
+                </h4>
+                <div className="inquiry-reqs-list">
+                  {parsedData.requirementsList.map((req, idx) => {
+                    const reqKey = req.id || `req_${idx}`;
+                    const hasFile = Boolean(req.file?.url);
+                    const isComplete = hasFile;
+
+                    return (
+                      <div key={reqKey} className={`inquiry-req-card ${isComplete ? 'is-uploaded' : ''}`}>
+                        <div>
+                          <div className="inquiry-req-title">
+                            <span>{req.name || `Requirement ${idx + 1}`}</span>
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        {hasFile ? (
-                          <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          {hasFile ? (
                             <a
                               href={req.file.url}
                               target="_blank"
@@ -431,60 +421,31 @@ export default function InquiryFormDetailPage() {
                               <i className="fa-solid fa-file-check"></i>
                               <span>{req.file.fileName || 'View Document'}</span>
                             </a>
-                            {!isConfirmed && (
-                              <label className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}>
-                                <i className={uploadingReqId === reqKey ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-pen'}></i>
-                                <input
-                                  type="file"
-                                  style={{ display: 'none' }}
-                                  disabled={uploadingReqId === reqKey}
-                                  onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                      handleUploadRequirement(reqKey, e.target.files[0]);
-                                    }
-                                  }}
-                                />
-                              </label>
-                            )}
-                          </>
-                        ) : isTextDone ? (
-                          <span className="inquiry-doc-badge valid">
-                            <i className="fa-solid fa-check"></i> Completed
-                          </span>
-                        ) : (
-                          <>
-                            <span className="inquiry-doc-badge missing">
-                              <i className="fa-solid fa-triangle-exclamation"></i> Missing Document
-                            </span>
-                            {!isConfirmed && (
-                              <label className="btn btn-primary" style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', background: 'var(--purple)', cursor: 'pointer' }}>
-                                <i className={uploadingReqId === reqKey ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'}></i>
-                                <span>{uploadingReqId === reqKey ? 'Uploading...' : 'Upload Now'}</span>
-                                <input
-                                  type="file"
-                                  style={{ display: 'none' }}
-                                  disabled={uploadingReqId === reqKey}
-                                  onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                      handleUploadRequirement(reqKey, e.target.files[0]);
-                                    }
-                                  }}
-                                />
-                              </label>
-                            )}
-                          </>
-                        )}
+                          ) : (
+                            <label className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}>
+                              <i className={uploadingReqId === reqKey ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'}></i>
+                              <span style={{ marginLeft: '0.3rem' }}>Attach</span>
+                              <input
+                                type="file"
+                                style={{ display: 'none' }}
+                                disabled={uploadingReqId === reqKey}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    handleUploadRequirement(reqKey, e.target.files[0]);
+                                  }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            ) : (
-              <p className="inquiry-text" style={{ whiteSpace: 'pre-line' }}>
-                {parsedData.requirementsText}
-              </p>
             )}
           </article>
+
 
           {/* Remarks & Signatures Row */}
           <div className="details-grid-2">
@@ -529,6 +490,18 @@ export default function InquiryFormDetailPage() {
             confirmText="Delete Inquiry"
             isLoading={isDeleting}
             OnConfirm={handleDelete}
+          />
+
+          {/* Create Quotation Modal */}
+          <CreateQuotationModal
+            isOpen={showCreateQuoteModal}
+            onClose={() => setShowCreateQuoteModal(false)}
+            initialData={form}
+            onQuotationCreated={(created) => {
+              if (created?.id) {
+                navigate(`/operator/quotations/${created.id}`);
+              }
+            }}
           />
 
           {/* PDF Preview & Export Modal */}

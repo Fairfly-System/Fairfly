@@ -2,94 +2,105 @@ import React, { useRef, useState } from 'react';
 import html2pdf from 'html2pdf.js';
 import './pdf-document.css';
 
-// Helper to safely parse requirements and remarks across all legacy and new inquiry formats
-function parseInquiryData(inquiry) {
-  if (!inquiry) return { requirementsList: [], requirementsText: '', remarksText: '' };
+// Standard official service categories listed on SAF-01-002
+const OFFICIAL_SERVICES = [
+  'NSO',
+  'Passport',
+  'VISA Assistance',
+  'Package Tour',
+  'Ticket',
+  'Others'
+];
 
-  let requirementsList = [];
-  let requirementsText = '';
-  let remarksText = '';
+/**
+ * Normalizes inquiry data for rendering in the SAF-01-002 inquiry form
+ */
+function normalizeInquiryPdfData(data) {
+  if (!data) return {};
 
-  // 1. Parse Requirements
-  if (Array.isArray(inquiry.requirements)) {
-    requirementsList = inquiry.requirements.map((req, idx) => {
-      if (typeof req === 'string') {
-        return { id: `req_${idx}`, name: req, required: true, file: null, value: '' };
-      }
-      if (typeof req === 'object' && req !== null) {
-        return {
-          id: req.id || `req_${idx}`,
-          name: req.name || req.title || `Requirement ${idx + 1}`,
-          required: req.required !== false,
-          file: req.file || null,
-          value: typeof req.value === 'object' ? JSON.stringify(req.value) : (req.value || '')
-        };
-      }
-      return { id: `req_${idx}`, name: String(req), required: true, file: null, value: '' };
-    });
-  } else if (typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
-    requirementsText = inquiry.requirements.trim();
-  } else if (typeof inquiry.requirements === 'object' && inquiry.requirements !== null) {
-    if (inquiry.requirements.name || inquiry.requirements.title) {
-      requirementsList = [{
-        id: inquiry.requirements.id || 'req_0',
-        name: inquiry.requirements.name || inquiry.requirements.title,
-        required: inquiry.requirements.required !== false,
-        file: inquiry.requirements.file || null,
-        value: typeof inquiry.requirements.value === 'object' ? JSON.stringify(inquiry.requirements.value) : (inquiry.requirements.value || '')
-      }];
-    } else {
-      requirementsText = Object.entries(inquiry.requirements)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n');
-    }
-  }
+  const servicesOffered = Array.isArray(data.servicesOffered)
+    ? data.servicesOffered
+    : (data.serviceType ? [data.serviceType] : []);
 
-  // 2. Parse Remarks
-  if (typeof inquiry.remarks === 'string' && inquiry.remarks.trim()) {
-    remarksText = inquiry.remarks.trim();
-  } else if (typeof inquiry.remarks === 'object' && inquiry.remarks !== null) {
-    remarksText = Object.entries(inquiry.remarks)
-      .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+  // Normalize specified requirements of client
+  let specifiedReqs = '';
+  if (typeof data.specifiedRequirements === 'string' && data.specifiedRequirements.trim()) {
+    specifiedReqs = data.specifiedRequirements.trim();
+  } else if (typeof data.requirements === 'string' && data.requirements.trim()) {
+    specifiedReqs = data.requirements.trim();
+  } else if (Array.isArray(data.requirements) && data.requirements.length > 0) {
+    specifiedReqs = data.requirements
+      .map(r => typeof r === 'string' ? `• ${r}` : `• ${r.name || r.title || 'Requirement'}${r.value ? `: ${r.value}` : ''}`)
       .join('\n');
+  } else if (data.notes) {
+    specifiedReqs = String(data.notes).trim();
   }
 
-  // 3. Fallback to notes / details (Legacy format parser: "Requirements | Remarks: ...")
-  const legacyRaw = typeof inquiry.notes === 'string' ? inquiry.notes : typeof inquiry.details === 'string' ? inquiry.details : '';
-  if (legacyRaw) {
-    if (legacyRaw.includes(' | Remarks: ')) {
-      const [reqPart, remPart] = legacyRaw.split(' | Remarks: ');
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = reqPart.trim();
-      }
-      if (!remarksText && remPart) {
-        remarksText = remPart.trim();
-      }
-    } else if (legacyRaw.includes('Remarks: ')) {
-      const [reqPart, remPart] = legacyRaw.split('Remarks: ');
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = reqPart.trim();
-      }
-      if (!remarksText && remPart) {
-        remarksText = remPart.trim();
-      }
-    } else {
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = legacyRaw.trim();
-      }
-    }
-  } else if (typeof inquiry.notes === 'object' && inquiry.notes !== null) {
-    if (!requirementsText && requirementsList.length === 0) {
-      requirementsText = Object.entries(inquiry.notes)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n');
-    }
+  // Normalize remarks
+  let remarksText = '';
+  if (typeof data.remarks === 'string' && data.remarks.trim()) {
+    remarksText = data.remarks.trim();
+  } else if (typeof data.notes === 'string' && data.notes.trim() && data.notes !== specifiedReqs) {
+    remarksText = data.notes.trim();
   }
 
   return {
-    requirementsList,
-    requirementsText: requirementsText || (requirementsList.length === 0 ? 'Standard service requirements.' : ''),
-    remarksText: remarksText || 'No additional remarks recorded.'
+    clientName: data.clientName || data.fullName || 'N/A',
+    address: data.address || '',
+    contactPerson: data.contactPerson || data.fullName || '',
+    telNo: data.telNo || '',
+    cellphone: data.cellphone || data.phoneNumber || '',
+    email: data.email || '',
+    population: data.population || '',
+    contractNo: data.contractNo || '',
+    isNo: data.isNo || '',
+    dateInquired: data.dateInquired || (data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : ''),
+    servicesOffered,
+    specifiedRequirements: specifiedReqs || 'No specified requirements recorded.',
+    remarks: remarksText || '',
+    agentName: data.agentName || data.preparedByName || 'Agent',
+    agentSignature: data.agentSignature || '',
+    acknowledgedBy: data.acknowledgedBy || '',
+    acknowledgedSignature: data.acknowledgedSignature || '',
+    branchName: data.branchName || 'Fairfly-Baliuag',
+    formNo: data.formNo || 'SAF-01-002',
+    controlNo: data.controlNo || '23-001'
+  };
+}
+
+/**
+ * Normalizes quotation data for rendering in the ADF-07-001 quotation form
+ */
+function normalizeQuotationPdfData(data) {
+  if (!data) return {};
+
+  let requirementsText = '';
+  if (typeof data.requirements === 'string' && data.requirements.trim()) {
+    requirementsText = data.requirements.trim();
+  } else if (Array.isArray(data.requirements)) {
+    requirementsText = data.requirements
+      .map(r => typeof r === 'string' ? `• ${r}` : `• ${r.name || r.title || 'Requirement'}`)
+      .join('\n');
+  } else if (data.specifiedRequirements) {
+    requirementsText = String(data.specifiedRequirements).trim();
+  }
+
+  return {
+    quoteNo: data.quoteNo || 'QT-001',
+    quotationDate: data.quotationDate || (data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : ''),
+    clientName: data.clientName || 'N/A',
+    contactPerson: data.contactPerson || '',
+    requirements: requirementsText,
+    tourDates: data.tourDates || '',
+    inclusions: data.inclusions || '',
+    exclusions: data.exclusions || '',
+    rateBreakdown: data.rateBreakdown || (data.rate ? `Php ${Number(data.rate).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : ''),
+    rate: Number(data.rate || 0),
+    totalAmount: Number(data.totalAmount || data.rate || 0),
+    remarks: data.remarks || '',
+    preparedByName: data.preparedByName || data.preparedBy || 'Emmanuel Manlapig',
+    preparedByTitle: data.preparedByTitle || 'Business Head',
+    preparedByContact: data.preparedByContact || '0997 4763844'
   };
 }
 
@@ -100,17 +111,21 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
   if (!isOpen || !data) return null;
 
   const isQuotation = type === 'quotation';
+  const inquiryData = !isQuotation ? normalizeInquiryPdfData(data) : null;
+  const quotationData = isQuotation ? normalizeQuotationPdfData(data) : null;
+
   const referenceNo = isQuotation 
-    ? (data.quoteNo || 'QT-001')
-    : (data.formNo || 'SAF-001');
+    ? quotationData.quoteNo 
+    : `${inquiryData.formNo} (${inquiryData.controlNo})`;
 
-  const formattedDate = data.quotationDate 
-    ? new Date(data.quotationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    : data.dateInquired
-      ? new Date(data.dateInquired).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-      : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  const parsedInquiry = !isQuotation ? parseInquiryData(data) : null;
+  const formattedDocDate = (dateStr) => {
+    if (!dateStr) return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
 
   const handleDownloadPdf = async () => {
     if (!printableRef.current || isExporting) return;
@@ -119,8 +134,8 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
     try {
       const element = printableRef.current;
       const opt = {
-        margin: [8, 8, 8, 8],
-        filename: `FairFly_${isQuotation ? 'Quotation' : 'Inquiry'}_${referenceNo}.pdf`,
+        margin: [5, 5, 5, 5],
+        filename: `FairFly_${isQuotation ? 'Quotation' : 'Inquiry'}_${(isQuotation ? quotationData.quoteNo : inquiryData.controlNo).replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -129,7 +144,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
       await html2pdf().set(opt).from(element).save();
     } catch (err) {
       console.error('Failed to export PDF:', err);
-      alert('Could not export PDF. Please use the Print button as an alternative.');
+      alert('Could not export PDF automatically. Please use the Print button to print or save as PDF.');
     } finally {
       setIsExporting(false);
     }
@@ -146,7 +161,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
         <div className="pdf-modal-header">
           <h2 className="pdf-modal-title">
             <i className={`fa-solid ${isQuotation ? 'fa-file-invoice-dollar' : 'fa-file-lines'}`} style={{ color: 'var(--purple, #7c3aed)' }}></i>
-            <span>{isQuotation ? 'Quotation Document Preview' : 'Inquiry Intake Document Preview'}</span>
+            <span>{isQuotation ? 'Quotation Document Preview' : 'Official Inquiry Form Preview'}</span>
             <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>({referenceNo})</span>
           </h2>
 
@@ -195,239 +210,305 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
         {/* Printable Canvas */}
         <div className="pdf-modal-body">
           <div ref={printableRef} className="pdf-sheet">
-            <div>
-              {/* Header */}
-              <header className="pdf-header">
-                <div className="pdf-logo-wrapper">
-                  <img src="/FairflyLogo.png" alt="FairFly Travel & Tours" className="pdf-logo-img" />
+            {isQuotation ? (
+              /* ============================================================ */
+              /* OFFICIAL FAIRFLY QUOTATION (ADF-07-001)                      */
+              /* ============================================================ */
+              <div className="quotation-pdf-container">
+                {/* Header with Logo and Date */}
+                <div className="quotation-pdf-top">
+                  <div className="pdf-logo-wrapper">
+                    <img src="/FairflyLogo.png" alt="FairFly Travel & Tours" className="pdf-logo-img" />
+                  </div>
+                  <div className="quotation-date-text">
+                    {formattedDocDate(quotationData.quotationDate)}
+                  </div>
                 </div>
-                <div className="pdf-meta-box">
-                  <span className="pdf-meta-ref">{referenceNo}</span>
-                  <span>{formattedDate}</span>
-                  {(data.branchName || data.preferredBranchLocation) && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6366f1' }}>
-                      Branch: {data.branchName || data.preferredBranchLocation}
-                    </span>
-                  )}
-                </div>
-              </header>
 
-              {/* Document Title */}
-              <h1 className="pdf-doc-title">
-                {isQuotation ? 'Q U O T A T I O N' : 'I N Q U I R Y   I N T A K E'}
-              </h1>
+                <h1 className="quotation-pdf-title">Q U O T A T I O N</h1>
 
-              {/* Quotation Structure */}
-              {isQuotation ? (
-                <table className="pdf-table">
+                {/* 2-Column Bordered Table */}
+                <table className="quotation-table">
                   <tbody>
                     <tr>
-                      <th>
-                        NAME OF CLIENT /<br />
+                      <th className="quotation-th">
+                        NAME OF CLIENT/ <br />
                         CONTACT PERSON
                       </th>
-                      <td>
-                        <div className="pdf-client-name">{data.clientName || 'N/A'}</div>
-                        {data.contactPerson && (
-                          <div className="pdf-contact-person">{data.contactPerson}</div>
-                        )}
-                        {data.clientPhone && (
-                          <div style={{ fontSize: '0.75rem', color: '#4b5563' }}>Tel/Mobile: {data.clientPhone}</div>
-                        )}
-                        {data.clientEmail && (
-                          <div style={{ fontSize: '0.75rem', color: '#4b5563' }}>Email: {data.clientEmail}</div>
+                      <td className="quotation-td">
+                        <div className="quotation-bold-text">{quotationData.clientName}</div>
+                        {quotationData.contactPerson && (
+                          <div>{quotationData.contactPerson}</div>
                         )}
                       </td>
                     </tr>
 
                     <tr>
-                      <th>REQUIREMENTS</th>
-                      <td>
-                        <div className="pdf-multiline-text">
-                          {typeof data.requirements === 'string' ? data.requirements : data.serviceTitle || 'Standard Tour / Transport Service'}
+                      <th className="quotation-th">REQUIREMENTS</th>
+                      <td className="quotation-td">
+                        <div className="quotation-multiline">
+                          {quotationData.requirements || 'Standard service requirements'}
                         </div>
                       </td>
                     </tr>
 
                     <tr>
-                      <th>TOUR DATE / ITINERARY:</th>
-                      <td>
-                        <div className="pdf-multiline-text">
-                          {data.tourDates || 'As agreed with client'}
+                      <th className="quotation-th">TOUR DATE:</th>
+                      <td className="quotation-td">
+                        <div className="quotation-multiline">
+                          {quotationData.tourDates || 'As agreed with client'}
                         </div>
                       </td>
                     </tr>
 
                     <tr>
-                      <th>INCLUSIONS:</th>
-                      <td>
-                        <div className="pdf-multiline-text">
-                          {data.inclusions || 'Standard service inclusions'}
+                      <th className="quotation-th">INCLUSIONS:</th>
+                      <td className="quotation-td">
+                        <div className="quotation-multiline">
+                          {quotationData.inclusions || 'Standard service package inclusions'}
                         </div>
                       </td>
                     </tr>
 
                     <tr>
-                      <th>EXCLUSIONS:</th>
-                      <td>
-                        <div className="pdf-multiline-text">
-                          {data.exclusions || 'Toll fees, personal expenses, and incidental items'}
+                      <th className="quotation-th">EXCLUSIONS:</th>
+                      <td className="quotation-td">
+                        <div className="quotation-multiline">
+                          {quotationData.exclusions || 'Toll Fee, personal expenses, and incidental items'}
                         </div>
                       </td>
                     </tr>
 
                     <tr>
-                      <th>RATE / BREAKDOWN:</th>
-                      <td>
-                        {data.rateBreakdown ? (
-                          <div style={{ fontWeight: 600 }}>{data.rateBreakdown}</div>
-                        ) : (
-                          <div>PHP {Number(data.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                        )}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <th>TOTAL AMOUNT:</th>
-                      <td>
-                        <div className="pdf-rate-highlight">
-                          PHP {Number(data.totalAmount || data.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      <th className="quotation-th">RATE:</th>
+                      <td className="quotation-td">
+                        <div className="quotation-multiline">
+                          {quotationData.rateBreakdown || `Php ${quotationData.rate.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                         </div>
                       </td>
                     </tr>
 
                     <tr>
-                      <th>REMARKS:</th>
-                      <td>
-                        <div className="pdf-multiline-text">
-                          {data.remarks || '- Initial payment upon reservation confirmation\n- Full payment on or before service commencement'}
+                      <th className="quotation-th">TOTAL AMOUNT:</th>
+                      <td className="quotation-td">
+                        <div className="quotation-bold-text">
+                          Php {quotationData.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th className="quotation-th">REMARKS:</th>
+                      <td className="quotation-td">
+                        <div className="quotation-multiline">
+                          {quotationData.remarks || '- Initial payment upon confirmation\n- Full payment on or before tour commencement'}
                         </div>
                       </td>
                     </tr>
                   </tbody>
                 </table>
-              ) : (
-                /* Inquiry Intake Structure */
-                <table className="pdf-table">
-                  <tbody>
-                    <tr>
-                      <th>CLIENT INFORMATION</th>
-                      <td>
-                        <div className="pdf-client-name">{data.fullName || data.clientName || 'N/A'}</div>
-                        <div><strong>Contact Person:</strong> {data.contactPerson || data.fullName || 'N/A'}</div>
-                        <div><strong>Phone:</strong> {data.phoneNumber || data.cellphone || 'N/A'} {data.telNo ? `· Tel: ${data.telNo}` : ''}</div>
-                        <div><strong>Email:</strong> {data.email || 'N/A'}</div>
-                        <div><strong>Address:</strong> {data.address || 'N/A'}</div>
-                        {data.population && <div><strong>Pax Count:</strong> {data.population}</div>}
-                      </td>
-                    </tr>
 
-                    <tr>
-                      <th>SERVICE REQUESTED</th>
-                      <td>
-                        <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: '#111827', marginBottom: '0.25rem' }}>
-                          {data.serviceType || data.serviceTitle || 'General Inquiry'}
-                        </div>
-                        {data.servicePrice && (
-                          <div style={{ fontSize: '0.8125rem', color: '#6366f1', fontWeight: 600 }}>
-                            Fee / Price: {data.servicePrice}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <th>REQUIREMENTS CHECKLIST</th>
-                      <td>
-                        {parsedInquiry?.requirementsList && parsedInquiry.requirementsList.length > 0 ? (
-                          <ul className="pdf-bullet-list">
-                            {parsedInquiry.requirementsList.map((req, idx) => {
-                              const reqName = req.name || `Requirement ${idx + 1}`;
-                              const isFulfilled = Boolean(req.file?.url || req.value);
-                              return (
-                                <li key={idx}>
-                                  <strong>{reqName}</strong> — {isFulfilled ? '✓ Verified / Submitted' : 'Pending Document'}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : (
-                          <div className="pdf-multiline-text">{parsedInquiry?.requirementsText || 'Standard client requirements'}</div>
-                        )}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <th>REMARKS & INTERNAL NOTES</th>
-                      <td>
-                        <div className="pdf-multiline-text">
-                          {parsedInquiry?.remarksText || 'No additional notes provided.'}
-                        </div>
-                      </td>
-                    </tr>
-
-                    {data.customFields && typeof data.customFields === 'object' && Object.keys(data.customFields).length > 0 && (
-                      <tr>
-                        <th>ADDITIONAL SPECIFICATIONS</th>
-                        <td>
-                          {Object.entries(data.customFields).map(([k, v]) => (
-                            <div key={k}>
-                              <strong>{k}:</strong> {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-                            </div>
-                          ))}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {/* Prepared By Section */}
-              <div className="pdf-sign-off-section">
-                <div className="pdf-prepared-by-box">
-                  <span className="pdf-prepared-label">Prepared by:</span>
-                  <span className="pdf-signature-line">
-                    {data.preparedByName || data.preparedBy || data.agentName || 'Emmanuel Manlapig'}
-                  </span>
-                  <span className="pdf-prepared-name">
-                    {data.preparedByName || data.preparedBy || data.agentName || 'Emmanuel Manlapig'}
-                  </span>
-                  <span className="pdf-prepared-title">
-                    {data.preparedByTitle || 'Business Head'}
-                  </span>
-                  {(data.preparedByContact || data.agentContact) && (
-                    <span className="pdf-prepared-contact">
-                      {data.preparedByContact || data.agentContact}
-                    </span>
+                {/* Sign-off */}
+                <div className="quotation-prepared-by-block">
+                  <div className="prepared-label">Prepared by:</div>
+                  <div className="prepared-sig-space"></div>
+                  <div className="prepared-name">{quotationData.preparedByName}</div>
+                  <div className="prepared-sub">{quotationData.preparedByTitle}</div>
+                  {quotationData.preparedByContact && (
+                    <div className="prepared-sub">{quotationData.preparedByContact}</div>
                   )}
                 </div>
 
-                {data.acknowledgedBy && (
-                  <div className="pdf-prepared-by-box" style={{ textAlign: 'right' }}>
-                    <span className="pdf-prepared-label">Acknowledged by:</span>
-                    <span className="pdf-signature-line">{data.acknowledgedBy}</span>
-                    <span className="pdf-prepared-name">{data.acknowledgedBy}</span>
-                    <span className="pdf-prepared-title">Supervisor / Manager</span>
+                {/* Official Footer with DOT Accreditation */}
+                <div className="quotation-pdf-footer">
+                  <div className="quotation-accreditation">
+                    <div className="dot-badge-icon">
+                      <i className="fa-solid fa-certificate"></i> ACCREDITED
+                    </div>
+                    <div className="accreditation-code">ADF-07-001</div>
                   </div>
-                )}
+                  <div className="quotation-address">
+                    <div>Unit 35 A Square Mall Brgy. Pinagbarilan Baliuag 3006 Bulacan</div>
+                    <div>Telephone. No. +63 (44) 813 3801</div>
+                    <div>fairflytravel19@yahoo.com</div>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* ============================================================ */
+              /* OFFICIAL INQUIRY FORM (SAF-01-002)                           */
+              /* ============================================================ */
+              <div className="inquiry-official-form">
+                {/* Top Header */}
+                <div className="inquiry-form-header">
+                  <div className="inquiry-form-brand">
+                    <img src="/FairflyLogo.png" alt="FairFly Travel & Tours" className="inquiry-brand-logo" />
+                  </div>
+                  <div className="inquiry-form-center-title">
+                    INQUIRY FORM
+                  </div>
+                  <div className="inquiry-control-box">
+                    <div className="inquiry-control-row">
+                      <span className="ctrl-label">Form No.:</span>
+                      <span className="ctrl-val">{inquiryData.formNo}</span>
+                    </div>
+                    <div className="inquiry-control-row highlight">
+                      <span className="ctrl-label">Control No.:</span>
+                      <span className="ctrl-val">{inquiryData.controlNo}</span>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Footer Matching Attached PDF */}
-            <footer className="pdf-footer">
-              <div className="pdf-accreditation-box">
-                <span className="pdf-accreditation-code">ADF-07-001</span>
-                <span style={{ fontSize: '0.675rem', color: '#6b7280' }}>DOT Accredited Travel & Tours</span>
+                {/* Client Profile Table Grid */}
+                <table className="inquiry-info-table">
+                  <tbody>
+                    <tr>
+                      <td className="info-cell" colSpan="2">
+                        <span className="cell-label">Name of Client/Company:</span>
+                        <span className="cell-value bold">{inquiryData.clientName}</span>
+                      </td>
+                      <td className="info-cell">
+                        <span className="cell-label">Population:</span>
+                        <span className="cell-value">{inquiryData.population}</span>
+                      </td>
+                      <td className="info-cell">
+                        <span className="cell-label">Date Inquired:</span>
+                        <span className="cell-value">{inquiryData.dateInquired}</span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="info-cell" colSpan="2">
+                        <span className="cell-label">Address:</span>
+                        <span className="cell-value">{inquiryData.address}</span>
+                      </td>
+                      <td className="info-cell" colSpan="2">
+                        <span className="cell-label">Tel No.:</span>
+                        <span className="cell-value">{inquiryData.telNo}</span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="info-cell" colSpan="2">
+                        <span className="cell-label">Contact Person:</span>
+                        <span className="cell-value">{inquiryData.contactPerson}</span>
+                      </td>
+                      <td className="info-cell" colSpan="2">
+                        <span className="cell-label">Cellphone No.:</span>
+                        <span className="cell-value">{inquiryData.cellphone}</span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="info-cell" colSpan="2">
+                        <span className="cell-label">E-mail Address:</span>
+                        <span className="cell-value">{inquiryData.email}</span>
+                      </td>
+                      <td className="info-cell">
+                        <span className="cell-label">Contract No.</span>
+                        <span className="cell-value">{inquiryData.contractNo}</span>
+                      </td>
+                      <td className="info-cell">
+                        <span className="cell-label">I.S. No.</span>
+                        <span className="cell-value">{inquiryData.isNo}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* 3-Column Table: Services Offered | Specified Requirements of Client | Remarks */}
+                <table className="inquiry-spec-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '25%' }}>Services Offered:</th>
+                      <th style={{ width: '50%' }}>Specified Requirements of Client</th>
+                      <th style={{ width: '25%' }}>Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {/* Services Offered Checkboxes */}
+                      <td className="services-checkboxes-cell">
+                        <div className="services-check-list">
+                          {OFFICIAL_SERVICES.map((srv) => {
+                            const isSelected = inquiryData.servicesOffered.some((s) => {
+                              const cleanS = String(s).toLowerCase();
+                              const cleanTarget = srv.toLowerCase();
+                              if (cleanTarget === 'others') {
+                                return !OFFICIAL_SERVICES.slice(0, 5).some(o => cleanS.includes(o.toLowerCase()));
+                              }
+                              return cleanS.includes(cleanTarget);
+                            });
+
+                            return (
+                              <div key={srv} className="pdf-check-item">
+                                <span className={`pdf-check-box ${isSelected ? 'checked' : ''}`}>
+                                  {isSelected ? '✓' : ''}
+                                </span>
+                                <span className="pdf-check-label">{srv}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+
+                      {/* Specified Requirements of Client */}
+                      <td className="spec-reqs-cell">
+                        <div className="spec-reqs-content">
+                          {inquiryData.specifiedRequirements}
+                        </div>
+                      </td>
+
+                      {/* Remarks */}
+                      <td className="remarks-cell">
+                        <div className="remarks-content">
+                          {inquiryData.remarks}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Sign-off Bottom Row */}
+                <table className="inquiry-sign-table">
+                  <tbody>
+                    <tr>
+                      <td className="sign-cell" style={{ width: '50%' }}>
+                        <div className="sign-title">Agent:</div>
+                        <div className="sign-signature-area">
+                          {inquiryData.agentSignature ? (
+                            <span className="sign-digital">{inquiryData.agentSignature}</span>
+                          ) : (
+                            <span className="sign-placeholder">{inquiryData.agentName}</span>
+                          )}
+                        </div>
+                        <div className="sign-sub">Name/Signature</div>
+                      </td>
+                      <td className="sign-cell" style={{ width: '50%' }}>
+                        <div className="sign-title">Acknowledged by:</div>
+                        <div className="sign-signature-area">
+                          {inquiryData.acknowledgedSignature ? (
+                            <span className="sign-digital">{inquiryData.acknowledgedSignature}</span>
+                          ) : (
+                            <span className="sign-placeholder">{inquiryData.acknowledgedBy}</span>
+                          )}
+                        </div>
+                        <div className="sign-sub">Name/Signature</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Branch attribution footer */}
+                <div className="inquiry-form-footer">
+                  <span>{inquiryData.branchName}</span>
+                </div>
               </div>
-              <div className="pdf-address-box">
-                <div>Unit 35 A Square Mall Brgy. Pinagbarilan Baliuag 3006 Bulacan</div>
-                <div>Telephone No. +63 (44) 813 3801</div>
-                <div>fairflytravel19@yahoo.com</div>
-              </div>
-            </footer>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
+

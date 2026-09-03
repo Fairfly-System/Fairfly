@@ -137,6 +137,11 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
     }
   };
 
+  const isFormValid = Boolean(
+    title.trim() &&
+    (selectedFile || existingFileUrl)
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -402,7 +407,7 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
         <button
           type="submit"
           className="btn-primary"
-          disabled={isLoading || isUploading}
+          disabled={isLoading || isUploading || !isFormValid}
           style={{ minWidth: '8rem', justifyContent: 'center' }}
         >
           {isUploading ? 'Uploading...' : isLoading ? 'Saving...' : initialData ? 'Save Changes' : 'Publish Resource'}

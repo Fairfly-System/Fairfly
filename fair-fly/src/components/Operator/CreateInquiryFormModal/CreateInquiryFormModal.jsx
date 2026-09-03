@@ -1,14 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import { fetchServices } from '../../../services/serviceService';
-import { createInquiry, fetchInquirySchema } from '../../../services/inquiryService';
-import { uploadFileToBackend } from '../../../utils/fileUploadApi';
+import { createInquiry } from '../../../services/inquiryService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './create-inquiry-form-modal.css';
 
 const todayIso = new Date().toISOString().split('T')[0];
+
+const OFFICIAL_SERVICES = [
+  'NSO',
+  'Passport',
+  'VISA Assistance',
+  'Package Tour',
+  'Ticket',
+  'Others'
+];
 
 export default function CreateInquiryFormModal({ onClose }) {
   const { user, userDetails, userToken } = useAuthContext();
@@ -16,13 +24,11 @@ export default function CreateInquiryFormModal({ onClose }) {
 
   const [activeServices, setActiveServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
-  const [formSchema, setFormSchema] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadingReqId, setUploadingReqId] = useState(null);
 
   const [form, setForm] = useState({
-    formNo: `SAF-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-    controlNo: `CTRL-${Math.floor(1000 + Math.random() * 9000)}`,
+    formNo: 'SAF-01-002',
+    controlNo: `23-${Math.floor(100 + Math.random() * 900)}`,
     clientName: '',
     contactPerson: '',
     cellphone: '',
@@ -33,10 +39,11 @@ export default function CreateInquiryFormModal({ onClose }) {
     contractNo: '',
     isNo: '',
     dateInquired: todayIso,
+    servicesOffered: ['Package Tour'],
     serviceId: '',
-    serviceType: '',
+    serviceType: 'Package Tour',
     servicePrice: '',
-    requirements: [],
+    specifiedRequirements: '',
     remarks: '',
     agentName: userDetails?.name || userDetails?.fullName || 'Operator',
     agentSignature: '',
@@ -45,7 +52,6 @@ export default function CreateInquiryFormModal({ onClose }) {
     customFields: {}
   });
 
-  // Fetch active services (including branch exclusives) and dynamic schema
   useEffect(() => {
     setLoadingServices(true);
     const branchUid = userDetails?.role === 'operator' ? user?.uid : null;
@@ -62,15 +68,6 @@ export default function CreateInquiryFormModal({ onClose }) {
         setLoadingServices(false);
       }
     );
-
-    fetchInquirySchema(
-      (schema) => {
-        if (schema) setFormSchema(schema);
-      },
-      (err) => {
-        console.error('Error loading inquiry schema:', err);
-      }
-    );
   }, [user?.uid, userDetails?.role]);
 
   const handleChange = (e) => {
@@ -78,138 +75,87 @@ export default function CreateInquiryFormModal({ onClose }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCustomFieldChange = (fieldId, value) => {
-    setForm((prev) => ({
-      ...prev,
-      customFields: {
-        ...prev.customFields,
-        [fieldId]: value
-      }
-    }));
+  const handleToggleService = (srv) => {
+    setForm((prev) => {
+      const current = prev.servicesOffered || [];
+      const updated = current.includes(srv)
+        ? current.filter((s) => s !== srv)
+        : [...current, srv];
+      return {
+        ...prev,
+        servicesOffered: updated,
+        serviceType: updated.join(', ')
+      };
+    });
   };
 
-  const handleServiceSelect = (e) => {
+  const handleCatalogServiceSelect = (e) => {
     const selectedServiceId = e.target.value;
     if (!selectedServiceId) {
-      setForm((prev) => ({
-        ...prev,
-        serviceId: '',
-        serviceType: '',
-        servicePrice: '',
-        requirements: []
-      }));
       return;
     }
 
     const matched = activeServices.find((s) => s.id === selectedServiceId);
     if (matched) {
-      // Map service requirements into dynamic requirement items with file upload placeholders
-      const reqItems = Array.isArray(matched.requirements) && matched.requirements.length > 0
-        ? matched.requirements.map((r, idx) => {
-            const name = typeof r === 'string' ? r : (r.name || r.title || `Requirement ${idx + 1}`);
-            return {
-              id: `req_${idx}_${Date.now()}`,
-              name,
-              required: typeof r === 'object' ? (r.required !== false) : true,
-              inputType: typeof r === 'object' && r.inputType ? r.inputType : 'file',
-              file: null,
-              value: '',
-              isUploaded: false
-            };
-          })
-        : [
-            {
-              id: `req_default_${Date.now()}`,
-              name: 'Valid ID / Client Documents',
-              required: true,
-              inputType: 'file',
-              file: null,
-              value: '',
-              isUploaded: false
-            }
-          ];
-
-      setForm((prev) => ({
-        ...prev,
-        serviceId: matched.id,
-        serviceType: matched.name,
-        servicePrice: matched.price || (matched.baseFee ? `PHP ${matched.baseFee}` : ''),
-        requirements: reqItems
-      }));
+      setForm((prev) => {
+        const current = prev.servicesOffered || [];
+        const updated = current.includes(matched.name) ? current : [...current, matched.name];
+        return {
+          ...prev,
+          serviceId: matched.id,
+          servicePrice: matched.price || (matched.baseFee ? `PHP ${matched.baseFee}` : ''),
+          servicesOffered: updated,
+          serviceType: updated.join(', ')
+        };
+      });
     }
   };
 
-  const handleRequirementFileUpload = async (reqId, file) => {
-    if (!file) return;
-    setUploadingReqId(reqId);
-
-    try {
-      const uploadResult = await uploadFileToBackend(file, 'inquiry_requirements', userToken);
-      setForm((prev) => ({
-        ...prev,
-        requirements: prev.requirements.map((r) => {
-          if (r.id === reqId) {
-            return {
-              ...r,
-              file: {
-                url: uploadResult.url,
-                fileName: uploadResult.fileName,
-                fileSize: uploadResult.fileSize,
-                storagePath: uploadResult.storagePath
-              },
-              isUploaded: true
-            };
-          }
-          return r;
-        })
-      }));
-      addToast(`Uploaded "${file.name}" for requirement`, 'success');
-    } catch (err) {
-      console.error('Error uploading requirement file:', err);
-      addToast(toFriendlyMessage(err, 'Failed to upload document file'), 'error');
-    } finally {
-      setUploadingReqId(null);
-    }
-  };
-
-  const handleRequirementTextChange = (reqId, val) => {
-    setForm((prev) => ({
-      ...prev,
-      requirements: prev.requirements.map((r) => {
-        if (r.id === reqId) {
-          return { ...r, value: val, isUploaded: Boolean(val.trim()) };
-        }
-        return r;
-      })
-    }));
-  };
+  const isFormValid = Boolean(
+    form.clientName.trim() &&
+    (form.cellphone.trim() || form.email.trim()) &&
+    ((form.servicesOffered || []).length > 0 || form.serviceType.trim()) &&
+    form.specifiedRequirements.trim()
+  );
 
   const handleSubmit = () => {
-    if (!form.clientName || !form.cellphone) {
-      addToast('Client name and cellphone number are required', 'error');
+    if (!form.clientName.trim()) {
+      addToast('Client or Company name is required', 'error');
       return;
     }
-
-    if (!form.serviceId && !form.serviceType) {
-      addToast('Please select a service for this inquiry', 'error');
+    if (!form.cellphone.trim() && !form.email.trim()) {
+      addToast('Please provide at least a cellphone number or email', 'error');
+      return;
+    }
+    if ((form.servicesOffered || []).length === 0) {
+      addToast('Please select at least one service offered checkbox', 'error');
+      return;
+    }
+    if (!form.specifiedRequirements.trim()) {
+      addToast('Please enter the Specified Requirements of Client', 'error');
       return;
     }
 
     const payload = {
       ...form,
+      formNo: 'SAF-01-002',
       branchUid: userDetails?.role === 'operator' ? user?.uid : null,
       branchName: userDetails?.branchName || userDetails?.name || 'Branch Office',
+      status: 'submitted',
       notes: form.remarks
     };
 
+    setIsSubmitting(true);
     createInquiry(
       userToken,
       payload,
       () => {
-        addToast('Inquiry form created successfully', 'success');
+        setIsSubmitting(false);
+        addToast('Official Inquiry Form (SAF-01-002) recorded successfully', 'success');
         onClose();
       },
       (error) => {
+        setIsSubmitting(false);
         addToast(toFriendlyMessage(error, 'Failed to create inquiry form'), 'error');
       },
       setIsSubmitting
@@ -221,26 +167,24 @@ export default function CreateInquiryFormModal({ onClose }) {
       isOpen={true}
       onClose={onClose}
       maxWidth="58rem"
-      title="Create Service Inquiry Intake Form"
-      subtitle="Select active service, attach required client documents, and record client details"
+      title="Official Service Inquiry Intake Form (SAF-01-002)"
+      subtitle="Intake client specifications and requirements for custom travel or document services"
       isLoading={isSubmitting}
     >
       <div className="cif-body-content">
-        {/* Form No / Control No */}
         <div className="cif-row2">
           <div className="cif-field">
             <label>Form No. <span>*</span></label>
-            <input name="formNo" placeholder="e.g., SAF-01-001" value={form.formNo} onChange={handleChange} disabled={isSubmitting} />
+            <input name="formNo" value={form.formNo} onChange={handleChange} disabled={isSubmitting} />
           </div>
           <div className="cif-field">
             <label>Control No. <span>*</span></label>
-            <input name="controlNo" placeholder="e.g., 26-059" value={form.controlNo} onChange={handleChange} disabled={isSubmitting} />
+            <input name="controlNo" placeholder="e.g., 23-001" value={form.controlNo} onChange={handleChange} disabled={isSubmitting} />
           </div>
         </div>
 
-        {/* ── Client Information ── */}
         <h3 className="cif-section-title">
-          <i className="fa-solid fa-user"></i> Client Information
+          <i className="fa-solid fa-user"></i> 1. Client Information
         </h3>
 
         <div className="cif-row2">
@@ -296,144 +240,79 @@ export default function CreateInquiryFormModal({ onClose }) {
           <input name="dateInquired" type="date" value={form.dateInquired} onChange={handleChange} disabled={isSubmitting} />
         </div>
 
-        {/* ── Dynamic Services and Requirements ── */}
         <h3 className="cif-section-title">
-          <i className="fa-solid fa-layer-group"></i> Dynamic Service & Client Requirements
+          <i className="fa-solid fa-list-check"></i> 2. Services Offered (SAF-01-002)
         </h3>
 
-        <div className="cif-row2">
-          <div className="cif-field">
-            <label>Select Active Service Offered <span>*</span></label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem', marginBottom: '0.75rem' }}>
+          {OFFICIAL_SERVICES.map((srv) => {
+            const isChecked = (form.servicesOffered || []).includes(srv);
+            return (
+              <label key={srv} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                border: isChecked ? '1.5px solid var(--purple, #7c3aed)' : '1px solid #e2e8f0',
+                background: isChecked ? '#f5f3ff' : '#ffffff',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.8125rem',
+                fontWeight: isChecked ? 700 : 500
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => handleToggleService(srv)}
+                />
+                <span>{srv}</span>
+              </label>
+            );
+          })}
+        </div>
+
+        {activeServices.length > 0 && (
+          <div className="cif-field" style={{ marginBottom: '0.75rem' }}>
+            <label>Link Active Catalog Service (Optional)</label>
             <select
-              name="serviceId"
               value={form.serviceId}
-              onChange={handleServiceSelect}
+              onChange={handleCatalogServiceSelect}
               disabled={isSubmitting || loadingServices}
             >
-              <option value="">-- Choose from Active Services --</option>
+              <option value="">-- Associate with an active catalog service --</option>
               {activeServices.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} {s.isBranchExclusive ? `(Branch Exclusive: ${s.branchName || 'Exclusive'})` : ''} - {s.price || 'PHP ' + (s.baseFee || '')}
+                  {s.name} - {s.price || (s.baseFee ? 'PHP ' + s.baseFee : 'Standard')}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="cif-field">
-            <label>Package Fee / Price</label>
-            <input
-              name="servicePrice"
-              placeholder="e.g. PHP 55,000.00"
-              value={form.servicePrice}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-          </div>
-        </div>
-
-        {/* Requirements Uploads Section */}
-        {form.requirements.length > 0 && (
-          <div style={{ marginTop: '0.75rem' }}>
-            <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-dark)' }}>
-              Service Requirements Checklist (Upload client documents on their behalf)
-            </label>
-            <p style={{ margin: '0.2rem 0 0.6rem 0', fontSize: '0.75rem', color: '#64748b' }}>
-              Upload valid copies (PDF, JPG, PNG) of the required documents for the client. All mandatory requirements must be uploaded before the inquiry can be confirmed.
-            </p>
-
-            <div className="cif-reqs-container">
-              {form.requirements.map((req) => (
-                <div key={req.id} className={`cif-req-card ${req.file?.url || req.value ? 'is-fulfilled' : ''}`}>
-                  <div className="cif-req-header">
-                    <span className="cif-req-name">
-                      {req.name} {req.required && <span style={{ color: 'var(--red)' }}>*</span>}
-                    </span>
-                    <span className={`cif-req-badge ${req.file?.url || req.value ? 'uploaded' : 'pending'}`}>
-                      {req.file?.url ? '✓ Uploaded' : req.value ? '✓ Completed' : 'Pending Document'}
-                    </span>
-                  </div>
-
-                  <div className="cif-upload-box">
-                    {req.inputType === 'text' ? (
-                      <input
-                        type="text"
-                        placeholder={`Enter ${req.name}...`}
-                        value={req.value || ''}
-                        onChange={(e) => handleRequirementTextChange(req.id, e.target.value)}
-                        disabled={isSubmitting}
-                        style={{ padding: '0.45rem 0.65rem', fontSize: '0.8125rem' }}
-                      />
-                    ) : (
-                      <>
-                        {req.file?.url ? (
-                          <div className="cif-file-chosen">
-                            <i className="fa-solid fa-file-check"></i>
-                            <span>{req.file.fileName}</span>
-                            <a
-                              href={req.file.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: 'var(--purple)', marginLeft: '0.5rem', fontSize: '0.75rem', textDecoration: 'underline' }}
-                            >
-                              Preview
-                            </a>
-                          </div>
-                        ) : null}
-
-                        <label className="cif-file-btn">
-                          <i className={uploadingReqId === req.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'}></i>
-                          <span>{uploadingReqId === req.id ? 'Uploading...' : req.file?.url ? 'Change File' : 'Upload File / Photo'}</span>
-                          <input
-                            type="file"
-                            style={{ display: 'none' }}
-                            disabled={isSubmitting || uploadingReqId === req.id}
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                handleRequirementFileUpload(req.id, e.target.files[0]);
-                              }
-                            }}
-                          />
-                        </label>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         )}
 
-        {/* Dynamic Custom Fields from Admin Form Builder (if configured) */}
-        {formSchema?.sections && formSchema.sections.filter(s => s.id !== 'client_info' && s.id !== 'signatures').map(section => (
-          <div key={section.id} style={{ marginTop: '1rem' }}>
-            <h3 className="cif-section-title">
-              <i className="fa-solid fa-sliders"></i> {section.title}
-            </h3>
-            <div className="cif-row2">
-              {section.fields?.map(field => (
-                <div key={field.id} className="cif-field">
-                  <label>
-                    {field.label} {field.required && <span>*</span>}
-                  </label>
-                  <input
-                    type={field.type || 'text'}
-                    placeholder={field.placeholder || ''}
-                    value={form.customFields[field.id] || ''}
-                    onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+        <h3 className="cif-section-title">
+          <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span>*</span>
+        </h3>
+        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.775rem', color: '#64748b' }}>
+          What does the client want? Describe vehicles, passenger count, itinerary, destinations, target tour dates, lodging preferences, and specific requests.
+        </p>
+        <div className="cif-field">
+          <textarea
+            name="specifiedRequirements"
+            placeholder={`• (1) Unit Tourist Bus (49 Regular seats, audio/video entertainment)\n• 3D/2N Tour: QC - Bolinao - Alaminos - QC\n• Target Tour Dates: April 29 to May 1`}
+            value={form.specifiedRequirements}
+            onChange={handleChange}
+            rows={5}
+            className="cif-textarea-light"
+            disabled={isSubmitting}
+            required
+          />
+        </div>
 
-        {/* Remarks */}
         <div className="cif-field" style={{ marginTop: '0.875rem' }}>
-          <label>Remarks & Additional Notes</label>
+          <label>Remarks & Notes</label>
           <textarea
             name="remarks"
-            placeholder="Additional instructions or notes regarding this inquiry..."
+            placeholder="Payment terms, special considerations, or branch notes..."
             value={form.remarks}
             onChange={handleChange}
             rows={3}
@@ -442,9 +321,8 @@ export default function CreateInquiryFormModal({ onClose }) {
           />
         </div>
 
-        {/* ── Signatures ── */}
         <h3 className="cif-section-title">
-          <i className="fa-solid fa-signature"></i> Signatures & Authorizations
+          <i className="fa-solid fa-signature"></i> 4. Signatures & Authorizations
         </h3>
 
         <div className="cif-row2">
@@ -461,7 +339,7 @@ export default function CreateInquiryFormModal({ onClose }) {
         <div className="cif-row2">
           <div className="cif-field">
             <label>Acknowledged By</label>
-            <input name="acknowledgedBy" placeholder="Supervisor/Manager name" value={form.acknowledgedBy} onChange={handleChange} disabled={isSubmitting} />
+            <input name="acknowledgedBy" placeholder="Supervisor / Manager name" value={form.acknowledgedBy} onChange={handleChange} disabled={isSubmitting} />
           </div>
           <div className="cif-field">
             <label>Supervisor Signature</label>
@@ -469,21 +347,20 @@ export default function CreateInquiryFormModal({ onClose }) {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="cif-actions">
           <button className="cif-btn-cancel" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
-          <button className="cif-btn-submit" onClick={handleSubmit} disabled={isSubmitting}>
+          <button className="cif-btn-submit" onClick={handleSubmit} disabled={isSubmitting || !isFormValid}>
             {isSubmitting ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin"></i>
-                <span>Creating Inquiry...</span>
+                <span>Recording Inquiry...</span>
               </>
             ) : (
               <>
                 <i className="fa-solid fa-file-pen"></i>
-                <span>Create Inquiry Form</span>
+                <span>Record Official Inquiry</span>
               </>
             )}
           </button>

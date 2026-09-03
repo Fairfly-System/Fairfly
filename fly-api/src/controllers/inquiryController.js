@@ -70,6 +70,8 @@ const createInquiry = async (req, res) => {
       serviceId,
       serviceType, 
       servicePrice,
+      servicesOffered,
+      specifiedRequirements,
       requirements,
       notes, 
       remarks,
@@ -81,7 +83,9 @@ const createInquiry = async (req, res) => {
       branchName,
       formNo, 
       controlNo,
-      customFields
+      customFields,
+      clientUid,
+      status
     } = req.body;
 
     const resolvedName = fullName || clientName;
@@ -94,8 +98,25 @@ const createInquiry = async (req, res) => {
     const now = new Date().toISOString();
     const effectiveBranchUid = branchUid || req.userDetails?.branchUid || req.user?.uid || null;
     const effectiveBranchName = branchName || req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
+    const effectiveClientUid = req.user?.uid || clientUid || null;
+
+    // Resolve services offered array
+    let resolvedServices = [];
+    if (Array.isArray(servicesOffered) && servicesOffered.length > 0) {
+      resolvedServices = servicesOffered;
+    } else if (serviceType) {
+      resolvedServices = [serviceType];
+    } else {
+      resolvedServices = ['General Inquiry'];
+    }
+
+    // Resolve client's specified requirements (What does the client want?)
+    const resolvedSpecReqs = typeof specifiedRequirements === 'string'
+      ? specifiedRequirements.trim()
+      : (typeof requirements === 'string' ? requirements.trim() : (notes || ''));
 
     const newInquiry = {
+      clientUid: effectiveClientUid,
       fullName: resolvedName.trim(),
       clientName: resolvedName.trim(),
       contactPerson: (contactPerson || '').trim(),
@@ -109,25 +130,27 @@ const createInquiry = async (req, res) => {
       isNo: isNo || '',
       dateInquired: dateInquired || now.split('T')[0],
       serviceId: serviceId || null,
-      serviceType: serviceType || 'General Inquiry',
+      serviceType: serviceType || resolvedServices[0] || 'General Inquiry',
+      servicesOffered: resolvedServices,
       servicePrice: servicePrice || '',
-      requirements: Array.isArray(requirements) ? requirements : [],
-      notes: notes || remarks || '',
+      specifiedRequirements: resolvedSpecReqs,
+      requirements: Array.isArray(requirements) ? requirements : (resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []),
+      notes: notes || remarks || resolvedSpecReqs || '',
       remarks: remarks || notes || '',
-      agentName: agentName || req.userDetails?.name || 'Operator',
+      agentName: agentName || (req.userDetails?.role === 'operator' ? req.userDetails?.name : 'Online Intake'),
       agentSignature: agentSignature || '',
       agentContact: req.userDetails?.phone || req.userDetails?.phoneNumber || '',
       acknowledgedBy: acknowledgedBy || '',
       acknowledgedSignature: acknowledgedSignature || '',
       branchUid: effectiveBranchUid,
       branchName: effectiveBranchName,
-      formNo: formNo || `SAF-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-      controlNo: controlNo || `CTRL-${Math.floor(1000 + Math.random() * 9000)}`,
+      formNo: formNo || 'SAF-01-002',
+      controlNo: controlNo || `23-${Math.floor(100 + Math.random() * 900)}`,
       customFields: customFields || {},
-      status: 'pending',
+      status: status || 'submitted',
       createdAt: now,
       updatedAt: now,
-      operatorId: req.user?.uid || 'operator_admin',
+      operatorId: req.user?.uid || 'system_intake',
       confirmedQuotationId: null,
       confirmedActiveServiceId: null
     };
@@ -145,11 +168,18 @@ const createInquiry = async (req, res) => {
  */
 const getInquiries = async (req, res) => {
   try {
-    const { status, branchUid, limit } = req.query;
+    const { status, branchUid, clientUid, limit } = req.query;
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
     };
+
+    // If client user is calling, restrict to their own inquiries
+    if (req.userDetails?.role === 'client') {
+      options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
+    } else if (clientUid) {
+      options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+    }
 
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });

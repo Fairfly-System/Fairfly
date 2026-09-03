@@ -127,7 +127,7 @@ export default function QualificationApplicationModal({
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !reason.trim()}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--purple)' }}
           >
             <i className="fa-solid fa-paper-plane"></i> Submit Application

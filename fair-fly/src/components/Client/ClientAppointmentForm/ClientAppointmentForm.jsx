@@ -139,6 +139,12 @@ export default function ClientAppointmentForm({
     }
   };
 
+  const isFormValid = Boolean(
+    clientName.trim() &&
+    clientPhone.trim() &&
+    preferredDate
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -369,7 +375,7 @@ export default function ClientAppointmentForm({
             <button
               type="submit"
               className="btn-primary"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isFormValid}
             >
               <i className="fa-solid fa-calendar-check"></i>
               {isSubmitting ? 'Booking Appointment...' : 'Confirm Appointment'}

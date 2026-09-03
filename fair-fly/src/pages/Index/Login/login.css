@@ -129,6 +129,12 @@
   background: #4a5de0;
 }
 
+.login-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #a5b4fc;
+}
+
 .signup-text {
   text-align: center;
   margin-top: 16px;

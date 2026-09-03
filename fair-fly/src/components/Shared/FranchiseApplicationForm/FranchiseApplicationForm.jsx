@@ -149,7 +149,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
 
     //Check if there are any fields that are not filled with .some()
     const isNotFilled = requiredFields.some(
-      (field) => formData[field] === ''
+      (field) => !formData[field] || !String(formData[field]).trim()
     );
 
     //Check if there are any errors by seeing if the errors object is not empty

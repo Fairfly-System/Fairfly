@@ -18,7 +18,7 @@ function parseInquiryData(inquiry) {
   if (!inquiry) return { requirementsList: [], requirementsText: '', remarksText: '' };
 
   let requirementsList = [];
-  let requirementsText = '';
+  let requirementsText = inquiry.specifiedRequirements || '';
   let remarksText = '';
 
   // 1. Parse Requirements
@@ -38,22 +38,8 @@ function parseInquiryData(inquiry) {
       }
       return { id: `req_${idx}`, name: String(req), required: true, file: null, value: '' };
     });
-  } else if (typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
+  } else if (!requirementsText && typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
     requirementsText = inquiry.requirements.trim();
-  } else if (typeof inquiry.requirements === 'object' && inquiry.requirements !== null) {
-    if (inquiry.requirements.name || inquiry.requirements.title) {
-      requirementsList = [{
-        id: inquiry.requirements.id || 'req_0',
-        name: inquiry.requirements.name || inquiry.requirements.title,
-        required: inquiry.requirements.required !== false,
-        file: inquiry.requirements.file || null,
-        value: typeof inquiry.requirements.value === 'object' ? JSON.stringify(inquiry.requirements.value) : (inquiry.requirements.value || '')
-      }];
-    } else {
-      requirementsText = Object.entries(inquiry.requirements)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n');
-    }
   }
 
   // 2. Parse Remarks
@@ -65,7 +51,7 @@ function parseInquiryData(inquiry) {
       .join('\n');
   }
 
-  // 3. Fallback to notes / details (Legacy format parser: "Requirements | Remarks: ...")
+  // 3. Fallback to notes / details (Legacy format parser)
   const legacyRaw = typeof inquiry.notes === 'string' ? inquiry.notes : typeof inquiry.details === 'string' ? inquiry.details : '';
   if (legacyRaw) {
     if (legacyRaw.includes(' | Remarks: ')) {
@@ -89,17 +75,11 @@ function parseInquiryData(inquiry) {
         requirementsText = legacyRaw.trim();
       }
     }
-  } else if (typeof inquiry.notes === 'object' && inquiry.notes !== null) {
-    if (!requirementsText && requirementsList.length === 0) {
-      requirementsText = Object.entries(inquiry.notes)
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-        .join('\n');
-    }
   }
 
   return {
     requirementsList,
-    requirementsText: requirementsText || (requirementsList.length === 0 ? 'Standard service requirements.' : ''),
+    requirementsText: requirementsText || (requirementsList.length === 0 ? 'No specific client requirements provided.' : ''),
     remarksText: remarksText || 'No additional remarks recorded.'
   };
 }
@@ -144,16 +124,14 @@ export default function AdminInquiryDetailPage() {
   const breadcrumbs = [
     { label: 'Dashboard', to: '/admin' },
     { label: 'Inquiry Requests History', to: '/admin/inquiry-history' },
-    { label: inquiry ? (inquiry.formNo || 'Inquiry Details') : 'Loading...' },
+    { label: inquiry ? (inquiry.controlNo || inquiry.formNo || 'Inquiry Details') : 'Loading...' },
   ];
-
-  const isConfirmed = (inquiry?.status || '').toLowerCase() === 'confirmed';
 
   const actions = useMemo(() => {
     if (!inquiry) return [];
     return [
       {
-        label: 'Export to PDF',
+        label: 'Export to PDF (SAF-01-002)',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-primary',
@@ -170,11 +148,13 @@ export default function AdminInquiryDetailPage() {
     ];
   }, [inquiry, isDeleting]);
 
+  const isConfirmed = ['confirmed', 'accepted', 'quotation_created'].includes((inquiry?.status || '').toLowerCase());
+
   return (
     <RecordDetailLayout
       title={inquiry?.fullName || inquiry?.clientName || 'Inquiry Record Profile'}
       subtitle={inquiry?.serviceType || 'Service Inquiry'}
-      status={(inquiry?.status || 'PENDING').toUpperCase()}
+      status={(inquiry?.status || 'SUBMITTED').toUpperCase()}
       statusType={isConfirmed ? 'success' : 'warning'}
       breadcrumbs={breadcrumbs}
       backTo="/admin/inquiry-history"
@@ -186,6 +166,7 @@ export default function AdminInquiryDetailPage() {
     >
       {inquiry && (
         <div className="inquiry-detail-wrapper">
+
           {/* Confirmed Cross-Reference Banner */}
           {isConfirmed && (
             <div className="inquiry-confirmed-banner">
@@ -259,19 +240,30 @@ export default function AdminInquiryDetailPage() {
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Form Reference No.</span>
-                  <span className="detail-value text-mono" style={{ fontWeight: 700 }}>{inquiry.formNo || 'N/A'}</span>
+                  <span className="detail-value text-mono" style={{ fontWeight: 700, color: 'var(--purple)' }}>{inquiry.formNo || 'SAF-01-002'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Control No.</span>
-                  <span className="detail-value text-mono">{inquiry.controlNo || 'N/A'}</span>
+                  <span className="detail-value text-mono" style={{ fontWeight: 700 }}>{inquiry.controlNo || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
-                  <span className="detail-label">Service Requested</span>
-                  <span className="detail-value" style={{ fontWeight: 600 }}>{inquiry.serviceType || 'General Inquiry'}</span>
+                  <span className="detail-label">Services Offered</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.2rem' }}>
+                    {Array.isArray(inquiry.servicesOffered) && inquiry.servicesOffered.length > 0 ? (
+                      inquiry.servicesOffered.map((svc) => (
+                        <span key={svc} style={{ background: '#f5f3ff', color: 'var(--purple, #7c3aed)', border: '1px solid #ddd6fe', borderRadius: '4px', padding: '0.15rem 0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                          <i className="fa-solid fa-check" style={{ marginRight: '0.25rem', fontSize: '0.65rem' }}></i>
+                          {svc}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="detail-value">{inquiry.serviceType || 'General Inquiry'}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="detail-item">
-                  <span className="detail-label">Package Fee / Price</span>
-                  <span className="detail-value text-purple">{inquiry.servicePrice || 'N/A'}</span>
+                  <span className="detail-label">Service Title / Catalog Link</span>
+                  <span className="detail-value" style={{ fontWeight: 600 }}>{inquiry.serviceType || 'Custom Request'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Date Inquired</span>
@@ -285,63 +277,65 @@ export default function AdminInquiryDetailPage() {
             </article>
           </div>
 
-          {/* Requirements & Documents */}
-          <article className="card detail-panel">
-            <h2 className="panel-title">
-              <i className="fa-solid fa-list-check"></i> Service Requirements & Uploaded Attachments
+          {/* Specified Requirements of Client (SAF-01-002 Col 2) */}
+          <article className="card detail-panel" style={{ borderLeft: '4px solid var(--purple, #7c3aed)' }}>
+            <h2 className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>
+                <i className="fa-solid fa-clipboard-list" style={{ color: 'var(--purple)', marginRight: '0.4rem' }}></i>
+                Specified Requirements of Client (What the Client Wants)
+              </span>
+              <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#f5f3ff', color: 'var(--purple)', borderRadius: '4px', fontWeight: 600 }}>
+                SAF-01-002 Col 2
+              </span>
             </h2>
-            
-            {parsedData.requirementsList.length > 0 ? (
-              <div className="inquiry-reqs-list">
-                {parsedData.requirementsList.map((req, idx) => {
-                  const hasFile = Boolean(req.file?.url);
-                  const isTextDone = Boolean(req.value);
-                  const isComplete = hasFile || isTextDone;
-
-                  return (
-                    <div key={idx} className={`inquiry-req-card ${isComplete ? 'is-uploaded' : ''}`}>
-                      <div>
-                        <div className="inquiry-req-title">
-                          <span>{req.name || `Requirement ${idx + 1}`}</span>
-                          {req.required !== false && <span style={{ color: 'var(--red)', fontSize: '0.75rem' }}>(Required)</span>}
-                        </div>
-                        {req.value && (
-                          <div style={{ fontSize: '0.8125rem', color: '#475569', marginTop: '0.2rem' }}>
-                            <strong>Value:</strong> {req.value}
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        {hasFile ? (
-                          <a
-                            href={req.file.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inquiry-doc-badge valid"
-                            style={{ textDecoration: 'none' }}
-                          >
-                            <i className="fa-solid fa-file-check"></i>
-                            <span>{req.file.fileName || 'View Client Document'}</span>
-                          </a>
-                        ) : isTextDone ? (
-                          <span className="inquiry-doc-badge valid">
-                            <i className="fa-solid fa-check"></i> Completed
-                          </span>
-                        ) : (
-                          <span className="inquiry-doc-badge missing">
-                            <i className="fa-solid fa-triangle-exclamation"></i> Missing Document
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="inquiry-text" style={{ whiteSpace: 'pre-line' }}>
-                {parsedData.requirementsText}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', marginTop: '0.75rem' }}>
+              <p className="inquiry-text" style={{ whiteSpace: 'pre-line', margin: 0, fontSize: '0.9375rem', lineHeight: '1.6', color: '#1e293b' }}>
+                {inquiry.specifiedRequirements || parsedData.requirementsText}
               </p>
+            </div>
+
+            {/* Optional Attachments if any */}
+            {parsedData.requirementsList.length > 0 && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8125rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Document Attachments
+                </h4>
+                <div className="inquiry-reqs-list">
+                  {parsedData.requirementsList.map((req, idx) => {
+                    const hasFile = Boolean(req.file?.url);
+                    const isComplete = hasFile;
+
+                    return (
+                      <div key={idx} className={`inquiry-req-card ${isComplete ? 'is-uploaded' : ''}`}>
+                        <div>
+                          <div className="inquiry-req-title">
+                            <span>{req.name || `Requirement ${idx + 1}`}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          {hasFile ? (
+                            <a
+                              href={req.file.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inquiry-doc-badge valid"
+                              style={{ textDecoration: 'none' }}
+                            >
+                              <i className="fa-solid fa-file-check"></i>
+                              <span>{req.file.fileName || 'View Client Document'}</span>
+                            </a>
+                          ) : (
+                            <span className="inquiry-doc-badge missing">
+                              <i className="fa-solid fa-triangle-exclamation"></i> Missing Document
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </article>
 

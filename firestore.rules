@@ -146,6 +146,13 @@ service cloud.firestore {
       allow update, delete: if isAdminOrOperator();
     }
 
+    // ── Inquiries ─────────────────────────────────────────────────
+    match /inquiries/{inquiryId} {
+      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isAdminOrOperator();
+    }
+
     // ── Franchise Applications ────────────────────────────────────
     match /franchise_applications/{appId} {
       allow create: if true;

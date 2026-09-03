@@ -95,6 +95,11 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
     }
   };
 
+  const isFormValid = Boolean(
+    username.trim() &&
+    (initialData || (email.trim() && password && password.length >= 6))
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -375,7 +380,7 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
         <button
           type="submit"
           className="btn-primary"
-          disabled={isLoading}
+          disabled={isLoading || !isFormValid}
         >
           <i className="fa-solid fa-user-shield"></i>
           {isLoading ? 'Saving...' : initialData ? 'Update Administrator' : 'Create Administrator'}

@@ -3,6 +3,7 @@ import { NavLink } from 'react-router';
 import { fetchServices } from '../../../services/serviceService';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
 import ClientServiceRequestModal from '../../../components/Client/ClientServiceRequestModal/ClientServiceRequestModal';
+import ClientInquiryModal from '../../../components/Client/ClientInquiryModal/ClientInquiryModal';
 import ClientServicesMarketplace from '../../../components/Client/ClientServicesMarketplace/ClientServicesMarketplace';
 import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
 import './client-dashboard.css';
@@ -10,6 +11,7 @@ import './client-dashboard.css';
 export default function ClientDashboard() {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
   const [selectedServiceIdForModal, setSelectedServiceIdForModal] = useState('');
 
   const [catalogServices, setCatalogServices] = useState([]);
@@ -60,22 +62,19 @@ export default function ClientDashboard() {
             </div>
             <div>
               <h2>Custom Service Request</h2>
-              <p>Submit custom requirements or start a document processing intake</p>
+              <p>Submit custom requirements or start an official service inquiry (SAF-01-002)</p>
             </div>
           </div>
 
           <div className="client-card-body">
             <p>
-              Avail travel services online including PSA documents, passport renewals, VISA assistance, package tours, and airline bookings assigned directly to your preferred branch.
+              Submit custom requirements for travel packages, PSA documents, passport renewals, VISA assistance, and airline bookings assigned directly to your preferred branch.
             </p>
 
             <button
               type="button"
               className="btn-primary"
-              onClick={() => {
-                setSelectedServiceIdForModal('');
-                setShowServiceRequestModal(true);
-              }}
+              onClick={() => setShowInquiryModal(true)}
             >
               <i className="fa-solid fa-plus-circle"></i>
               Request Custom Service
@@ -148,6 +147,11 @@ export default function ClientDashboard() {
       />
 
       {/* Modals */}
+      <ClientInquiryModal
+        isOpen={showInquiryModal}
+        onClose={() => setShowInquiryModal(false)}
+      />
+
       <ClientServiceRequestModal
         isOpen={showServiceRequestModal}
         initialServiceId={selectedServiceIdForModal}

@@ -1,0 +1,55 @@
+.create-quote-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+}
+
+.quote-inquiry-linked-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.65rem 1rem;
+  font-size: 0.8125rem;
+  color: #5b21b6;
+}
+
+.quote-inquiry-linked-badge i {
+  color: var(--purple, #7c3aed);
+  font-size: 0.9375rem;
+}
+
+.quote-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1rem 1.25rem;
+}
+
+.quote-section-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--purple, #7c3aed);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px solid #f8fafc;
+  padding-bottom: 0.4rem;
+}
+
+.quote-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}

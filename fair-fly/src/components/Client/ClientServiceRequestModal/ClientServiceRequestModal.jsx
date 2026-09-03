@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
@@ -199,6 +199,29 @@ export default function ClientServiceRequestModal({
       }
     }));
   };
+
+  const isFormValid = useMemo(() => {
+    if (!selectedServiceId || !selectedBranchUid || !clientName.trim()) {
+      return false;
+    }
+
+    for (let i = 0; i < serviceRequirements.length; i++) {
+      const req = serviceRequirements[i];
+      const isReq = typeof req === 'object' ? req.required !== false : true;
+      const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
+
+      if (isReq) {
+        const state = requirementInputs[i] || {};
+        if (inputType === 'image' || inputType === 'file') {
+          if (!state.file) return false;
+        } else {
+          if (!state.textValue || !state.textValue.trim()) return false;
+        }
+      }
+    }
+
+    return true;
+  }, [selectedServiceId, selectedBranchUid, clientName, serviceRequirements, requirementInputs]);
 
   if (!isOpen) return null;
 
@@ -661,7 +684,7 @@ export default function ClientServiceRequestModal({
               <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </button>
-              <button type="submit" className="btn-primary" disabled={isSubmitting || servicesList.length === 0}>
+              <button type="submit" className="btn-primary" disabled={isSubmitting || servicesList.length === 0 || !isFormValid}>
                 {isSubmitting ? (
                   <>
                     <i className="fa-solid fa-spinner fa-spin"></i> Submitting & Uploading...

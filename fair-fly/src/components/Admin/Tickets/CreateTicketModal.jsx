@@ -270,7 +270,7 @@ const CreateTicketModal = forwardRef(
             <button
               type="submit"
               className="btn-primary"
-              disabled={!formData.title.trim() || !formData.initialMessage.trim() || isLoading}
+              disabled={!formData.title.trim() || !formData.initialMessage.trim() || (!isOperatorPortal && !formData.operatorId?.trim()) || isLoading}
             >
               {isLoading ? (
                 <>

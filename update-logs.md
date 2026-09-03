@@ -1,5 +1,70 @@
 # Update Logs
 
+## [2026-09-03] Fix: Proactive Submit Button Disabling Across All Forms Until Required Inputs and Files Are Provided
+
+### Files Modified
+- **Client Portal (`fair-fly`)**:
+  - `fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx` (Added `isFormValid` memo that validates selected service, selected branch, client name, and every dynamic requirement in `serviceRequirements` ensuring all required files/images are attached and text inputs are filled before enabling the submit button; updated submit button `disabled={isSubmitting || servicesList.length === 0 || !isFormValid}`).
+  - `fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx` (Added `isFormValid` memo checking `clientName`, phone/email, `selectedServices.length > 0`, `specifiedRequirements`, and branch selection; updated submit button `disabled={isSubmitting || !isFormValid}`).
+  - `fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx` (Added `isFormValid` validation checking client name, phone number, and preferred appointment date; updated submit button `disabled={isSubmitting || !isFormValid}`).
+  - `fair-fly/src/pages/Index/Login/login.jsx` (Added `isFormValid` checking email and password alongside `isLoading` state; updated submit button `disabled={!isFormValid || isLoading}`).
+  - `fair-fly/src/pages/Index/Login/login.css` (Added dedicated `.login-button:disabled` visual styles with dimmed background and `not-allowed` cursor).
+- **Operator Portal (`fair-fly`)**:
+  - `fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx` (Added `isFormValid` checking client name, contact info, selected services offered, and specified requirements; updated submit button `disabled={isSubmitting || !isFormValid}`).
+  - `fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx` (Added `isFormValid` checking client name, service title/id, requirements, rate, and total amount; updated submit button `disabled={isSubmitting || !isFormValid}`).
+  - `fair-fly/src/components/Operator/QualificationApplicationModal/QualificationApplicationModal.jsx` (Updated submit button `disabled={isSubmitting || !reason.trim()}`).
+- **Admin Portal & Shared Modals (`fair-fly`)**:
+  - `fair-fly/src/components/Admin/Modals/ServiceModal/ServiceForm.jsx` (Added `isFormValid` checking service name, category/customCategory, price, and processing time turnaround; updated submit button `disabled={isLoading || !isFormValid}`).
+  - `fair-fly/src/components/Admin/Modals/ServiceRequirementsModal/ServiceRequirementsModal.jsx` (Enhanced Add Requirement button validation to verify `attachmentUrl` when attachment type is link).
+  - `fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowForm.jsx` (Added `isWorkflowValid` checking workflow name, description, and `steps.length > 0`; disabled Save Steps button when `steps.length === 0`).
+  - `fair-fly/src/components/Admin/Modals/ResourceModal/ResourceForm.jsx` (Added `isFormValid` checking document title and attached file; updated submit button `disabled={isLoading || isUploading || !isFormValid}`).
+  - `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx` (Added `isFormValid` checking branch name, contact number, address, email, and password on create; updated submit button `disabled={isLoading || !isFormValid}`).
+  - `fair-fly/src/components/Admin/Modals/AdminModal/AdminForm.jsx` (Added `isFormValid` checking username, email, and password; updated submit button `disabled={isLoading || !isFormValid}`).
+  - `fair-fly/src/components/Admin/Modals/ClientEditModal/ClientEditForm.jsx` (Updated submit button `disabled={isLoading || !fullName.trim()}`).
+  - `fair-fly/src/components/Admin/Modals/QuickLinkModal/QuickLinkForm.jsx` (Added `isFormValid` checking title, URL, and category; updated submit button `disabled={isLoading || !isFormValid}`).
+  - `fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx` (Added validation to disable ticket creation button if branch operator is unassigned in admin view).
+  - `fair-fly/src/components/Shared/Chatbot/Chatbot.jsx` (Updated send button `disabled={loading || !input.trim()}`).
+  - `fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx` (Hardened required fields check to reject whitespace-only strings).
+
+### Summary of Changes
+- **Proactive UX Gate**: Eliminated frustrating error toast popups caused by clicking enabled buttons on incomplete forms.
+- **Dynamic File & Input Verification**: Multi-part forms like `ClientServiceRequestModal` now monitor dynamic text requirements and mandatory file/image attachments in real time, keeping the submit button disabled until all criteria are satisfied.
+- **Global Consistency**: Ensured every form in the Client, Operator, and Admin interfaces enforces uniform disabled states and visual cues when mandatory fields are missing.
+
+## [2026-09-03] Feature: Inquiry → Quotation → Custom Service Workflow Overhaul (SAF-01-002 & ADF-07-001)
+
+### Files Created & Modified
+- **Security & Backend API (`fly-api` & `firestore.rules`)**:
+  - `Fairfly/firestore.rules` (Added `/inquiries/{inquiryId}` security rules granting read access to client owner and staff, create to authenticated clients, and update/delete to operator/admin).
+  - `fly-api/src/controllers/inquiryController.js` (Updated `createInquiry` and `getInquiries` to handle `clientUid`, `servicesOffered` array, `specifiedRequirements`, `formNo: 'SAF-01-002'`, formatted `controlNo`, and client-scoped filtering).
+  - `fly-api/src/controllers/quotationController.js` (Added `inquiryId` linkage and `clientUid` inheritance, auto-synced inquiry status on quotation creation/sending/acceptance, client role query filtering, and implemented `acceptQuotation` to initialize active Custom Service in `activeServices` with compiled sequential workflow milestones).
+  - `fly-api/src/routes/quotationRoutes.js` (Mounted `POST /:id/accept`).
+- **Official PDF Templates (`fair-fly`)**:
+  - `fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx` (Re-engineered Inquiry export to exact layout of `SAF-01-002` with 6 services offered checkboxes, 4-row client info grid, Specified Requirements of Client, Remarks, and signatures; re-engineered Quotation export to exact layout of `ADF-07-001` with 2-column bordered table, requirements, tour dates, inclusions, exclusions, rates, prepared by block, and DOT accreditation footer).
+  - `fair-fly/src/components/Shared/PdfDocument/pdf-document.css` (Added complete printable styling and `@media print` rules for both document formats).
+- **Client Portal (`fair-fly`)**:
+  - `fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx` **[NEW]** (Digital client intake modal matching `SAF-01-002` with 6 service checkboxes, Specified Requirements of Client textarea, and auto-populated profile).
+  - `fair-fly/src/components/Client/ClientInquiryModal/client-inquiry-modal.css` **[NEW]** (Modal styles for digital client inquiry intake).
+  - `fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx` (Connected "Request Custom Service" button to `ClientInquiryModal`).
+  - `fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx` (Implemented 2 tabs: "Ongoing Services" and "My Inquiries & Quotations" with real-time `onSnapshot` queries, PDF previews, and 1-click "Accept Quotation" action).
+  - `fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css` (Added styling for 2-tab navigation, quotation proposal cards, and inquiry intake cards).
+- **Operator Portal (`fair-fly`)**:
+  - `fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx` (Updated on-site inquiry intake to mirror `SAF-01-002` fields without blocking on internal document uploads).
+  - `fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx` **[NEW]** (Reusable quotation modal supporting pre-population from inquiry data, automatic totals calculation, and `ADF-07-001` fields).
+  - `fair-fly/src/components/Operator/CreateQuotationModal/create-quotation-modal.css` **[NEW]** (Styling for quotation creator modal).
+  - `fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx` (Refactored to import and use reusable `CreateQuotationModal`).
+  - `fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx` (Updated to display Specified Requirements of Client prominently, added "Create Quotation" action pre-filled with inquiry data, "Export to PDF (SAF-01-002)", and cross-reference links).
+  - `fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx` (Added "Accept on Behalf of Client (On-Site)" button calling `acceptQuotation`, "Send to Client", "Export to PDF (ADF-07-001)", and cross-reference banners).
+  - `fair-fly/src/services/quotationService.js` (Exported `acceptQuotation`).
+- **Admin Portal (`fair-fly`)**:
+  - `fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx` (Updated to display Specified Requirements of Client, services offered badges, and "Export to PDF (SAF-01-002)").
+
+### Summary of Changes
+- **Conceptual Clarification**: The Inquiry Form (`SAF-01-002`) represents "What does the client want?" captured in "Specified Requirements of Client" and 6 service checkboxes (`NSO`, `Passport`, `VISA Assistance`, `Package Tour`, `Ticket`, `Others`).
+- **Quotation Proposal Flow (`ADF-07-001`)**: Operators review client inquiries and generate official Quotations pre-filled from client requirements.
+- **Custom Service Fulfillment**: Accepting a quotation (either by the client via the tracking portal or by the operator on behalf of walk-in clients) compiles sequential workflow milestones and instantiates the Custom Service in `activeServices`.
+- **End-to-End Real-Time Linkage**: Inquiries, Quotations, and Ongoing Custom Services maintain two-way cross references with direct navigation links and status synchronizations across Client, Operator, and Admin interfaces.
+
 ## [2026-08-27] Feature: Quotation PDF Mirror, Dynamic Inquiries with Document Uploads & Confirmation Workflow, Admin Branch Inquiry History, Form Builder, and Storage Photo Diffing
 
 ### Files Created & Modified

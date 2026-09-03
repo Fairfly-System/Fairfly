@@ -134,7 +134,7 @@ export default function Chatbot() {
               className="chatbot-input-field"
               disabled={loading}
             />
-            <button type="submit" className="chatbot-send-button" disabled={loading}><i class="fa-regular fa-paper-plane"></i></button>
+            <button type="submit" className="chatbot-send-button" disabled={loading || !input.trim()}><i className="fa-regular fa-paper-plane"></i></button>
           </form>
         </div>
       )}
