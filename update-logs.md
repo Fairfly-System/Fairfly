@@ -1,5 +1,11 @@
 # Update Logs
 
+## [2026-09-03] Fix: Resolved ReferenceError for isConfirmed in InquiryFormDetailPage
+
+### Files Modified
+- `fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx` (Fixed `ReferenceError: isConfirmed is not defined` on line 233 by passing the dynamic helper `statusType={getStatusBadgeType()}` to `<RecordDetailLayout>` and declaring `isConfirmed` state helper).
+- `Fairfly/lessons-learned.md` (Recorded root cause, prevention, and remediation for stale identifier references).
+
 ## [2026-09-03] Fix: Proactive Submit Button Disabling Across All Forms Until Required Inputs and Files Are Provided
 
 ### Files Modified

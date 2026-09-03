@@ -62,3 +62,8 @@
   1. Older inquiry records in Firestore stored `requirements`, `notes`, or `remarks` as raw Objects or Arrays of objects. When JSX evaluated `{inquiry.notes}` or `{inquiry.remarks}`, rendering an object resulted in `[object Object]`.
   2. Legacy versions of `CreateInquiryFormModal.jsx` concatenated user input into a single `notes: form.requirements + ' | Remarks: ' + form.remarks` string. When either field fell back to `notes`, both cards showed the identical concatenated string `Stuffs | Remarks: none`.
 - **Prevention**: Always pass heterogeneous/legacy document fields through a centralized parser (like `parseInquiryData`) that inspects types, safely extracts text from objects/arrays, parses legacy delimiter strings (` | Remarks: `), and never renders raw objects directly in JSX.
+
+## [2026-09-03] Stale Identifier Reference in RecordDetailLayout Prop
+- **Problem**: `Uncaught ReferenceError: isConfirmed is not defined at InquiryFormDetailPage (InquiryFormDetailPage.jsx:233:19)`.
+- **Root Cause**: During the Inquiry $\to$ Quotation workflow overhaul, the old confirmation state logic was replaced by dynamic status badge mapping (`getStatusBadgeType()`), but the prop `statusType={isConfirmed ? 'success' : 'warning'}` on `<RecordDetailLayout>` was left referencing the retired variable `isConfirmed`.
+- **Prevention**: When replacing an older state or workflow pattern with a newer one, search the entire file for any remaining occurrences of the retired variable or function names before shipping.

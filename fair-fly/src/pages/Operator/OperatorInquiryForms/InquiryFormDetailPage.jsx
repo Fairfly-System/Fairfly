@@ -379,7 +379,7 @@ export default function InquiryFormDetailPage() {
             <h2 className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>
                 <i className="fa-solid fa-clipboard-list" style={{ color: 'var(--purple)', marginRight: '0.4rem' }}></i>
-                Specified Requirements of Client (What the Client Wants)
+                Specified Requirements
               </span>
               <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#f5f3ff', color: 'var(--purple)', borderRadius: '4px', fontWeight: 600 }}>
                 SAF-01-002 Col 2
