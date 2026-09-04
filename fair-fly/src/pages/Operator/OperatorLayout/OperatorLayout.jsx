@@ -10,7 +10,7 @@ import './operator-layout.css';
 const baseOperatorLinks = [
   { to: '/operator', end: true, icon: 'fa-solid fa-table-cells-large', label: 'Dashboard' },
   { to: '/operator/appointments', icon: 'fa-regular fa-calendar', label: 'Appointments' },
-  { to: '/operator/services', icon: 'fa-regular fa-file-lines', label: 'My Services' },
+  { to: '/operator/services', icon: 'fa-solid fa-concierge-bell', label: 'Services' },
   { to: '/operator/inquiry-forms', icon: 'fa-solid fa-file-pen', label: 'Inquiry Forms' },
   { to: '/operator/quotations', icon: 'fa-solid fa-file-invoice-dollar', label: 'Quotations' },
   { to: '/operator/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },

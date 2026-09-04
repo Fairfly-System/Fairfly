@@ -62,6 +62,7 @@ import { InquiryContent } from './pages/Operator/OperatorInquiryForms/OperatorIn
 import InquiryFormDetailPage from './pages/Operator/OperatorInquiryForms/InquiryFormDetailPage';
 import OperatorServices from './pages/Operator/OperatorServices/OperatorServices';
 import OperatorServicesContent from './pages/Operator/OperatorServices/OperatorServicesContent';
+import OperatorServiceDetailPage from './pages/Operator/OperatorServices/OperatorServiceDetailPage';
 
 import AdminQualifications from './pages/Admin/AdminQualifications/AdminQualifications';
 import QualificationsContent from './pages/Admin/AdminQualifications/QualificationsContent';
@@ -147,6 +148,7 @@ function App() {
           </Route>
           <Route path="services" element={<OperatorServices />}>
             <Route index element={<OperatorServicesContent />} />
+            <Route path=":id" element={<OperatorServiceDetailPage />} />
           </Route>
           <Route path="workflows" element={<Navigate to="/operator" replace />} />
           <Route path="resources" element={<OperatorResources />} />

@@ -1,5 +1,32 @@
 # Update Logs
 
+## [2026-09-04] Feature: Operator Services Catalog, Branch Exclusivity Permissions, Detail View & Interactive Carousel Gallery
+
+### Overview
+Enhanced the Operator portal with a dedicated "Services" catalog tab allowing all operators to inspect standard catalog services in detail (read-only), while empowering qualified branch operators to create, manage, and price their own branch-exclusive services. Added an interactive `<ServiceCarouselGallery />` with thumbnail navigation and high-resolution Lightbox preview to Service Detail pages across both Admin and Operator portals, and eliminated inline CSS.
+
+### Files Created & Modified
+- **Shared UI Gallery Component (`fair-fly`)**:
+  - `fair-fly/src/components/UI/ServiceCarouselGallery/ServiceCarouselGallery.jsx` **[NEW]**: Reusable multi-image carousel component combining `coverImage` and `carouselImages` with smooth navigation, previous/next controls, image counter indicator, thumbnail strip selector, category overlay pills, and fullscreen click-to-zoom Lightbox modal with keyboard Escape support.
+  - `fair-fly/src/components/UI/ServiceCarouselGallery/service-carousel-gallery.css` **[NEW]**: Complete styling for the gallery stage, buttons, thumbnail items, and lightbox overlay.
+- **Admin Portal (`fair-fly`)**:
+  - `fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx`: Replaced static hero cover banner with interactive `<ServiceCarouselGallery />`. Migrated all remaining inline styles to `.service-detail.css`.
+  - `fair-fly/src/pages/Admin/AdminServices/service-detail.css`: Added utility classes (`.service-kpi-purple`, `.service-detail-category-value`, `.service-featured-pill`, `.service-add-desc-btn`, etc.).
+- **Operator Portal (`fair-fly`)**:
+  - `fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx`: Updated navigation item from `'My Services'` to `'Services'` with icon `'fa-solid fa-concierge-bell'`.
+  - `fair-fly/src/pages/Operator/OperatorServices/OperatorServicesContent.jsx`: Removed hard access lockout for unqualified operators. Implemented Scope Filter chips ("All Services", "Standard Catalog", "My Branch Exclusive"), search with debouncing, status filters, and "View Details" action for all services. Restricted Edit, Status Toggle, and Delete actions strictly to qualified operators for their own branch-exclusive services. Displayed contextual privilege alert banners and header CTA ("Create Branch Service" for qualified; "Apply for Qualification" for standard). Cleaned all inline styles.
+  - `fair-fly/src/pages/Operator/OperatorServices/operator-services.css`: Added styles for branch badges (`.op-service-badge-own`, `.op-service-badge-standard`, `.op-service-badge-other`), scope chips, qualification banner, and view links.
+  - `fair-fly/src/pages/Operator/OperatorServices/OperatorServiceDetailPage.jsx` **[NEW]**: Full detail view at `/operator/services/:id` utilizing `RecordDetailLayout`. Renders `<ServiceCarouselGallery />`, KPI metrics (fee, turnaround, requirements count, workflow stages), specifications, required input checklist with attachment links, and workflow milestones. Displays permissions banner and enables management actions only for qualified operators on their own branch services; provides quick-action link to SOP Procedure if available.
+  - `fair-fly/src/pages/Operator/OperatorServices/operator-service-detail.css` **[NEW]**: Stylesheet for operator service detail layout, procedure callout banner, and branch exclusivity indicators.
+- **Application Routing (`fair-fly`)**:
+  - `fair-fly/src/App.jsx`: Registered child route `<Route path=":id" element={<OperatorServiceDetailPage />} />` under `/operator/services`.
+
+---
+
+### Files Modified
+- `fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx`: Defined `CATEGORIES` and `PRIORITIES` constants at module scope and ensured both Category and Priority select dropdowns map options cleanly with `className="form-select"`.
+- `Fairfly/lessons-learned.md`: Documented root cause, remediation, and prevention for unscoped array constant references in JSX.
+
 ## [2026-09-03] Refactor: Migrated Inline CSS Styles to Dedicated Stylesheets and Semantic Classes
 
 ### Overview

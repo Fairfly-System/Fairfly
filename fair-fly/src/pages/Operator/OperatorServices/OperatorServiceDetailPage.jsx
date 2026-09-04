@@ -1,20 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, Link } from 'react-router';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
-import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
+import ServiceCarouselGallery from '../../../components/UI/ServiceCarouselGallery/ServiceCarouselGallery';
+import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import ServiceModal from '../../../components/Admin/Modals/ServiceModal/ServiceModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
-import AlertBar from '../../../components/UI/AlertBar/AlertBar';
+import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
-import ServiceCarouselGallery from '../../../components/UI/ServiceCarouselGallery/ServiceCarouselGallery';
-import './service-detail.css';
-
-const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
-const BanIcon = (props) => <i className="fa-solid fa-ban" {...props}></i>;
+import toFriendlyMessage from '../../../utils/friendlyErrors';
+import '../../Admin/AdminServices/service-detail.css';
+import './operator-service-detail.css';
 
 const CATEGORY_ICON_MAP = {
   'visa & embassy assistance': 'fa-solid fa-passport',
@@ -28,15 +27,23 @@ const CATEGORY_ICON_MAP = {
   'travel insurance & hotels': 'fa-solid fa-hotel',
   'authentication & legalization': 'fa-solid fa-certificate',
   'other': 'fa-solid fa-boxes-stacked',
-  'general services': 'fa-solid fa-concierge-bell'
+  'general services': 'fa-solid fa-concierge-bell',
 };
 
-export default function ServiceDetailPage() {
+const UNIT_LABELS = {
+  days: 'Day/s',
+  weeks: 'Week/s',
+  months: 'Month/s',
+};
+
+export default function OperatorServiceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: services, loading } = useAdminContext();
-  const { userToken } = useAuthContext();
+  const { user, userToken, userDetails } = useAuthContext();
   const { addToast } = useToast();
+
+  const isQualified = Boolean(userDetails?.isQualified);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,11 +55,13 @@ export default function ServiceDetailPage() {
     return services.find((s) => s.id === id) || null;
   }, [services, id]);
 
-  const UNIT_LABELS = {
-    days: 'Day/s',
-    weeks: 'Week/s',
-    months: 'Month/s',
-  };
+  const isOwnBranchService = Boolean(
+    service &&
+      user &&
+      (service.createdByOperatorId === user.uid || service.branchUid === user.uid)
+  );
+
+  const canManageService = isQualified && isOwnBranchService;
 
   const formatProcessingTime = (processingTime) => {
     if (!processingTime || typeof processingTime !== 'object') {
@@ -82,17 +91,18 @@ export default function ServiceDetailPage() {
   const handleDeactivate = async () => {
     if (!service) return;
     const newStatus = service.status === 'Active' ? 'Disabled' : 'Active';
+    setIsConfirmLoading(true);
     ApiCaller(
       `${API_BASE_URL}/api/services/${service.id}`,
       'PATCH',
       { status: newStatus },
       { Authorization: `Bearer ${userToken}` },
       () => {
-        addToast(`Service catalog item ${newStatus === 'Active' ? 'activated' : 'disabled'} successfully`, 'success');
+        addToast(`Service ${newStatus === 'Active' ? 'activated' : 'disabled'} successfully!`, 'success');
         setConfirmState(null);
       },
       (error) => {
-        addToast(`Failed to update status: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Failed to update status.'), 'error');
       },
       setIsConfirmLoading
     );
@@ -100,18 +110,19 @@ export default function ServiceDetailPage() {
 
   const handleDelete = async () => {
     if (!service) return;
+    setIsConfirmLoading(true);
     ApiCaller(
       `${API_BASE_URL}/api/services/${service.id}`,
       'DELETE',
       null,
       { Authorization: `Bearer ${userToken}` },
       () => {
-        addToast('Service catalog item deleted successfully', 'success');
+        addToast('Branch service deleted successfully', 'success');
         setConfirmState(null);
-        navigate('/admin/services');
+        navigate('/operator/services');
       },
       (error) => {
-        addToast(`Failed to delete service: ${error.message}`, 'error');
+        addToast(toFriendlyMessage(error, 'Failed to delete service.'), 'error');
       },
       setIsConfirmLoading
     );
@@ -151,7 +162,6 @@ export default function ServiceDetailPage() {
         );
       }
 
-      // Process Carousel Images
       let updatedCarouselImages = [];
       if (Array.isArray(serviceData.carouselImages)) {
         updatedCarouselImages = await Promise.all(
@@ -176,62 +186,71 @@ export default function ServiceDetailPage() {
       const payload = {
         ...cleanData,
         coverImage: coverImageUrl,
+        coverPhoto: coverImageUrl,
+        coverPhotoUrl: coverImageUrl,
         carouselImages: updatedCarouselImages,
         requirements: updatedRequirements,
+        isBranchExclusive: true,
+        branchUid: user.uid,
+        branchName: userDetails?.branchName || userDetails?.name || 'Branch Operator',
       };
 
       ApiCaller(
         `${API_BASE_URL}/api/services/${service.id}`,
-        'PUT',
+        'PATCH',
         payload,
         { Authorization: `Bearer ${userToken}` },
         () => {
-          addToast('Service updated successfully', 'success');
+          addToast('Branch service updated successfully!', 'success');
           setIsModalOpen(false);
           setIsSubmitting(false);
         },
         (error) => {
-          addToast(`Failed to update service: ${error.message}`, 'error');
+          addToast(toFriendlyMessage(error, 'Failed to update service.'), 'error');
           setIsSubmitting(false);
         },
         setIsSubmitting
       );
     } catch (err) {
-      console.error('Error updating service on detail page:', err);
+      console.error('Error updating service on operator detail page:', err);
       addToast('Failed to upload file attachments: ' + err.message, 'error');
       setIsSubmitting(false);
     }
   };
 
   const breadcrumbs = [
-    { label: 'Dashboard', to: '/admin' },
-    { label: 'Services', to: '/admin/services' },
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Services', to: '/operator/services' },
     { label: service ? service.name : 'Loading...' },
   ];
 
-  const actions = [
-    {
+  // Actions based on permissions
+  const actions = [];
+
+  // If operator has management rights over their branch exclusive service
+  if (canManageService) {
+    actions.push({
       label: 'Edit Service',
       icon: 'fa-solid fa-pen-to-square',
       onClick: () => setIsModalOpen(true),
       className: 'btn-primary',
       disabled: isSubmitting || isConfirmLoading,
-    },
-    {
+    });
+    actions.push({
       label: service?.status === 'Active' ? 'Disable Service' : 'Activate Service',
       icon: service?.status === 'Active' ? 'fa-solid fa-ban' : 'fa-solid fa-circle-check',
       onClick: () => setConfirmState('status'),
       className: 'btn-secondary',
       disabled: isSubmitting || isConfirmLoading,
-    },
-    {
+    });
+    actions.push({
       label: 'Delete Service',
       icon: 'fa-solid fa-trash',
       onClick: () => setConfirmState('delete'),
       className: 'btn-danger',
       disabled: isSubmitting || isConfirmLoading,
-    },
-  ];
+    });
+  }
 
   const coverUrl = service?.coverImage || service?.coverPhoto || service?.coverPhotoUrl;
   const requirementsCount = service?.requirements?.length || 0;
@@ -239,31 +258,66 @@ export default function ServiceDetailPage() {
 
   return (
     <RecordDetailLayout
-      title={service?.name || 'Service Catalog Details'}
-      subtitle={service?.category || 'Standard Services Category'}
+      title={service?.name || 'Service Details'}
+      subtitle={
+        isOwnBranchService
+          ? `Branch Exclusive • ${userDetails?.branchName || 'My Branch'}`
+          : service?.isBranchExclusive
+          ? `Branch Exclusive • ${service.branchName || 'Partner Branch'}`
+          : 'Standard Global Service'
+      }
       status={service?.status}
       statusType={service?.status === 'Active' ? 'success' : 'danger'}
       thumbnail={coverUrl}
       avatarIcon={getCategoryIcon(service?.category)}
       breadcrumbs={breadcrumbs}
-      backTo="/admin/services"
+      backTo="/operator/services"
       backLabel="Back to Services"
       actions={service ? actions : []}
       isLoading={loading}
       isNotFound={!loading && !service}
-      notFoundMessage="The service catalog item could not be found."
+      notFoundMessage="The service item could not be found in the catalog."
     >
       {service && (
-        <div className="service-detail-wrapper">
-          {service.status === 'Disabled' && (
+        <div className="operator-service-detail-wrapper service-detail-wrapper">
+          {/* Permission / Exclusivity Context Banner */}
+          {isOwnBranchService ? (
             <AlertBar
-              message="This service is currently disabled. It is hidden from the client-side shopping catalog."
+              message={`✨ Branch Exclusive Service: Managed and priced exclusively by ${userDetails?.branchName || 'your branch'}. You have full editing rights.`}
+              type="success"
+            />
+          ) : service.isBranchExclusive ? (
+            <AlertBar
+              message={`🔒 Branch Exclusive Service (Read-Only): Exclusively serviced by ${service.branchName || 'another branch'}. Available for review only.`}
               type="warning"
+            />
+          ) : (
+            <AlertBar
+              message="📖 Standard Catalog Service (Read-Only): This is a global FairFly service catalog item available across all branches."
+              type="info"
             />
           )}
 
           {/* Interactive Hero Carousel Gallery (Cover + Carousel Photos) */}
           <ServiceCarouselGallery service={service} />
+
+          {/* Quick Execution SOP Callout (If Workflow Steps Configured) */}
+          {stepsCount > 0 && (
+            <div className="op-service-procedure-callout">
+              <div className="op-procedure-callout-text">
+                <i className="fa-solid fa-clipboard-check"></i>
+                <span>
+                  <strong>Standard Operating Procedure Available:</strong> This service has {stepsCount} operational stage{stepsCount !== 1 ? 's' : ''} with execution guidelines.
+                </span>
+              </div>
+              <Link
+                to={`/operator/services/${service.id}/procedure`}
+                className="op-procedure-btn"
+              >
+                <i className="fa-solid fa-list-check"></i> Perform Service SOP
+              </Link>
+            </div>
+          )}
 
           {/* Quick Metrics KPI Row */}
           <div className="service-kpi-grid">
@@ -273,7 +327,7 @@ export default function ServiceDetailPage() {
               </div>
               <div className="service-kpi-info">
                 <span className="service-kpi-label">Service Fee</span>
-                <span className="service-kpi-val service-kpi-purple">
+                <span className="service-kpi-val op-kpi-purple">
                   {formatPriceDisplay(service.price)}
                 </span>
               </div>
@@ -308,7 +362,7 @@ export default function ServiceDetailPage() {
                 <i className="fa-solid fa-diagram-project"></i>
               </div>
               <div className="service-kpi-info">
-                <span className="service-kpi-label">Workflow Steps</span>
+                <span className="service-kpi-label">Workflow Stages</span>
                 <span className="service-kpi-val">
                   {stepsCount} {stepsCount === 1 ? 'Stage' : 'Stages'}
                 </span>
@@ -321,25 +375,43 @@ export default function ServiceDetailPage() {
             {/* Catalog Info Profile */}
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-regular fa-folder-open"></i> Catalog Configuration
+                <i className="fa-regular fa-folder-open"></i> Service Specifications
               </h2>
               <div className="panel-details-list">
                 <div className="detail-item">
-                  <span className="detail-label">Service Category</span>
-                  <span className="detail-value service-detail-category-value">
+                  <span className="detail-label">Category</span>
+                  <span className="detail-value op-detail-category-value">
                     <i className={getCategoryIcon(service.category)}></i>
                     {service.category || 'General Services'}
                   </span>
                 </div>
                 <div className="detail-item">
-                  <span className="detail-label">Base Service Price</span>
+                  <span className="detail-label">Base Fee</span>
                   <span className="detail-value text-purple font-large">
                     {formatPriceDisplay(service.price)}
                   </span>
                 </div>
                 <div className="detail-item">
-                  <span className="detail-label">Estimated Turnaround</span>
+                  <span className="detail-label">Turnaround Time</span>
                   <span className="detail-value">{formatProcessingTime(service.processingTime)}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Service Scope</span>
+                  <span className="detail-value">
+                    {isOwnBranchService ? (
+                      <span className="op-branch-exclusive-badge">
+                        <i className="fa-solid fa-store"></i> Exclusive to Your Branch
+                      </span>
+                    ) : service.isBranchExclusive ? (
+                      <span className="op-branch-exclusive-badge op-branch-exclusive-badge-partner">
+                        <i className="fa-solid fa-building-user"></i> Exclusive to {service.branchName || 'Partner'}
+                      </span>
+                    ) : (
+                      <span className="status-pill status-pill-active">
+                        <i className="fa-solid fa-globe"></i> Global Standard Catalog
+                      </span>
+                    )}
+                  </span>
                 </div>
                 {Array.isArray(service.tags) && service.tags.length > 0 && (
                   <div className="detail-item">
@@ -354,42 +426,16 @@ export default function ServiceDetailPage() {
                   </div>
                 )}
                 <div className="detail-item">
-                  <span className="detail-label">Marketplace Spotlight</span>
-                  {service.featured ? (
-                    <span className="status-pill service-featured-pill">
-                      <i className="fa-solid fa-star service-featured-star"></i> Featured / Top Showcase
-                    </span>
-                  ) : (
-                    <span className="detail-value service-detail-muted">
-                      Standard Listing
-                    </span>
-                  )}
-                </div>
-                <div className="detail-item">
                   <span className="detail-label">Catalog Status</span>
                   <span className={`status-pill ${service.status === 'Active' ? 'status-pill-success' : 'status-pill-danger'}`}>
-                    <i className={`fa-solid service-status-icon-gap ${service.status === 'Active' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
+                    <i className={`fa-solid op-status-icon-gap ${service.status === 'Active' ? 'fa-circle-check' : 'fa-circle-xmark'}`}></i>
                     {service.status || 'Active'}
                   </span>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">Created At</span>
-                  <span className="detail-value">
-                    {service.createdAt ? new Date(service.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                  </span>
-                </div>
-                {service.updatedAt && (
-                  <div className="detail-item">
-                    <span className="detail-label">Last Modified</span>
-                    <span className="detail-value">
-                      {new Date(service.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                )}
               </div>
             </article>
 
-            {/* Catalog Overview & Description */}
+            {/* Description & Overview */}
             <article className="card detail-panel">
               <h2 className="panel-title">
                 <i className="fa-solid fa-align-left"></i> Description & Customer Summary
@@ -400,14 +446,16 @@ export default function ServiceDetailPage() {
                 </p>
               ) : (
                 <div className="no-items-text">
-                  <p>No description provided for this service yet.</p>
-                  <button
-                    type="button"
-                    className="btn-secondary service-add-desc-btn"
-                    onClick={() => setIsModalOpen(true)}
-                  >
-                    <i className="fa-solid fa-pen"></i> Add Description
-                  </button>
+                  <p>No description provided for this service item.</p>
+                  {canManageService && (
+                    <button
+                      type="button"
+                      className="btn-secondary op-add-desc-btn"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      <i className="fa-solid fa-pen"></i> Add Description
+                    </button>
+                  )}
                 </div>
               )}
             </article>
@@ -415,7 +463,7 @@ export default function ServiceDetailPage() {
 
           {/* Requirements & Workflows Grid */}
           <div className="details-grid-2">
-            {/* Requirements Checklist */}
+            {/* Standard Required Inputs */}
             <article className="card detail-panel">
               <h2 className="panel-title">
                 <i className="fa-solid fa-list-check"></i> Standard Required Inputs ({requirementsCount})
@@ -467,15 +515,15 @@ export default function ServiceDetailPage() {
                     );
                   })
                 ) : (
-                  <p className="no-items-text">No custom documents or input requirements configured for this service.</p>
+                  <p className="no-items-text">No custom documents or requirements configured for this service.</p>
                 )}
               </div>
             </article>
 
-            {/* Connected Workflows */}
+            {/* Workflow Pipeline Steps */}
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-solid fa-diagram-project"></i> Workflow Checklist Steps ({stepsCount})
+                <i className="fa-solid fa-diagram-project"></i> Workflow Checklist Stages ({stepsCount})
               </h2>
               <div className="detail-workflows-list">
                 {service.steps && service.steps.length > 0 ? (
@@ -489,49 +537,53 @@ export default function ServiceDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="no-items-text">No workflow pipeline checklist configured for this catalog item.</p>
+                  <p className="no-items-text">No operational workflow stages linked to this service catalog item.</p>
                 )}
               </div>
             </article>
           </div>
 
-          {/* Form Modal for editing */}
-          <ServiceModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            editingService={service}
-            onSubmit={handleFormSubmit}
-            isLoading={isSubmitting}
-          />
+          {/* Form Modal for editing own branch service */}
+          {canManageService && (
+            <ServiceModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              editingService={service}
+              onSubmit={handleFormSubmit}
+              isLoading={isSubmitting}
+            />
+          )}
 
-          {/* Single Delete confirmation */}
-          <ConfirmationModal
-            isOpen={confirmState === 'delete'}
-            onClose={() => !isConfirmLoading && setConfirmState(null)}
-            Icon={TrashIcon}
-            Title="Delete this service item?"
-            Desc={`"${service.name}" will be permanently deleted from the catalog. This action cannot be undone.`}
-            BtnColor="var(--error-red)"
-            confirmText="Delete Service"
-            isLoading={isConfirmLoading}
-            OnConfirm={handleDelete}
-          />
+          {/* Delete confirmation modal */}
+          {canManageService && (
+            <ConfirmationModal
+              isOpen={confirmState === 'delete'}
+              onClose={() => !isConfirmLoading && setConfirmState(null)}
+              Title="Delete this branch service?"
+              Desc={`"${service.name}" will be permanently deleted from your branch catalog.`}
+              BtnColor="var(--error-red)"
+              confirmText="Delete Service"
+              isLoading={isConfirmLoading}
+              OnConfirm={handleDelete}
+            />
+          )}
 
-          {/* Single Deactivate/Activate confirmation */}
-          <ConfirmationModal
-            isOpen={confirmState === 'status'}
-            onClose={() => !isConfirmLoading && setConfirmState(null)}
-            Icon={BanIcon}
-            Title={service.status === 'Active' ? 'Disable this service item?' : 'Enable this service item?'}
-            Desc={service.status === 'Active' 
-              ? `"${service.name}" will be hidden from the catalog until re-enabled.` 
-              : `"${service.name}" will be reactivated in the client search catalog.`
-            }
-            BtnColor="var(--orange)"
-            confirmText={service.status === 'Active' ? 'Disable' : 'Enable'}
-            isLoading={isConfirmLoading}
-            OnConfirm={handleDeactivate}
-          />
+          {/* Deactivate/Activate confirmation modal */}
+          {canManageService && (
+            <ConfirmationModal
+              isOpen={confirmState === 'status'}
+              onClose={() => !isConfirmLoading && setConfirmState(null)}
+              Title={service.status === 'Active' ? 'Disable this service item?' : 'Enable this service item?'}
+              Desc={service.status === 'Active'
+                ? `"${service.name}" will be hidden from customer booking options.`
+                : `"${service.name}" will be made active again.`
+              }
+              BtnColor="var(--orange)"
+              confirmText={service.status === 'Active' ? 'Disable' : 'Enable'}
+              isLoading={isConfirmLoading}
+              OnConfirm={handleDeactivate}
+            />
+          )}
         </div>
       )}
     </RecordDetailLayout>

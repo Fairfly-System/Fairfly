@@ -376,3 +376,40 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.service-kpi-purple {
+  color: var(--purple, #7c3aed);
+}
+
+.service-detail-category-value {
+  font-weight: 700;
+  color: var(--purple, #7c3aed);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.service-featured-pill {
+  background: var(--warning-yellow-light, #fef3c7);
+  color: #8d6b00;
+  font-weight: 700;
+}
+
+.service-featured-star {
+  margin-right: 0.25rem;
+  color: var(--warning-yellow, #f59e0b);
+}
+
+.service-detail-muted {
+  color: var(--text-light, #94a3b8);
+}
+
+.service-status-icon-gap {
+  margin-right: 0.25rem;
+}
+
+.service-add-desc-btn {
+  margin-top: 0.5rem;
+  display: inline-flex;
+}
+

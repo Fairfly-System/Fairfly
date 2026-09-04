@@ -67,3 +67,8 @@
 - **Problem**: `Uncaught ReferenceError: isConfirmed is not defined at InquiryFormDetailPage (InquiryFormDetailPage.jsx:233:19)`.
 - **Root Cause**: During the Inquiry $\to$ Quotation workflow overhaul, the old confirmation state logic was replaced by dynamic status badge mapping (`getStatusBadgeType()`), but the prop `statusType={isConfirmed ? 'success' : 'warning'}` on `<RecordDetailLayout>` was left referencing the retired variable `isConfirmed`.
 - **Prevention**: When replacing an older state or workflow pattern with a newer one, search the entire file for any remaining occurrences of the retired variable or function names before shipping.
+
+## [2026-09-03] Unscoped Constant Mapping in Refactored Modal Form
+- **Problem**: `Uncaught ReferenceError: PRIORITIES is not defined at CreateTicketModal (CreateTicketModal.jsx:234:18)`.
+- **Root Cause**: During inline CSS refactoring and component cleanup, `<select name="priority">` was rewritten to map over `PRIORITIES.map(...)`, but `PRIORITIES` was not defined at the top of `CreateTicketModal.jsx`.
+- **Prevention**: Whenever mapping options over an array constant in JSX, verify that the constant is explicitly exported/imported or defined at the module level in the same file. Always test the modal trigger or verify imports across JSX templates.
