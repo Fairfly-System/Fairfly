@@ -201,8 +201,8 @@ export default function DataTable({
                         if (input) input.indeterminate = isIndeterminate;
                       }}
                       onChange={handleSelectAll}
+                      aria-label="Select all rows"
                     />
-                    <span className="checkbox-custom"></span>
                   </label>
                 </th>
               )}
@@ -243,8 +243,8 @@ export default function DataTable({
                             checked={isSelected}
                             disabled={disabled}
                             onChange={() => handleSelectRow(rowId)}
+                            aria-label={`Select row ${rowId || rowIndex + 1}`}
                           />
-                          <span className="checkbox-custom"></span>
                         </label>
                       </td>
                     )}

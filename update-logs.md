@@ -1,6 +1,15 @@
 # Update Logs
 
-## [2026-09-04] Feature: Operator Services Catalog, Branch Exclusivity Permissions, Detail View & Interactive Carousel Gallery
+## [2026-09-04] Fix: Removed Duplicate Selection Checkbox in DataTable
+
+### Overview
+Resolved an issue where tables with row selection enabled displayed two selection boxes side-by-side. The header and body row selection cells in `DataTable.jsx` contained both a native `<input type="checkbox" />` and a redundant `<span className="checkbox-custom"></span>` which picked up global styling from the application CSS bundle.
+
+### Files Modified
+- `fair-fly/src/components/UI/DataTable/DataTable.jsx`: Removed redundant `<span className="checkbox-custom"></span>` from both table header and table body row selection cells (`th.select-col` and `td.select-col`), and added accessible `aria-label` tags.
+- `fair-fly/src/components/Client/ClientInquiryModal/client-inquiry-modal.css`: Scoped `.checkbox-custom` to `.service-check-tile .checkbox-custom` to prevent any CSS rule leakage to other components across the project.
+
+---
 
 ### Overview
 Enhanced the Operator portal with a dedicated "Services" catalog tab allowing all operators to inspect standard catalog services in detail (read-only), while empowering qualified branch operators to create, manage, and price their own branch-exclusive services. Added an interactive `<ServiceCarouselGallery />` with thumbnail navigation and high-resolution Lightbox preview to Service Detail pages across both Admin and Operator portals, and eliminated inline CSS.
