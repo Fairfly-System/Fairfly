@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -282,7 +282,7 @@ export default function AdminInquiryDetailPage() {
             <h2 className="panel-title inquiry-panel-title-row">
               <span>
                 <i className="fa-solid fa-clipboard-list inquiry-panel-title-icon"></i>
-                Specified Requirements of Client (What the Client Wants)
+                Specified Requirements of Client
               </span>
               <span className="inquiry-saf-badge">
                 SAF-01-002 Col 2
