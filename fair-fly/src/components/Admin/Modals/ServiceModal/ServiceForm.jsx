@@ -694,7 +694,11 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  {isSelected ? `✓ #${sug}` : `+#${sug}`}
+                  {isSelected ? (
+                    <span><i className="fa-solid fa-check" style={{ marginRight: '0.25rem', fontSize: '0.7rem' }}></i>#{sug}</span>
+                  ) : (
+                    `+#${sug}`
+                  )}
                 </button>
               );
             })}

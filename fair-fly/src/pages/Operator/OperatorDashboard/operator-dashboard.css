@@ -118,6 +118,35 @@
   color: #FFFFFF;
 }
 
+.op-status-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.op-status-badge.completed {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.op-status-badge.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.op-status-badge.processing {
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #a5b4fc;
+}
+
+
 .op-perform-procedure-btn {
   display: inline-flex;
   align-items: center;

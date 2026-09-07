@@ -443,7 +443,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
                             return (
                               <div key={srv} className="pdf-check-item">
                                 <span className={`pdf-check-box ${isSelected ? 'checked' : ''}`}>
-                                  {isSelected ? '✓' : ''}
+                                  {isSelected ? <i className="fa-solid fa-check" style={{ fontSize: '9px' }}></i> : ''}
                                 </span>
                                 <span className="pdf-check-label">{srv}</span>
                               </div>

@@ -1,5 +1,52 @@
 # Update Logs
 
+## [2026-09-07] Feature & Polish: Operator Service Fulfillment Revenue Crediting, Cancellation Flow, Client Notifications, and Complete Emoji Removal
+
+### Overview
+Implemented branch revenue crediting upon service fulfillment completion, added service fulfillment cancellation workflow with reason capture, integrated automated client in-app notifications on both service completion and cancellation, surfaced real-time fulfilled revenue in the Operator portal, and performed a comprehensive codebase-wide emoji removal replacing all unicode emojis and pictographs with semantic FontAwesome icons or text.
+
+### Key Changes
+
+1. **Revenue Crediting on Service Fulfillment (`fly-api`)**:
+   - `fly-api/src/controllers/activeServiceController.js`:
+     - When all steps in a service procedure are marked as `Completed`, parses and calculates the service revenue.
+     - Atomically increments `totalRevenue` and `completedServicesCount` on the fulfilling operator's branch record (`users/${branchUid}`) using `admin.firestore.FieldValue.increment`.
+     - Flags `revenueCredited: true`, `revenueAmount`, and `fulfilledBranchUid` on the active service document with strict idempotency to prevent duplicate revenue additions.
+     - Automatically creates and dispatches an in-app notification to `clientUid` (`createNotification`) notifying the client that their service fulfillment has been completed and verified.
+
+2. **Service Fulfillment Cancellation Workflow (`fly-api` & `fair-fly`)**:
+   - `fly-api/src/controllers/activeServiceController.js`: Added `cancelActiveService` controller method (`PATCH /api/services/active/:id/cancel`). Validates that the service is not already finalized, transitions status to `Cancelled`, timestamps `cancelledAt`, records `cancellationReason` and `cancelledBy`, and dispatches an in-app notification to `clientUid` (`'Service Fulfillment Cancelled'`).
+   - `fly-api/src/routes/activeServiceRoutes.js`: Mounted `PATCH /services/active/:id/cancel` endpoint.
+   - `fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx`:
+     - Added "Cancel Service Fulfillment" button in the top header bar when active.
+     - Added an interactive modal dialog with cancellation reason input and confirm/cancel actions.
+     - Added dedicated status banners for both `Completed` (displaying credited revenue) and `Cancelled` (displaying cancellation reason and timestamp).
+     - Locked workflow step action buttons when service fulfillment is completed or cancelled.
+   - `fair-fly/src/pages/Operator/OperatorServiceProcedure/operator-service-procedure.css`: Added styles for `.swm-overall-badge.cancelled`, `.op-procedure-top-actions`, `.op-procedure-cancel-btn`, `.op-procedure-status-banner.completed`, `.op-procedure-status-banner.cancelled`, and `.op-cancel-modal-*` modal components.
+
+3. **Operator Dashboard & Layout Real-time Revenue Surfacing (`fair-fly`)**:
+   - `fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx`: Added a real-time `Fulfilled Revenue` KPI Card (`₱...`) linked to the operator's branch profile `userDetails.totalRevenue`, and scoped active service counts to the branch.
+   - `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx`: Added status badges (`Completed`, `Cancelled`, `Processing`) and dynamic button actions (`View Fulfilled Details`, `View Cancellation`, `Perform Workflow Procedure`) on active service cards.
+   - `fair-fly/src/pages/Operator/OperatorDashboard/operator-dashboard.css`: Added `.op-status-badge` classes for `completed`, `cancelled`, and `processing`.
+
+4. **Complete Elimination of Emojis Across Repository**:
+   - Replaced all emojis and unicode pictographs across the codebase with FontAwesome icons or clean semantic text:
+     - `ServiceForm.jsx`: Replaced `✓` in suggested tag buttons with `<i className="fa-solid fa-check"></i>`.
+     - `ClientServiceRequestModal.jsx`: Removed `🎉` from success toast notification.
+     - `QualificationApplicationModal.jsx`: Removed `🎉` from success toast notification.
+     - `ServiceWorkflowModal.jsx`: Removed `🎉` from completion toast notification.
+     - `OperatorServiceProcedure.jsx`: Removed `🎉` from completion toast notification, replaced requirement type badges (`📷`, `📄`, `📅`, `🔢`, `✏️`) with `<i className="fa-regular ..."></i>` icons.
+     - `Chatbot.jsx`: Removed `☕` from quota fallback message.
+     - `Toast.jsx`: Replaced unicode symbols (`✓`, `✕`, `⚠`) with `<i className="fa-solid fa-circle-check"></i>`, `<i className="fa-solid fa-circle-xmark"></i>`, `<i className="fa-solid fa-triangle-exclamation"></i>`.
+     - `OperatorServiceDetailPage.jsx`: Removed `✨`, `🔒`, `📖` from privilege alert banners.
+     - `OperatorServicesContent.jsx`: Removed `🎉` from service creation toast.
+     - `PdfDocumentView.jsx`: Replaced unicode `✓` in print checkbox with FontAwesome icon.
+   - Verified 0 remaining emojis across the entire frontend and backend source trees using custom unicode character inspection.
+
+---
+
+
+
 ## [2026-09-04] Fix: Removed Duplicate Selection Checkbox in DataTable
 
 ### Overview

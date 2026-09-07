@@ -283,17 +283,17 @@ export default function OperatorServiceDetailPage() {
           {/* Permission / Exclusivity Context Banner */}
           {isOwnBranchService ? (
             <AlertBar
-              message={`✨ Branch Exclusive Service: Managed and priced exclusively by ${userDetails?.branchName || 'your branch'}. You have full editing rights.`}
+              message={`Branch Exclusive Service: Managed and priced exclusively by ${userDetails?.branchName || 'your branch'}. You have full editing rights.`}
               type="success"
             />
           ) : service.isBranchExclusive ? (
             <AlertBar
-              message={`🔒 Branch Exclusive Service (Read-Only): Exclusively serviced by ${service.branchName || 'another branch'}. Available for review only.`}
+              message={`Branch Exclusive Service (Read-Only): Exclusively serviced by ${service.branchName || 'another branch'}. Available for review only.`}
               type="warning"
             />
           ) : (
             <AlertBar
-              message="📖 Standard Catalog Service (Read-Only): This is a global FairFly service catalog item available across all branches."
+              message="Standard Catalog Service (Read-Only): This is a global FairFly service catalog item available across all branches."
               type="info"
             />
           )}

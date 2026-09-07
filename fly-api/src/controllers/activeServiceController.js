@@ -4,11 +4,15 @@ const {
   queryDatabaseAdvanced, 
   updateToDatabase 
 } = require('../services/firebaseService');
+const { db } = require('../config/firebase');
+const admin = require('firebase-admin');
+const { createNotification } = require('../services/notificationService');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
   SERVICES: 'services',
-  WORKFLOW_TEMPLATES: 'workflowTemplates'
+  WORKFLOW_TEMPLATES: 'workflowTemplates',
+  USERS: 'users'
 };
 
 const DEFAULT_FALLBACK_STEPS = [
@@ -269,17 +273,73 @@ const updateStepStatus = async (req, res) => {
       const overallStatus = allCompleted ? 'Completed' : 'Processing';
       const overallCompletedAt = allCompleted ? now : null;
 
+      let revenueCredited = Boolean(serviceRecord.revenueCredited);
+      let creditedAmount = serviceRecord.revenueAmount || 0;
+
+      // When all steps are fulfilled, credit revenue to the fulfilling branch
+      if (allCompleted && !revenueCredited) {
+        const priceStr = serviceRecord.price || serviceRecord.servicePrice || serviceRecord.totalAmount || '0';
+        const num = parseFloat(String(priceStr).replace(/[^0-9.]/g, '')) || 0;
+        creditedAmount = num;
+
+        const targetBranchUid = serviceRecord.branchUid || serviceRecord.operatorId;
+        if (targetBranchUid && targetBranchUid !== 'OP-ACCOUNT') {
+          try {
+            const userRef = db.collection(COLLECTIONS.USERS).doc(targetBranchUid);
+            const userDoc = await userRef.get();
+            if (userDoc.exists) {
+              await userRef.update({
+                totalRevenue: admin.firestore.FieldValue.increment(num),
+                completedServicesCount: admin.firestore.FieldValue.increment(1),
+                updatedAt: now
+              });
+              revenueCredited = true;
+            }
+          } catch (branchErr) {
+            console.error('Error updating branch revenue on service completion:', branchErr);
+          }
+        }
+      }
+
       await updateToDatabase(dbPath, {
         steps,
         currentStepIndex: nextStepIdx,
         status: overallStatus,
         completedAt: overallCompletedAt,
+        revenueCredited,
+        revenueAmount: creditedAmount,
+        fulfilledBranchUid: serviceRecord.branchUid || serviceRecord.operatorId || null,
         updatedAt: now
       });
 
+      // When service fulfillment completes, send in-app notification to the client
+      if (allCompleted && serviceRecord.clientUid) {
+        try {
+          await createNotification({
+            recipientUid: serviceRecord.clientUid,
+            recipientRole: 'client',
+            title: 'Service Completed & Fulfilled',
+            message: `Your service "${serviceRecord.serviceType}" has been successfully completed and fulfilled by ${serviceRecord.branchName || 'FairFly'}.`,
+            type: 'service',
+            link: '/tracking',
+            metadata: {
+              serviceId: id,
+              status: 'Completed',
+              serviceType: serviceRecord.serviceType,
+              completedAt: now,
+              revenueAmount: creditedAmount
+            }
+          });
+        } catch (notifErr) {
+          console.error('Error sending completion notification to client:', notifErr);
+        }
+      }
+
       return res.status(200).json({ 
         message: `Step ${targetIdx + 1} marked as Completed.`,
-        allCompleted
+        allCompleted,
+        revenueCredited,
+        revenueAmount: creditedAmount
       });
     } else {
       // Toggle between 'Currently Processing' and 'Ongoing'
@@ -297,9 +357,80 @@ const updateStepStatus = async (req, res) => {
   }
 };
 
+/**
+ * Cancel an active service fulfillment
+ */
+const cancelActiveService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+
+    const dbPath = `${COLLECTIONS.ACTIVE_SERVICES}/${id}`;
+    const serviceRecord = await getFromDatabase(dbPath);
+    if (!serviceRecord) {
+      return res.status(404).json({ error: 'Active service record not found' });
+    }
+
+    if (serviceRecord.status === 'Completed') {
+      return res.status(400).json({ error: 'Cannot cancel an already completed service.' });
+    }
+
+    if (serviceRecord.status === 'Cancelled') {
+      return res.status(400).json({ error: 'Service fulfillment is already cancelled.' });
+    }
+
+    const now = new Date().toISOString();
+    const cancellationReason = (reason || 'Fulfillment cancelled by operator').trim();
+
+    await updateToDatabase(dbPath, {
+      status: 'Cancelled',
+      cancelledAt: now,
+      cancellationReason,
+      cancelledBy: req.user?.uid || 'operator',
+      cancelledByRole: req.userDetails?.role || 'operator',
+      updatedAt: now
+    });
+
+    // Send in-app cancellation notification to the client
+    if (serviceRecord.clientUid) {
+      try {
+        await createNotification({
+          recipientUid: serviceRecord.clientUid,
+          recipientRole: 'client',
+          title: 'Service Fulfillment Cancelled',
+          message: `Your service "${serviceRecord.serviceType}" fulfillment has been cancelled.${cancellationReason ? ' Reason: ' + cancellationReason : ''}`,
+          type: 'service',
+          link: '/tracking',
+          metadata: {
+            serviceId: id,
+            status: 'Cancelled',
+            serviceType: serviceRecord.serviceType,
+            reason: cancellationReason,
+            cancelledAt: now
+          }
+        });
+      } catch (notifErr) {
+        console.error('Error sending cancellation notification to client:', notifErr);
+      }
+    }
+
+    return res.status(200).json({
+      message: `Service "${serviceRecord.serviceType}" fulfillment has been cancelled.`,
+      status: 'Cancelled',
+      cancelledAt: now,
+      cancellationReason
+    });
+  } catch (error) {
+    console.error('Error cancelling active service:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
 module.exports = {
   getActiveServices,
   createActiveService,
   updateStepStatus,
+  cancelActiveService,
   compileWorkflowStepsForService
 };
+

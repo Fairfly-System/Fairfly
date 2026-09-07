@@ -36,6 +36,9 @@ function ServiceProcedureContent() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const serviceRecord = useMemo(() => {
     if (!activeServices || !id) return null;
@@ -71,6 +74,27 @@ function ServiceProcedureContent() {
   const requirements = serviceRecord.requirements || [];
   const completedStepsCount = steps.filter((s) => s.status === 'Completed').length;
   const progressPct = steps.length > 0 ? Math.round((completedStepsCount / steps.length) * 100) : 0;
+  const isTerminal = serviceRecord.status === 'Completed' || serviceRecord.status === 'Cancelled';
+
+  const handleCancelService = () => {
+    if (!serviceRecord) return;
+    setIsCancelling(true);
+    ApiCaller(
+      `${API_BASE_URL}/api/services/active/${serviceRecord.id}/cancel`,
+      'PATCH',
+      { cancellationReason: cancelReason.trim() },
+      { Authorization: `Bearer ${userToken}` },
+      () => {
+        addToast('Service fulfillment has been cancelled.', 'info');
+        setShowCancelModal(false);
+        setCancelReason('');
+      },
+      (error) => {
+        addToast(`Failed to cancel service: ${error.message}`, 'error');
+      },
+      setIsCancelling
+    );
+  };
 
   const handleCompleteStep = (stepIdx) => {
     if (stepIdx > 0 && steps[stepIdx - 1].status !== 'Completed') {
@@ -86,7 +110,7 @@ function ServiceProcedureContent() {
       (res) => {
         addToast(`Step ${stepIdx + 1} marked as Completed!`, 'success');
         if (res.allCompleted) {
-          addToast('🎉 All workflow steps completed! Service marked as finished.', 'success');
+          addToast('All workflow steps completed! Service marked as finished.', 'success');
         }
       },
       (error) => {
@@ -124,16 +148,63 @@ function ServiceProcedureContent() {
 
       <section className="card op-procedure-page">
         <div className="op-procedure-top-bar">
-        <Link to="/operator" className="op-procedure-back-btn">
-          <i className="fa-solid fa-arrow-left"></i> Back to Active Services
-        </Link>
+          <Link to="/operator" className="op-procedure-back-btn">
+            <i className="fa-solid fa-arrow-left"></i> Back to Active Services
+          </Link>
 
-        <span className={`swm-overall-badge ${serviceRecord.status === 'Completed' ? 'completed' : 'processing'}`}>
-          Overall Status: {serviceRecord.status || 'Processing'}
-        </span>
-      </div>
+          <div className="op-procedure-top-actions">
+            {!isTerminal && (
+              <button
+                type="button"
+                className="op-procedure-cancel-btn"
+                onClick={() => setShowCancelModal(true)}
+                disabled={isSubmitting || isCancelling}
+              >
+                <i className="fa-solid fa-ban"></i> Cancel Service Fulfillment
+              </button>
+            )}
+            <span className={`swm-overall-badge ${serviceRecord.status === 'Completed' ? 'completed' : serviceRecord.status === 'Cancelled' ? 'cancelled' : 'processing'}`}>
+              Overall Status: {serviceRecord.status || 'Processing'}
+            </span>
+          </div>
+        </div>
 
-      {/* Top Client & Service Header */}
+        {serviceRecord.status === 'Completed' && (
+          <div className="op-procedure-status-banner completed">
+            <div className="op-status-banner-content">
+              <i className="fa-solid fa-circle-check"></i>
+              <div>
+                <strong>Service Fulfillment Completed & Fulfilled</strong>
+                <p style={{ margin: '0.25rem 0 0 0', color: '#166534' }}>
+                  All procedure steps have been completed and verified. The revenue has been credited to your branch account.
+                </p>
+              </div>
+            </div>
+            {(serviceRecord.revenueAmount || serviceRecord.price) && (
+              <div className="op-status-banner-revenue">
+                <i className="fa-solid fa-coins" style={{ marginRight: '0.35rem' }}></i>
+                {serviceRecord.revenueAmount ? `+₱${Number(serviceRecord.revenueAmount).toLocaleString()}` : serviceRecord.price}
+              </div>
+            )}
+          </div>
+        )}
+
+        {serviceRecord.status === 'Cancelled' && (
+          <div className="op-procedure-status-banner cancelled">
+            <div className="op-status-banner-content">
+              <i className="fa-solid fa-circle-xmark"></i>
+              <div>
+                <strong>Service Fulfillment Cancelled</strong>
+                <p style={{ margin: '0.25rem 0 0 0', color: '#991b1b' }}>
+                  {serviceRecord.cancellationReason ? `Reason: ${serviceRecord.cancellationReason}` : 'This service fulfillment has been cancelled.'}
+                  {serviceRecord.cancelledAt && ` (${new Date(serviceRecord.cancelledAt).toLocaleString()})`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Client & Service Header */}
       <div className="op-procedure-header-card">
         <div className="op-procedure-header-left">
           <div className="op-procedure-header-icon">
@@ -202,7 +273,17 @@ function ServiceProcedureContent() {
                       <div className="op-submitted-req-header">
                         <span className="op-submitted-req-name">{reqName}</span>
                         <span className="op-submitted-req-type">
-                          {isImage ? '📷 Image' : fileMeta ? '📄 Document' : inputType === 'date' ? '📅 Date' : inputType === 'number' ? '🔢 Number' : '✏️ Text'}
+                          {isImage ? (
+                            <span><i className="fa-regular fa-image" style={{ marginRight: '0.35rem' }}></i>Image</span>
+                          ) : fileMeta ? (
+                            <span><i className="fa-regular fa-file-lines" style={{ marginRight: '0.35rem' }}></i>Document</span>
+                          ) : inputType === 'date' ? (
+                            <span><i className="fa-regular fa-calendar" style={{ marginRight: '0.35rem' }}></i>Date</span>
+                          ) : inputType === 'number' ? (
+                            <span><i className="fa-solid fa-hashtag" style={{ marginRight: '0.35rem' }}></i>Number</span>
+                          ) : (
+                            <span><i className="fa-solid fa-pen" style={{ marginRight: '0.35rem' }}></i>Text</span>
+                          )}
                         </span>
                       </div>
 
@@ -322,7 +403,7 @@ function ServiceProcedureContent() {
                 </div>
 
                 <div className="op-procedure-step-actions">
-                  {!isCompleted && (
+                  {!isTerminal && !isCompleted && (
                     <button
                       className="swm-btn-complete"
                       disabled={isLocked || isSubmitting}
@@ -333,7 +414,7 @@ function ServiceProcedureContent() {
                     </button>
                   )}
 
-                  {!isCompleted && !isLocked && (
+                  {!isTerminal && !isCompleted && !isLocked && (
                     <button
                       className="swm-btn-portal"
                       disabled={isSubmitting}
@@ -377,6 +458,62 @@ function ServiceProcedureContent() {
         </div>
       </div>
       </section>
+
+      {/* Cancellation Modal */}
+      {showCancelModal && (
+        <div className="op-cancel-modal-overlay" onClick={() => !isCancelling && setShowCancelModal(false)}>
+          <div className="op-cancel-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="op-cancel-modal-header">
+              <div className="op-cancel-modal-icon">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <div className="op-cancel-modal-title">Cancel Service Fulfillment</div>
+            </div>
+            <div className="op-cancel-modal-body">
+              <p>
+                Are you sure you want to cancel the fulfillment of this service? The client will be automatically notified that the service fulfillment has been cancelled.
+              </p>
+              <label htmlFor="op-cancel-reason-textarea" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Cancellation Reason (Optional)
+              </label>
+              <textarea
+                id="op-cancel-reason-textarea"
+                className="op-cancel-textarea"
+                placeholder="State why this service cannot be completed (e.g., Client requested cancellation, unable to acquire documents...)"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                disabled={isCancelling}
+              />
+            </div>
+            <div className="op-cancel-modal-actions">
+              <button
+                type="button"
+                className="op-cancel-modal-btn-cancel"
+                onClick={() => setShowCancelModal(false)}
+                disabled={isCancelling}
+              >
+                Go Back
+              </button>
+              <button
+                type="button"
+                className="op-cancel-modal-btn-confirm"
+                onClick={handleCancelService}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin"></i> Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-ban"></i> Confirm Cancellation
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

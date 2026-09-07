@@ -359,10 +359,13 @@ function DashboardContent() {
                         </span>
                       )}
                       <span className={`op-priority ${priorityType}`}>{priority}</span>
+                      <span className={`op-status-badge ${s.status === 'Completed' ? 'completed' : s.status === 'Cancelled' ? 'cancelled' : 'processing'}`}>
+                        {s.status || 'Processing'}
+                      </span>
                     </div>
                     <Link to={`/operator/services/${s.id}/procedure`} className="op-perform-procedure-btn">
-                      <i className="fa-solid fa-play"></i>
-                      <span>Perform Workflow Procedure</span>
+                      <i className={`fa-solid ${s.status === 'Completed' ? 'fa-circle-check' : s.status === 'Cancelled' ? 'fa-circle-xmark' : 'fa-play'}`}></i>
+                      <span>{s.status === 'Completed' ? 'View Fulfilled Details' : s.status === 'Cancelled' ? 'View Cancellation' : 'Perform Workflow Procedure'}</span>
                     </Link>
                   </div>
 

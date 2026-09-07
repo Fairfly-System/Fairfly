@@ -21,7 +21,7 @@ const baseOperatorLinks = [
 ];
 
 export default function OperatorLayout() {
-  const { userDetails } = useAuthContext();
+  const { user, userDetails } = useAuthContext();
   // Real-time stat metrics
   const [activeServices, setActiveServices] = useState(0);
   const [completedServices, setCompletedServices] = useState(0);
@@ -32,17 +32,21 @@ export default function OperatorLayout() {
     const unsubServices = onSnapshot(collection(firestore, 'activeServices'), (snapshot) => {
       let active = 0;
       let completed = 0;
+      const userHasScoped = user?.uid && snapshot.docs.some((d) => d.data().operatorId === user.uid || d.data().branchUid === user.uid);
+
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
+        if (userHasScoped && data.operatorId !== user.uid && data.branchUid !== user.uid) {
+          return;
+        }
         if (data.status === 'Completed' || data.status === 'completed') completed++;
-        else active++;
+        else if (data.status !== 'Cancelled' && data.status !== 'cancelled') active++;
       });
       setActiveServices(active);
       setCompletedServices(completed);
     }, () => {
-      // Fallback defaults if collection empty
-      setActiveServices(3);
-      setCompletedServices(12);
+      setActiveServices(0);
+      setCompletedServices(0);
     });
 
     // Real-time listener for appointments requiring action
@@ -53,14 +57,16 @@ export default function OperatorLayout() {
       });
       setPendingActions(pending);
     }, () => {
-      setPendingActions(5);
+      setPendingActions(0);
     });
 
     return () => {
       unsubServices();
       unsubAppointments();
     };
-  }, []);
+  }, [user?.uid]);
+
+  const branchRevenue = Number(userDetails?.totalRevenue) || 0;
 
   return (
     <AppLayout
@@ -69,6 +75,16 @@ export default function OperatorLayout() {
       navLinks={baseOperatorLinks}
       statCards={
         <>
+          <KpiCard
+            title="Fulfilled Revenue"
+            value={`₱${branchRevenue.toLocaleString()}`}
+            detail="Credited from completed services"
+            icon="fa-solid fa-coins"
+            iconColor="#eab308"
+            badge="Revenue"
+            badgeType="ok"
+          />
+
           <KpiCard
             title="Active Services"
             value={activeServices}

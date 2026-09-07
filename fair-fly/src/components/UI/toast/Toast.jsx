@@ -27,13 +27,13 @@ const Toast = ({ message, type = 'info', onRemove, id }) => {
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return <span role="img" aria-label="success icon">✓</span>;
+        return <i className="fa-solid fa-circle-check" aria-hidden="true"></i>;
       case 'error':
-        return <span role="img" aria-label="error icon">✕</span>;
+        return <i className="fa-solid fa-circle-xmark" aria-hidden="true"></i>;
       case 'warning':
-        return <span role="img" aria-label="warning icon">⚠</span>;
+        return <i className="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>;
       default:
-        return <span role="img" aria-label="info icon">ℹ</span>;
+        return <i className="fa-solid fa-circle-info" aria-hidden="true"></i>;
     }
   };
 

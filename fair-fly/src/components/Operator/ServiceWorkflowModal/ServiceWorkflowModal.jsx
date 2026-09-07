@@ -55,7 +55,7 @@ export default function ServiceWorkflowModal({ serviceRecord, onClose }) {
       (res) => {
         addToast(`Step ${stepIdx + 1} completed successfully!`, 'success');
         if (res.allCompleted) {
-          addToast('🎉 All workflow steps completed! Service marked as finished.', 'success');
+          addToast('All workflow steps completed! Service marked as finished.', 'success');
         }
       },
       (error) => {

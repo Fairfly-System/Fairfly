@@ -338,7 +338,7 @@ export default function ClientServiceRequestModal({
         payload,
         userToken ? { Authorization: `Bearer ${userToken}` } : {},
         (res) => {
-          addToast(`🎉 Service request for "${payload.serviceType}" submitted to ${payload.branchName}!`, 'success');
+          addToast(`Service request for "${payload.serviceType}" submitted to ${payload.branchName}!`, 'success');
           if (onRequestSuccess) onRequestSuccess(res);
           setIsSubmitting(false);
           onClose();

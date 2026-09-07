@@ -228,7 +228,7 @@ export default function OperatorServicesContent() {
           processedData,
           { Authorization: `Bearer ${userToken}` },
           () => {
-            addToast(`🎉 Branch service "${processedData.name}" created and published!`, 'success');
+            addToast(`Branch service "${processedData.name}" created and published!`, 'success');
             handleCloseModal();
             setIsSubmitting(false);
           },

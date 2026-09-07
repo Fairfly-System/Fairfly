@@ -32,7 +32,7 @@ export default function QualificationApplicationModal({
       { reason: reason.trim() },
       { Authorization: `Bearer ${userToken}` },
       (res) => {
-        addToast('🎉 Qualification application submitted successfully! Super Administrators will review your request.', 'success');
+        addToast('Qualification application submitted successfully! Super Administrators will review your request.', 'success');
         setReason('');
         if (onApplicationSubmitted) onApplicationSubmitted(res);
         onClose();

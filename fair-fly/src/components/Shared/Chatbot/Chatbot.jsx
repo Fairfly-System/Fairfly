@@ -69,7 +69,7 @@ export default function Chatbot() {
       let fallbackText = "Oops, Something went wrong. Please try again in a bit!";
       
       if (errorString.includes("429") || errorString.includes("quota")) {
-        fallbackText = "Slow down a bit! ☕ You've hit Google's temporary limit. Please wait about a minute before sending your next message, thanks!";
+        fallbackText = "Slow down a bit! You've hit Google's temporary limit. Please wait about a minute before sending your next message, thanks!";
       }
 
       setMessages([
