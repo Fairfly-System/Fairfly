@@ -1,5 +1,6 @@
 const { db } = require('../config/firebase');
 const { createNotification, notifyAllOperators } = require('../services/notificationService');
+const { deleteRecordStorageFiles, extractStorageUrls, deleteFilesFromStorage } = require('../services/storageService');
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -414,10 +415,31 @@ const postAnnouncement = async (req, res) => {
       return res.status(403).json({ error: 'Only Administrators can post announcements' });
     }
 
-    const { title, content, priority = 'Normal' } = req.body;
+    const { title, content, priority = 'Normal', photos = [] } = req.body;
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
     }
+
+    if (!Array.isArray(photos)) {
+      return res.status(400).json({ error: 'photos must be an array' });
+    }
+    if (photos.length > 5) {
+      return res.status(400).json({ error: 'Maximum 5 photos can be attached to an announcement' });
+    }
+
+    // Sanitize photos array
+    const sanitizedPhotos = photos.map((p, idx) => {
+      if (typeof p === 'string') {
+        return { url: p, name: `Photo ${idx + 1}` };
+      }
+      return {
+        url: p.url || '',
+        name: p.name || p.fileName || `Photo ${idx + 1}`,
+        size: Number(p.size || p.fileSize) || 0,
+        type: p.type || 'image',
+        storagePath: p.storagePath || null
+      };
+    }).filter(p => p.url);
 
     const now = new Date().toISOString();
     const authorName = getDisplayName(req.userDetails, req.user.email);
@@ -426,6 +448,7 @@ const postAnnouncement = async (req, res) => {
       title: title.trim(),
       content: content.trim(),
       priority, // 'Normal' | 'Important' | 'Urgent'
+      photos: sanitizedPhotos,
       authorUid: req.user.uid,
       authorName,
       createdAt: now,
@@ -439,7 +462,7 @@ const postAnnouncement = async (req, res) => {
       title: `Announcement: ${announcementData.title}`,
       message: announcementData.content.substring(0, 100),
       type: 'system',
-      link: '/operator',
+      link: '/operator/announcements',
       metadata: { announcementId: docRef.id, priority }
     }).catch(err => console.warn('Announcement broadcast notification failed:', err));
 
@@ -454,6 +477,126 @@ const postAnnouncement = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /api/chats/announcements/:id
+ * Update an announcement with storage photo diffing (Admin Only)
+ */
+const updateAnnouncement = async (req, res) => {
+  try {
+    const currentRole = req.userDetails?.role;
+    if (currentRole !== 'admin') {
+      return res.status(403).json({ error: 'Only Administrators can edit announcements' });
+    }
+
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Announcement ID is required' });
+
+    const docRef = db.collection(COLLECTIONS.ANNOUNCEMENTS).doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: 'Announcement not found' });
+    }
+
+    const existing = { id: docSnap.id, ...docSnap.data() };
+    const { title, content, priority, photos } = req.body;
+
+    const sanitizedUpdates = {
+      updatedAt: new Date().toISOString()
+    };
+
+    if (title !== undefined) {
+      if (!title.trim()) return res.status(400).json({ error: 'Title cannot be empty' });
+      sanitizedUpdates.title = title.trim();
+    }
+    if (content !== undefined) {
+      if (!content.trim()) return res.status(400).json({ error: 'Content cannot be empty' });
+      sanitizedUpdates.content = content.trim();
+    }
+    if (priority !== undefined) {
+      sanitizedUpdates.priority = priority;
+    }
+
+    if (photos !== undefined) {
+      if (!Array.isArray(photos)) {
+        return res.status(400).json({ error: 'photos must be an array' });
+      }
+      if (photos.length > 5) {
+        return res.status(400).json({ error: 'Maximum 5 photos can be attached to an announcement' });
+      }
+
+      sanitizedUpdates.photos = photos.map((p, idx) => {
+        if (typeof p === 'string') {
+          return { url: p, name: `Photo ${idx + 1}` };
+        }
+        return {
+          url: p.url || '',
+          name: p.name || p.fileName || `Photo ${idx + 1}`,
+          size: Number(p.size || p.fileSize) || 0,
+          type: p.type || 'image',
+          storagePath: p.storagePath || null
+        };
+      }).filter(p => p.url);
+
+      // Perform storage file diffing cleanup
+      const existingStorageUrls = extractStorageUrls(existing);
+      const updatedStorageUrls = extractStorageUrls(sanitizedUpdates);
+      const removedStorageUrls = existingStorageUrls.filter((url) => !updatedStorageUrls.includes(url));
+
+      if (removedStorageUrls.length > 0) {
+        console.log(`[StorageDiff] Detected ${removedStorageUrls.length} removed photo(s) on announcement update (${id}). Cleaning up from Firebase Storage...`, removedStorageUrls);
+        await deleteFilesFromStorage(removedStorageUrls);
+      }
+    }
+
+    await docRef.update(sanitizedUpdates);
+
+    return res.status(200).json({
+      id,
+      ...existing,
+      ...sanitizedUpdates,
+      message: 'Announcement updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating announcement:', error);
+    return res.status(500).json({ error: 'Failed to update announcement' });
+  }
+};
+
+/**
+ * DELETE /api/chats/announcements/:id
+ * Delete an announcement and clean up all attached photos from Firebase Storage (Admin Only)
+ */
+const deleteAnnouncement = async (req, res) => {
+  try {
+    const currentRole = req.userDetails?.role;
+    if (currentRole !== 'admin') {
+      return res.status(403).json({ error: 'Only Administrators can delete announcements' });
+    }
+
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Announcement ID is required' });
+
+    const docRef = db.collection(COLLECTIONS.ANNOUNCEMENTS).doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: 'Announcement not found' });
+    }
+
+    const existing = { id: docSnap.id, ...docSnap.data() };
+
+    await docRef.delete();
+
+    // Clean up all attached photos from Firebase Storage
+    console.log(`[StorageCleanup] Deleting all attached files for announcement ${id}...`);
+    await deleteRecordStorageFiles(existing);
+
+    return res.status(200).json({ message: 'Announcement and attached photos deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting announcement:', error);
+    return res.status(500).json({ error: 'Failed to delete announcement' });
+  }
+};
+
 module.exports = {
   getContacts,
   getOrCreateConversation,
@@ -461,5 +604,7 @@ module.exports = {
   postMessage,
   markConversationRead,
   getAnnouncements,
-  postAnnouncement
+  postAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement
 };

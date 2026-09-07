@@ -76,6 +76,7 @@ import ClientDetailPage from './pages/Admin/AdminClients/ClientDetailPage';
 import AdminResources from './pages/Admin/AdminResources/AdminResources';
 import OperatorResources from './pages/Operator/OperatorResources/OperatorResources';
 import MessagesPage from './pages/Shared/MessagesPage/MessagesPage';
+import AnnouncementsPage from './pages/Shared/Announcements/AnnouncementsPage';
 
 function App() {
 
@@ -116,6 +117,7 @@ function App() {
             <Route path=":id" element={<AdminDetailPage />} />
           </Route>
           <Route path="resources" element={<AdminResources />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="messages" element={<MessagesPage />} />
           <Route path="franchise-apps" element={<AdminFranchiseApps />}>
             <Route index element={<FranchiseContent />} />
@@ -154,6 +156,7 @@ function App() {
           </Route>
           <Route path="workflows" element={<Navigate to="/operator" replace />} />
           <Route path="resources" element={<OperatorResources />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="messages" element={<MessagesPage />} />
           <Route path="tickets" element={<OperatorTickets />}>
             <Route index element={<OperatorTicketsContent />} />

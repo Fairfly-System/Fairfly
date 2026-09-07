@@ -14,6 +14,7 @@ const baseAdminLinks = [
   { to: '/admin/operators', icon: 'fa-solid fa-users', label: 'Operators' },
   { to: '/admin/clients', icon: 'fa-solid fa-user-group', label: 'Clients' },
   { to: '/admin/resources', icon: 'fa-solid fa-folder-open', label: 'Resources' },
+  { to: '/admin/announcements', icon: 'fa-solid fa-bullhorn', label: 'Announcements' },
   { to: '/admin/messages', icon: 'fa-solid fa-comments', label: 'Messages' },
   { to: '/admin/qualifications', icon: 'fa-solid fa-certificate', label: 'Qualifications' },
   { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },

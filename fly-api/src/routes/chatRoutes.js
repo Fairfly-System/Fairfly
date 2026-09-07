@@ -7,7 +7,9 @@ const {
   postMessage,
   markConversationRead,
   getAnnouncements,
-  postAnnouncement
+  postAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement
 } = require('../controllers/chatController');
 const { verifyFirebaseToken } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
@@ -25,6 +27,8 @@ router.patch('/conversations/:id/read', apiRateLimiter, markConversationRead);
 // Announcements
 router.get('/announcements', apiRateLimiter, getAnnouncements);
 router.post('/announcements', apiRateLimiter, postAnnouncement);
+router.patch('/announcements/:id', apiRateLimiter, updateAnnouncement);
+router.delete('/announcements/:id', apiRateLimiter, deleteAnnouncement);
 
 // Legacy routes
 router.post('/', apiRateLimiter, getOrCreateConversation);

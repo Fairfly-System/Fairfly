@@ -1,5 +1,50 @@
 # Update Logs
 
+## [2026-09-08] Feature: Dedicated Announcements Page with Facebook-Style Post Feed, Multi-Photo Mosaic Grid, Fullscreen Lightbox, Reader Modal, and Storage Diffing
+
+### Overview
+Moved Head Office Announcements from a modal dialog (`AnnouncementsModal`) into a dedicated full page accessible to both Administrators (`/admin/announcements`) and Operators (`/operator/announcements`). Announcements are styled as Facebook-style post cards featuring official author badges, priority indicators, inline text expander ("... See more"), Facebook-style multi-photo mosaic grids (supporting 1 to 5 photos), a fullscreen lightbox viewer, and an expanded reader modal. Deleting announcements cleanly deletes all attached photos from Firebase Storage, and updating announcements uses storage URL diffing to remove replaced or deleted photos from Firebase Storage.
+
+### Key Changes
+
+1. **Backend Enhancements (`fly-api`)**:
+   - `chatController.js`:
+     - Updated `postAnnouncement` to accept and sanitize up to 5 attached photos (`url`, `name`, `size`, `type`, `storagePath`).
+     - Added `updateAnnouncement` (`PATCH /api/chats/announcements/:id`) with role-check (admin only) and storage diffing: compares existing storage URLs with updated storage URLs and invokes `deleteFilesFromStorage` for deleted photos.
+     - Added `deleteAnnouncement` (`DELETE /api/chats/announcements/:id`) with role-check (admin only) and invokes `deleteRecordStorageFiles` to clean up all storage assets associated with the announcement document upon deletion.
+   - `chatRoutes.js`:
+     - Registered `PATCH /announcements/:id` and `DELETE /announcements/:id` protected with authentication and rate limiting.
+
+2. **Frontend Services & Routing (`fair-fly`)**:
+   - `chatService.js`:
+     - Updated `postAnnouncement` to pass sanitized `photos`.
+     - Added `updateAnnouncement(id, { title, content, priority, photos })`.
+     - Added `deleteAnnouncement(id)`.
+   - `App.jsx`:
+     - Registered `<Route path="announcements" element={<AnnouncementsPage />} />` under both `/admin` and `/operator`.
+   - `AppNavbar.jsx`:
+     - Removed the Announcements button from the top navbar since Announcements is now a dedicated page accessible via the main sidebar navigation.
+     - Removed obsolete `AnnouncementsModal` from the navbar.
+   - `AdminLayout.jsx` & `OperatorLayout.jsx`:
+     - Added Announcements link (`fa-solid fa-bullhorn`) to sidebar menus in both admin and operator portals.
+
+3. **Facebook-Style Announcements Page & Components (`fair-fly`)**:
+   - `AnnouncementsPage.jsx`:
+     - Integrated `PageHeader`, `SearchBar` with debouncing, and `FilterChipGroup` with real-time priority counts.
+     - Implemented Facebook-style post composer for Administrators with drag-and-drop / file picker photo attachments (max 5 photos, $\le 15\text{MB}$ each, thumbnail previews with remove `✕` buttons, sequential upload via `uploadFileToBackend`).
+     - Supports inline post editing with form pre-filling and scroll-into-view.
+     - Supports post deletion with `ConfirmationModal` and storage asset cleanup.
+     - Implemented post cards with official Head Office avatar, author metadata, verified badge, relative/absolute timestamp, priority indicator pill (`Urgent Alert`, `Important`, `Normal`), inline text truncation with "... See more" / "Show less" toggle, and "Expand Notice" reader action.
+   - `AnnouncementPhotoGrid.jsx`:
+     - Renders responsive Facebook-style multi-photo mosaic grid layouts for 1, 2, 3, 4, and 5 photos with hover zoom effects.
+   - `AnnouncementLightbox.jsx`:
+     - Implemented fullscreen image viewer with next/previous controls, keyboard navigation (`Esc`, `ArrowLeft`, `ArrowRight`), photo counter ("X of Y"), and external tab open link.
+   - `announcements-page.css`:
+     - Complete CSS styling for the Facebook feed layout, composer, photo dropzone, thumbnail preview grid, mosaic photo grids (1 to 5 photos), lightbox viewer, and expanded reader modal.
+     - **Layout Refinement**: Removed restrictive `max-width: 48rem` clamp and centered alignment, allowing the toolbar, composer, and post cards to utilize the full comfortable dashboard content width (`width: 100%`) without excessive horizontal margins or narrow column squishing. Streamlined card and toolbar paddings.
+
+---
+
 ## [2026-09-08] Refactor: Admin Inquiry History Table Clean-Up and Symbol Styling
 
 ### Overview

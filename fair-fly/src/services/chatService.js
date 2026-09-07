@@ -210,7 +210,7 @@ export const subscribeToAnnouncements = (callback) => {
 /**
  * Post a new Head Office announcement (Admin Only)
  */
-export const postAnnouncement = async ({ title, content, priority = 'Normal' }) => {
+export const postAnnouncement = async ({ title, content, priority = 'Normal', photos = [] }) => {
   try {
     const token = await auth.currentUser?.getIdToken();
     const res = await fetch(`${API_BASE_URL}/api/chats/announcements`, {
@@ -219,7 +219,7 @@ export const postAnnouncement = async ({ title, content, priority = 'Normal' }) 
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ title, content, priority })
+      body: JSON.stringify({ title, content, priority, photos })
     });
 
     if (!res.ok) {
@@ -230,6 +230,58 @@ export const postAnnouncement = async ({ title, content, priority = 'Normal' }) 
     return await res.json();
   } catch (error) {
     console.error('Error posting announcement:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing Head Office announcement (Admin Only)
+ */
+export const updateAnnouncement = async (id, { title, content, priority, photos }) => {
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/api/chats/announcements/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ title, content, priority, photos })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update announcement');
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error updating announcement:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an announcement and its attached photos from storage (Admin Only)
+ */
+export const deleteAnnouncement = async (id) => {
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/api/chats/announcements/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete announcement');
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error deleting announcement:', error);
     throw error;
   }
 };

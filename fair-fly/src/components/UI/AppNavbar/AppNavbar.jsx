@@ -5,7 +5,6 @@ import { auth } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../toast/ToastProvider';
 import BaseModal from '../ModalBase/BaseModal';
-import AnnouncementsModal from '../../Shared/AnnouncementsModal/AnnouncementsModal';
 import NotificationBell from '../NotificationBell/NotificationBell';
 import './app-navbar.css';
 
@@ -22,7 +21,6 @@ export default function AppNavbar({
   const { user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const logoutModalRef = useRef(null);
-  const [isAnnouncementsOpen, setIsAnnouncementsOpen] = useState(false);
   const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
 
   const handleLogoutConfirm = async () => {
@@ -134,13 +132,6 @@ export default function AppNavbar({
           {/* Notification Bell */}
           <NotificationBell />
 
-          {/* Render Announcements for Admin & Operator only */}
-          {!isClient && (
-            <button className="app-nav-chat btn-ghost" onClick={() => setIsAnnouncementsOpen(true)} title="Head Office Announcements">
-              <i className="fa-solid fa-bullhorn"></i> Announcements
-            </button>
-          )}
-
           {/* Render welcome text for Client */}
           {isClient && (
             <span className="app-nav-client-welcome">
@@ -153,9 +144,6 @@ export default function AppNavbar({
             <span className="logout-text">Logout</span>
           </a>
         </div>
-
-        {/* Announcements Modal */}
-        <AnnouncementsModal isOpen={isAnnouncementsOpen} onClose={() => setIsAnnouncementsOpen(false)} />
 
         <BaseModal ref={logoutModalRef} title="Confirm Logout" maxWidth="26.25rem">
           <div className="logout-confirm-content">
