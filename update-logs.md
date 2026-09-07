@@ -1,5 +1,62 @@
 # Update Logs
 
+## [2026-09-08] Refactor: Admin Inquiry History Table Clean-Up and Symbol Styling
+
+### Overview
+Refined the Inquiry History table in the Admin portal (`/admin/inquiry-history`) by removing the redundant Requirements column per design requirements. Fixed missing and broken icon/symbol styles across the table and toolbar, including search icon positioning, clear button styling, branch selector label, branch tag badges with building icons, status pills, and standardized table action icon buttons for PDF export and record view.
+
+### Key Changes
+
+1. **Table Structure Optimization (`HistoryContent.jsx`)**:
+   - Removed the `Requirements` column header and its table data cells.
+   - Reduced `SkeletonTable` column count from 7 to 6 columns.
+   - Updated empty state table cell `colSpan` from 7 to 6.
+   - Cleaned up unused requirements parsing variables in the table render loop.
+
+2. **Symbol & Typography Styling (`admin-inquiry-history.css` & `HistoryContent.jsx`)**:
+   - **Toolbar Controls**: Added styles for `.search-box`, `.search-icon` (proper absolute positioning), `.search-box input`, and `.clear-search-btn` (interactive button with clean icon positioning).
+   - **Branch Selector**: Styled `.inquiry-branch-label` with code-branch icon and focus states on `.inquiry-branch-select`.
+   - **Form Reference & Date**: Styled `.inquiry-form-code` as a clean monospace badge with document icon and `.inquiry-date-sub` with calendar icon.
+   - **Client Info**: Styled `.inquiry-client-name` and `.inquiry-client-sub` with mail/phone icons and proper hierarchy.
+   - **Branch Received From**: Added complete styling for `.branch-tag` with purple building icon, padding, subtle border, and background tag.
+   - **Table Actions**: Replaced mismatched buttons with standardized `.icon-btn.pdf` (red PDF icon with subtle highlight) and `.icon-btn.view` (purple eye icon button).
+   - **Status Badges**: Standardized `.status-pill` classes (`status-pill-active`, `status-pill-pending`, `status-pill-disabled`) with capitalized text.
+
+---
+
+## [2026-09-08] Feature: Operator Qualification Application Supporting Documents & Admin Dedicated Qualification Detail Page
+
+### Overview
+Enhanced the Operator Qualification Application flow by adding multi-document upload support (up to 5 documents, 15MB each, supporting PDF, images, Word docs) on the Operator side. Converted the Admin qualification review flow from a modal into a dedicated full-page view (`/admin/qualifications/:id`) utilizing `RecordDetailLayout`. The dedicated page displays the applicant operator's live performance KPIs (Fulfilled Revenue, Active Services, Completed Services, Attached Documents), comprehensive branch profile, justification statement, decision form, and an interactive document manager providing View (with in-modal preview), Print, and Download capabilities for each attached document.
+
+### Key Changes
+
+1. **Backend API Enhancements (`fly-api`)**:
+   - `qualificationRoutes.js`: Whitelisted `documents` array in `allowedFields` for `POST /qualifications`.
+   - `qualificationController.js`:
+     - Added robust server-side validation in `submitQualificationApplication`: enforces array type, maximum 5 documents, individual item schema verification (`name`, `url`, `size`, `type`, `storagePath`, `uploadedAt`), sanitized payload insertion, and dynamic Super Admin notifications with attached document counts.
+     - Enriched `getQualificationApplicationById`: fetches and merges the operator's profile data (`operatorProfile`), including branch details and performance metrics (`totalRevenue`, `completedServicesCount`).
+
+2. **Operator Document Upload Experience (`fair-fly`)**:
+   - `QualificationApplicationModal.jsx`: Integrated dropzone allowing drag-and-drop and file picker uploads for up to 5 documents ($\le 15\text{MB}$ each, supported types `.pdf, .png, .jpg, .jpeg, .webp, .doc, .docx`). Features file type icons, size calculation, validation warnings, duplicate avoidance, attached document list with removal, upload progress indicator, and sequential upload via `uploadFileToBackend`.
+   - `qualification-application-modal.css`: Styled upload dropzone, hover states, document item badges, remove actions, and progress feedback adhering to clean UI standards (no emojis).
+
+3. **Dedicated Admin Qualification Detail Page (`fair-fly`)**:
+   - `AdminQualificationDetailPage.jsx`: Created new dedicated detail page built with `RecordDetailLayout`, featuring:
+     - Realtime synchronization with Firestore (`qualificationApplications`, `users`, `activeServices`).
+     - Performance KPI Grid: Fulfilled Revenue (`₱${operator.totalRevenue}`), Active Services count, Completed Services count, and Attached Documents count badge.
+     - Operator & Branch Profile Panel: Displays Branch Name, Contact Person, Email, Contact Number, Address, Account Status, Current Certification, Operator ID, and direct navigation link to the operator's account profile (`/admin/operators/:id`).
+     - Justification Panel: Cleanly formatted statement of qualifications and experience.
+     - Document Manager Panel: Shows all uploaded documents with type icons, file size, upload timestamp, and 3 dedicated actions per document: **View** (opens in-modal preview for images/PDFs), **Print** (triggers print window), and **Download** (secure blob download with proper filename).
+     - Administrative Decision Form: Super Admin controls for approval/rejection with custom remarks and confirmation modals.
+   - `admin-qualification-detail.css`: Tailored styles for KPI cards, two-column panels, document cards, hover treatments, action buttons, and responsive in-modal document previewer.
+
+4. **Routing and Navigation Updates (`fair-fly`)**:
+   - `App.jsx`: Registered route `<Route path=":id" element={<AdminQualificationDetailPage />} />` inside `<Route path="qualifications" element={<AdminQualifications />}>`.
+   - `QualificationsContent.jsx`: Added document count badge to the data table, removed legacy review modal, and updated table action button to navigate directly to `/admin/qualifications/:id`.
+
+---
+
 ## [2026-09-07] Feature: System-Wide Skeleton UI Implementation Replacing Data Loading Spinners
 
 ### Overview

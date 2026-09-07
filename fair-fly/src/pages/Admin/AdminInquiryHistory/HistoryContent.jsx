@@ -175,8 +175,8 @@ export default function HistoryContent() {
           </div>
 
           <div className="inquiry-branch-select-box">
-            <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-dark)' }}>
-              <i className="fa-solid fa-code-branch" style={{ color: 'var(--purple)', marginRight: '0.25rem' }}></i> Branch:
+            <label className="inquiry-branch-label">
+              <i className="fa-solid fa-code-branch"></i> Branch:
             </label>
             <select
               className="inquiry-branch-select"
@@ -218,18 +218,17 @@ export default function HistoryContent() {
                 <th>Client / Company Name</th>
                 <th>Service Requested</th>
                 <th>Branch Received From</th>
-                <th>Requirements</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <SkeletonTable columns={7} rows={5} />
+                <SkeletonTable columns={6} rows={5} />
               ) : paginatedInquiries.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-                    <div className="empty-state-box" style={{ border: 'none', margin: 0, padding: 0 }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                    <div className="empty-state-box">
                       <i className="fa-solid fa-file-circle-question empty-icon"></i>
                       <p>No inquiry records match your search or filter criteria.</p>
                     </div>
@@ -237,37 +236,44 @@ export default function HistoryContent() {
                 </tr>
               ) : (
                 paginatedInquiries.map((inq) => {
-                  const isConf = (inq.status || '').toLowerCase() === 'confirmed';
-                  const reqs = Array.isArray(inq.requirements) ? inq.requirements : [];
-                  const uploadedCount = reqs.filter(r => r.file?.url || r.value).length;
-                  const totalReqs = reqs.length;
+                  const statusLower = (inq.status || 'pending').toLowerCase();
+                  let statusPillClass = 'status-pill status-pill-pending';
+                  if (['confirmed', 'accepted', 'completed', 'active'].includes(statusLower)) {
+                    statusPillClass = 'status-pill status-pill-active';
+                  } else if (['cancelled', 'rejected'].includes(statusLower)) {
+                    statusPillClass = 'status-pill status-pill-disabled';
+                  }
 
                   return (
                     <tr key={inq.id}>
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
+                        <div className="inquiry-form-meta">
+                          <span className="inquiry-form-code">
+                            <i className="fa-solid fa-file-lines"></i>
                             {inq.formNo || 'SAF-01'}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                          <span className="inquiry-date-sub">
+                            <i className="fa-regular fa-calendar"></i>
                             {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : 'N/A'}
                           </span>
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <strong style={{ color: 'var(--text-dark)' }}>
+                        <div className="inquiry-client-meta">
+                          <strong className="inquiry-client-name">
                             {inq.fullName || inq.clientName || 'Anonymous Client'}
                           </strong>
-                          {inq.email && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                              {inq.email}
+                          {(inq.email || inq.phoneNumber || inq.cellphone) && (
+                            <span className="inquiry-client-sub">
+                              <i className={inq.email ? 'fa-regular fa-envelope' : 'fa-solid fa-phone'}></i>
+                              {inq.email || inq.phoneNumber || inq.cellphone}
                             </span>
                           )}
                         </div>
                       </td>
                       <td>
-                        <span style={{ fontWeight: 600, color: 'var(--purple)' }}>
+                        <span className="inquiry-service-badge">
+                          <i className="fa-solid fa-briefcase"></i>
                           {inq.serviceType || 'General Travel Service'}
                         </span>
                       </td>
@@ -278,35 +284,28 @@ export default function HistoryContent() {
                         </span>
                       </td>
                       <td>
-                        <span className="req-count-badge">
-                          <i className="fa-solid fa-paperclip"></i>
-                          {uploadedCount} / {totalReqs} Files
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-pill ${isConf ? 'status-pill-active' : 'status-pill-pending'}`}>
+                        <span className={statusPillClass} style={{ textTransform: 'capitalize' }}>
                           {inq.status || 'Pending'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.375rem', alignItems: 'center' }}>
+                      <td className="actions-col" style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="btn btn-secondary"
+                            className="icon-btn pdf"
                             onClick={() => setPdfModalData(inq)}
-                            title="Export PDF"
-                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                            title="Export PDF (SAF-01)"
                           >
                             <i className="fa-solid fa-file-pdf"></i>
                           </button>
 
                           <button
                             type="button"
-                            className="btn btn-primary"
+                            className="icon-btn view"
                             onClick={() => navigate(`/admin/inquiry-history/${inq.id}`)}
-                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', background: 'var(--purple)' }}
+                            title="View Inquiry Record"
                           >
-                            <span>View</span>
+                            <i className="fa-solid fa-eye"></i>
                           </button>
                         </div>
                       </td>

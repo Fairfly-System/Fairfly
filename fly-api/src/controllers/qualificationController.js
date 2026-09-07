@@ -28,11 +28,37 @@ const submitQualificationApplication = async (req, res) => {
       return res.status(400).json({ error: 'Your branch account is already qualified to create services' });
     }
 
-    const { reason, justification, experience, notes } = req.body;
+    const { reason, justification, experience, notes, documents } = req.body;
     const finalReason = (reason || justification || experience || notes || '').trim();
 
     if (!finalReason) {
       return res.status(400).json({ error: 'Please provide a justification or reason for your qualification request' });
+    }
+
+    // Validate documents (up to 5 documents allowed)
+    let validatedDocuments = [];
+    if (documents) {
+      if (!Array.isArray(documents)) {
+        return res.status(400).json({ error: 'Documents must be provided as an array' });
+      }
+      if (documents.length > 5) {
+        return res.status(400).json({ error: 'You can upload a maximum of 5 supporting documents' });
+      }
+
+      for (let i = 0; i < documents.length; i++) {
+        const docItem = documents[i];
+        if (!docItem || typeof docItem !== 'object' || !docItem.url || typeof docItem.url !== 'string') {
+          return res.status(400).json({ error: `Document #${i + 1} has an invalid or missing file URL` });
+        }
+        validatedDocuments.push({
+          name: String(docItem.name || docItem.fileName || `document_${i + 1}`).substring(0, 150),
+          url: docItem.url,
+          size: Number(docItem.size || docItem.fileSize) || 0,
+          type: String(docItem.type || docItem.contentType || 'application/octet-stream').substring(0, 100),
+          storagePath: docItem.storagePath || '',
+          uploadedAt: docItem.uploadedAt || new Date().toISOString()
+        });
+      }
     }
 
     // Check for existing pending application
@@ -58,6 +84,7 @@ const submitQualificationApplication = async (req, res) => {
       contactNumber: operatorData.contactNumber || operatorData.phone || '',
       address: operatorData.address || '',
       reason: finalReason,
+      documents: validatedDocuments,
       status: 'pending',
       reviewedBy: null,
       reviewedByName: null,
@@ -70,11 +97,12 @@ const submitQualificationApplication = async (req, res) => {
     const docId = await addToDatabase(COLLECTIONS.QUALIFICATION_APPLICATIONS, applicationData);
 
     // Notify Super Admins
+    const docCountText = validatedDocuments.length > 0 ? ` (${validatedDocuments.length} document${validatedDocuments.length !== 1 ? 's' : ''} attached)` : '';
     notifyAdmins({
       title: 'New Operator Qualification Request',
-      message: `${branchName} applied to become a Qualified Operator for custom services`,
+      message: `${branchName} applied to become a Qualified Operator for custom services${docCountText}`,
       type: 'qualification',
-      link: '/admin/qualifications',
+      link: `/admin/qualifications/${docId}`,
       metadata: { applicationId: docId, operatorId }
     }).catch(e => console.warn('Qualification notification warning:', e.message));
 
@@ -132,7 +160,33 @@ const getQualificationApplicationById = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Insufficient privileges' });
     }
 
-    return res.status(200).json({ id, ...appDoc });
+    // Fetch Operator profile data and live stats
+    let operatorProfile = null;
+    if (appDoc.operatorId) {
+      const opUser = await getFromDatabase(`${COLLECTIONS.USERS}/${appDoc.operatorId}`);
+      if (opUser) {
+        operatorProfile = {
+          id: appDoc.operatorId,
+          name: opUser.name || opUser.fullName || appDoc.operatorName,
+          branchName: opUser.branchName || appDoc.branchName,
+          email: opUser.email || appDoc.email,
+          contactNumber: opUser.contactNumber || opUser.phone || appDoc.contactNumber,
+          address: opUser.address || appDoc.address,
+          status: opUser.status || 'Active',
+          isQualified: opUser.isQualified || false,
+          totalRevenue: Number(opUser.totalRevenue) || 0,
+          completedServicesCount: Number(opUser.completedServicesCount) || 0,
+          createdAt: opUser.createdAt || null
+        };
+      }
+    }
+
+    return res.status(200).json({
+      id,
+      ...appDoc,
+      operatorProfile,
+      documents: Array.isArray(appDoc.documents) ? appDoc.documents : []
+    });
   } catch (error) {
     console.error('Error fetching qualification application by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });

@@ -18,7 +18,7 @@ router.post(
     'POST /qualifications',
     verifyFirebaseToken,
     requireRole('operator'),
-    allowedFields(['reason', 'justification', 'experience', 'notes']),
+    allowedFields(['reason', 'justification', 'experience', 'notes', 'documents']),
     apiRateLimiter,
     submitQualificationApplication
   )

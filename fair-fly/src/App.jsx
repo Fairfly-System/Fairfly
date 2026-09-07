@@ -66,6 +66,7 @@ import OperatorServiceDetailPage from './pages/Operator/OperatorServices/Operato
 
 import AdminQualifications from './pages/Admin/AdminQualifications/AdminQualifications';
 import QualificationsContent from './pages/Admin/AdminQualifications/QualificationsContent';
+import AdminQualificationDetailPage from './pages/Admin/AdminQualifications/AdminQualificationDetailPage';
 import AdminAdmins from './pages/Admin/AdminAdmins/AdminAdmins';
 import AdminsContent from './pages/Admin/AdminAdmins/AdminsContent';
 import AdminDetailPage from './pages/Admin/AdminAdmins/AdminDetailPage';
@@ -122,6 +123,7 @@ function App() {
           </Route>
           <Route path="qualifications" element={<AdminQualifications />}>
             <Route index element={<QualificationsContent />} />
+            <Route path=":id" element={<AdminQualificationDetailPage />} />
           </Route>
           <Route path="tickets" element={<AdminTickets />}>
             <Route index element={<TicketsContent />} />
