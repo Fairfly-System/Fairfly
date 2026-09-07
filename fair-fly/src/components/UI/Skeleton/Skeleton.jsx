@@ -162,3 +162,59 @@ export function SkeletonKpi({ count = 1, className = '' }) {
     </>
   );
 }
+
+/**
+ * Skeleton Announcement Component (Facebook-style post feed card)
+ */
+export function SkeletonAnnouncement({ count = 3, className = '' }) {
+  const items = Array.from({ length: Math.max(1, count) });
+
+  return (
+    <>
+      {items.map((_, i) => (
+        <article
+          key={`skel-announcement-${i}`}
+          className={`fb-post-card skeleton-announcement-card ${className}`.trim()}
+          aria-busy="true"
+        >
+          {/* Header */}
+          <div className="fb-post-header">
+            <div className="fb-post-author-row">
+              <div
+                className="skeleton skeleton-circle"
+                style={{ width: '2.75rem', height: '2.75rem', borderRadius: '50%' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div className="skeleton" style={{ width: '8.5rem', height: '1rem', borderRadius: 'var(--radius-xs)' }} />
+                <div className="skeleton" style={{ width: '6rem', height: '0.75rem', borderRadius: 'var(--radius-xs)' }} />
+              </div>
+            </div>
+            <div className="skeleton" style={{ width: '4.75rem', height: '1.25rem', borderRadius: 'var(--radius-full)' }} />
+          </div>
+
+          {/* Body */}
+          <div className="fb-post-body">
+            <div className="skeleton" style={{ width: '45%', height: '1.25rem', marginBottom: '0.5rem', borderRadius: 'var(--radius-xs)' }} />
+            <div className="skeleton" style={{ width: '100%', height: '0.875rem', marginBottom: '0.35rem', borderRadius: 'var(--radius-xs)' }} />
+            <div className="skeleton" style={{ width: '92%', height: '0.875rem', marginBottom: '0.35rem', borderRadius: 'var(--radius-xs)' }} />
+            <div className="skeleton" style={{ width: '65%', height: '0.875rem', borderRadius: 'var(--radius-xs)' }} />
+          </div>
+
+          {/* Photo placeholder on first card */}
+          {i === 0 && (
+            <div
+              className="skeleton"
+              style={{ width: '100%', height: '16rem', borderRadius: 0 }}
+            />
+          )}
+
+          {/* Footer */}
+          <div className="fb-post-footer">
+            <div className="skeleton" style={{ width: '5.5rem', height: '0.875rem', borderRadius: 'var(--radius-xs)' }} />
+            <div className="skeleton" style={{ width: '6.5rem', height: '1.5rem', borderRadius: 'var(--radius-xs)' }} />
+          </div>
+        </article>
+      ))}
+    </>
+  );
+}

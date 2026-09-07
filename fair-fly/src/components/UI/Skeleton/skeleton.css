@@ -121,3 +121,9 @@
   gap: 0.5rem;
   padding-top: 0.25rem;
 }
+
+/* Skeleton Announcement Card */
+.skeleton-announcement-card {
+  pointer-events: none;
+  user-select: none;
+}

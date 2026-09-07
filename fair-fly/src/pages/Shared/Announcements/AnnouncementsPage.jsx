@@ -16,6 +16,7 @@ import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import AnnouncementPhotoGrid from './AnnouncementPhotoGrid';
 import AnnouncementLightbox from './AnnouncementLightbox';
+import { SkeletonAnnouncement } from '../../../components/UI/Skeleton/Skeleton';
 import './announcements-page.css';
 
 const MAX_PHOTOS = 5;
@@ -534,12 +535,8 @@ export default function AnnouncementsPage() {
           {/* Feed List */}
           <div className="announcements-feed-container">
             {loading ? (
-            <div className="fb-feed-empty">
-              <i className="fa-solid fa-spinner fa-spin"></i>
-              <h3>Loading announcements...</h3>
-              <p>Fetching official company notices</p>
-            </div>
-          ) : filteredAnnouncements.length === 0 ? (
+              <SkeletonAnnouncement count={3} />
+            ) : filteredAnnouncements.length === 0 ? (
             <div className="fb-feed-empty">
               <i className="fa-solid fa-bullhorn"></i>
               <h3>No announcements found</h3>
