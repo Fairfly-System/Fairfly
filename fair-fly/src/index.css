@@ -60,6 +60,29 @@
   /* Smooth Transitions */
   --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Subtle Selection & Highlight Tokens */
+  --selection-bg: rgba(107, 111, 245, 0.045);
+  --selection-bg-hover: rgba(107, 111, 245, 0.075);
+  --selection-border: rgba(107, 111, 245, 0.18);
+  --selection-text: rgba(107, 111, 245, 0.16);
+}
+
+/* Global Subtle Text Selection */
+::selection {
+  background-color: var(--selection-text, rgba(107, 111, 245, 0.16));
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: var(--selection-text, rgba(107, 111, 245, 0.16));
+  color: inherit;
+}
+
+/* Consistent Subtle Form Controls */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--purple-dark, #5558E3);
 }
 
 html { 
@@ -253,6 +276,17 @@ tr {
 
 tbody tr:hover td {
   background-color: rgba(107, 111, 245, 0.03);
+}
+
+/* Standard Subtle Table Row Selection */
+tr.table-row-selected td,
+tr.selected td {
+  background-color: var(--selection-bg) !important;
+}
+
+tbody tr.table-row-selected:hover td,
+tbody tr.selected:hover td {
+  background-color: var(--selection-bg-hover) !important;
 }
 
 /* Standard Status Badge Pills */

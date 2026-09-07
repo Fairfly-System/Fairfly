@@ -39,19 +39,19 @@
 
 /* Active state when 1+ items selected */
 .table-bulk-bar-active {
-  background: var(--purple-light-2, #f5f3ff);
-  border: 1px solid var(--purple-light, #e9d5ff);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08);
+  background: var(--selection-bg, rgba(107, 111, 245, 0.045));
+  border: 1px solid var(--selection-border, rgba(107, 111, 245, 0.18));
+  box-shadow: 0 1px 3px rgba(26, 26, 46, 0.04);
 }
 
 .table-bulk-bar-active .bulk-bar-info {
-  color: var(--purple-dark, #5b21b6);
+  color: var(--text-dark, #1A1A2E);
   font-weight: 600;
 }
 
 .count-badge-active {
-  background: var(--purple, #7c3aed);
-  color: #ffffff;
+  background: rgba(107, 111, 245, 0.12);
+  color: var(--purple-dark, #5558E3);
   font-weight: 700;
 }
 
@@ -171,12 +171,16 @@
   width: 1.125rem;
   height: 1.125rem;
   cursor: pointer;
-  accent-color: var(--purple, #7c3aed);
+  accent-color: var(--purple-dark, #5558E3);
 }
 
 /* Highlight Selected Rows */
 tr.table-row-selected td {
-  background-color: var(--purple-light-2, rgba(124, 58, 237, 0.05)) !important;
+  background-color: var(--selection-bg, rgba(107, 111, 245, 0.045)) !important;
+}
+
+tbody tr.table-row-selected:hover td {
+  background-color: var(--selection-bg-hover, rgba(107, 111, 245, 0.075)) !important;
 }
 
 /* Responsive adjustments */

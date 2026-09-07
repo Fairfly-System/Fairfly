@@ -203,12 +203,12 @@
 
 .admin-operator-checkbox-card:hover {
   border-color: var(--purple-light);
-  background: var(--purple-light-2);
+  background: var(--selection-bg-hover, rgba(107, 111, 245, 0.075));
 }
 
 .admin-operator-checkbox-card.selected {
   border-color: var(--purple);
-  background: var(--purple-light-2);
+  background: var(--selection-bg, rgba(107, 111, 245, 0.045));
 }
 
 .admin-op-card-info {

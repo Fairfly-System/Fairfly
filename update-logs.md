@@ -1,5 +1,47 @@
 # Update Logs
 
+## [2026-09-08] Refinement: System-Wide Selection Color Softening & Expanded Announcement Modal Sizing and Scroll Isolation
+
+### Overview
+Softened the system-wide "selection" colors across tables, checkboxes, bulk action bars, and multi-selection cards, replacing high-contrast opaque purple/blue highlights with subtle, translucent tints. Enhanced the Expanded Announcement Reader Modal in the Announcements feature: made the modal significantly wider for generous reading comfort and fixed the scroll architecture so that the modal window itself never scrolls, isolating scroll behavior strictly to the inner announcement content.
+
+### Key Changes
+
+1. **System-Wide Subtle Selection Styling (`fair-fly`)**:
+   - `index.css`:
+     - Introduced semantic selection design tokens in `:root`:
+       - `--selection-bg: rgba(107, 111, 245, 0.045);`
+       - `--selection-bg-hover: rgba(107, 111, 245, 0.075);`
+       - `--selection-border: rgba(107, 111, 245, 0.18);`
+       - `--selection-text: rgba(107, 111, 245, 0.16);`
+     - Added global `::selection` and `::-moz-selection` rules using `--selection-text` to eliminate default browser neon/electric blue text highlights.
+     - Set default `input[type="checkbox"], input[type="radio"]` accent color to `var(--purple-dark, #5558E3)`.
+     - Standardized global table row selection (`tr.table-row-selected td`, `tr.selected td`) to subtle `--selection-bg` and hover to `--selection-bg-hover`.
+   - `data-table.css`:
+     - Softened `.table-bulk-bar-active` to use subtle `var(--selection-bg)` with refined border `var(--selection-border)`.
+     - Updated `.count-badge-active` to a soft badge tint (`background: rgba(107, 111, 245, 0.12); color: var(--purple-dark, #5558E3)`).
+     - Standardized `tr.table-row-selected td` to use `--selection-bg` and hover to `--selection-bg-hover`.
+     - Changed selection checkboxes accent-color to `var(--purple-dark, #5558E3)`.
+   - `admin-admins.css`:
+     - Refined `.admin-operator-checkbox-card.selected` from opaque `var(--purple-light-2)` to `var(--selection-bg)` and hover to `var(--selection-bg-hover)`.
+   - `ServiceWorkflowsModal.jsx`:
+     - Replaced hard-coded `var(--purple-light-2)` selected background with `var(--selection-bg)`.
+     - Standardized checkbox `accentColor` to `var(--purple-dark)`.
+
+2. **Expanded Announcement Modal Width & Scroll Isolation (`fair-fly`)**:
+   - `AnnouncementsPage.jsx`:
+     - Widened the expanded reader modal from narrow `44rem` to generous `60rem` with `width="92%"`.
+     - Added specialized class `announcements-reader-modal` to `BaseModal`.
+   - `announcements-page.css`:
+     - Isolated modal frame: locked `.base-modal-container.announcements-reader-modal` and its `.base-modal-body` to `overflow: hidden !important` with `max-height: 88vh`.
+     - Replaced nested scroll container on `.fb-expanded-reader`: configured it as the sole scrollable element (`overflow-y: auto; flex: 1; min-height: 0; padding: 1.5rem 1.75rem`) with custom thin scrollbar styling.
+     - Added mobile-responsive rules (`width: 95% !important; max-height: 92vh; padding: 1rem 1rem`) in `@media (max-width: 640px)`.
+   - `BaseModal.jsx` & `base-modal.css`:
+     - Added automatic body scroll locking (`document.body.style.overflow = 'hidden'`) using `useEffect` whenever `isOpen` is active, preventing the underlying page from scrolling while reading modals.
+     - Added `overflow: hidden;` to `.base-modal-overlay`.
+
+---
+
 ## [2026-09-08] Feature: Dedicated Announcements Page with Facebook-Style Post Feed, Multi-Photo Mosaic Grid, Fullscreen Lightbox, Reader Modal, and Storage Diffing
 
 ### Overview
@@ -35,6 +77,9 @@ Moved Head Office Announcements from a modal dialog (`AnnouncementsModal`) into 
      - Supports inline post editing with form pre-filling and scroll-into-view.
      - Supports post deletion with `ConfirmationModal` and storage asset cleanup.
      - Implemented post cards with official Head Office avatar, author metadata, verified badge, relative/absolute timestamp, priority indicator pill (`Urgent Alert`, `Important`, `Normal`), inline text truncation with "... See more" / "Show less" toggle, and "Expand Notice" reader action.
+     - Integrated `SkeletonAnnouncement` replacing the loading spinner with realistic shimmering Facebook-card skeletons.
+   - `Skeleton.jsx` & `skeleton.css`:
+     - Created and exported `SkeletonAnnouncement` composite component matching the Facebook post card layout (avatar circle, author metadata bar, priority badge, headline, paragraph lines, photo placeholder, and footer actions).
    - `AnnouncementPhotoGrid.jsx`:
      - Renders responsive Facebook-style multi-photo mosaic grid layouts for 1, 2, 3, 4, and 5 photos with hover zoom effects.
    - `AnnouncementLightbox.jsx`:

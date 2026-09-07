@@ -707,7 +707,9 @@ export default function AnnouncementsPage() {
           isOpen={Boolean(readerPost)}
           onClose={() => setReaderPost(null)}
           title="Announcement Details"
-          maxWidth="44rem"
+          maxWidth="60rem"
+          width="92%"
+          className="announcements-reader-modal"
         >
           <div className="fb-expanded-reader">
             <div className="fb-post-header" style={{ padding: 0 }}>

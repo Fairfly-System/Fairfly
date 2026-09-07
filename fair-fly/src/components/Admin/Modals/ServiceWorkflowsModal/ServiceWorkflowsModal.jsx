@@ -98,7 +98,7 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
                   style={{
                     cursor: 'pointer',
                     borderLeft: isSelected ? '0.25rem solid var(--purple)' : '0.0625rem solid var(--border-color)',
-                    background: isSelected ? 'var(--purple-light-2)' : 'var(--card-bg)',
+                    background: isSelected ? 'var(--selection-bg, rgba(107, 111, 245, 0.045))' : 'var(--card-bg)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
@@ -107,7 +107,7 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => {}} // handled by row onClick
-                      style={{ cursor: 'pointer', width: '1.125rem', height: '1.125rem' }}
+                      style={{ cursor: 'pointer', width: '1.125rem', height: '1.125rem', accentColor: 'var(--purple-dark, #5558E3)' }}
                     />
                     <div className="stepContent">
                       <h4 style={{ color: isSelected ? 'var(--purple-dark)' : 'var(--text-dark)' }}>
