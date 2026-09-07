@@ -950,15 +950,30 @@ export default function ClientServicesMarketplace({
           {/* Products Grid or List */}
           <div className={viewMode === 'grid' ? 'shopping-products-grid' : 'shopping-products-list'}>
             {loading ? (
-              <div className="shopping-empty-card">
-                <i className="fa-solid fa-spinner fa-spin shopping-empty-icon" style={{ fontSize: '2.5rem' }}></i>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>
-                  Loading Catalog Items...
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', margin: 0 }}>
-                  Connecting to real-time service listings.
-                </p>
-              </div>
+              Array.from({ length: 6 }).map((_, i) => (
+                <article
+                  key={`skel-market-${i}`}
+                  className={`shopping-card ${viewMode === 'list' ? 'shopping-card--list' : ''}`}
+                  aria-busy="true"
+                >
+                  <div className="shopping-card-media skeleton" style={{ minHeight: '160px', borderRadius: '0' }} />
+                  <div className="shopping-card-body">
+                    <div className="shopping-card-header">
+                      <div className="skeleton skeleton-title" style={{ width: '80%', height: '1.25rem', marginBottom: '0.5rem' }} />
+                      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                        <div className="skeleton skeleton-badge" style={{ width: '3.5rem', height: '1.1rem' }} />
+                        <div className="skeleton skeleton-badge" style={{ width: '4rem', height: '1.1rem' }} />
+                      </div>
+                    </div>
+                    <div className="skeleton skeleton-text" style={{ width: '100%', height: '0.8rem', margin: '0.2rem 0' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.8rem', margin: '0.2rem 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color, #f1f5f9)' }}>
+                      <div className="skeleton skeleton-text" style={{ width: '4.5rem', height: '1.2rem', margin: 0 }} />
+                      <div className="skeleton skeleton-btn" style={{ width: '5.5rem', height: '2rem' }} />
+                    </div>
+                  </div>
+                </article>
+              ))
             ) : filteredAndSortedServices.length === 0 ? (
               <div className="shopping-empty-card">
                 <div className="shopping-empty-icon">

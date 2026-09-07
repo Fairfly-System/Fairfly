@@ -1,14 +1,26 @@
+import React from 'react';
 import './loader.css';
 
-//A loader that only takes up 100% of the parent component's width and height. It is used in the Admin Panel to indicate that data is being fetched from the server.
-export default function Loader({text}) {
-
-    return (
-        <div className="loader-container">
-            <div className="loader-spinner"></div>
-            <p> {text} </p>
-        </div>
-    )
-
+/**
+ * Universal Skeleton Loader for Admin Panel components.
+ */
+export default function Loader({ text }) {
+  return (
+    <div className="loader-container" aria-busy="true">
+      <div
+        className="skeleton"
+        style={{
+          width: '100%',
+          minHeight: '14rem',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      />
+      {text && (
+        <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', fontWeight: 600, marginTop: '0.5rem' }}>
+          {text}
+        </p>
+      )}
+    </div>
+  );
 }
-

@@ -383,24 +383,28 @@ export default function AdminsContent() {
           value={totalCount}
           icon="fa-solid fa-users-gear"
           iconColor="var(--purple)"
+          isLoading={loading}
         />
         <KpiCard
           title="Super Administrators"
           value={superCount}
           icon="fa-solid fa-crown"
           iconColor="#eab308"
+          isLoading={loading}
         />
         <KpiCard
           title="Support Administrators"
           value={supportCount}
           icon="fa-solid fa-shield-halved"
           iconColor="var(--complete-green-dark)"
+          isLoading={loading}
         />
         <KpiCard
           title="Active Accounts"
           value={activeCount}
           icon="fa-solid fa-circle-check"
           iconColor="var(--complete-green-dark)"
+          isLoading={loading}
         />
       </section>
 
@@ -452,6 +456,7 @@ export default function AdminsContent() {
           data={paginatedAdmins}
           columns={columns}
           selectable={false}
+          isLoading={loading}
           disabled={loading || isConfirmLoading}
           emptyState={{
             icon: 'fa-solid fa-user-slash',

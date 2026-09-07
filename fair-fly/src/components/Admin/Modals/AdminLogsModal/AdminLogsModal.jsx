@@ -119,7 +119,17 @@ export default function AdminLogsModal({
         {/* Log rows */}
         <div className="logs-modal-list">
           {allLogsLoading ? (
-            <p className="activity-empty">Loading logs...</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', padding: '1rem 0' }} aria-busy="true">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.75rem 0' }}>
+                  <div className="skeleton skeleton-circle" style={{ width: '2.25rem', height: '2.25rem' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.875rem', margin: 0 }} />
+                    <div className="skeleton skeleton-text" style={{ width: '30%', height: '0.75rem', margin: 0 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : paginatedModalLogs.length === 0 ? (
             <p className="activity-empty">No logs match your search.</p>
           ) : (

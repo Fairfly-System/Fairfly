@@ -246,7 +246,7 @@ export default function OperatorDetailPage() {
             <KpiCard
               title="Assigned Active Services"
               value={stats.activeServicesCount}
-              icon="fa-solid fa-spinner"
+              icon="fa-solid fa-bars-progress"
               iconColor="var(--purple)"
               detail="Checks and updates pending"
             />

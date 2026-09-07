@@ -365,9 +365,31 @@ export default function ClientServiceRequestModal({
       isLoading={isSubmitting}
     >
       {loadingOptions ? (
-        <div className="client-req-loading-box">
-          <i className="fa-solid fa-spinner fa-spin client-req-loading-spinner"></i>
-          <p>Loading available services and branches...</p>
+        <div className="client-request-form form-column client-req-form-spaced" aria-busy="true" style={{ gap: '1.25rem' }}>
+          <div className="form-grid-2">
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '45%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '40%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+          </div>
+          <div className="form-grid-2">
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '45%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+          </div>
+          <div className="form-column">
+            <div className="skeleton skeleton-text" style={{ width: '30%', height: '0.85rem', marginBottom: '0.4rem' }} />
+            <div className="skeleton skeleton-input" style={{ width: '100%', height: '5rem', borderRadius: 'var(--radius-md)' }} />
+          </div>
         </div>
       ) : (
         <form className="client-request-form form-column client-req-form-spaced" onSubmit={handleSubmit}>

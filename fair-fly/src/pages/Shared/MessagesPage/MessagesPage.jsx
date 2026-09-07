@@ -93,6 +93,7 @@ export default function MessagesPage() {
 
   // Conversations state
   const [conversations, setConversations] = useState([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const [activeConversation, setActiveConversation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -144,8 +145,10 @@ export default function MessagesPage() {
   // Real-time subscription to conversations list
   useEffect(() => {
     if (!currentUid) return;
+    setLoadingConversations(true);
     const unsub = subscribeToConversations(currentUid, (list) => {
       setConversations(list);
+      setLoadingConversations(false);
 
       // If active conversation updated in list, update activeConversation data
       setActiveConversation((prev) => {
@@ -404,7 +407,20 @@ export default function MessagesPage() {
 
           {/* Conversation List Items */}
           <div className="messages-conv-list">
-            {filteredConversations.length === 0 ? (
+            {loadingConversations ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={`skel-conv-${i}`} className="messages-conv-item" aria-busy="true" style={{ pointerEvents: 'none' }}>
+                  <div className="skeleton skeleton-circle" style={{ width: '2.5rem', height: '2.5rem', minWidth: '2.5rem' }} />
+                  <div className="messages-conv-content" style={{ flex: 1 }}>
+                    <div className="messages-conv-top-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                      <div className="skeleton skeleton-title" style={{ width: '50%', height: '0.9rem', margin: 0 }} />
+                      <div className="skeleton skeleton-text" style={{ width: '20%', height: '0.75rem', margin: 0 }} />
+                    </div>
+                    <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.75rem', margin: 0 }} />
+                  </div>
+                </div>
+              ))
+            ) : filteredConversations.length === 0 ? (
               <div className="messages-empty-left">
                 <i className="fa-regular fa-comments"></i>
                 <p>No conversations found</p>

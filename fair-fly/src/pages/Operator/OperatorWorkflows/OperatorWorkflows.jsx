@@ -113,7 +113,12 @@ function WorkflowContent() {
 
       <div className="op-step-list">
         {loading ? (
-          <div className="empty-state-box"><p>Loading workflow templates...</p></div>
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={`skel-step-${i}`} className="op-step" aria-busy="true">
+              <span className="skeleton skeleton-circle" style={{ width: '1.75rem', height: '1.75rem', minWidth: '1.75rem' }} />
+              <span className="skeleton skeleton-text" style={{ width: `${60 + (i % 3) * 15}%`, height: '1rem', margin: 0 }} />
+            </div>
+          ))
         ) : paginatedSteps.length === 0 ? (
           <div className="empty-state-box"><p>No steps defined for this workflow</p></div>
         ) : (

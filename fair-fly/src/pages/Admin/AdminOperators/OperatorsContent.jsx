@@ -520,24 +520,28 @@ export default function OperatorsContent() {
           value={totalOperators}
           icon="fa-solid fa-building-user"
           iconColor="var(--purple)"
+          isLoading={operatorLoading}
         />
         <KpiCard
           title="Active"
           value={activeCount}
           icon="fa-regular fa-circle-check"
           iconColor="var(--complete-green-dark)"
+          isLoading={operatorLoading}
         />
         <KpiCard
           title="Disabled"
           value={inactiveCount}
           icon="fa-solid fa-ban"
           iconColor="var(--error-red-dark)"
+          isLoading={operatorLoading}
         />
         <KpiCard
           title="My Assigned"
           value={assignedOperatorsCount}
           icon="fa-solid fa-user-check"
           iconColor="var(--blue)"
+          isLoading={operatorLoading}
         />
       </section>
 
@@ -608,6 +612,7 @@ export default function OperatorsContent() {
           columns={columns}
           selectable={isSuperAdmin}
           selectedIds={selectedIds}
+          isLoading={operatorLoading}
           disabled={isConfirmLoading || isSubmitting}
           onSelectionChange={setSelectedIds}
           onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}

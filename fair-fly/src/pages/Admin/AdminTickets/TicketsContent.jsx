@@ -250,24 +250,28 @@ export default function TicketsContent() {
               value={totalTickets}
               icon="fa-solid fa-ticket"
               iconColor="var(--purple)"
+              isLoading={ticketsLoading}
             />
             <KpiCard
               title="Pending"
               value={pendingCount}
               icon="fa-regular fa-clock"
               iconColor="var(--orange)"
+              isLoading={ticketsLoading}
             />
             <KpiCard
               title="Ongoing Threads"
               value={ongoingCount}
               icon="fa-solid fa-comments"
               iconColor="var(--blue-dark)"
+              isLoading={ticketsLoading}
             />
             <KpiCard
               title="Closed"
               value={closedCount}
               icon="fa-regular fa-circle-check"
               iconColor="var(--complete-green-dark)"
+              isLoading={ticketsLoading}
             />
           </section>
 

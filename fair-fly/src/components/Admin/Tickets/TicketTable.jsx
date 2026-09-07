@@ -147,6 +147,7 @@ export default function TicketTable({
       columns={columns}
       data={tickets}
       keyField="id"
+      isLoading={loading}
       disabled={disabled || loading}
       emptyState={{
         icon: 'fa-solid fa-ticket-simple',

@@ -354,6 +354,7 @@ export default function ClientsContent() {
           iconColor="#6b21a8"
           badge="All"
           badgeType="neutral"
+          isLoading={loading}
         />
 
         <KpiCard
@@ -364,6 +365,7 @@ export default function ClientsContent() {
           iconColor="#16a34a"
           badge={totalClients > 0 ? `${Math.round((activeClients / totalClients) * 100)}%` : '0%'}
           badgeType="ok"
+          isLoading={loading}
         />
 
         <KpiCard
@@ -374,6 +376,7 @@ export default function ClientsContent() {
           iconColor="#ef4444"
           badge={deactivatedClients > 0 ? `${deactivatedClients} Inactive` : 'None'}
           badgeType={deactivatedClients > 0 ? 'warn' : 'ok'}
+          isLoading={loading}
         />
       </div>
 

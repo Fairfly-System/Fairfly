@@ -253,17 +253,6 @@ export default function QualificationsContent() {
     { label: 'Qualifications' }
   ];
 
-  if (loading) {
-    return (
-      <div className="card admin-qualifications-page page-fade-in">
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-light)' }}>
-          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.75rem', marginBottom: '0.75rem', color: 'var(--purple)' }}></i>
-          <p>Loading operator qualification applications...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <main className="admin-qualifications-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
@@ -281,24 +270,28 @@ export default function QualificationsContent() {
           value={totalApps}
           icon="fa-solid fa-clipboard-list"
           iconColor="var(--purple)"
+          isLoading={loading}
         />
         <KpiCard
           title="Pending Review"
           value={pendingCount}
           icon="fa-regular fa-clock"
           iconColor="var(--warning-yellow)"
+          isLoading={loading}
         />
         <KpiCard
           title="Approved"
           value={approvedCount}
           icon="fa-regular fa-circle-check"
           iconColor="var(--complete-green-dark)"
+          isLoading={loading}
         />
         <KpiCard
           title="Rejected"
           value={rejectedCount}
           icon="fa-solid fa-ban"
           iconColor="var(--error-red-dark)"
+          isLoading={loading}
         />
       </section>
 
@@ -355,6 +348,7 @@ export default function QualificationsContent() {
         <DataTable
           data={paginatedApplications}
           columns={columns}
+          isLoading={loading}
           emptyState={{
             icon: 'fa-solid fa-user-check',
             message: 'No qualification applications match your criteria'

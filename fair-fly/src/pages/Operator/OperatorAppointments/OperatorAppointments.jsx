@@ -129,9 +129,28 @@ export function AppointmentContent() {
 
       <div className="op-appt-list">
         {loading ? (
-          <div className="empty-state-box">
-            <p>Loading appointments...</p>
-          </div>
+          Array.from({ length: 3 }).map((_, i) => (
+            <article key={`skel-appt-${i}`} className="op-appt-card" aria-busy="true">
+              <div className="op-appt-top">
+                <div className="op-appt-left">
+                  <div className="skeleton skeleton-circle" style={{ width: '2.5rem', height: '2.5rem', minWidth: '2.5rem' }} />
+                  <div style={{ width: '12rem' }}>
+                    <div className="skeleton skeleton-title" style={{ width: '70%', height: '1.1rem', marginBottom: '0.35rem' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '90%', height: '0.75rem', margin: 0 }} />
+                  </div>
+                </div>
+                <div className="op-appt-actions">
+                  <div className="skeleton skeleton-badge" style={{ width: '4.5rem', height: '1.5rem' }} />
+                  <div className="skeleton skeleton-btn" style={{ width: '6.5rem', height: '2rem' }} />
+                </div>
+              </div>
+              <div className="op-appt-grid">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <div key={j} className="skeleton skeleton-text" style={{ width: '80%', height: '0.9rem', margin: 0 }} />
+                ))}
+              </div>
+            </article>
+          ))
         ) : paginatedAppointments.length === 0 ? (
           <div className="empty-state-box">
             <i className="fa-regular fa-calendar-xmark empty-icon"></i>

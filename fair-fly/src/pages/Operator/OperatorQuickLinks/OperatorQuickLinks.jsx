@@ -99,7 +99,14 @@ function QuickLinksContent() {
 
       <div className="op-links-grid">
         {loading ? (
-          <div className="empty-state-box"><p>Loading quick links...</p></div>
+          Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={`skel-link-${i}`}
+              className="op-link-btn skeleton"
+              style={{ height: '3.25rem', opacity: 0.85 }}
+              aria-busy="true"
+            />
+          ))
         ) : paginatedLinks.length === 0 ? (
           <div className="empty-state-box"><p>No quick links available in this category</p></div>
         ) : (

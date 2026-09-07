@@ -153,10 +153,21 @@ export default function NewChatModal({ isOpen, onClose, onSelectContact, current
           style={{ maxHeight: '22rem', overflowY: 'auto' }}
         >
           {loading ? (
-            <div className="new-chat-empty">
-              <i className="fa-solid fa-circle-notch fa-spin"></i>
-              <p>Loading available contacts...</p>
-            </div>
+            Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={`skel-contact-${i}`}
+                className="new-chat-contact-item"
+                aria-busy="true"
+                style={{ pointerEvents: 'none' }}
+              >
+                <div className="skeleton skeleton-circle" style={{ width: '2.5rem', height: '2.5rem', minWidth: '2.5rem' }} />
+                <div className="new-chat-contact-info" style={{ flex: 1 }}>
+                  <div className="skeleton skeleton-title" style={{ width: '50%', height: '0.95rem', marginBottom: '0.3rem' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '70%', height: '0.75rem', margin: 0 }} />
+                </div>
+                <div className="skeleton skeleton-badge" style={{ width: '3.5rem', height: '1.25rem' }} />
+              </div>
+            ))
           ) : visibleContacts.length === 0 ? (
             <div className="new-chat-empty">
               <i className="fa-regular fa-user"></i>

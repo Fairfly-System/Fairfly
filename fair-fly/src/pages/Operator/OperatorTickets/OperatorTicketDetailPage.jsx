@@ -96,13 +96,22 @@ export default function OperatorTicketDetailPage() {
 
   if (loading) {
     return (
-      <main className="operator-ticket-detail-page page-fade-in">
+      <main className="operator-ticket-detail-page page-fade-in" aria-busy="true">
         <Breadcrumbs items={breadcrumbs} />
-        <div className="card loading-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '20rem' }}>
-          <div style={{ textAlign: 'center' }}>
-            <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2.5rem', color: 'var(--purple)', marginBottom: '1rem' }}></i>
-            <p>Loading ticket details...</p>
+        <div className="card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div className="skeleton skeleton-title" style={{ width: '45%', height: '1.5rem', marginBottom: '0.5rem' }} />
+              <div className="skeleton skeleton-text" style={{ width: '25%', height: '0.875rem' }} />
+            </div>
+            <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.5rem' }} />
           </div>
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="skeleton skeleton-text" style={{ width: '90%' }} />
+            <div className="skeleton skeleton-text" style={{ width: '85%' }} />
+            <div className="skeleton skeleton-text" style={{ width: '70%' }} />
+          </div>
+          <div className="card skeleton" style={{ height: '14rem', marginTop: '1rem' }} />
         </div>
       </main>
     );

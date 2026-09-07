@@ -102,7 +102,7 @@ export default function ClientAppointmentsPage() {
           </div>
           <div className="appointment-kpi-info">
             <span className="appointment-kpi-label">Total Scheduled</span>
-            <span className="appointment-kpi-val">{totalCount}</span>
+            <span className={`appointment-kpi-val ${loading ? 'skeleton skeleton-text' : ''}`} style={loading ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loading ? '' : totalCount}</span>
           </div>
         </div>
 
@@ -112,7 +112,7 @@ export default function ClientAppointmentsPage() {
           </div>
           <div className="appointment-kpi-info">
             <span className="appointment-kpi-label">Confirmed Visits</span>
-            <span className="appointment-kpi-val">{confirmedCount}</span>
+            <span className={`appointment-kpi-val ${loading ? 'skeleton skeleton-text' : ''}`} style={loading ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loading ? '' : confirmedCount}</span>
           </div>
         </div>
 
@@ -122,7 +122,7 @@ export default function ClientAppointmentsPage() {
           </div>
           <div className="appointment-kpi-info">
             <span className="appointment-kpi-label">Pending Review</span>
-            <span className="appointment-kpi-val">{pendingCount}</span>
+            <span className={`appointment-kpi-val ${loading ? 'skeleton skeleton-text' : ''}`} style={loading ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loading ? '' : pendingCount}</span>
           </div>
         </div>
 
@@ -132,7 +132,7 @@ export default function ClientAppointmentsPage() {
           </div>
           <div className="appointment-kpi-info">
             <span className="appointment-kpi-label">Past / Cancelled</span>
-            <span className="appointment-kpi-val">{cancelledCount}</span>
+            <span className={`appointment-kpi-val ${loading ? 'skeleton skeleton-text' : ''}`} style={loading ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loading ? '' : cancelledCount}</span>
           </div>
         </div>
       </div>
@@ -171,20 +171,19 @@ export default function ClientAppointmentsPage() {
           </button>
         </div>
 
-        {/* Search Box */}
+        {/* Search Field */}
         <div className="appointments-search-box">
-          <i className="fa-solid fa-magnifying-glass appointments-search-icon"></i>
+          <i className="fa-solid fa-magnifying-glass"></i>
           <input
             type="text"
-            className="appointments-search-input"
-            placeholder="Search by branch, service, or date..."
+            placeholder="Search by branch or service..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
             <button
               type="button"
-              className="tracking-search-clear"
+              className="appointments-clear-search"
               onClick={() => setSearchQuery('')}
             >
               <i className="fa-solid fa-xmark"></i>
@@ -196,13 +195,20 @@ export default function ClientAppointmentsPage() {
       {/* Appointments Grid List */}
       <div className="appointments-grid">
         {loading ? (
-          <div className="tracking-empty-card" style={{ gridColumn: '1 / -1' }}>
-            <i className="fa-solid fa-spinner fa-spin tracking-empty-icon" style={{ fontSize: '2.5rem' }}></i>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Loading Scheduled Appointments...</h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', margin: 0 }}>
-              Connecting to live appointment records.
-            </p>
-          </div>
+          Array.from({ length: 4 }).map((_, i) => (
+            <article key={`skel-app-${i}`} className="appointment-card" aria-busy="true">
+              <div className="appointment-card-header">
+                <div className="skeleton skeleton-badge" style={{ width: '9rem', height: '1.5rem' }} />
+                <div className="skeleton skeleton-badge" style={{ width: '5.5rem', height: '1.5rem' }} />
+              </div>
+              <div className="skeleton skeleton-title" style={{ width: '70%', height: '1.25rem', margin: '0.75rem 0' }} />
+              <div className="appointment-details-list">
+                <div className="skeleton skeleton-text" style={{ width: '85%', height: '0.9rem', margin: '0.25rem 0' }} />
+                <div className="skeleton skeleton-text" style={{ width: '75%', height: '0.9rem', margin: '0.25rem 0' }} />
+              </div>
+              <div className="skeleton skeleton-text" style={{ width: '95%', height: '2rem', marginTop: '0.75rem' }} />
+            </article>
+          ))
         ) : filteredAppointments.length === 0 ? (
           <div className="tracking-empty-card" style={{ gridColumn: '1 / -1' }}>
             <div className="tracking-empty-icon">

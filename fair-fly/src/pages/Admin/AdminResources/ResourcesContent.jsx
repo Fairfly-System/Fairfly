@@ -369,6 +369,7 @@ export default function ResourcesContent() {
           iconColor="var(--purple)"
           badge="Catalog"
           badgeType="info"
+          isLoading={loading}
         />
         <KpiCard
           title="Marketing Assets"
@@ -378,6 +379,7 @@ export default function ResourcesContent() {
           iconColor="#2563eb"
           badge="Promos"
           badgeType="ok"
+          isLoading={loading}
         />
         <KpiCard
           title="Docs & Guides"
@@ -387,6 +389,7 @@ export default function ResourcesContent() {
           iconColor="#8b5cf6"
           badge="Operational"
           badgeType="info"
+          isLoading={loading}
         />
         <KpiCard
           title="Total Downloads"
@@ -396,6 +399,7 @@ export default function ResourcesContent() {
           iconColor="#16a34a"
           badge="Activity"
           badgeType="ok"
+          isLoading={loading}
         />
       </section>
 

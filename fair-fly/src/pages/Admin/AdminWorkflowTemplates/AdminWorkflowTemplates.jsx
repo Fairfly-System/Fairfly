@@ -300,19 +300,6 @@ export default function AdminWorkflowTemplates() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="card workflow-template-page page-fade-in">
-        <div className="workflow-template-header">
-          <div>
-            <h2>Workflow Templates</h2>
-            <p>Loading template configurations...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/admin' },
     { label: 'Workflows' },
@@ -386,6 +373,7 @@ export default function AdminWorkflowTemplates() {
           keyField="id"
           selectable={true}
           selectedIds={selectedIds}
+          isLoading={loading}
           disabled={isConfirmLoading || isSubmitting}
           onSelectionChange={setSelectedIds}
           onBulkDelete={(ids) => setConfirmState({ type: 'bulk-delete', ids })}

@@ -310,9 +310,20 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
           style={{ maxHeight: '13.5rem', overflowY: 'auto' }}
         >
           {loadingOperators ? (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: 'var(--text-light)', fontSize: '0.8125rem' }}>
-              <i className="fa-solid fa-circle-notch fa-spin"></i> Loading operators...
-            </div>
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={`skel-op-${i}`}
+                className="admin-operator-checkbox-card"
+                aria-busy="true"
+                style={{ pointerEvents: 'none' }}
+              >
+                <div className="skeleton skeleton-circle" style={{ width: '1.75rem', height: '1.75rem', minWidth: '1.75rem' }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton skeleton-text" style={{ width: '70%', height: '0.85rem', marginBottom: '0.25rem' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.75rem', margin: 0 }} />
+                </div>
+              </div>
+            ))
           ) : filteredOperators.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: 'var(--text-light)', fontSize: '0.8125rem' }}>
               No branch operators found.

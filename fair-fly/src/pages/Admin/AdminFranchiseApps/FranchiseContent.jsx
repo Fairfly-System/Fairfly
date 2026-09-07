@@ -3,6 +3,7 @@ import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGr
 import FranchiseCard from '../../../components/Admin/FranchiseeApplication/FranchiseeCard';
 import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { SkeletonCard } from '../../../components/UI/Skeleton/Skeleton';
 import Loader from '../../../components/Admin/Loader/Loader';
 import ApplicationModal from '../../../components/Admin/Modals/ApplicationModal/ApplicationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
@@ -125,24 +126,28 @@ export default function FranchiseContent() {
           value={totalApps}
           icon="fa-solid fa-file-signature"
           iconColor="var(--purple)"
+          isLoading={franchiseLoading}
         />
         <KpiCard
           title="Pending Review"
           value={pendingCount}
           icon="fa-regular fa-clock"
           iconColor="var(--orange)"
+          isLoading={franchiseLoading}
         />
         <KpiCard
           title="Approved"
           value={approvedCount}
           icon="fa-regular fa-circle-check"
           iconColor="var(--complete-green-dark)"
+          isLoading={franchiseLoading}
         />
         <KpiCard
           title="Rejected"
           value={rejectedCount}
           icon="fa-solid fa-ban"
           iconColor="var(--error-red-dark)"
+          isLoading={franchiseLoading}
         />
       </section>
 
@@ -164,11 +169,10 @@ export default function FranchiseContent() {
             />
             {searchTerm && (
               <button
-                className="clear-search-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                }}
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
@@ -177,10 +181,10 @@ export default function FranchiseContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'pending', label: `Pending (${pendingCount})` },
-              { value: 'approved', label: `Approved (${approvedCount})` },
-              { value: 'rejected', label: `Rejected (${rejectedCount})` },
-              { value: 'all', label: `All (${totalApps})` },
+              { label: 'All', value: 'all', count: totalApps },
+              { label: 'Pending', value: 'pending', count: pendingCount },
+              { label: 'Approved', value: 'approved', count: approvedCount },
+              { label: 'Rejected', value: 'rejected', count: rejectedCount },
             ]}
             activeChip={statusFilter}
             onChipChange={(val) => {
@@ -192,7 +196,9 @@ export default function FranchiseContent() {
 
         {/* Cards Grid */}
         {franchiseLoading ? (
-          <Loader text="Loading franchise applications..." />
+          <div className="franchise-cards-list" aria-busy="true">
+            <SkeletonCard count={4} lines={4} hasAvatar={true} />
+          </div>
         ) : paginatedApplications.length === 0 ? (
           <div className="empty-state-box">
             <i className="fa-solid fa-folder-open empty-icon"></i>

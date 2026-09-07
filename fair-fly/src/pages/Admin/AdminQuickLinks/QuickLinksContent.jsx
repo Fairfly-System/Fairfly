@@ -274,12 +274,14 @@ export default function QuickLinksContent() {
           value={totalLinks}
           icon="fa-solid fa-link"
           iconColor="var(--purple)"
+          isLoading={isLoading}
         />
         <KpiCard
           title="Resource Categories"
           value={categoriesCount}
           icon="fa-solid fa-folder-tree"
           iconColor="var(--blue-dark)"
+          isLoading={isLoading}
         />
       </section>
 
@@ -334,6 +336,7 @@ export default function QuickLinksContent() {
           keyField="id"
           selectable={true}
           selectedIds={selectedIds}
+          isLoading={isLoading}
           disabled={isLoading || isDeleting}
           onSelectionChange={setSelectedIds}
           onBulkDelete={(ids) => setBulkDeleteIds(ids)}

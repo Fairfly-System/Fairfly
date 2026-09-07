@@ -299,17 +299,17 @@ export default function ClientTrackingPage() {
               </div>
               <div className="tracking-kpi-info">
                 <span className="tracking-kpi-label">Total Requested</span>
-                <span className="tracking-kpi-val">{totalCount}</span>
+                <span className={`tracking-kpi-val ${loadingServices ? 'skeleton skeleton-text' : ''}`} style={loadingServices ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loadingServices ? '' : totalCount}</span>
               </div>
             </div>
 
             <div className="tracking-kpi-card">
               <div className="tracking-kpi-icon tracking-kpi-icon--orange">
-                <i className="fa-solid fa-spinner fa-spin"></i>
+                <i className="fa-solid fa-clock-rotate-left"></i>
               </div>
               <div className="tracking-kpi-info">
                 <span className="tracking-kpi-label">Currently In Progress</span>
-                <span className="tracking-kpi-val">{ongoingCount}</span>
+                <span className={`tracking-kpi-val ${loadingServices ? 'skeleton skeleton-text' : ''}`} style={loadingServices ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loadingServices ? '' : ongoingCount}</span>
               </div>
             </div>
 
@@ -319,7 +319,7 @@ export default function ClientTrackingPage() {
               </div>
               <div className="tracking-kpi-info">
                 <span className="tracking-kpi-label">Completed & Released</span>
-                <span className="tracking-kpi-val">{completedCount}</span>
+                <span className={`tracking-kpi-val ${loadingServices ? 'skeleton skeleton-text' : ''}`} style={loadingServices ? { width: '2.5rem', height: '1.75rem', display: 'inline-block' } : {}}>{loadingServices ? '' : completedCount}</span>
               </div>
             </div>
           </div>
@@ -375,13 +375,30 @@ export default function ClientTrackingPage() {
           {/* Trackers List Area */}
           <div className="tracking-cards-list">
             {loadingServices ? (
-              <div className="tracking-empty-card">
-                <i className="fa-solid fa-spinner fa-spin tracking-empty-icon tracking-loading-spinner"></i>
-                <h3 className="tracking-loading-title">Connecting to Live Tracker...</h3>
-                <p className="tracking-loading-subtitle">
-                  Retrieving your active service request statuses from Firestore.
-                </p>
-              </div>
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={`skel-srv-${i}`} className="client-service-tracker-card" aria-busy="true" style={{ padding: '1.5rem', background: 'var(--card-bg, #fff)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 'var(--radius-lg, 12px)', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <div style={{ width: '45%' }}>
+                      <div className="skeleton skeleton-title" style={{ width: '80%', height: '1.25rem', marginBottom: '0.4rem' }} />
+                      <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.8rem', margin: 0 }} />
+                    </div>
+                    <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.75rem' }} />
+                  </div>
+                  {/* Stepper bar skeleton */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', margin: '1.5rem 0' }}>
+                    {Array.from({ length: 4 }).map((_, sIdx) => (
+                      <div key={sIdx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                        <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
+                        <div className="skeleton skeleton-text" style={{ width: '70%', height: '0.75rem', margin: 0 }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '30%', height: '0.85rem', margin: 0 }} />
+                    <div className="skeleton skeleton-btn" style={{ width: '6rem', height: '2rem' }} />
+                  </div>
+                </div>
+              ))
             ) : filteredServices.length === 0 ? (
               <div className="tracking-empty-card">
                 <div className="tracking-empty-icon">
@@ -433,9 +450,26 @@ export default function ClientTrackingPage() {
             </div>
 
             {loadingQuotations ? (
-              <div className="tracking-empty-card">
-                <i className="fa-solid fa-spinner fa-spin tracking-empty-icon"></i>
-                <span>Loading your quotations...</span>
+              <div className="quotation-cards-grid">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <article key={`skel-q-${i}`} className="client-quote-card" aria-busy="true" style={{ opacity: 0.85 }}>
+                    <div className="quote-card-header">
+                      <div>
+                        <div className="skeleton skeleton-badge" style={{ width: '5rem', height: '1.25rem', marginBottom: '0.4rem' }} />
+                        <div className="skeleton skeleton-title" style={{ width: '12rem', height: '1.25rem', margin: 0 }} />
+                      </div>
+                      <div className="skeleton skeleton-badge" style={{ width: '4.5rem', height: '1.5rem' }} />
+                    </div>
+                    <div className="quote-details-list" style={{ margin: '1rem 0' }}>
+                      <div className="skeleton skeleton-text" style={{ width: '90%', height: '0.85rem', margin: '0.35rem 0' }} />
+                      <div className="skeleton skeleton-text" style={{ width: '70%', height: '0.85rem', margin: '0.35rem 0' }} />
+                    </div>
+                    <div className="quote-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem' }}>
+                      <div className="skeleton skeleton-text" style={{ width: '6rem', height: '1.25rem', margin: 0 }} />
+                      <div className="skeleton skeleton-btn" style={{ width: '5.5rem', height: '2rem' }} />
+                    </div>
+                  </article>
+                ))}
               </div>
             ) : quotationsList.length === 0 ? (
               <div className="empty-sub-card">
@@ -584,9 +618,22 @@ export default function ClientTrackingPage() {
             </div>
 
             {loadingInquiries ? (
-              <div className="tracking-empty-card">
-                <i className="fa-solid fa-spinner fa-spin tracking-empty-icon"></i>
-                <span>Loading your inquiries...</span>
+              <div className="inquiry-cards-list">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={`skel-inq-${i}`} className="client-inquiry-card" aria-busy="true" style={{ opacity: 0.85 }}>
+                    <div className="inq-card-top">
+                      <div style={{ width: '70%' }}>
+                        <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.1rem', marginBottom: '0.35rem' }} />
+                        <div className="skeleton skeleton-title" style={{ width: '10rem', height: '1.2rem', marginBottom: '0.35rem' }} />
+                        <div className="skeleton skeleton-text" style={{ width: '14rem', height: '0.75rem', margin: 0 }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', margin: '0.75rem 0' }}>
+                      <div className="skeleton skeleton-badge" style={{ width: '5rem', height: '1.3rem' }} />
+                      <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.3rem' }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : inquiriesList.length === 0 ? (
               <div className="empty-sub-card">

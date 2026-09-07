@@ -25,12 +25,55 @@ export default function RecordDetailLayout({
 }) {
   if (isLoading) {
     return (
-      <main className="record-detail-layout page-fade-in">
+      <main className="record-detail-layout page-fade-in" aria-busy="true">
         {breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
-        <div className="record-detail-card card loading-card">
-          <div className="spinner-box">
-            <i className="fa-solid fa-circle-notch fa-spin spinner-icon"></i>
-            <p>Loading details...</p>
+
+        <div className="record-detail-nav-back">
+          <div className="skeleton skeleton-btn" style={{ width: '5.5rem', height: '2.125rem' }} />
+        </div>
+
+        <div className="record-detail-container">
+          {/* Header Card Skeleton */}
+          <header className="record-detail-header-card card">
+            <div className="record-header-left">
+              <div
+                className="skeleton skeleton-circle"
+                style={{ width: '4rem', height: '4rem' }}
+              />
+              <div className="record-header-titles" style={{ flex: 1 }}>
+                <div className="skeleton skeleton-title" style={{ width: '45%', height: '1.5rem', marginBottom: '0.5rem' }} />
+                <div className="skeleton skeleton-text" style={{ width: '30%', height: '0.875rem', marginBottom: '0.625rem' }} />
+                <div className="skeleton skeleton-badge" style={{ width: '5.5rem', height: '1.25rem' }} />
+              </div>
+            </div>
+            <div className="record-header-actions">
+              <div className="skeleton skeleton-btn" style={{ width: '7rem', height: '2.25rem' }} />
+            </div>
+          </header>
+
+          {/* Content Card Skeleton */}
+          <div className="record-detail-card card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div>
+              <div className="skeleton skeleton-title" style={{ width: '25%', height: '1.25rem', marginBottom: '1rem' }} />
+              <div className="skeleton skeleton-text" style={{ width: '100%', height: '1rem' }} />
+              <div className="skeleton skeleton-text" style={{ width: '92%', height: '1rem' }} />
+              <div className="skeleton skeleton-text" style={{ width: '78%', height: '1rem' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))', gap: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <div>
+                <div className="skeleton skeleton-text" style={{ width: '40%', height: '0.75rem', marginBottom: '0.5rem' }} />
+                <div className="skeleton skeleton-text" style={{ width: '70%', height: '1.125rem' }} />
+              </div>
+              <div>
+                <div className="skeleton skeleton-text" style={{ width: '40%', height: '0.75rem', marginBottom: '0.5rem' }} />
+                <div className="skeleton skeleton-text" style={{ width: '65%', height: '1.125rem' }} />
+              </div>
+              <div>
+                <div className="skeleton skeleton-text" style={{ width: '40%', height: '0.75rem', marginBottom: '0.5rem' }} />
+                <div className="skeleton skeleton-text" style={{ width: '80%', height: '1.125rem' }} />
+              </div>
+            </div>
           </div>
         </div>
       </main>

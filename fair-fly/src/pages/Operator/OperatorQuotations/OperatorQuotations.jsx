@@ -127,7 +127,28 @@ export function QuotationsContent() {
 
         <div className="op-quotations-list">
           {loading ? (
-            <div className="empty-state-box"><p>Loading quotations...</p></div>
+            Array.from({ length: 3 }).map((_, i) => (
+              <article key={`skel-quote-${i}`} className="op-quotation-card" aria-busy="true">
+                <div className="op-quotation-top">
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', width: '40%' }}>
+                    <div className="skeleton skeleton-title" style={{ width: '60%', height: '1.25rem', margin: 0 }} />
+                    <div className="skeleton skeleton-badge" style={{ width: '4rem', height: '1rem', margin: 0 }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <div className="skeleton skeleton-btn" style={{ width: '4.5rem', height: '1.875rem' }} />
+                    <div className="skeleton skeleton-badge" style={{ width: '4.5rem', height: '1.875rem' }} />
+                  </div>
+                </div>
+                <div className="op-quotation-details-grid">
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <div key={j} className="op-quotation-meta-item">
+                      <div className="skeleton skeleton-text" style={{ width: '45%', height: '0.75rem', marginBottom: '0.35rem' }} />
+                      <div className="skeleton skeleton-text" style={{ width: '80%', height: '1rem', margin: 0 }} />
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))
           ) : paginatedQuotations.length === 0 ? (
             <div className="empty-state-box">
               <i className="fa-regular fa-folder-open empty-icon"></i>

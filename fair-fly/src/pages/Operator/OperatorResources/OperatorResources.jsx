@@ -212,9 +212,26 @@ export default function OperatorResources() {
 
       {/* Resources Display */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
-          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
-          <p>Loading resource materials...</p>
+        <div className={`op-resources-grid ${viewMode === 'list' ? 'op-resources-grid--list' : ''}`}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={`skel-res-${i}`} className="op-resource-card" aria-busy="true">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="op-card-header">
+                  <div className="skeleton skeleton-circle" style={{ width: '2.5rem', height: '2.5rem', minWidth: '2.5rem', borderRadius: 'var(--radius-md)' }} />
+                  <div className="op-card-title-group" style={{ width: '70%' }}>
+                    <div className="skeleton skeleton-badge" style={{ width: '4rem', height: '1rem', marginBottom: '0.25rem' }} />
+                    <div className="skeleton skeleton-title" style={{ width: '85%', height: '1rem', margin: 0 }} />
+                  </div>
+                </div>
+                <div className="skeleton skeleton-text" style={{ width: '100%', height: '0.8rem', margin: 0 }} />
+                <div className="skeleton skeleton-text" style={{ width: '65%', height: '0.8rem', margin: 0 }} />
+              </div>
+              <div className="op-card-footer" style={{ marginTop: '1rem' }}>
+                <div className="skeleton skeleton-text" style={{ width: '5rem', height: '0.75rem', margin: 0 }} />
+                <div className="skeleton skeleton-btn" style={{ width: '4rem', height: '1.75rem' }} />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredResources.length === 0 ? (
         <div className="op-resources-empty">

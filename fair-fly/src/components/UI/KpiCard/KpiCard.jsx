@@ -23,7 +23,26 @@ export default function KpiCard({
   badge,
   badgeType = 'neutral',
   trend,
+  isLoading = false,
+  loading = false,
 }) {
+  const isKpiLoading = isLoading || loading;
+
+  if (isKpiLoading) {
+    return (
+      <div className="card kpi-card" aria-busy="true">
+        <div className="kpi-card-top">
+          <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.875rem', margin: 0 }} />
+          <div className="skeleton skeleton-circle" style={{ width: '2.25rem', height: '2.25rem' }} />
+        </div>
+        <div className="skeleton" style={{ width: '45%', height: '2rem', borderRadius: 'var(--radius-sm)', margin: '0.5rem 0' }} />
+        <div className="kpi-footer">
+          <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem', margin: 0 }} />
+        </div>
+      </div>
+    );
+  }
+
   const trendSymbol =
     trend?.direction === 'up' ? '↑'
     : trend?.direction === 'down' ? '↓'

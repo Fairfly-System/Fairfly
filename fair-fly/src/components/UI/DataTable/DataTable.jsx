@@ -1,4 +1,5 @@
 import React from 'react';
+import { SkeletonTable } from '../Skeleton/Skeleton';
 import './data-table.css';
 
 /**
@@ -19,6 +20,8 @@ import './data-table.css';
  * @param {string} [className=''] - Custom container class
  * @param {Function|string} [rowClassName] - Custom row class generator or string
  * @param {boolean} [disabled=false] - Whether controls should be disabled during loading/submitting
+ * @param {boolean} [isLoading=false] - Whether data is loading (renders skeleton rows)
+ * @param {boolean} [loading=false] - Alias for isLoading
  */
 export default function DataTable({
   columns = [],
@@ -35,7 +38,10 @@ export default function DataTable({
   className = '',
   rowClassName,
   disabled = false,
+  isLoading = false,
+  loading = false,
 }) {
+  const isTableLoading = isLoading || loading;
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;
 
@@ -219,7 +225,9 @@ export default function DataTable({
           </thead>
 
           <tbody>
-            {data.length === 0 ? (
+            {isTableLoading ? (
+              <SkeletonTable columns={columns.length} rows={5} selectable={selectable} />
+            ) : data.length === 0 ? (
               <tr>{renderEmptyState()}</tr>
             ) : (
               data.map((row, rowIndex) => {

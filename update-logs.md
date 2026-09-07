@@ -1,5 +1,70 @@
 # Update Logs
 
+## [2026-09-07] Feature: System-Wide Skeleton UI Implementation Replacing Data Loading Spinners
+
+### Overview
+Converted all data-loading states across the entire FairFly system (Admin portal, Operator portal, Client portal, and shared modals) from generic loading spinners and text placeholders to a modern, responsive Skeleton UI with shimmering animation. Created a global `.skeleton` CSS class hierarchy and reusable composite components (`Skeleton`, `SkeletonTable`, `SkeletonCard`, `SkeletonKpi`).
+
+### Key Changes
+
+1. **Global Skeleton CSS Animation & Utilities (`fair-fly/src/index.css`)**:
+   - Implemented `@keyframes skeleton-shimmer` with a smooth linear gradient animation tailored to the design token palette (`var(--bg)`, `var(--border-color)`, `rgba(255, 255, 255, 0.4)`).
+   - Created `.skeleton` base class with child suppression (`visibility: hidden`) allowing components to switch to `.skeleton` during loading and seamlessly transition back to their default class when data arrives.
+   - Added utility classes: `.skeleton-text`, `.skeleton-title`, `.skeleton-circle`, `.skeleton-badge`, `.skeleton-btn`, and `.skeleton-card`.
+
+2. **Core Reusable Skeleton Component Suite (`fair-fly/src/components/UI/Skeleton/`)**:
+   - `Skeleton.jsx`: Exported primitive `Skeleton` supporting variants (`rect`, `circle`, `text`, `title`, `button`, `badge`).
+   - `SkeletonTable`: Renders customizable skeleton table rows and cell bars matching table layouts with natural width variation.
+   - `SkeletonCard`: Renders modular card skeletons with avatar, titles, multi-line descriptions, and actions.
+   - `SkeletonKpi`: Renders metric KPI card skeletons matching dashboard stat cards.
+   - `skeleton.css`: Defined styles for composite skeletons and natural pulse animations.
+
+3. **Core Shared Layouts & Component Integration**:
+   - `DataTable.jsx`: Integrated `isLoading` and `loading` props to render `<SkeletonTable columns={columns.length} rows={5} />` in `<tbody>`, instantly upgrading all standard tabular data across the application.
+   - `KpiCard.jsx`: Added `isLoading` / `loading` props to seamlessly show skeleton headers and metric values while stats calculate.
+   - `RecordDetailLayout.jsx`: Replaced `.spinner-box` with a full record detail skeleton (breadcrumbs, header card with avatar/title/badges/actions, and sectioned content body), upgrading all 10 detail pages system-wide.
+   - `Loader.jsx`: Upgraded legacy loader component to render structured card skeletons instead of spinning wheels.
+   - `Loading.jsx` & `Loading.css`: Modernized root app loading shell (auth initialization) with an animated app skeleton (sidebar, topbar, KPI grid, and table skeleton).
+
+4. **Admin Portal Enhancements**:
+   - `ServiceContent.jsx`: Removed early blank card; bound `isLoading` to KPI cards and `DataTable`.
+   - `OperatorsContent.jsx`: Bound `isLoading={operatorLoading}` to KPI cards and `DataTable`.
+   - `ClientsContent.jsx` & `AdminsContent.jsx`: Added `isLoading={loading}` to KPI cards and `DataTable`.
+   - `FranchiseContent.jsx`: Replaced `<Loader />` with `<SkeletonCard count={4} />` and added `isLoading` to KPI cards.
+   - `QualificationsContent.jsx`: Replaced loading spinner return with `isLoading` forwarded to KPI cards and `DataTable`.
+   - `HistoryContent.jsx`: Replaced empty-state loading box with `<SkeletonTable columns={7} rows={5} />` in `tbody`.
+   - `TicketsContent.jsx` & `TicketTable.jsx`: Bound `isLoading={ticketsLoading}` to KPI cards and forwarded to `DataTable`.
+   - `TicketDetailPage.jsx`: Replaced spinner card with a full skeleton ticket conversation layout.
+   - `ResourcesContent.jsx` & `QuickLinksContent.jsx`: Added `isLoading` to KPI cards and `DataTable`.
+   - `AdminWorkflowTemplates.jsx`: Bound `isLoading` to `DataTable`.
+   - `AdminDashboard.jsx` & `AdminLogsModal.jsx`: Replaced loading text with skeleton log rows.
+   - `AdminForm.jsx`: Replaced loading operators spinner with skeleton operator checkbox cards.
+
+5. **Operator Portal Enhancements**:
+   - `OperatorDashboard.jsx`: Replaced active services loading box with 3 skeleton active service cards.
+   - `OperatorServicesContent.jsx`: Bound `isLoading` to KPI cards and `DataTable`.
+   - `OperatorServiceProcedure.jsx`: Replaced plain text loading box with a skeleton procedure stepper and step cards.
+   - `OperatorTicketsContent.jsx` & `OperatorTicketDetailPage.jsx`: Bound `isLoading` to KPI cards and ticket detail layout.
+   - `OperatorQuotations.jsx`: Replaced loading text with 3 skeleton quotation cards matching `.op-quotation-card` geometry.
+   - `OperatorInquiryForms.jsx`: Replaced loading text with 4 skeleton inquiry cards matching `.op-inquiry-card`.
+   - `OperatorAppointments.jsx`: Replaced loading box with 3 skeleton appointment cards matching `.op-appt-card`.
+   - `OperatorWorkflows.jsx`: Replaced loading text with 4 skeleton step rows.
+   - `OperatorResources.jsx`: Replaced loading spinner with 6 skeleton resource cards in `.op-resources-grid`.
+   - `OperatorQuickLinks.jsx`: Replaced loading text with 6 skeleton quick link buttons.
+
+6. **Client Portal & Shared Modals Enhancements**:
+   - `ClientAppointmentsPage.jsx`: Added skeleton KPI metric values and replaced grid spinner with 4 skeleton appointment cards.
+   - `ClientTrackingPage.jsx`: Added skeleton states for KPI metrics, replaced `loadingServices` spinner with skeleton service tracker cards, replaced `loadingQuotations` spinner with skeleton quotation cards, and replaced `loadingInquiries` spinner with skeleton inquiry cards.
+   - `ClientServicesMarketplace.jsx`: Replaced catalog loading spinner with 6 skeleton product cards in `.shopping-products-grid`.
+   - `ServiceItemPage.jsx`: Replaced `service-loading-card` with a full 2-column skeleton product layout matching the e-commerce gallery and specifications.
+   - `ClientAppointmentForm.jsx`: Replaced branch options loading spinner with skeleton form inputs.
+   - `ClientServiceRequestModal.jsx`: Replaced service options loading spinner with skeleton form inputs.
+   - `NewChatModal.jsx`: Replaced contacts loading spinner with 5 skeleton contact list items.
+   - `AnnouncementsModal.jsx`: Replaced announcements loading spinner with 3 skeleton announcement cards.
+   - `MessagesPage.jsx`: Added `loadingConversations` state and rendered 4 skeleton conversation items in the left chat sidebar.
+
+---
+
 ## [2026-09-07] Feature & Polish: Operator Service Fulfillment Revenue Crediting, Cancellation Flow, Client Notifications, and Complete Emoji Removal
 
 ### Overview

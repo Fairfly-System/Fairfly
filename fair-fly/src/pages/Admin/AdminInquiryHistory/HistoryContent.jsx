@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useAdminContext } from '../../../context/AdminContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import { SkeletonTable } from '../../../components/UI/Skeleton/Skeleton';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
@@ -120,24 +121,28 @@ export default function HistoryContent() {
           value={totalCount}
           icon="fa-solid fa-file-lines"
           iconColor="var(--purple, #7c3aed)"
+          isLoading={loading}
         />
         <KpiCard
           title="Confirmed & Transferred"
           value={confirmedCount}
           icon="fa-regular fa-circle-check"
           iconColor="var(--complete-green-dark, #059669)"
+          isLoading={loading}
         />
         <KpiCard
           title="Pending Inquiries"
           value={pendingCount}
           icon="fa-regular fa-clock"
           iconColor="var(--amber, #d97706)"
+          isLoading={loading}
         />
         <KpiCard
           title="Active Branches"
           value={branchCount}
           icon="fa-solid fa-code-branch"
           iconColor="var(--indigo, #4f46e5)"
+          isLoading={loading}
         />
       </section>
 
@@ -205,31 +210,33 @@ export default function HistoryContent() {
         </div>
 
         {/* Inquiries Table */}
-        {loading ? (
-          <div className="empty-state-box">
-            <p>Loading inquiry requests history...</p>
-          </div>
-        ) : paginatedInquiries.length === 0 ? (
-          <div className="empty-state-box">
-            <i className="fa-solid fa-file-circle-question empty-icon"></i>
-            <p>No inquiry records match your search or filter criteria.</p>
-          </div>
-        ) : (
-          <div className="inquiry-table-responsive">
-            <table className="inquiry-data-table">
-              <thead>
+        <div className="inquiry-table-responsive">
+          <table className="inquiry-data-table" aria-busy={loading}>
+            <thead>
+              <tr>
+                <th>Form No. / Date</th>
+                <th>Client / Company Name</th>
+                <th>Service Requested</th>
+                <th>Branch Received From</th>
+                <th>Requirements</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <SkeletonTable columns={7} rows={5} />
+              ) : paginatedInquiries.length === 0 ? (
                 <tr>
-                  <th>Form No. / Date</th>
-                  <th>Client / Company Name</th>
-                  <th>Service Requested</th>
-                  <th>Branch Received From</th>
-                  <th>Requirements</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                    <div className="empty-state-box" style={{ border: 'none', margin: 0, padding: 0 }}>
+                      <i className="fa-solid fa-file-circle-question empty-icon"></i>
+                      <p>No inquiry records match your search or filter criteria.</p>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {paginatedInquiries.map((inq) => {
+              ) : (
+                paginatedInquiries.map((inq) => {
                   const isConf = (inq.status || '').toLowerCase() === 'confirmed';
                   const reqs = Array.isArray(inq.requirements) ? inq.requirements : [];
                   const uploadedCount = reqs.filter(r => r.file?.url || r.value).length;
@@ -238,61 +245,51 @@ export default function HistoryContent() {
                   return (
                     <tr key={inq.id}>
                       <td>
-                        <div style={{ fontWeight: 700, color: 'var(--purple)' }}>{inq.formNo || 'N/A'}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          {inq.dateInquired || (inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : 'N/A')}
-                        </div>
-                      </td>
-
-                      <td>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                          {inq.fullName || inq.clientName || 'N/A'}
-                        </div>
-                        {inq.contactPerson && (
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            Attn: {inq.contactPerson}
-                          </div>
-                        )}
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          {inq.phoneNumber || inq.cellphone || inq.email || ''}
-                        </div>
-                      </td>
-
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{inq.serviceType || 'General Inquiry'}</div>
-                        {inq.servicePrice && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--purple)', fontWeight: 600 }}>
-                            {inq.servicePrice}
-                          </div>
-                        )}
-                      </td>
-
-                      <td>
-                        <span className="inquiry-branch-badge">
-                          <i className="fa-solid fa-location-dot"></i>
-                          {inq.branchName || inq.preferredBranchLocation || 'Main Branch'}
-                        </span>
-                      </td>
-
-                      <td>
-                        {totalReqs > 0 ? (
-                          <span className={`inquiry-reqs-pill ${uploadedCount === totalReqs ? 'complete' : 'incomplete'}`}>
-                            <i className={`fa-solid ${uploadedCount === totalReqs ? 'fa-circle-check' : 'fa-clock'}`}></i>
-                            {uploadedCount}/{totalReqs} Uploaded
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
+                            {inq.formNo || 'SAF-01'}
                           </span>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>None</span>
-                        )}
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                            {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
                       </td>
-
                       <td>
-                        <span className={`inquiry-status-pill ${isConf ? 'confirmed' : 'pending'}`}>
-                          {isConf ? 'CONFIRMED' : 'PENDING'}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <strong style={{ color: 'var(--text-dark)' }}>
+                            {inq.fullName || inq.clientName || 'Anonymous Client'}
+                          </strong>
+                          {inq.email && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                              {inq.email}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: 'var(--purple)' }}>
+                          {inq.serviceType || 'General Travel Service'}
                         </span>
                       </td>
-
+                      <td>
+                        <span className="branch-tag">
+                          <i className="fa-solid fa-building"></i>
+                          {inq.branchName || 'FairFly Main'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="req-count-badge">
+                          <i className="fa-solid fa-paperclip"></i>
+                          {uploadedCount} / {totalReqs} Files
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-pill ${isConf ? 'status-pill-active' : 'status-pill-pending'}`}>
+                          {inq.status || 'Pending'}
+                        </span>
+                      </td>
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.375rem', alignItems: 'center' }}>
                           <button
                             type="button"
                             className="btn btn-secondary"
@@ -315,11 +312,11 @@ export default function HistoryContent() {
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination */}
         <Pagination

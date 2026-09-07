@@ -438,17 +438,6 @@ export default function OperatorServicesContent() {
     { label: 'Services' },
   ];
 
-  if (serviceLoading) {
-    return (
-      <div className="card operator-services-page page-fade-in">
-        <div className="op-services-loading-card">
-          <i className="fa-solid fa-spinner fa-spin op-services-loading-spinner"></i>
-          <p>Loading services catalog...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <main className="operator-services-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
@@ -503,24 +492,28 @@ export default function OperatorServicesContent() {
           value={totalCount}
           icon="fa-solid fa-layer-group"
           iconColor="var(--purple)"
+          isLoading={serviceLoading}
         />
         <KpiCard
           title="Standard Catalog"
           value={standardCount}
           icon="fa-solid fa-globe"
           iconColor="#3b82f6"
+          isLoading={serviceLoading}
         />
         <KpiCard
           title="My Branch Exclusive"
           value={myBranchCount}
           icon="fa-solid fa-store"
           iconColor="var(--purple)"
+          isLoading={serviceLoading}
         />
         <KpiCard
           title="Active Services"
           value={activeCount}
           icon="fa-regular fa-circle-check"
           iconColor="var(--complete-green-dark)"
+          isLoading={serviceLoading}
         />
       </section>
 
@@ -608,6 +601,7 @@ export default function OperatorServicesContent() {
         <DataTable
           columns={columns}
           data={paginatedServices}
+          isLoading={serviceLoading}
           emptyState={{
             icon: 'fa-solid fa-concierge-bell',
             message: 'No services match your criteria. Adjust your filters or create a new branch service.',

@@ -131,12 +131,59 @@ export default function ServiceItemPage() {
 
   if (loading) {
     return (
-      <main className="service-product-page page-fade-in">
-        <Breadcrumbs items={breadcrumbs} />
-        <div className="card service-loading-card">
-          <i className="fa-solid fa-circle-notch fa-spin service-loading-icon"></i>
-          <h3>Loading Service Details...</h3>
-          <p>Connecting to travel service specifications.</p>
+      <main className="service-product-page page-fade-in" aria-busy="true">
+        <div className="service-page-nav-bar">
+          <Breadcrumbs items={breadcrumbs} />
+        </div>
+        <div className="service-ecommerce-grid">
+          {/* Left Column Skeleton */}
+          <section className="service-gallery-card card">
+            <div className="skeleton" style={{ width: '100%', height: '320px', borderRadius: 'var(--radius-md)' }} />
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ width: '4.5rem', height: '4.5rem', borderRadius: 'var(--radius-sm)' }} />
+              ))}
+            </div>
+            <div className="service-trust-grid" style={{ marginTop: '1.5rem' }}>
+              <div className="service-trust-item">
+                <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
+                <div style={{ width: '70%' }}>
+                  <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem' }} />
+                </div>
+              </div>
+              <div className="service-trust-item">
+                <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
+                <div style={{ width: '70%' }}>
+                  <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem' }} />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Right Column Skeleton */}
+          <section className="service-details-card card">
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.5rem' }} />
+              <div className="skeleton skeleton-badge" style={{ width: '8rem', height: '1.5rem' }} />
+            </div>
+            <div className="skeleton skeleton-title" style={{ width: '85%', height: '2rem', marginBottom: '1rem' }} />
+            <div className="skeleton skeleton-text" style={{ width: '100%', height: '1rem', margin: '0.35rem 0' }} />
+            <div className="skeleton skeleton-text" style={{ width: '95%', height: '1rem', margin: '0.35rem 0' }} />
+            <div className="skeleton skeleton-text" style={{ width: '75%', height: '1rem', margin: '0.35rem 0' }} />
+
+            <div style={{ marginTop: '2rem', padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              <div className="skeleton skeleton-title" style={{ width: '40%', height: '1.25rem', marginBottom: '1rem' }} />
+              <div className="skeleton skeleton-text" style={{ width: '90%', height: '0.9rem', margin: '0.5rem 0' }} />
+              <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.9rem', margin: '0.5rem 0' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <div className="skeleton skeleton-btn" style={{ flex: 1, height: '3rem' }} />
+              <div className="skeleton skeleton-btn" style={{ width: '3rem', height: '3rem' }} />
+            </div>
+          </section>
         </div>
       </main>
     );

@@ -327,9 +327,30 @@ function DashboardContent() {
 
         {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
 
-        <div className="op-service-list">
+        <div className="op-service-list" aria-busy={loading}>
           {loading ? (
-            <div className="empty-state-box"><p>Loading active services...</p></div>
+            [1, 2, 3].map((i) => (
+              <article key={`skel-service-${i}`} className="op-service-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flex: 1 }}>
+                    <div className="skeleton skeleton-title" style={{ width: '35%', height: '1.25rem', margin: 0 }} />
+                    <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.25rem' }} />
+                  </div>
+                  <div className="skeleton skeleton-badge" style={{ width: '5rem', height: '1.25rem' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '25%', height: '0.75rem', margin: 0 }} />
+                    <div className="skeleton skeleton-text" style={{ width: '10%', height: '0.75rem', margin: 0 }} />
+                  </div>
+                  <div className="skeleton" style={{ width: '100%', height: '0.5rem', borderRadius: 'var(--radius-full)' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                  <div className="skeleton skeleton-text" style={{ width: '30%', height: '0.875rem', margin: 0 }} />
+                  <div className="skeleton skeleton-btn" style={{ width: '7rem', height: '2rem' }} />
+                </div>
+              </article>
+            ))
           ) : paginatedServices.length === 0 ? (
             <div className="empty-state-box">
               <i className="fa-solid fa-list-check empty-icon"></i>

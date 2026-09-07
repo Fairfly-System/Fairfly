@@ -171,10 +171,23 @@ export default function AnnouncementsModal({ isOpen, onClose }) {
         {/* Feed List */}
         <div className="announcements-feed">
           {loading ? (
-            <div className="announcements-empty">
-              <i className="fa-solid fa-circle-notch fa-spin"></i>
-              <p>Loading announcements...</p>
-            </div>
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={`skel-ann-${i}`} className="announcement-card normal" aria-busy="true">
+                <div className="announcement-header-row">
+                  <div className="announcement-title-row" style={{ width: '60%' }}>
+                    <div className="skeleton skeleton-title" style={{ width: '70%', height: '1.1rem', margin: 0 }} />
+                    <div className="skeleton skeleton-badge" style={{ width: '4rem', height: '1.25rem', margin: 0 }} />
+                  </div>
+                  <div className="announcement-meta">
+                    <div className="skeleton skeleton-text" style={{ width: '7rem', height: '0.8rem', margin: 0 }} />
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <div className="skeleton skeleton-text" style={{ width: '95%', height: '0.85rem', margin: '0.3rem 0' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem', margin: '0.3rem 0' }} />
+                </div>
+              </div>
+            ))
           ) : announcements.length === 0 ? (
             <div className="announcements-empty">
               <i className="fa-regular fa-bell-slash"></i>

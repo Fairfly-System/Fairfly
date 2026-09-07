@@ -85,9 +85,21 @@ export function InquiryContent() {
       {/* Forms List Container */}
       <div className="op-inquiry-list">
         {loading ? (
-          <div className="op-inquiry-empty">
-            <p>Loading inquiry forms...</p>
-          </div>
+          Array.from({ length: 4 }).map((_, i) => (
+            <article key={`skel-inq-${i}`} className="op-inquiry-card" aria-busy="true">
+              <div className="op-inquiry-card-main">
+                <div className="skeleton skeleton-circle" style={{ width: '2.5rem', height: '2.5rem', minWidth: '2.5rem' }} />
+                <div style={{ width: '100%', maxWidth: '380px' }}>
+                  <div className="skeleton skeleton-title" style={{ width: '60%', height: '1.125rem', marginBottom: '0.35rem' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '90%', height: '0.8rem', margin: 0 }} />
+                </div>
+              </div>
+              <div className="op-inquiry-card-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="skeleton skeleton-btn" style={{ width: '4.5rem', height: '1.875rem' }} />
+                <div className="skeleton skeleton-badge" style={{ width: '4rem', height: '1.5rem' }} />
+              </div>
+            </article>
+          ))
         ) : paginatedForms.length === 0 ? (
           <div className="op-inquiry-empty">
             <i className="fa-regular fa-folder-open"></i>

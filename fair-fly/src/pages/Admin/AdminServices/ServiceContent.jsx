@@ -563,20 +563,6 @@ export default function ServiceContent() {
     }
   };
 
-  // Early loading return AFTER all hooks are declared
-  if (serviceLoading) {
-    return (
-      <div className="card services-page page-fade-in">
-        <div className="services-header">
-          <div>
-            <h2>Services Management</h2>
-            <p>Loading services catalog...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const breadcrumbItems = [
     { label: "Dashboard", to: "/admin" },
     { label: "Services" },
@@ -611,24 +597,28 @@ export default function ServiceContent() {
           value={totalServices}
           icon="fa-solid fa-layer-group"
           iconColor="var(--purple)"
+          isLoading={serviceLoading}
         />
         <KpiCard
           title="Active"
           value={activeCount}
           icon="fa-regular fa-circle-check"
           iconColor="var(--complete-green-dark)"
+          isLoading={serviceLoading}
         />
         <KpiCard
           title="Inactive"
           value={inactiveCount}
           icon="fa-solid fa-ban"
           iconColor="var(--error-red-dark)"
+          isLoading={serviceLoading}
         />
         <KpiCard
           title="Categories"
           value={categoriesCount}
           icon="fa-solid fa-tags"
           iconColor="#f0653e"
+          isLoading={serviceLoading}
         />
       </section>
 
@@ -683,6 +673,7 @@ export default function ServiceContent() {
           keyField="id"
           selectable={true}
           selectedIds={selectedIds}
+          isLoading={serviceLoading}
           disabled={isConfirmLoading || isSubmitting}
           onSelectionChange={setSelectedIds}
           onBulkEnable={(ids) => setConfirmState({ type: "bulk-enable", ids })}

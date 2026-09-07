@@ -202,9 +202,31 @@ export default function ClientAppointmentForm({
       isLoading={isSubmitting}
     >
       {isLoadingOptions ? (
-        <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-light)' }}>
-          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
-          <p>Loading available branches and appointment slots...</p>
+        <div className="appointmentForm form-column" aria-busy="true" style={{ gap: '1rem', padding: '0.5rem 0' }}>
+          <div className="form-grid-2">
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '40%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.5rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '45%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.5rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+          </div>
+          <div className="form-column">
+            <div className="skeleton skeleton-text" style={{ width: '35%', height: '0.85rem', marginBottom: '0.4rem' }} />
+            <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.5rem', borderRadius: 'var(--radius-md)' }} />
+          </div>
+          <div className="form-grid-2">
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.5rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+            <div className="form-column">
+              <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.85rem', marginBottom: '0.4rem' }} />
+              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.5rem', borderRadius: 'var(--radius-md)' }} />
+            </div>
+          </div>
         </div>
       ) : (
         <form className="appointmentForm form-column" onSubmit={handleSubmit}>
