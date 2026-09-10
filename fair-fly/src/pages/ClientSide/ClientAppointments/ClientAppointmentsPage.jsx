@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
+import SearchBar from '../../../components/UI/SearchBar/SearchBar';
 import { fetchAppointments } from '../../../services/appointmentService';
 import useDebounce from '../../../hooks/useDebounce';
 import './client-appointments.css';
@@ -172,24 +173,12 @@ export default function ClientAppointmentsPage() {
         </div>
 
         {/* Search Field */}
-        <div className="appointments-search-box">
-          <i className="fa-solid fa-magnifying-glass"></i>
-          <input
-            type="text"
-            placeholder="Search by branch or service..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              className="appointments-clear-search"
-              onClick={() => setSearchQuery('')}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          )}
-        </div>
+        <SearchBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          placeholder="Search by branch or service..."
+          className="appointments-search-bar"
+        />
       </div>
 
       {/* Appointments Grid List */}

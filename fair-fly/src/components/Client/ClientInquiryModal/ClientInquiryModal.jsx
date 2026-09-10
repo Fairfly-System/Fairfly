@@ -77,14 +77,6 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
     );
   }, [isOpen, userToken]);
 
-  if (!isOpen) return null;
-
-  const handleToggleService = (srv) => {
-    setSelectedServices((prev) =>
-      prev.includes(srv) ? prev.filter((s) => s !== srv) : [...prev, srv]
-    );
-  };
-
   const isFormValid = useMemo(() => {
     return Boolean(
       clientName.trim() &&
@@ -94,6 +86,14 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       (!branchesList.length || selectedBranchUid)
     );
   }, [clientName, cellphone, email, selectedServices, specifiedRequirements, branchesList, selectedBranchUid]);
+
+  if (!isOpen) return null;
+
+  const handleToggleService = (srv) => {
+    setSelectedServices((prev) =>
+      prev.includes(srv) ? prev.filter((s) => s !== srv) : [...prev, srv]
+    );
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();

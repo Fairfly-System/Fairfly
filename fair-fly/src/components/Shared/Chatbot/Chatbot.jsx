@@ -86,7 +86,7 @@ export default function Chatbot() {
       {/* FLOATING LAUNCHER BUTTON */}
       {!isOpen && (
         <button onClick={() => setIsOpen(true)} className="chatbot-launcher">
-          <i class="fa-solid fa-message"></i>
+          <i className="fa-solid fa-message"></i>
         </button>
       )}
 
@@ -104,7 +104,7 @@ export default function Chatbot() {
                 </span>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="chatbot-close-button"><i class="fa-solid fa-circle-xmark"></i></button>
+            <button onClick={() => setIsOpen(false)} className="chatbot-close-button"><i className="fa-solid fa-circle-xmark"></i></button>
           </div>
 
           {/* Messages Feed */}

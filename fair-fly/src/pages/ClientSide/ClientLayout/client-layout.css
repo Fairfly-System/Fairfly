@@ -1,5 +1,5 @@
 .client-portal-layout {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   display: flex;
   flex-direction: column;
@@ -8,9 +8,9 @@
 
 .client-portal-main {
   width: 100%;
-  max-width: 105rem;
+  max-width: 96rem;
   margin: 0 auto;
-  padding: 1.75rem 1.75rem 4rem;
+  padding: 2rem 2rem 4rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;

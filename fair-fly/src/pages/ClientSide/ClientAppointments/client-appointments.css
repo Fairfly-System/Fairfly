@@ -146,37 +146,17 @@
   color: #ffffff;
 }
 
-.appointments-search-box {
-  position: relative;
+.appointments-search-bar {
   min-width: 16rem;
-  display: flex;
-  align-items: center;
+  max-width: 22rem;
+  flex: 1 1 auto;
 }
 
-.appointments-search-icon {
-  position: absolute;
-  left: 0.875rem;
-  color: var(--purple);
-  font-size: 0.875rem;
-  pointer-events: none;
-}
-
-.appointments-search-input {
-  width: 100%;
-  padding: 0.5625rem 2.25rem 0.5625rem 2.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: var(--bg);
-  color: var(--text-dark);
-  font-size: 0.875rem;
-  font-family: inherit;
-  outline: none;
-  transition: var(--transition-fast);
-}
-
-.appointments-search-input:focus {
-  border-color: var(--purple);
-  background: var(--card-bg);
+@media (max-width: 640px) {
+  .appointments-search-bar {
+    min-width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* Appointments Cards Grid */

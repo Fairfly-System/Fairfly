@@ -14,25 +14,25 @@ const branches = [
 ]
 
 const BuildingIcon = ({ bg }) => (
-  <div className="branchIcon"style={{ background: bg }}>
-    <p><i class="fa-solid fa-building-flag"></i></p>
+  <div className="branchIcon" style={{ background: bg }}>
+    <p><i className="fa-solid fa-building-flag"></i></p>
   </div>
 )
 
 const PinIcon = () => (
-  <p><i class="fa-solid fa-location-dot"></i></p>
+  <p><i className="fa-solid fa-location-dot"></i></p>
 )
 
 const PhoneIcon = () => (
-  <p><i class="fa-solid fa-phone"></i></p>
+  <p><i className="fa-solid fa-phone"></i></p>
 )
 
 const MailIcon = () => (
-  <p><i class="fa-solid fa-envelope"></i></p>
+  <p><i className="fa-solid fa-envelope"></i></p>
 )
 
 const ClockIcon = () => (
-  <p><i class="fa-solid fa-clock"></i></p>
+  <p><i className="fa-solid fa-clock"></i></p>
 )
 
 export default function About() {
@@ -97,7 +97,7 @@ export default function About() {
         <div className="headOfficeCard">
           <div className="headOfficeLeft">
             <div className="headOfficeTitle">
-              <span style={{ fontSize: '1.2rem' }}><i class="fa-regular fa-building"></i></span>
+              <span style={{ fontSize: '1.2rem' }}><i className="fa-regular fa-building"></i></span>
               <h3>Head Office</h3>
             </div>
             <p className="headOfficeAddr">
@@ -115,11 +115,11 @@ export default function About() {
         <h2 className="sectionTitle">Connect With Us</h2>
         <div className="socialBtns">
           <a href="https://www.facebook.com/squaretravels.ph/" target="_blank" rel="noreferrer" className="socialBtn" style={{ background: '#1877F2' }}>
-            <p><i class="fa-brands fa-square-facebook"></i></p>
+            <p><i className="fa-brands fa-square-facebook"></i></p>
 
           </a>
           <a href="https://www.facebook.com/squaretravels.ph/" target="_blank" rel="noreferrer" className="socialBtn" style={{ background: '#229ED9' }}>
-            <p><i class="fa-brands fa-facebook-messenger"></i></p>
+            <p><i className="fa-brands fa-facebook-messenger"></i></p>
 
           </a>
         </div>
