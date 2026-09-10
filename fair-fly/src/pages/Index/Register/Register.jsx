@@ -45,7 +45,6 @@ export default function Register() {
   // -----------------------
   // VALIDATION FUNCTIONS
   // -----------------------
-
   const validateFullName = (name) => {
     if (name.trim().length < 2) {
       setErrors((prev) => ({
@@ -66,7 +65,7 @@ export default function Register() {
     if (!emailRegex.test(email)) {
       setErrors((prev) => ({
         ...prev,
-        email: "Invalid email format",
+        email: "Please enter a valid email address",
       }));
     } else {
       setErrors((prev) => {
@@ -82,7 +81,7 @@ export default function Register() {
     if (!phoneRegex.test(phone)) {
       setErrors((prev) => ({
         ...prev,
-        phone: "Invalid phone number",
+        phone: "Invalid phone number format",
       }));
     } else {
       setErrors((prev) => {
@@ -98,7 +97,7 @@ export default function Register() {
     if (!strongPassword.test(password)) {
       setErrors((prev) => ({
         ...prev,
-        password: "Must be 8+ chars, include uppercase, lowercase & number",
+        password: "Must be 8+ chars with uppercase, lowercase & number",
       }));
     } else {
       setErrors((prev) => {
@@ -156,7 +155,7 @@ export default function Register() {
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        confirmPassword: formData.confirmPassword,
       },
       (res) => {
         addToast(res?.message || "Registration successful! Please sign in.", "success");
@@ -170,118 +169,205 @@ export default function Register() {
   };
 
   return (
-    <div className="register-page">
-      <div className="register-container">
-        <Link to="/" className="back-button">
-          <ArrowLeft size={16} />
-          Back to Home
-        </Link>
+    <div className="auth-split-layout">
+      {/* 50% Left Side: Visual Showcase */}
+      <div className="auth-side-showcase">
+        <img
+          src="/auth/register-hero.jpg"
+          alt="Philippine Travel & Franchise Community"
+          className="auth-showcase-bg"
+          onError={(e) => {
+            // High quality inspiring travel horizon fallback
+            e.currentTarget.src = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1400&q=80";
+          }}
+        />
+        <div className="auth-showcase-overlay" />
 
-        <div className="register-card">
-          <div className="register-header">
-            <img src={logo} alt="logo" className="logo" />
-            <h1>Create Account</h1>
-            <p>Start your journey</p>
+        <div className="auth-showcase-content">
+          <div className="auth-showcase-header">
+            <img src={logo} alt="Fairfly Logo" className="auth-showcase-logo" />
+            <span className="auth-showcase-brand">Fairfly System</span>
           </div>
 
-          <form className="register-form" onSubmit={handleSubmit}>
+          <div className="auth-showcase-main">
+            <div className="auth-showcase-badge">
+              <i className="fa-solid fa-user-shield"></i>
+              <span>Direct Client & Partner Portal</span>
+            </div>
+
+            <h2 className="auth-showcase-title">
+              Start Your Journey with <span className="auth-showcase-title-highlight">Fairfly</span>.
+            </h2>
+
+            <p className="auth-showcase-desc">
+              Join thousands of Filipino travelers and corporate partners enjoying standardized document processing, PSA retrievals, and verified flight itineraries.
+            </p>
+
+            <div className="auth-showcase-benefits">
+              <div className="auth-benefit-item">
+                <i className="fa-solid fa-circle-check"></i>
+                <span>Real-time tracking of passport & civil registry filings</span>
+              </div>
+              <div className="auth-benefit-item">
+                <i className="fa-solid fa-circle-check"></i>
+                <span>Direct access to certified nationwide franchise operators</span>
+              </div>
+              <div className="auth-benefit-item">
+                <i className="fa-solid fa-circle-check"></i>
+                <span>Consolidated promo airfares & visa assistance advisory</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-showcase-stats">
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">50K+</span>
+              <span className="auth-stat-label">Processed Documents</span>
+            </div>
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">99.8%</span>
+              <span className="auth-stat-label">On-Time SLA Rate</span>
+            </div>
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">ISO:9001</span>
+              <span className="auth-stat-label">Ready Architecture</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 50% Right Side: Clean Form */}
+      <div className="auth-side-form">
+        <div className="auth-form-inner">
+          <Link to="/" className="auth-back-link">
+            <ArrowLeft size={16} />
+            <span>Back to Home</span>
+          </Link>
+
+          {/* Mobile-only brand badge */}
+          <div className="auth-mobile-brand">
+            <img src={logo} alt="Fairfly Logo" className="auth-mobile-logo" />
+            <span className="auth-mobile-name">Fairfly</span>
+          </div>
+
+          <div className="auth-form-header">
+            <h1>Create Account</h1>
+            <p>Fast registration with zero hidden fees. Start in under a minute.</p>
+          </div>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
             {/* FULL NAME */}
-            <div className="input-group">
-              <label>Full Name</label>
-              <div className="input-wrapper">
-                <User size={18} className="icon" />
+            <div className="auth-input-group">
+              <label className="auth-input-label">Full Name</label>
+              <div className={`auth-input-wrapper ${errors.fullName ? 'has-error' : ''}`}>
+                <User size={18} className="auth-input-icon" />
                 <input
                   type="text"
+                  className="auth-input"
                   value={formData.fullName}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "fullName");
                     validateFullName(e.target.value);
                   }}
-                  placeholder="Your Name"
+                  placeholder="Juan Dela Cruz"
+                  autoComplete="name"
+                  required
                 />
               </div>
-              {errors.fullName && <p className="error">{errors.fullName}</p>}
+              {errors.fullName && <p className="auth-input-error">{errors.fullName}</p>}
             </div>
 
             {/* EMAIL */}
-            <div className="input-group">
-              <label>Email</label>
-              <div className="input-wrapper">
-                <Mail size={18} className="icon" />
+            <div className="auth-input-group">
+              <label className="auth-input-label">Email Address</label>
+              <div className={`auth-input-wrapper ${errors.email ? 'has-error' : ''}`}>
+                <Mail size={18} className="auth-input-icon" />
                 <input
                   type="email"
+                  className="auth-input"
                   value={formData.email}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "email");
                     validateEmail(e.target.value);
                   }}
-                  placeholder="youremail@example.com"
+                  placeholder="juan@example.com"
+                  autoComplete="email"
+                  required
                 />
               </div>
-              {errors.email && <p className="error">{errors.email}</p>}
+              {errors.email && <p className="auth-input-error">{errors.email}</p>}
             </div>
 
             {/* PHONE */}
-            <div className="input-group">
-              <label>Phone</label>
-              <div className="input-wrapper">
-                <Phone size={18} className="icon" />
+            <div className="auth-input-group">
+              <label className="auth-input-label">Phone Number</label>
+              <div className={`auth-input-wrapper ${errors.phone ? 'has-error' : ''}`}>
+                <Phone size={18} className="auth-input-icon" />
                 <input
                   type="tel"
+                  className="auth-input"
                   value={formData.phone}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "phone");
                     validatePhone(e.target.value);
                   }}
-                  placeholder="+63 123 456 7890"
+                  placeholder="+63 912 345 6789"
+                  autoComplete="tel"
+                  required
                 />
               </div>
-              {errors.phone && <p className="error">{errors.phone}</p>}
+              {errors.phone && <p className="auth-input-error">{errors.phone}</p>}
             </div>
 
             {/* PASSWORD */}
-            <div className="input-group">
-              <label>Password</label>
-              <div className="input-wrapper">
-                <Lock size={18} className="icon" />
+            <div className="auth-input-group">
+              <label className="auth-input-label">Password</label>
+              <div className={`auth-input-wrapper ${errors.password ? 'has-error' : ''}`}>
+                <Lock size={18} className="auth-input-icon" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  className="auth-input"
                   value={formData.password}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "password");
                     validatePassword(e.target.value);
                   }}
                   placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="auth-password-toggle"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.password && <p className="error">{errors.password}</p>}
+              {errors.password && <p className="auth-input-error">{errors.password}</p>}
             </div>
 
             {/* CONFIRM PASSWORD */}
-            <div className="input-group">
-              <label>Confirm Password</label>
-              <div className="input-wrapper">
-                <Lock size={18} className="icon" />
+            <div className="auth-input-group">
+              <label className="auth-input-label">Confirm Password</label>
+              <div className={`auth-input-wrapper ${errors.confirmPassword ? 'has-error' : ''}`}>
+                <Lock size={18} className="auth-input-icon" />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
+                  className="auth-input"
                   value={formData.confirmPassword}
                   onChange={(e) => {
                     handleInputChange(e.target.value, "confirmPassword");
                     validateConfirmPassword(e.target.value);
                   }}
                   placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="auth-password-toggle"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
                   aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
@@ -289,44 +375,52 @@ export default function Register() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="error">{errors.confirmPassword}</p>
+                <p className="auth-input-error">{errors.confirmPassword}</p>
               )}
             </div>
 
-            <button type="submit" className="submit-button" disabled={disabled || isSubmitting}>
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={disabled || isSubmitting}
+            >
               {isSubmitting ? (
                 <>
-                  <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: "0.5rem" }}></i>
-                  Creating Account...
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  <span>Creating Account...</span>
                 </>
               ) : (
-                "Create Account"
+                <span>Create Account</span>
               )}
             </button>
           </form>
 
-          <div className="switch-link">
-            Already have an account? <Link to="/login">Sign In</Link>
-          </div>
-        </div>
+          <p className="auth-switch-text">
+            Already have an account?{" "}
+            <Link to="/login" className="auth-switch-link">
+              Sign In
+            </Link>
+          </p>
 
-        <div className="footer-text">
-          By signing up, you agree to{" "}
-          <button
-            type="button"
-            className="legal-link-btn"
-            onClick={() => openLegalModal("terms")}
-          >
-            Terms
-          </button>{" "}
-          &{" "}
-          <button
-            type="button"
-            className="legal-link-btn"
-            onClick={() => openLegalModal("privacy")}
-          >
-            Privacy Policy
-          </button>
+          <p className="auth-footer-terms">
+            By signing up, you agree to our{" "}
+            <button
+              type="button"
+              className="auth-legal-btn"
+              onClick={() => openLegalModal("terms")}
+            >
+              Terms of Service
+            </button>{" "}
+            and{" "}
+            <button
+              type="button"
+              className="auth-legal-btn"
+              onClick={() => openLegalModal("privacy")}
+            >
+              Privacy Policy
+            </button>
+            .
+          </p>
         </div>
       </div>
 

@@ -1,6 +1,147 @@
 # Update Logs
 
-## [2026-09-08] Refinement: System-Wide Selection Color Softening & Expanded Announcement Modal Sizing and Scroll Isolation
+## [2026-09-10] Redesign: Consistent Flat Light SaaS Landing Page, Instrument Serif Editorial Accents, Service Card De-cluttering & Service Details React Child Bug Fix
+
+### Overview
+Addressed explicit design requirements and runtime error fixes on the public landing page. Strictly adhered to a **consistent, flat light SaaS design**—eliminating all liquid glass, dark/blackish backgrounds, and translucent blur filters across all sections (Franchise, CTA Footer Card, Explore, Services). Resolved a fatal React child crash (`Objects are not valid as a React child (found: object with keys {required, name})`) in the Service Details modal and purged all dummy data arrays. Streamlined the service cards from over-cluttered 15-element widgets to crisp 16:9 photo cards with clean metadata and a single "View Details" action. Integrated Google Font `Instrument Serif` italic accents across section headers for high-end editorial flair.
+
+### Key Changes
+
+1. **Hero Section Background Image (`Landing.jsx` & `landing.css`)**:
+   - Switched hero backdrop from ambient video to a high-resolution background image container (`.hero-bg-container`, `.hero-bg-img`).
+   - Configured local target `/hero-bg.jpg` with a graceful high-res aviation/sky Unsplash fallback via `onError`.
+   - Applied a soft atmospheric light gradient overlay (`.hero-bg-overlay`) that keeps the existing light color scheme (`#F8FAFC`, `--bg`), while ensuring high contrast and readability for all headlines, CTAs, and the trust strip.
+   - File path for custom replacement: `Fairfly/fair-fly/public/hero-bg.jpg`.
+
+2. **Fixed React Child Runtime Crash & Purged Dummy Data (`ServiceDetailModal.jsx`)**:
+   - Resolved `Objects are not valid as a React child (found: object with keys {required, name})` when opening the service details modal.
+   - Added `getRequirementName(req, idx)` helper to safely extract requirement label strings from Firestore objects (`req.name || req.title || req.label`).
+   - Added `isRequirementMandatory(req)` to render clean status pills (`.service-req-pill.mandatory` / `.service-req-pill.optional`).
+   - Purged all hardcoded dummy data arrays (removed fake 5-point inclusions and fake workflow steps), ensuring the modal presents only actual backend service data (`requirements`, `description`, `processingTime`, `price`, `tags`).
+   - Redesigned modal dialog into a crisp, flat white card (`#FFFFFF`, `1px solid var(--border-color)`, `var(--shadow-lg)`) without liquid glass.
+
+2. **De-cluttered Service Cards (`Services.jsx` & `services.css`)**:
+   - Eliminated visual clutter: removed redundant icon box, hashtag rows, multi-branch pill tags, double button actions, and heavy overlay gradients.
+   - Streamlined layout: clean 16:9 thumbnail photo with single category pill, clean title, 1-line metadata (`turnaround • docs required`), 2-line description clamp, and clean footer with starting price + single "View Details" button.
+   - Replaced bouncy hover transforms with subtle border color transitions (`#94A3B8`) and slight photo scale (`1.025`).
+
+3. **Consistent Flat Light Theme & Elimination of Blackish Sections (`franchise-section.css`, `footer-card.css`, `explore.css`)**:
+   - `FranchiseSection`: Removed dark slate `#0F172A` background, glowing radials, and `backdrop-filter: blur(6px)` glass cards. Replaced with crisp white background (`#FFFFFF`), flat slate cards (`var(--bg): #F8FAFC`, border `#E2E8F0`), high-contrast text (`var(--text-dark)`), and flat orange accent buttons.
+   - `FooterCard`: Converted from blackish `#0F172A` to a clean branded light card (`var(--purple-light-2)`, border `var(--purple-light)`), high-contrast text, and a solid purple CTA button.
+   - `Explore`: Standardized container and grid borders with `--border-color` and `--radius-md`.
+   - `Footer`: Clean white background with `--border-color` top border.
+
+4. **Editorial Typography (`Instrument Serif`)**:
+   - Imported `@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');` in `fair-fly/src/index.css`.
+   - Defined `--font-serif: 'Instrument Serif', Georgia, serif;` in `:root`.
+   - Applied italic serif styling (`font-family: var(--font-serif); font-style: italic; font-weight: 400;`) to heading brand accents across Hero (`.hero-heading-brand`), Business System (`.bs-title-accent`), Service Guidelines (`.sg-title-accent`), Business Model (`.bm-title-accent`), Training Academy (`.tc-title-accent`), Explore (`.explore-title-accent`), Franchise Section (`.fr-titleOrange`), and FooterCard (`.footer-title-accent`).
+
+5. **Verification**:
+   - Tested Vite production build (`npm run build`) which succeeded in 3.19s with exit code 0.
+   - Executed browser subagent testing: verified clean visual rendering, checked all sections for light/flat consistency, tested modal opening/closing on service cards, and confirmed 0 console errors.
+
+---
+
+## [2026-09-10] Redesign: Landing Page AI-Slop Cleanup, E-Commerce/Airbnb Service Detail Modal, and 50/50 Split Authentication
+
+### Overview
+Executed a comprehensive aesthetic overhaul across the public-facing landing page and user onboarding journey. Eliminated all "AI-slop" design tropes—pulsing badges, neon gradient text, aggressive hover translations, and oversaturated glowing shadows—in favor of a refined, enterprise-grade travel SaaS layout. Introduced photo thumbnail cards on the landing page with automatic local and Unsplash fallbacks, paired with an Airbnb / E-commerce-style rich service detail modal (`ServiceDetailModal`) featuring full operational checklists, procedure timelines, and a sticky booking action card. Additionally transformed both Login and Register experiences into a modern 50/50 split-screen layout with an inspiring brand showcase on the left and a minimalist, accessible form on the right.
+
+### Key Changes
+
+1. **Landing Page AI-Slop Elimination (`fair-fly`)**:
+   - `Landing.jsx` & `landing.css`:
+     - Replaced multicolor neon gradient heading with clean, authoritative slate typography and single-accent brand emphasis (`.hero-heading`, `.hero-heading-brand`).
+     - Removed animated pulsing status dot in favor of a steady, clean indicator (`.hero-badge-dot`).
+     - Standardized hero CTA button styles (`.btn-hero-primary`, `.btn-hero-secondary`, `.btn-hero-outline`) with subtle single-light-source hover states.
+     - Redesigned Metric Trust Strip with clean border demarcation and subtle background tints.
+   - `franchise-section.css`:
+     - Replaced 3-color purple-magenta gradient background and 28px orange glowing shadow with a modern slate container (`#0F172A`) with subtle radial lighting and clean `--shadow-md`.
+   - `footer-card.css`:
+     - Replaced purple gradient and 60px glowing shadow with a dark slate card (`#0F172A`) featuring subtle radial lighting and `--shadow-md`.
+   - `service-guidelines.css` & `business-system.css`:
+     - Removed `box-shadow: var(--shadow-purple)` and bouncy card hover `transform: translateY(-0.25rem)` across all sections.
+
+2. **Airbnb / E-Commerce Style Service Detail Modal (`fair-fly`)**:
+   - `ServiceDetailModal.jsx` & `service-detail-modal.css`:
+     - Created a responsive two-column modal dialog:
+       - **Left Column**: High-resolution hero media banner with category pills, verified operator badge, star rating, service overview, 5-point verification inclusions list, required documents checklist, and a 3-step operational procedure timeline.
+       - **Right Column**: Sticky Airbnb-style booking widget with starting price breakdown, turnaround estimate, verified franchise operator badge, "Avail Service Now" CTA, and security guarantees.
+     - Added full keyboard navigation (`Escape` dismissal), backdrop click closing, and body scroll locking.
+   - `Services.jsx` & `services.css`:
+     - Updated all default operator services with `image` paths (`/services/*.jpg`) and robust Unsplash fallback URLs (`onError` handler).
+     - Upgraded service cards with 16:9 photo banners, quick view hints, mini icon headers, category tags, turnaround times, requirement counters, and dual actions ("Details" modal trigger + "Avail" direct booking navigation).
+
+3. **Modern 50/50 Split Authentication Screens (`fair-fly`)**:
+   - `Login/login.jsx` & `login.css`:
+     - Transformed from a basic centered card into a modern 50/50 split screen (`.auth-split-layout`).
+     - **Left Panel (50%)**: Atmospheric visual showcase featuring `/auth/login-hero.jpg` (with Unsplash fallback), dark overlay gradient, Fairfly brand badge, value proposition copy, and key trust statistics (ISO 9001:2000, 50+ Branches, 24/7 SLA).
+     - **Right Panel (50%)**: Clean, accessible login form with "Back to Home" navigation, sleek input wrappers with icon prefixes, password toggle, URL query param service continuation banner, and terms/privacy modal triggers.
+   - `Register/Register.jsx` & `register.css`:
+     - Transformed into matching 50/50 split screen with `/auth/register-hero.jpg` (with Unsplash fallback), ecosystem benefits list, and clean registration inputs with client-side field validation.
+   - Both pages collapse gracefully on mobile screens (< 960px) to provide a 100% full-width form layout with zero horizontal overflow.
+
+---
+
+## [2026-09-10] Redesign: Clean Modern SaaS Polish & Sidebar Tab Notification System with Real-Time Dynamic Badging
+
+### Overview
+Systematically redesigned the Fairfly web application to eliminate "AI-slop" aesthetic anti-patterns—removing heavy glowing drop shadows, pulsating status dots, bouncy hover transforms, and inline styles across layouts and components. Replaced them with a refined, professional SaaS aesthetic utilizing subtle single-light-source shadows, crisp borders, and clean status indicators. Additionally implemented a comprehensive Sidebar Tab Notification System that renders red notification badges displaying numeric unread counts (formatted as `9+` when exceeding 9) across Admin, Operator, and Client navigation tabs, fully integrated with real-time Firestore listeners and `NotificationContext`.
+
+### Key Changes
+
+1. **Global CSS Design System Tokens & Base Reset (`fair-fly/src/index.css`)**:
+   - Replaced heavy colored drop shadows (`--shadow-purple`, `--purple-glow`, `--orange-glow`) with standardized, elevation tokens (`--shadow-xs`, `--shadow-sm`, `--shadow-md`, `--shadow-lg`).
+   - Standardized modern slate canvas palette (`--bg: #F8FAFC`), crisp borders (`#E2E8F0`), and professional indigo/purple tokens (`--purple: #5558E3`, `--purple-dark: #4338CA`, `--purple-light-2: #EEF2FF`).
+   - Removed distracting `pulseDot` CSS animation on `.status-pill::before` for steady, reliable status pills.
+   - Removed aggressive hover shadow expansions on `.card` in favor of clean border highlights.
+   - Replaced noisy glowing input focus rings with clean `0 0 0 3px rgba(85, 88, 227, 0.12)`.
+
+2. **Sidebar Tab Notification System (`fair-fly`)**:
+   - `AppSidebar.jsx`:
+     - Integrated `useNotifications()` from `NotificationContext`.
+     - Added `tabNotifications?: Record<string, number>` prop to `AppSidebar` and support for `notificationCount?: number`, `badge?: number | string`, or `notifications?: number` on `navLinks`.
+     - Added automatic fallback mapping between navigation paths (`/notifications`, `/messages`, `/appointments`, `/tickets`) and unread categories from `NotificationContext`.
+     - Rendered `<span className="sidebar-tab-badge">{count > 9 ? '9+' : count}</span>` for tabs with positive unread counts.
+   - `app-sidebar.css`:
+     - Removed jittery `transform: translateX(0.125rem)` hover and purple active tab box-shadow glow.
+     - Added `.sidebar-tab-badge` with vibrant red background (`var(--error-red)`), white bold typography, tabular numerals, circular/pill geometry, and flex alignment.
+     - Added `.sidebar-link-label` wrapper to guarantee clean spacing between tab labels and badges.
+   - `AppLayout.jsx`:
+     - Forwarded `tabNotifications` prop from caller layouts directly to `AppSidebar`.
+   - `AdminLayout.jsx`:
+     - Added real-time Firestore listener on `tickets` collection querying open tickets (`status == 'Open'`).
+     - Passed `tabNotifications` to `AppLayout` mapping `/admin/franchise-apps` (pending applications count) and `/admin/tickets` (open tickets count).
+   - `OperatorLayout.jsx`:
+     - Added real-time Firestore listener on `tickets` collection querying open tickets (`status == 'Open'`).
+     - Passed `tabNotifications` to `AppLayout` mapping `/operator/appointments` (pending actions count) and `/operator/tickets` (open tickets count).
+
+3. **Top Navbar & Notification Bell (`fair-fly`)**:
+   - `AppNavbar.jsx` & `app-navbar.css`:
+     - Removed navbar drop shadow in favor of a crisp bottom border.
+     - Replaced pill-shaped client navigation buttons with standard SaaS radius (`var(--radius-sm)`).
+     - Added live red notification badges to Client navigation items for Tracking, Appointments, and Messages (both desktop and mobile drawer).
+   - `NotificationBell.jsx` & `notification-bell.css`:
+     - Removed glowing purple box-shadow and distracting badge pulse animation.
+     - Flattened dropdown shadow to `var(--shadow-md)`.
+
+4. **Component Modularization & Zero Inline Styles Enforcement (`fair-fly`)**:
+   - `RecordDetailLayout.jsx` & `record-detail-layout.css`:
+     - Extracted all inline styles from loading skeleton blocks and fallback avatar thumbnails into modular CSS classes (`.record-skeleton-back`, `.record-skeleton-avatar`, `.record-skeleton-card`, `.record-skeleton-grid`, etc.).
+   - `OperatorDashboard.jsx` & `operator-dashboard.css`:
+     - Extracted inline styles from Qualification Status banner into `.op-qualification-banner`, `.op-qualification-icon-bubble`, and `.op-qualification-pill`.
+     - Cleaned up `.op-perform-procedure-btn` and `.op-message-lead-btn`, eliminating heavy gradients, bouncy transforms, and purple shadows.
+   - `AdminDashboard.jsx` & `admin-dashboard.css`:
+     - Replaced inline styles on activity skeleton placeholders and empty inbox icons with dedicated CSS classes (`.activity-skeleton-row`, `.activity-skeleton-bubble`, etc.).
+   - `OperatorServiceProcedure.jsx` & `operator-service-procedure.css`:
+     - Replaced inline styles on loading skeleton cards and not-found states with CSS classes.
+     - Replaced green gradient and heavy shadow on `.swm-btn-complete` with standard SaaS styling.
+     - Replaced cancel modal blur and 25px shadow with clean `var(--shadow-lg)`.
+   - `admin-qualification-detail.css` & `announcements-page.css`:
+     - Removed purple glow box shadows on hover cards and search inputs; standardized focus rings and avatar circles.
+
+---
+
 
 ### Overview
 Softened the system-wide "selection" colors across tables, checkboxes, bulk action bars, and multi-selection cards, replacing high-contrast opaque purple/blue highlights with subtle, translucent tints. Enhanced the Expanded Announcement Reader Modal in the Announcements feature: made the modal significantly wider for generous reading comfort and fixed the scroll architecture so that the modal window itself never scrolls, isolating scroll behavior strictly to the inner announcement content.

@@ -51,6 +51,9 @@ export default function AdminLayout() {
   // Franchise applications
   const [pendingApps, setPendingApps] = useState(0);
 
+  // Tickets requiring action
+  const [openTickets, setOpenTickets] = useState(0);
+
   useEffect(() => {
     // ── Services ──
     const unsubServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
@@ -98,21 +101,43 @@ export default function AdminLayout() {
       setPendingApps(snapshot.size);
     });
 
+    // ── Open Tickets ──
+    const qTickets = query(
+      collection(firestore, 'tickets'),
+      where('status', 'in', ['Open', 'open', 'In Progress', 'in_progress', 'pending'])
+    );
+    const unsubTickets = onSnapshot(
+      qTickets,
+      (snapshot) => {
+        setOpenTickets(snapshot.size);
+      },
+      () => {
+        setOpenTickets(0);
+      }
+    );
+
     return () => {
       unsubServices();
       unsubUsers();
       unsubFranchise();
+      unsubTickets();
     };
   }, []);
 
   const totalOperators = activeOperators + disabledOperators;
   const totalServices = activeServices + disabledServices;
 
+  const tabNotifications = useMemo(() => ({
+    '/admin/franchise-apps': pendingApps,
+    '/admin/tickets': openTickets,
+  }), [pendingApps, openTickets]);
+
   return (
     <AppLayout
       portalName="Admin"
       portalSubtitle="Management Portal"
       navLinks={navLinks}
+      tabNotifications={tabNotifications}
       statCards={
         <>
           {/* ── Revenue ── */}

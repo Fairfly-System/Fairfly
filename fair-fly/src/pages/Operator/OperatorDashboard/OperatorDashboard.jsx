@@ -150,57 +150,22 @@ function DashboardContent() {
 
       {/* Qualification Status / Callout Banner */}
       <section
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          padding: '1.25rem 1.5rem',
-          background: userDetails?.isQualified
-            ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(167, 139, 250, 0.04) 100%)'
-            : 'var(--bg-card, #ffffff)',
-          border: `1px solid ${userDetails?.isQualified ? '#ddd6fe' : 'var(--border-color)'}`,
-          borderRadius: 'var(--radius-md)'
-        }}
+        className={`card op-qualification-banner ${userDetails?.isQualified ? 'is-qualified' : ''}`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div
-            style={{
-              width: '3rem',
-              height: '3rem',
-              borderRadius: 'var(--radius-md)',
-              background: userDetails?.isQualified ? 'var(--purple-soft, #ede9fe)' : 'var(--bg, #f1f5f9)',
-              color: userDetails?.isQualified ? 'var(--purple, #7c3aed)' : 'var(--text-mid)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.25rem',
-              flexShrink: 0
-            }}
-          >
+        <div className="op-qualification-left">
+          <div className="op-qualification-icon-bubble">
             <i className={`fa-solid ${userDetails?.isQualified ? 'fa-certificate' : 'fa-award'}`}></i>
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-dark)' }}>
+            <div className="op-qualification-title-row">
+              <h4 className="op-qualification-title">
                 {userDetails?.isQualified ? 'Qualified Operator Account' : 'Become a Qualified Operator'}
               </h4>
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: 'var(--radius-full, 9999px)',
-                  background: userDetails?.isQualified ? 'var(--purple)' : 'var(--bg-muted, #e2e8f0)',
-                  color: userDetails?.isQualified ? '#ffffff' : 'var(--text-mid)'
-                }}
-              >
+              <span className="op-qualification-pill">
                 {userDetails?.isQualified ? 'Active Privilege' : 'Standard'}
               </span>
             </div>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--text-mid)' }}>
+            <p className="op-qualification-text">
               {userDetails?.isQualified
                 ? 'Your branch is verified to create and publish branch-exclusive services to the Client Marketplace.'
                 : 'Apply for qualification to offer custom travel packages, set branch fees, and receive direct client orders.'}
@@ -212,17 +177,15 @@ function DashboardContent() {
           {userDetails?.isQualified ? (
             <Link
               to="/operator/services"
-              className="btn btn-secondary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem' }}
+              className="btn btn-secondary op-qualification-action-btn"
             >
               <i className="fa-solid fa-list-check"></i> Manage Branch Services
             </Link>
           ) : (
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary op-qualification-action-btn"
               onClick={() => setShowQualModal(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--purple)', fontSize: '0.875rem' }}
             >
               <i className="fa-solid fa-paper-plane"></i> Apply for Qualification
             </button>

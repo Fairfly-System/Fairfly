@@ -12,7 +12,7 @@
   padding: 0.75rem 1.25rem;
   background: var(--card-bg);
   border-bottom: 0.0625rem solid var(--border-color);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -117,17 +117,17 @@
 .client-nav-links-desktop {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 .client-nav-link {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5625rem 1rem;
-  border-radius: var(--radius-full);
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-mid);
   text-decoration: none;
   transition: var(--transition-fast);
@@ -135,18 +135,34 @@
 }
 
 .client-nav-link:hover {
-  color: var(--purple);
-  background: var(--bg);
+  color: var(--purple-dark);
+  background: var(--purple-light-2);
 }
 
 .client-nav-link.active {
   color: var(--purple-dark);
   background: var(--purple-light-2);
-  border-color: rgba(107, 111, 245, 0.25);
+  border-color: rgba(85, 88, 227, 0.2);
 }
 
 .client-nav-link.active i {
   color: var(--purple);
+}
+
+.client-nav-badge {
+  background-color: var(--error-red, #dc2626);
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-full, 9999px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Right Actions ───────────────────────────────────────────────── */
@@ -201,7 +217,7 @@
   padding: 0.75rem 1rem;
   flex-direction: column;
   gap: 0.5rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .client-mobile-nav-item {
@@ -209,12 +225,16 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-dark);
   text-decoration: none;
   background: var(--bg);
+}
+
+.client-mobile-nav-label {
+  flex: 1;
 }
 
 .client-mobile-nav-item.active {

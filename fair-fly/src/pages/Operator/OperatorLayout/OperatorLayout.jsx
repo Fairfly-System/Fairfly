@@ -27,6 +27,7 @@ export default function OperatorLayout() {
   const [activeServices, setActiveServices] = useState(0);
   const [completedServices, setCompletedServices] = useState(0);
   const [pendingActions, setPendingActions] = useState(0);
+  const [openTickets, setOpenTickets] = useState(0);
 
   useEffect(() => {
     // Real-time listener for active services / workflows
@@ -61,19 +62,41 @@ export default function OperatorLayout() {
       setPendingActions(0);
     });
 
+    // Real-time listener for open tickets
+    const unsubTickets = onSnapshot(collection(firestore, 'tickets'), (snapshot) => {
+      let open = 0;
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const isOpenStatus = data.status === 'Open' || data.status === 'open' || data.status === 'pending' || data.status === 'In Progress';
+        if (isOpenStatus && (!data.operatorId || data.operatorId === user?.uid)) {
+          open++;
+        }
+      });
+      setOpenTickets(open);
+    }, () => {
+      setOpenTickets(0);
+    });
+
     return () => {
       unsubServices();
       unsubAppointments();
+      unsubTickets();
     };
   }, [user?.uid]);
 
   const branchRevenue = Number(userDetails?.totalRevenue) || 0;
+
+  const tabNotifications = useMemo(() => ({
+    '/operator/appointments': pendingActions,
+    '/operator/tickets': openTickets,
+  }), [pendingActions, openTickets]);
 
   return (
     <AppLayout
       portalName="Operator"
       portalSubtitle="Branch Operations"
       navLinks={baseOperatorLinks}
+      tabNotifications={tabNotifications}
       statCards={
         <>
           <KpiCard

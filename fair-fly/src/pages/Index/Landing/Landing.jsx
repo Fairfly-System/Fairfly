@@ -14,31 +14,45 @@ export default function Landing() {
     <>
       {/* Hero Section */}
       <section className="hero">
-        <div className="badge">
-          <span className="dot" />
-          <span>Trusted Travel Agency</span>
+        <div className="hero-bg-container">
+          <img
+            src="/hero-bg.jpg"
+            alt="Fairfly Travel Background"
+            className="hero-bg-img"
+            onError={(e) => {
+              e.currentTarget.src = "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=2000&auto=format&fit=crop";
+            }}
+          />
+          <div className="hero-bg-overlay" />
         </div>
 
-        <h1 className="heading">
-          Your Journey Starts Here
+        <div className="hero-badge">
+          <span className="hero-badge-dot" />
+          <span>Standardized Travel Management System</span>
+        </div>
+
+        <h1 className="hero-heading">
+          Standardized Travel & Document Processing
           <br />
-          With<span className="headingGradient"> Fairfly Travel & Tours</span>
+          Across the Philippines with <span className="hero-heading-brand">Fairfly</span>
         </h1>
 
-        <p className="sub">
-          A standardized, cloud-powered travel ecosystem. From passports, PSA documents, and international flight ticketing to franchise operations with zero physical inventory liabilities.
+        <p className="hero-sub">
+          An ISO 9001:2000-ready cloud ecosystem. From expedited passport filing, PSA civil documents, and international flight ticketing to asset-light franchise operations with zero physical inventory liability.
         </p>
 
-        <div className="actions">
-          <a href="#franchise-section" className="btnFranchiseHero">
-            <i className="fa-solid fa-building-flag"></i> Franchise Inquiries
+        <div className="hero-actions">
+          <a href="#services" className="btn-hero-primary">
+            <span>Browse Services</span>
+            <i className="fa-solid fa-arrow-right"></i>
           </a>
-
-          <a href="#business-system" className="btnSecondary">
-            <i className="fa-solid fa-microchip"></i> Explore Business System
+          <a href="#business-system" className="btn-hero-secondary">
+            <i className="fa-solid fa-microchip"></i>
+            <span>Explore Business System</span>
           </a>
-          <a href="/register" className="btnPrimary">
-            Get Started <i className="fa-solid fa-arrow-right"></i>
+          <a href="#franchise-section" className="btn-hero-outline">
+            <i className="fa-solid fa-building-flag"></i>
+            <span>Franchise Inquiries</span>
           </a>
         </div>
 

@@ -142,9 +142,9 @@
 }
 
 .qualification-doc-card:hover {
-  border-color: var(--purple, #7c3aed);
+  border-color: var(--purple);
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .qualification-doc-card-main {

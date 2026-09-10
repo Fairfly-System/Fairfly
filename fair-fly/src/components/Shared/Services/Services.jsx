@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { fetchServices } from '../../../services/serviceService';
+import ServiceDetailModal from './ServiceDetailModal';
 import './services.css';
 
 // Curated operator services that represent the core FairFly franchise offerings
@@ -23,7 +24,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['DFA', 'Passport', 'Renewal', 'Expedited'],
     featured: true,
     icon: 'fa-solid fa-id-card',
-    iconBg: 'linear-gradient(135deg, #6366f1, #818cf8)'
+    iconBg: 'linear-gradient(135deg, #6366f1, #818cf8)',
+    image: '/services/passport.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-psa-civil-docs',
@@ -41,7 +44,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['PSA', 'BirthCert', 'CENOMAR', 'Authentication'],
     featured: true,
     icon: 'fa-regular fa-file-lines',
-    iconBg: 'linear-gradient(135deg, #3b82f6, #60a5fa)'
+    iconBg: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
+    image: '/services/psa-docs.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-japan-visa',
@@ -60,7 +65,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Japan', 'TouristVisa', 'Embassy', 'MultipleEntry'],
     featured: true,
     icon: 'fa-solid fa-passport',
-    iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)'
+    iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)',
+    image: '/services/japan-visa.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-flight-ticketing',
@@ -78,7 +85,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Airlines', 'PromoFares', 'Domestic', 'International'],
     featured: true,
     icon: 'fa-solid fa-plane-departure',
-    iconBg: 'linear-gradient(135deg, #0ea5e9, #38bdf8)'
+    iconBg: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
+    image: '/services/flight-ticket.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-boracay-package',
@@ -96,7 +105,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Boracay', 'TourPackage', 'BeachResort', 'IslandHopping'],
     featured: true,
     icon: 'fa-solid fa-map-location-dot',
-    iconBg: 'linear-gradient(135deg, #f59e0b, #fbbf24)'
+    iconBg: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+    image: '/services/boracay.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-korea-visa',
@@ -115,7 +126,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Korea', 'KVAC', 'Visa', 'Seoul'],
     featured: false,
     icon: 'fa-solid fa-plane-up',
-    iconBg: 'linear-gradient(135deg, #8b5cf6, #a78bfa)'
+    iconBg: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+    image: '/services/korea-visa.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-schengen-visa',
@@ -134,7 +147,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Schengen', 'Europe', 'VFS', 'TLScontact'],
     featured: false,
     icon: 'fa-solid fa-earth-europe',
-    iconBg: 'linear-gradient(135deg, #10b981, #34d399)'
+    iconBg: 'linear-gradient(135deg, #10b981, #34d399)',
+    image: '/services/schengen-visa.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'op-singapore-twin-tour',
@@ -151,7 +166,9 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Singapore', 'Malaysia', 'TourPackage', 'TwinCity'],
     featured: false,
     icon: 'fa-solid fa-compass',
-    iconBg: 'linear-gradient(135deg, #14b8a6, #2dd4bf)'
+    iconBg: 'linear-gradient(135deg, #14b8a6, #2dd4bf)',
+    image: '/services/singapore-tour.jpg',
+    fallbackImage: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=800&q=80'
   }
 ];
 
@@ -254,9 +271,13 @@ export default function Services() {
         icon: service.icon || fallback.icon,
         iconBg: service.iconBg || fallback.iconBg,
         coverImage: service.coverImage || service.coverPhoto || service.coverPhotoUrl,
+        image: service.image || service.coverImage || fallback.image,
+        fallbackImage: service.fallbackImage || fallback.fallbackImage,
       };
     });
   }, [dbServices]);
+
+  const [selectedService, setSelectedService] = useState(null);
 
   // Filter by category and search term
   const filteredServices = useMemo(() => {
@@ -374,76 +395,79 @@ export default function Services() {
               const priceDisplay = formatPriceDisplay(service.price);
 
               return (
-                <article key={service.id} className="landing-service-card">
-                  {/* Card Top Banner / Media */}
-                  <div className="service-card-top">
-                    <div className="service-icon-box" style={{ background: service.iconBg || 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
-                      <i className={service.icon || 'fa-solid fa-briefcase'}></i>
-                    </div>
-
-                    <div className="service-card-badges">
-                      <span className="badge-category">{service.category}</span>
-                      {service.featured && (
-                        <span className="badge-featured">
-                          <i className="fa-solid fa-star"></i> Featured
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="service-card-body">
-                    <h3 className="service-card-title">{service.name}</h3>
-                    <p className="service-card-description">{service.description}</p>
-
-                    {/* Operational Highlights Pill Strip */}
-                    <div className="service-meta-strip">
-                      <div className="meta-pill" title="Estimated processing turnaround">
-                        <i className="fa-regular fa-clock"></i>
-                        <span>{turnaround}</span>
-                      </div>
-                      <div className="meta-pill" title="Standard requirements checklist">
-                        <i className="fa-solid fa-list-check"></i>
-                        <span>{reqCount} {reqCount === 1 ? 'Requirement' : 'Requirements'}</span>
-                      </div>
-                      <div className="meta-pill" title="Available nationwide across operators">
-                        <i className="fa-solid fa-store"></i>
-                        <span>All Branches</span>
-                      </div>
-                    </div>
-
-                    {/* Requirement Tags */}
-                    {Array.isArray(service.tags) && service.tags.length > 0 && (
-                      <div className="service-tags-row">
-                        {service.tags.map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="service-tag-pill"
-                            onClick={() => setSearchTerm(tag)}
-                            title={`Filter by #${tag}`}
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
+                <article
+                  key={service.id}
+                  className="landing-service-card"
+                  onClick={() => setSelectedService(service)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedService(service);
+                    }
+                  }}
+                  aria-label={`View details for ${service.name}`}
+                >
+                  {/* Photo Media Banner with single clean category tag */}
+                  <div className="service-card-media">
+                    <img
+                      src={service.image || service.coverImage || '/services/passport.jpg'}
+                      alt={service.name}
+                      className="service-card-img"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src = service.fallbackImage || 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80';
+                      }}
+                    />
+                    {service.category && (
+                      <span className="service-card-category-pill">
+                        {service.category}
+                      </span>
                     )}
                   </div>
 
-                  {/* Card Footer with Price & Avail Button */}
+                  {/* Clean, spacious card body */}
+                  <div className="service-card-body">
+                    <h3 className="service-card-title">{service.name}</h3>
+
+                    {/* Subtle 1-line metadata */}
+                    <div className="service-card-meta">
+                      <span className="service-card-meta-item">
+                        <i className="fa-regular fa-clock"></i>
+                        <span>{turnaround}</span>
+                      </span>
+                      {reqCount > 0 && (
+                        <>
+                          <span className="service-card-meta-dot">•</span>
+                          <span className="service-card-meta-item">
+                            <i className="fa-regular fa-file-lines"></i>
+                            <span>{reqCount} {reqCount === 1 ? 'doc required' : 'docs required'}</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <p className="service-card-description">{service.description}</p>
+                  </div>
+
+                  {/* Clean footer: Starting price on left, single CTA on right */}
                   <div className="service-card-footer">
-                    <div className="service-price-block">
-                      <span className="price-label">Starting at</span>
-                      <span className="price-amount">{priceDisplay}</span>
+                    <div className="service-card-price">
+                      <span className="service-card-price-label">Starting at</span>
+                      <span className="service-card-price-amount">{priceDisplay}</span>
                     </div>
 
                     <button
                       type="button"
-                      className="btn-avail-service"
-                      onClick={() => handleAvailService(service)}
-                      title={`Avail ${service.name}`}
+                      className="service-card-action-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedService(service);
+                      }}
                     >
-                      <span>Avail Service</span>
-                      <i className="fa-solid fa-arrow-right-to-bracket"></i>
+                      <span>View Details</span>
+                      <i className="fa-solid fa-arrow-right"></i>
                     </button>
                   </div>
                 </article>
@@ -451,6 +475,14 @@ export default function Services() {
             })
           )}
         </div>
+
+        {/* Airbnb / E-commerce Style Detail Modal */}
+        <ServiceDetailModal
+          isOpen={Boolean(selectedService)}
+          service={selectedService}
+          onClose={() => setSelectedService(null)}
+          onAvailService={handleAvailService}
+        />
       </div>
     </section>
   );

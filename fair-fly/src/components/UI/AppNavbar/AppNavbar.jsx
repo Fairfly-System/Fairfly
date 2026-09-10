@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { NavLink, useNavigate } from 'react-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import { useToast } from '../toast/ToastProvider';
 import BaseModal from '../ModalBase/BaseModal';
 import NotificationBell from '../NotificationBell/NotificationBell';
@@ -19,9 +20,23 @@ export default function AppNavbar({
 }) {
   const navigate = useNavigate();
   const { user, userDetails } = useAuthContext();
+  const { notifications } = useNotifications();
   const { addToast } = useToast();
   const logoutModalRef = useRef(null);
   const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
+
+  // Unread notification breakdown for client navigation tabs
+  const clientTabCounts = useMemo(() => {
+    if (!Array.isArray(notifications) || notifications.length === 0) {
+      return { tracking: 0, appointments: 0, messages: 0 };
+    }
+    const unread = notifications.filter((n) => !n.read);
+    return {
+      tracking: unread.filter((n) => n.type === 'service' || n.link?.includes('/client/tracking')).length,
+      appointments: unread.filter((n) => n.type === 'appointment' || n.link?.includes('/client/appointments')).length,
+      messages: unread.filter((n) => n.type === 'message' || n.link?.includes('/client/messages')).length,
+    };
+  }, [notifications]);
 
   const handleLogoutConfirm = async () => {
     try {
@@ -108,6 +123,11 @@ export default function AppNavbar({
             >
               <i className="fa-solid fa-list-check"></i>
               <span>Track Requests</span>
+              {clientTabCounts.tracking > 0 && (
+                <span className="client-nav-badge">
+                  {clientTabCounts.tracking > 9 ? '9+' : clientTabCounts.tracking}
+                </span>
+              )}
             </NavLink>
 
             <NavLink
@@ -116,6 +136,11 @@ export default function AppNavbar({
             >
               <i className="fa-solid fa-calendar-check"></i>
               <span>Appointments</span>
+              {clientTabCounts.appointments > 0 && (
+                <span className="client-nav-badge">
+                  {clientTabCounts.appointments > 9 ? '9+' : clientTabCounts.appointments}
+                </span>
+              )}
             </NavLink>
 
             <NavLink
@@ -124,6 +149,11 @@ export default function AppNavbar({
             >
               <i className="fa-solid fa-comments"></i>
               <span>Messages</span>
+              {clientTabCounts.messages > 0 && (
+                <span className="client-nav-badge">
+                  {clientTabCounts.messages > 9 ? '9+' : clientTabCounts.messages}
+                </span>
+              )}
             </NavLink>
           </div>
         )}
@@ -192,7 +222,12 @@ export default function AppNavbar({
             className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
           >
             <i className="fa-solid fa-list-check"></i>
-            <span>Track Service Requests</span>
+            <span className="client-mobile-nav-label">Track Service Requests</span>
+            {clientTabCounts.tracking > 0 && (
+              <span className="client-nav-badge">
+                {clientTabCounts.tracking > 9 ? '9+' : clientTabCounts.tracking}
+              </span>
+            )}
           </NavLink>
 
           <NavLink
@@ -201,7 +236,12 @@ export default function AppNavbar({
             className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
           >
             <i className="fa-solid fa-calendar-check"></i>
-            <span>Book Appointments</span>
+            <span className="client-mobile-nav-label">Book Appointments</span>
+            {clientTabCounts.appointments > 0 && (
+              <span className="client-nav-badge">
+                {clientTabCounts.appointments > 9 ? '9+' : clientTabCounts.appointments}
+              </span>
+            )}
           </NavLink>
 
           <NavLink
@@ -210,7 +250,12 @@ export default function AppNavbar({
             className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
           >
             <i className="fa-solid fa-comments"></i>
-            <span>Direct Messages</span>
+            <span className="client-mobile-nav-label">Direct Messages</span>
+            {clientTabCounts.messages > 0 && (
+              <span className="client-nav-badge">
+                {clientTabCounts.messages > 9 ? '9+' : clientTabCounts.messages}
+              </span>
+            )}
           </NavLink>
         </div>
       )}

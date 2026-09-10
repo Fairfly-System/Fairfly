@@ -46,6 +46,9 @@
 }
 
 .sg-title-accent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
   color: var(--purple);
 }
 
@@ -93,7 +96,7 @@
   background: var(--purple);
   color: #FFFFFF;
   border-color: var(--purple);
-  box-shadow: var(--shadow-purple);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Showcase Card */

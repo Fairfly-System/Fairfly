@@ -48,27 +48,27 @@ function ServiceProcedureContent() {
   if (loading) {
     return (
       <main className="op-procedure-page page-fade-in" aria-busy="true">
-        <div style={{ marginBottom: '1rem' }}>
-          <div className="skeleton skeleton-btn" style={{ width: '5.5rem', height: '2rem' }} />
+        <div>
+          <div className="skeleton skeleton-btn op-procedure-skeleton-back" />
         </div>
-        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <div className="skeleton skeleton-title" style={{ width: '40%', height: '1.5rem', marginBottom: '0.5rem' }} />
-              <div className="skeleton skeleton-text" style={{ width: '25%', height: '0.875rem' }} />
+        <div className="card op-procedure-skeleton-header">
+          <div className="op-procedure-skeleton-row">
+            <div className="op-procedure-skeleton-row-left">
+              <div className="skeleton skeleton-title op-procedure-skeleton-title" />
+              <div className="skeleton skeleton-text op-procedure-skeleton-sub" />
             </div>
-            <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.5rem' }} />
+            <div className="skeleton skeleton-badge op-procedure-skeleton-badge" />
           </div>
-          <div className="skeleton" style={{ width: '100%', height: '0.5rem', borderRadius: 'var(--radius-full)' }} />
+          <div className="skeleton op-procedure-skeleton-track" />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="op-procedure-skeleton-list">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="card" style={{ padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div className="skeleton skeleton-title" style={{ width: '30%', height: '1.125rem', margin: 0 }} />
-                <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.875rem', margin: 0 }} />
-                <div className="skeleton" style={{ width: '6rem', height: '1.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }} />
+            <div key={i} className="card op-procedure-skeleton-item">
+              <div className="skeleton skeleton-circle op-procedure-skeleton-circle" />
+              <div className="op-procedure-skeleton-item-body">
+                <div className="skeleton skeleton-title op-procedure-skeleton-item-title" />
+                <div className="skeleton skeleton-text op-procedure-skeleton-item-text" />
+                <div className="skeleton op-procedure-skeleton-item-btn" />
               </div>
             </div>
           ))}
@@ -80,11 +80,11 @@ function ServiceProcedureContent() {
   if (!serviceRecord) {
     return (
       <div className="card op-procedure-page page-fade-in">
-        <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-          <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '2.5rem', color: '#eab308' }}></i>
-          <h2 style={{ fontSize: '1.25rem', marginTop: '1rem', color: '#0f172a' }}>Active Service Record Not Found</h2>
-          <p style={{ color: '#64748b', marginTop: '0.5rem' }}>The requested active service may have been deleted or moved.</p>
-          <Link to="/operator" className="op-procedure-back-btn" style={{ marginTop: '1.25rem', display: 'inline-flex' }}>
+        <div className="op-procedure-not-found">
+          <i className="fa-solid fa-triangle-exclamation op-procedure-not-found-icon"></i>
+          <h2 className="op-procedure-not-found-title">Active Service Record Not Found</h2>
+          <p className="op-procedure-not-found-text">The requested active service may have been deleted or moved.</p>
+          <Link to="/operator" className="op-procedure-back-btn op-procedure-not-found-link">
             <i className="fa-solid fa-arrow-left"></i> Return to Dashboard
           </Link>
         </div>

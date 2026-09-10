@@ -53,7 +53,9 @@ export default function Explore() {
   return (
     <section id="explore" className="explore-section">
       <div className="explore-header">
-        <h2 className="explore-title">Explore the World With Us</h2>
+        <h2 className="explore-title">
+          Explore the World With <span className="explore-title-accent">Fairfly</span>
+        </h2>
         <p className="explore-sub">
           From tropical beaches to iconic cities — Fairfly opens doors to destinations across the globe.
         </p>

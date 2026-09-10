@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { Mail, Lock, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import "./login.css";
 import logo from "/FairflyLogo.png";
-import {auth} from "../../../firebase";
-import {signInWithEmailAndPassword} from "firebase/auth";
+import { auth } from "../../../firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import TermsPrivacyModal from '../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addToast } = useToast();
+
+  const serviceName = searchParams.get("serviceName");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,52 +48,120 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
+    <div className="auth-split-layout">
+      {/* 50% Left Side: Visual Showcase */}
+      <div className="auth-side-showcase">
+        <img
+          src="/auth/login-hero.jpg"
+          alt="Philippine Travel & Consular Processing"
+          className="auth-showcase-bg"
+          onError={(e) => {
+            // Elegant fallback if local image isn't yet placed by user
+            e.currentTarget.src = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1400&q=80";
+          }}
+        />
+        <div className="auth-showcase-overlay" />
 
-        <Link to="/home" className="back-button">
-          <ArrowLeft size={16} />
-          Back to Home
-        </Link>
-
-        <div className="login-card">
-
-          <div className="login-header">
-            <img src={logo} alt="logo" className="logo" />
-            <h1>Welcome Back</h1>
-            <p>Sign in to access your account</p>
+        <div className="auth-showcase-content">
+          <div className="auth-showcase-header">
+            <img src={logo} alt="Fairfly Logo" className="auth-showcase-logo" />
+            <span className="auth-showcase-brand">Fairfly System</span>
           </div>
 
-          <form onSubmit={handleLogin} className="login-form">
+          <div className="auth-showcase-main">
+            <div className="auth-showcase-badge">
+              <i className="fa-solid fa-shield-halved"></i>
+              <span>ISO 9001:2000 Ready QMS</span>
+            </div>
 
-            <div className="input-group">
-              <label>Email Address</label>
-              <div className="input-wrapper">
-                <Mail className="icon" size={18} />
+            <h2 className="auth-showcase-title">
+              The Standard in Philippine <span className="auth-showcase-title-highlight">Travel & Document</span> Services.
+            </h2>
+
+            <p className="auth-showcase-desc">
+              Securely track appointment schedules, passport expedites, consular filings, and domestic & international itineraries in one verified portal.
+            </p>
+          </div>
+
+          <div className="auth-showcase-stats">
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">100%</span>
+              <span className="auth-stat-label">Direct Operator SLA</span>
+            </div>
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">50+</span>
+              <span className="auth-stat-label">Nationwide Branches</span>
+            </div>
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">24/7</span>
+              <span className="auth-stat-label">Document Tracking</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 50% Right Side: Clean Form */}
+      <div className="auth-side-form">
+        <div className="auth-form-inner">
+          <Link to="/" className="auth-back-link">
+            <ArrowLeft size={16} />
+            <span>Back to Home</span>
+          </Link>
+
+          {/* Mobile-only brand badge */}
+          <div className="auth-mobile-brand">
+            <img src={logo} alt="Fairfly Logo" className="auth-mobile-logo" />
+            <span className="auth-mobile-name">Fairfly</span>
+          </div>
+
+          <div className="auth-form-header">
+            <h1>Welcome Back</h1>
+            <p>Sign in to access your client portal and track your requests.</p>
+          </div>
+
+          {/* Context banner if user came from landing page service card */}
+          {serviceName && (
+            <div className="auth-service-notice">
+              <i className="fa-solid fa-circle-info"></i>
+              <span>
+                Continuing inquiry for <strong>{serviceName}</strong>. Sign in or create an account to proceed.
+              </span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="auth-form">
+            <div className="auth-input-group">
+              <label className="auth-input-label">Email Address</label>
+              <div className="auth-input-wrapper">
+                <Mail className="auth-input-icon" size={18} />
                 <input
                   type="email"
+                  className="auth-input"
                   placeholder="your.email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
             </div>
 
-            <div className="input-group">
-              <label>Password</label>
-              <div className="input-wrapper">
-                <Lock className="icon" size={18} />
+            <div className="auth-input-group">
+              <label className="auth-input-label">Password</label>
+              <div className="auth-input-wrapper">
+                <Lock className="auth-input-icon" size={18} />
                 <input
                   type={showPassword ? "text" : "password"}
+                  className="auth-input"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="auth-password-toggle"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -99,48 +170,60 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="form-row">
-              <label className="checkbox">
+            <div className="auth-form-row">
+              <label className="auth-checkbox-label">
                 <input type="checkbox" />
-                Remember me
+                <span>Remember me</span>
               </label>
 
-              <Link to="/forgot-password" className="forgot">
+              <Link to="/forgot-password" className="auth-forgot-link">
                 Forgot password?
               </Link>
             </div>
 
-            <button type="submit" className="login-button" disabled={!isFormValid || isLoading}>
-              {isLoading ? "Signing In..." : "Sign In"}
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={!isFormValid || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
             </button>
           </form>
 
-          <div className="signup-text">
+          <p className="auth-switch-text">
             Don't have an account?{" "}
-            <Link to="/register">Create Account</Link>
-          </div>
+            <Link to="/register" className="auth-switch-link">
+              Create Account
+            </Link>
+          </p>
 
+          <p className="auth-footer-terms">
+            By signing in, you agree to our{" "}
+            <button
+              type="button"
+              className="auth-legal-btn"
+              onClick={() => openLegalModal("terms")}
+            >
+              Terms of Service
+            </button>{" "}
+            and{" "}
+            <button
+              type="button"
+              className="auth-legal-btn"
+              onClick={() => openLegalModal("privacy")}
+            >
+              Privacy Policy
+            </button>
+            .
+          </p>
         </div>
-
-        <div className="footer-text">
-          By signing in, you agree to{" "}
-          <button
-            type="button"
-            className="legal-link-btn"
-            onClick={() => openLegalModal("terms")}
-          >
-            Terms
-          </button>{" "}
-          and{" "}
-          <button
-            type="button"
-            className="legal-link-btn"
-            onClick={() => openLegalModal("privacy")}
-          >
-            Privacy Policy
-          </button>
-        </div>
-
       </div>
 
       {/* Terms and Privacy Policy Popup Modal */}

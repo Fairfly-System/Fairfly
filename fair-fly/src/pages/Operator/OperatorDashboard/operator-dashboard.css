@@ -47,7 +47,7 @@
 
 .op-dashboard-btn:hover {
   background: var(--purple-dark);
-  box-shadow: var(--shadow-purple);
+  box-shadow: var(--shadow-sm);
 }
 
 .op-service-list {
@@ -152,31 +152,30 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, var(--purple, #7c3aed) 0%, var(--purple-dark, #5b21b6) 100%);
+  background: var(--purple);
   color: #FFFFFF !important;
   text-decoration: none;
-  border: none;
+  border: 1px solid var(--purple);
   font-size: 0.8125rem;
   font-weight: 600;
   padding: 0.55rem 1.125rem;
-  border-radius: var(--radius-md, 8px);
-  box-shadow: 0 2px 5px rgba(124, 58, 237, 0.22);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .op-perform-procedure-btn:hover {
-  background: linear-gradient(135deg, var(--purple-dark, #6d28d9) 0%, #4c1d95 100%);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.32);
-  transform: translateY(-1px);
+  background: var(--purple-dark);
+  border-color: var(--purple-dark);
+  box-shadow: var(--shadow-sm);
   color: #FFFFFF !important;
 }
 
 .op-perform-procedure-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.2);
+  box-shadow: none;
 }
 
 .op-perform-procedure-btn i {
@@ -345,13 +344,100 @@
   font-weight: 600;
   white-space: nowrap;
   border-radius: var(--radius-md);
-  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.2);
+  box-shadow: var(--shadow-xs);
   transition: var(--transition-fast);
 }
 
 .op-message-lead-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Qualification Banner ─────────────────────────────────── */
+.op-qualification-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.op-qualification-banner.is-qualified {
+  background: var(--purple-light-2);
+  border-color: #c7d2fe;
+}
+
+.op-qualification-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.op-qualification-icon-bubble {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+}
+
+.op-qualification-banner.is-qualified .op-qualification-icon-bubble {
+  background: #ffffff;
+  color: var(--purple);
+  border-color: #c7d2fe;
+}
+
+.op-qualification-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.op-qualification-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.op-qualification-pill {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  color: var(--text-mid);
+  border: 1px solid var(--border-color);
+}
+
+.op-qualification-banner.is-qualified .op-qualification-pill {
+  background: var(--purple);
+  color: #ffffff;
+  border-color: var(--purple);
+}
+
+.op-qualification-text {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-mid);
+}
+
+.op-qualification-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 48rem) {

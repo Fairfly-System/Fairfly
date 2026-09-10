@@ -198,3 +198,101 @@
     justify-content: center;
   }
 }
+
+/* Skeleton Helpers for Clean UI */
+.record-skeleton-back {
+  width: 5.5rem;
+  height: 2.125rem;
+}
+
+.record-skeleton-avatar {
+  width: 4rem;
+  height: 4rem;
+}
+
+.record-header-titles-skeleton {
+  flex: 1;
+}
+
+.record-skeleton-title {
+  width: 45%;
+  height: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.record-skeleton-sub {
+  width: 30%;
+  height: 0.875rem;
+  margin-bottom: 0.625rem;
+}
+
+.record-skeleton-badge {
+  width: 5.5rem;
+  height: 1.25rem;
+}
+
+.record-skeleton-action-btn {
+  width: 7rem;
+  height: 2.25rem;
+}
+
+.record-skeleton-card {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.record-skeleton-card-title {
+  width: 25%;
+  height: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.record-skeleton-line-full {
+  width: 100%;
+  height: 1rem;
+}
+
+.record-skeleton-line-90 {
+  width: 92%;
+  height: 1rem;
+}
+
+.record-skeleton-line-75 {
+  width: 78%;
+  height: 1rem;
+}
+
+.record-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.record-skeleton-grid-label {
+  width: 40%;
+  height: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.record-skeleton-grid-val-1 {
+  width: 70%;
+  height: 1.125rem;
+}
+
+.record-skeleton-grid-val-2 {
+  width: 65%;
+  height: 1.125rem;
+}
+
+.record-skeleton-grid-val-3 {
+  width: 80%;
+  height: 1.125rem;
+}
+
+.record-header-thumbnail-fallback.is-hidden {
+  display: none;
+}

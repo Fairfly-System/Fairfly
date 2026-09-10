@@ -205,10 +205,7 @@ export default function Dashboard() {
         <div className="activity-card-header">
           <div>
             <h3 className="activity-card-title">
-              <i
-                className="fa-solid fa-clock-rotate-left"
-                style={{ marginRight: '0.5rem', color: 'var(--purple)' }}
-              />
+              <i className="fa-solid fa-clock-rotate-left activity-card-icon" />
               Recent Activity
             </h3>
             <p className="activity-card-subtitle">Latest admin actions across the system</p>
@@ -232,20 +229,20 @@ export default function Dashboard() {
 
         <div className="activity-list">
           {logsLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }} aria-busy="true">
+            <div className="activity-loading-list" aria-busy="true">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.75rem 0' }}>
-                  <div className="skeleton skeleton-circle" style={{ width: '2.25rem', height: '2.25rem' }} />
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                    <div className="skeleton skeleton-text" style={{ width: '65%', height: '0.875rem', margin: 0 }} />
-                    <div className="skeleton skeleton-text" style={{ width: '35%', height: '0.75rem', margin: 0 }} />
+                <div key={i} className="activity-skeleton-row">
+                  <div className="skeleton skeleton-circle activity-skeleton-bubble" />
+                  <div className="activity-skeleton-body">
+                    <div className="skeleton skeleton-text activity-skeleton-text-1" />
+                    <div className="skeleton skeleton-text activity-skeleton-text-2" />
                   </div>
                 </div>
               ))}
             </div>
           ) : recentLogs.length === 0 ? (
             <div className="activity-empty">
-              <i className="fa-solid fa-inbox" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }} />
+              <i className="fa-solid fa-inbox activity-empty-icon" />
               <p>No activity recorded yet. Actions will appear here automatically.</p>
             </div>
           ) : (

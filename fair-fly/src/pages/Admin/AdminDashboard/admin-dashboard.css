@@ -275,3 +275,51 @@
     width: 100%;
   }
 }
+
+/* Activity Skeletons & Icons */
+.activity-card-icon {
+  margin-right: 0.5rem;
+  color: var(--purple);
+}
+
+.activity-loading-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.activity-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 0;
+}
+
+.activity-skeleton-bubble {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.activity-skeleton-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.activity-skeleton-text-1 {
+  width: 65%;
+  height: 0.875rem;
+  margin: 0;
+}
+
+.activity-skeleton-text-2 {
+  width: 35%;
+  height: 0.75rem;
+  margin: 0;
+}
+
+.activity-empty-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}

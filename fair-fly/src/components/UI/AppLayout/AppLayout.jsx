@@ -7,16 +7,18 @@ import './app-layout.css';
  * AppLayout — unified shell layout for Admin and Operator portals.
  *
  * Props:
- *  portalName      {string}          — "Admin" / "Operator"
- *  portalSubtitle  {string}          — Brand subtitle under title
- *  navLinks        {Array}           — Navigation link configs for sidebar
- *  statCards       {React.ReactNode} — Grid of KPI/Stat cards to display at top of layout
- *  children        {React.ReactNode} — Main page contents (usually Outlet)
+ *  portalName        {string}          — "Admin" / "Operator"
+ *  portalSubtitle    {string}          — Brand subtitle under title
+ *  navLinks          {Array}           — Navigation link configs for sidebar
+ *  tabNotifications  {Object}          — Dictionary mapping path/label to notification count
+ *  statCards         {React.ReactNode} — Grid of KPI/Stat cards to display at top of layout
+ *  children          {React.ReactNode} — Main page contents (usually Outlet)
  */
 export default function AppLayout({
   portalName,
   portalSubtitle,
   navLinks,
+  tabNotifications,
   statCards,
   children,
 }) {
@@ -39,6 +41,7 @@ export default function AppLayout({
         portalName={portalName}
         portalSubtitle={portalSubtitle}
         navLinks={navLinks}
+        tabNotifications={tabNotifications}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
