@@ -2345,3 +2345,26 @@ All messages are computed via `useMemo` from data already available through `use
 
 ### Breaking Changes
 - None.
+
+---
+
+## [2026-09-17] Self-Pruning Caching Architecture with CacheCollection and Cache
+
+### Files Modified
+- `fly-api/src/services/cacheService.js`
+
+### Summary of Changes
+- **Self-Pruning Architecture**: Replaced the interval-based polling cleanup (`setInterval`) with an event-driven `CacheCollection` and `Cache` architecture.
+- **`CacheCollection`**: Created central static registry with `caches` Map, `set`, `get`, `update`, `prune`, `delete`, `has`, `clear`, `size`, and `createKey` methods.
+- **`Cache`**: Created individual entry lifecycle class taking `(ttl, uid, data)` that sets a discrete `setTimeout` self-pruning timer and automatically cleans up via V8 garbage collection upon expiration.
+- **Sliding Expiration**: Implemented touch-on-read sliding TTL in `CacheCollection.get(key, touch = true)` to keep frequently viewed items warm.
+- **Stale Record In-Place Update**: Added `CacheCollection.update(key, newData, newTtl)` to replace cached database records with fresh values and reset timers upon DB mutations.
+- **Explicit Deletion**: Enhanced `delete` / `prune` to cancel active timers immediately, eliminating timer memory leaks and race conditions.
+- **Process Lifecycle Protection**: Added `timer.unref()` to prevent open cache timers from blocking clean Node.js process termination.
+- **Backward Compatibility**: Provided namespace adapters `userCache` and `staticDataCache` ensuring zero-regression compatibility with existing controllers and auth middleware.
+
+### Reason
+- Fulfill user request to replace interval pruning with a 2-class (`CacheCollection`, `Cache`) self-pruning caching system with sliding expiration, cache updates on DB mutation, and automated timer cleanup.
+
+### Breaking Changes
+- None. Fully backward-compatible with existing `userCache` and `staticDataCache` callers.
