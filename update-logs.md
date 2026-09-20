@@ -1,5 +1,105 @@
 # Update Logs
 
+## [2026-09-21] Fix: Client Branch Appointments Cards Redesign & Client Inquiry Modal (`SAF-01-002`) Unapplied Styles Fix
+
+### Overview
+Addressed unapplied and deficient styling on the Client Side for both the Branch Appointments page (`/client/appointments`) and the Submit New Inquiry Modal (`ClientInquiryModal`, form `SAF-01-002`). In the Inquiry Modal, form inputs used an undefined `.input-base` class and the modal ignored the `size="large"` prop, causing a narrow 450px layout and raw browser inputs. Added responsive modal sizing in `BaseModal`, styled all `.input-base` controls to meet SaaS design standards, and redesigned the Branch Appointment cards with dedicated schedule blocks, branch badges, and anchored footers.
+
+### Key Changes
+
+1. **Responsive Modal Size Support (`BaseModal.jsx`)**:
+   - Upgraded `BaseModal` with native support for the `size` prop (`'large'` -> 54rem max-width, `'xl'` -> 66rem, `'medium'` -> 40rem, `'small'` -> 28.125rem).
+   - Explicitly configured `ClientInquiryModal` with `size="large"` (`maxWidth="54rem" width="94%"`), resolving narrow squished modal rendering.
+
+2. **Client Submit New Inquiry Modal (`ClientInquiryModal.jsx` & `client-inquiry-modal.css`)**:
+   - Implemented full flat SaaS CSS rules for `.input-base` (inputs, selects with custom dropdown chevrons, and textareas) with proper padding, border colors, hover highlights, and purple focus rings (`0 0 0 3px rgba(85, 88, 227, 0.12)`).
+   - Standardized form action buttons using `.btn-secondary` and `.btn-primary.inquiry-modal-submit-btn` with disabled states and loading spinner support.
+   - Refined section cards, category checkbox tiles, and intro callout banner with flat SaaS styling.
+
+3. **Client Branch Appointments Cards (`ClientAppointmentsPage.jsx` & `client-appointments.css`)**:
+   - Fixed broken FontAwesome icon (`fa-regular fa-calendar-day` replaced with valid `fa-solid fa-calendar-day`).
+   - Redesigned `.appointment-card` with:
+     - Header: Monospace appointment reference badge (`Ref #...`) and bordered status badge pill.
+     - Service Title: Bold typography with service handshake icon.
+     - Schedule Highlight Banner (`.appointment-schedule-banner`): Dedicated date and time-window block.
+     - Details Box: Clean rows for assigned branch and client contact.
+     - Purpose Notes: Structured callout box with clipboard icon and clamped text.
+     - Card Footer: Anchored to bottom with `margin-top: auto;` for equal height card alignment across rows.
+   - Fixed missing empty state styles by declaring `.appointments-empty-card` and `.appointments-empty-icon` directly in `client-appointments.css`.
+
+4. **Verification**:
+   - Tested Vite build (`npm run build`) in `fair-fly` — passed in 2.49s with exit code 0.
+
+---
+
+## [2026-09-21] Fix: Service Item Page (`/client/services/:id`) Equal-Height Layout & Price Block SaaS Styling Redesign
+
+### Overview
+Resolved layout height discrepancies and aesthetic issues on the Client Service Item Detail page (`/client/services/:id`). The left column (Cover/Gallery & Additional Details) and right column (Service Details & CTA) previously collapsed to unequal heights due to grid alignment settings. Additionally, the service price block exhibited non-standard diagonal gradient backgrounds and unformatted flex layouts that conflicted with our design standards. Synchronized column heights with flex stretch mechanics, anchored bottom action bars, added structured service specifications, and completely restyled the price block following the flat SaaS design principles outlined in `.agents/rules/style-guide-components.md`.
+
+### Key Changes
+
+1. **Equal-Height Two-Column Grid Alignment (`service-item-page.css`)**:
+   - Switched `.service-ecommerce-grid` from `align-items: start;` to `align-items: stretch;`, ensuring both column cards expand equally within the grid row.
+   - Set `height: 100%;` on both `.service-gallery-card` (left) and `.service-details-card` (right).
+   - Added `margin-top: auto;` to `.service-additional-details` (left) and `.service-actions-cta-bar` (right) so bottom widgets anchor cleanly to the card base, maintaining visual balance regardless of description or requirement length.
+
+2. **Left Column Structured Additional Details (`ServiceItemPage.jsx` & `service-item-page.css`)**:
+   - Structured the left column with a clean `.service-additional-details` section containing a `.service-specs-table` with key operational specifications (Category, Processing Turnaround, Fulfillment Branch, and SLA).
+   - Integrated `.service-trust-grid` seamlessly beneath specifications.
+   - Refactored the branch exclusivity alert banner into dedicated CSS class `.service-branch-exclusive-banner`, removing all inline styles.
+   - Updated the skeleton loader to accurately mirror the equal-height layout structure.
+
+3. **Flat SaaS Service Price Block Redesign (`ServiceItemPage.jsx` & `service-item-page.css`)**:
+   - Removed diagonal gradient background and loose spacing. Replaced with a crisp, flat card container (`var(--bg)`, 1px border `#E2E8F0`, rounded corners).
+   - Added `.service-price-header` featuring an uppercase label (`SERVICE PROCESSING FEE`) and a subtle branded status badge (`Official Standard Rate`).
+   - Styled high-contrast typography for the main price amount (`font-size: 2.25rem; font-weight: 800; color: #0F172A`) paired with a `/ application filing` unit suffix.
+   - Added a subtle divider line and an inclusions callout (`.service-price-note`) with a green semantic check icon.
+
+4. **Verification**:
+   - Built the frontend via Vite (`npm run build`) in `fair-fly`, passing in 2.34s with exit code 0 and zero compilation errors.
+
+---
+
+## [2026-09-21] Feature: Secure 6-Digit Email Confirmation Registration Flow with Nodemailer Gmail SMTP, Anti-Brute Force Protection, and Custom Token Auto-Sign-In
+
+### Overview
+Implemented a secure, multi-step email confirmation flow for client account registration. Upon completing the registration form, users transition to a dedicated verification screen (`/verify-email`) where they enter a 6-digit numeric confirmation code delivered to their email. The system enforces strict security standards: server-side code generation, SHA-256 code hashing, 10-minute expiration windows, a 5-attempt brute-force limit with automatic invalidation, and 60-second resend cooldowns. Upon successful verification, the account is created in Firebase Auth and Firestore, and the user is automatically authenticated into the Client Portal using Firebase Custom Tokens.
+
+### Key Changes
+
+1. **Email Service & Gmail SMTP Integration (`fly-api/src/services/emailService.js` & `.env`)**:
+   - Integrated `nodemailer` configured for Gmail SMTP (`smtp.gmail.com`, port 465, secure SSL).
+   - Designed a responsive, official FairFly transactional HTML email template with indigo branding (`#5558E3`), clear greeting, prominent monospace 6-digit verification code box, security notes, and expiration notice.
+   - Added zero-crash fallback logging to terminal (`[EMAIL SERVICE: NO SMTP CREDENTIALS IN .ENV — DEV LOGGING MODE]`) for local development and testing before Google App Passwords are configured.
+
+2. **Cryptographic Verification Service (`fly-api/src/services/verificationService.js`)**:
+   - `createPendingRegistration`: Validates full name, email, phone, and strong password. Performs pre-flight checks against Firebase Auth and Firestore `users` to prevent duplicate accounts. Generates unguessable 6-digit numeric codes using `crypto.randomInt` and saves their SHA-256 hashes to `pending_registrations` with a 10-minute expiration and 5-attempt budget.
+   - `verifyRegistrationCode`: Enforces expiration checks, brute-force attempt countdowns, and lockout triggers. On successful hash match, creates the Firebase Auth user (`emailVerified: true`), creates the Firestore `users` document (`role: 'client'`), purges the pending record, and issues a Firebase Custom Token (`admin.auth().createCustomToken(uid)`).
+   - `resendVerificationCode`: Enforces a 60-second cooldown timer between requests, generates a fresh code, updates the hash, and re-dispatches the email.
+
+3. **Backend API Routes & Controllers (`fly-api/src/controllers/authController.js` & `authRoutes.js`)**:
+   - Added rate-limited public endpoints: `POST /api/auth/register-initiate`, `POST /api/auth/register-verify`, and `POST /api/auth/register-resend` wrapped with `publicRateLimiter` and `allowedFields`.
+   - Maintained `/api/auth/register` routing to `initiateRegistration` for backwards compatibility.
+
+4. **Firestore Security Rules (`Fairfly/firestore.rules`)**:
+   - Added `match /pending_registrations/{pendingId} { allow read, write: if false; }` to lock down all client access to pending registration documents. Only the backend Firebase Admin SDK can interact with this collection.
+
+5. **Frontend 50/50 Verification Screen (`fair-fly/src/pages/Index/VerifyEmail/VerifyEmail.jsx` & `verify-email.css`)**:
+   - Created a responsive 50/50 split authentication screen matching `Register.jsx` and `Login.jsx` strictly adhering to `.agents/rules/style-guide-components.md`.
+   - Built a 6-box segmented OTP input with auto-focus, single-character advancing, backspace navigation, arrow key traversal, and full 6-character paste support.
+   - Integrated live 10-minute expiration countdown timer (`MM:SS`) with expired-state locking and resend guidance.
+   - Integrated 60-second resend cooldown timer with animated rotating indicator.
+   - Provided remaining attempts feedback on invalid submissions and security lockout notices.
+   - Automatically signs the client in using `signInWithCustomToken(auth, res.customToken)` on verification, navigating directly to `/client`.
+
+6. **Frontend Routing & Registration Submission Updates (`fair-fly/src/App.jsx`, `Register.jsx`, & `authService.js`)**:
+   - Updated `authService.js` with `initiateRegistration`, `verifyRegistrationCode`, and `resendRegistrationCode`.
+   - Updated `Register.jsx` to call `initiateRegistration` and navigate to `/verify-email` with navigation state and `sessionStorage` fallback.
+   - Mounted `/verify-email` and `/confirm-email` in `App.jsx` under the unauthenticated route tree.
+
+---
+
 ## [2026-09-10] Redesign: Consistent Flat Light SaaS Landing Page, Instrument Serif Editorial Accents, Service Card De-cluttering & Service Details React Child Bug Fix
 
 ### Overview

@@ -174,6 +174,8 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
         </div>
       }
       size="large"
+      maxWidth="54rem"
+      width="94%"
     >
       <form onSubmit={handleSubmit} className="client-inquiry-modal-form">
         <div className="inquiry-intro-callout">
@@ -363,7 +365,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
         <div className="inquiry-modal-footer">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn-secondary"
             onClick={onClose}
             disabled={isSubmitting}
           >
@@ -371,7 +373,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
           </button>
           <button
             type="submit"
-            className="btn btn-primary inquiry-modal-submit-btn"
+            className="btn-primary inquiry-modal-submit-btn"
             disabled={isSubmitting || !isFormValid}
           >
             {isSubmitting ? (

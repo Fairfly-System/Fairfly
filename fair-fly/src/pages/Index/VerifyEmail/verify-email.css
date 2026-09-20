@@ -1,0 +1,267 @@
+/* Verify Email - Flat Modern SaaS Styles */
+
+.verify-page-header {
+  margin-bottom: 1.75rem;
+}
+
+.verify-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background-color: var(--purple-light-2, #EEF2FF);
+  color: var(--purple, #5558E3);
+  margin-bottom: 1rem;
+  border: 1px solid rgba(85, 88, 227, 0.18);
+}
+
+.verify-page-header h1 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--text-dark, #0F172A);
+  letter-spacing: -0.025em;
+  margin: 0 0 0.5rem 0;
+}
+
+.verify-header-desc {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748B);
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.verify-target-email-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background-color: #F1F5F9;
+  border: 1px solid var(--border-color, #E2E8F0);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-dark, #0F172A);
+}
+
+.verify-target-email-pill svg {
+  color: var(--purple, #5558E3);
+}
+
+/* Alert Boxes */
+.verify-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.verify-alert svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.verify-alert-danger {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.verify-alert-warning {
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+}
+
+/* 6-Box Segmented OTP Inputs */
+.verify-otp-container {
+  margin-bottom: 1.25rem;
+}
+
+.verify-otp-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-dark, #0F172A);
+  margin-bottom: 0.75rem;
+}
+
+.verify-otp-boxes {
+  display: flex;
+  gap: 0.625rem;
+  justify-content: space-between;
+}
+
+.verify-otp-box {
+  width: 3.25rem;
+  height: 3.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Courier New', Courier, monospace;
+  text-align: center;
+  border: 1.5px solid var(--border-color, #CBD5E1);
+  border-radius: 0.625rem;
+  background-color: #FFFFFF;
+  color: var(--text-dark, #0F172A);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.verify-otp-box:focus {
+  border-color: var(--purple, #5558E3);
+  box-shadow: 0 0 0 3px rgba(85, 88, 227, 0.14);
+}
+
+.verify-otp-box.filled {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+.verify-otp-box.has-error {
+  border-color: #EF4444;
+  background-color: #FFF5F5;
+}
+
+.verify-otp-box:disabled {
+  background-color: #F1F5F9;
+  border-color: #E2E8F0;
+  color: #94A3B8;
+  cursor: not-allowed;
+}
+
+/* Status Bar: Expiration Countdown & Attempt Counter */
+.verify-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748B);
+}
+
+.verify-timer-indicator,
+.verify-attempts-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.verify-timer-indicator svg.urgent {
+  color: #DC2626;
+  animation: none;
+}
+
+.verify-timer-indicator .text-expired {
+  color: #DC2626;
+}
+
+.verify-attempts-indicator {
+  color: #D97706;
+  font-weight: 600;
+}
+
+.verify-attempts-indicator svg {
+  color: #D97706;
+}
+
+/* Submit Button */
+.verify-submit-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+/* Resend Section */
+.verify-resend-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color, #E2E8F0);
+}
+
+.verify-resend-text {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748B);
+  margin: 0;
+}
+
+.verify-resend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--purple, #5558E3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.375rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.verify-resend-btn:hover:not(:disabled) {
+  color: var(--purple-dark, #4338CA);
+  background-color: var(--purple-light-2, #EEF2FF);
+}
+
+.verify-resend-btn:disabled {
+  color: #94A3B8;
+  cursor: not-allowed;
+}
+
+.verify-resend-btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Security Footnote */
+.verify-footer-security {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  color: #94A3B8;
+  text-align: center;
+}
+
+.verify-footer-security svg {
+  color: #10B981;
+  flex-shrink: 0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .verify-otp-boxes {
+    gap: 0.375rem;
+  }
+
+  .verify-otp-box {
+    width: 2.75rem;
+    height: 3.25rem;
+    font-size: 1.25rem;
+  }
+
+  .verify-status-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

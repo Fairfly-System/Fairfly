@@ -144,19 +144,21 @@ export default function ServiceItemPage() {
                 <div key={i} className="skeleton" style={{ width: '4.5rem', height: '4.5rem', borderRadius: 'var(--radius-sm)' }} />
               ))}
             </div>
-            <div className="service-trust-grid" style={{ marginTop: '1.5rem' }}>
-              <div className="service-trust-item">
-                <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
-                <div style={{ width: '70%' }}>
-                  <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem' }} />
-                  <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem' }} />
+            <div className="service-additional-details">
+              <div className="service-trust-grid">
+                <div className="service-trust-item">
+                  <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
+                  <div style={{ width: '70%' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem' }} />
+                  </div>
                 </div>
-              </div>
-              <div className="service-trust-item">
-                <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
-                <div style={{ width: '70%' }}>
-                  <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem' }} />
-                  <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem' }} />
+                <div className="service-trust-item">
+                  <div className="skeleton skeleton-circle" style={{ width: '2rem', height: '2rem' }} />
+                  <div style={{ width: '70%' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '80%', height: '0.85rem' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '60%', height: '0.75rem' }} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -301,20 +303,65 @@ export default function ServiceItemPage() {
             </div>
           )}
 
-          {/* Quick Trust Badges Below Gallery */}
-          <div className="service-trust-grid">
-            <div className="service-trust-item">
-              <i className="fa-solid fa-shield-halved"></i>
-              <div>
-                <strong>Secure Document Handling</strong>
-                <span>Direct submission to authorized branch</span>
+          {/* Additional Details & Specifications Section */}
+          <div className="service-additional-details">
+            <div className="service-additional-header">
+              <h3 className="service-additional-title">
+                <i className="fa-solid fa-circle-info"></i> Additional Service Details
+              </h3>
+            </div>
+
+            <div className="service-specs-table">
+              <div className="service-spec-row">
+                <span className="service-spec-label">
+                  <i className="fa-solid fa-layer-group"></i> Category
+                </span>
+                <span className="service-spec-value">{service.category || 'General Service'}</span>
+              </div>
+
+              {turnaround && (
+                <div className="service-spec-row">
+                  <span className="service-spec-label">
+                    <i className="fa-regular fa-clock"></i> Est. Turnaround
+                  </span>
+                  <span className="service-spec-value">{turnaround}</span>
+                </div>
+              )}
+
+              <div className="service-spec-row">
+                <span className="service-spec-label">
+                  <i className="fa-solid fa-store"></i> Fulfillment Branch
+                </span>
+                <span className="service-spec-value">
+                  {service.isBranchExclusive
+                    ? (service.branchName || 'Designated Branch')
+                    : 'All Authorized Fairfly Branches'}
+                </span>
+              </div>
+
+              <div className="service-spec-row">
+                <span className="service-spec-label">
+                  <i className="fa-solid fa-shield-halved"></i> Verification SLA
+                </span>
+                <span className="service-spec-value">ISO 9001:2000 Ready</span>
               </div>
             </div>
-            <div className="service-trust-item">
-              <i className="fa-solid fa-building-user"></i>
-              <div>
-                <strong>Branch Assistance</strong>
-                <span>Assigned to certified Fairfly operator</span>
+
+            {/* Quick Trust Badges Below Gallery */}
+            <div className="service-trust-grid">
+              <div className="service-trust-item">
+                <i className="fa-solid fa-shield-halved"></i>
+                <div>
+                  <strong>Secure Document Handling</strong>
+                  <span>Direct submission to authorized branch</span>
+                </div>
+              </div>
+              <div className="service-trust-item">
+                <i className="fa-solid fa-building-user"></i>
+                <div>
+                  <strong>Branch Assistance</strong>
+                  <span>Assigned to certified Fairfly operator</span>
+                </div>
               </div>
             </div>
           </div>
@@ -348,35 +395,28 @@ export default function ServiceItemPage() {
 
           {/* Price Box */}
           <div className="service-price-block">
-            <div className="service-price-main">
+            <div className="service-price-header">
               <span className="service-price-label">Service Processing Fee</span>
-              <span className="service-price-amount">{formatPriceDisplay(service.price)}</span>
+              <span className="service-price-badge">Official Standard Rate</span>
             </div>
-            <span className="service-price-note">
-              <i className="fa-solid fa-circle-check"></i> Includes initial document review & branch processing
-            </span>
+            <div className="service-price-main">
+              <span className="service-price-amount">{formatPriceDisplay(service.price)}</span>
+              <span className="service-price-unit">/ application filing</span>
+            </div>
+            <div className="service-price-divider" />
+            <div className="service-price-note">
+              <i className="fa-solid fa-circle-check"></i>
+              <span>Includes initial document review, submission prep &amp; branch fulfillment</span>
+            </div>
           </div>
 
           {/* Branch Exclusivity Banner */}
           {service.isBranchExclusive && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                background: 'var(--purple-soft, #ede9fe)',
-                border: '1px solid #ddd6fe',
-                borderRadius: 'var(--radius-md, 0.5rem)',
-                padding: '0.875rem 1rem',
-                margin: '1.25rem 0'
-              }}
-            >
-              <i className="fa-solid fa-store" style={{ color: 'var(--purple)', fontSize: '1.25rem' }}></i>
+            <div className="service-branch-exclusive-banner">
+              <i className="fa-solid fa-store"></i>
               <div>
-                <strong style={{ color: 'var(--text-dark)', fontSize: '0.875rem', display: 'block' }}>
-                  Branch Exclusive Service
-                </strong>
-                <span style={{ color: 'var(--text-mid)', fontSize: '0.8125rem' }}>
+                <strong>Branch Exclusive Service</strong>
+                <span>
                   This specialized service package is exclusively fulfilled by our <strong>{service.branchName || 'designated branch'}</strong> operator.
                 </span>
               </div>

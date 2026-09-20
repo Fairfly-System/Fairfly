@@ -21,15 +21,15 @@ export function requestClientPasswordReset(email, successCallback, errorCallback
 }
 
 /**
- * Register a new Client account via backend API
- * @param {object} userData - { fullName, email, phone, password }
+ * Initiate Client registration (generates and emails a 6-character code)
+ * @param {object} userData - { fullName, email, phone, password, confirmPassword }
  * @param {function} successCallback - Success callback handler
  * @param {function} errorCallback - Error callback handler
  * @param {function} setIsLoading - Loading state setter
  */
-export function registerClient(userData, successCallback, errorCallback, setIsLoading) {
+export function initiateRegistration(userData, successCallback, errorCallback, setIsLoading) {
   return ApiCaller(
-    `${API_BASE_URL}/api/auth/register`,
+    `${API_BASE_URL}/api/auth/register-initiate`,
     'POST',
     userData,
     {},
@@ -38,4 +38,48 @@ export function registerClient(userData, successCallback, errorCallback, setIsLo
     setIsLoading
   );
 }
+
+/**
+ * Register a new Client account via backend API (delegates to initiateRegistration)
+ */
+export const registerClient = initiateRegistration;
+
+/**
+ * Verify 6-character registration code and sign in
+ * @param {object} payload - { email, code }
+ * @param {function} successCallback - Success callback handler
+ * @param {function} errorCallback - Error callback handler
+ * @param {function} setIsLoading - Loading state setter
+ */
+export function verifyRegistrationCode(payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/register-verify`,
+    'POST',
+    payload,
+    {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+/**
+ * Resend 6-character registration code
+ * @param {string} email - Recipient email
+ * @param {function} successCallback - Success callback handler
+ * @param {function} errorCallback - Error callback handler
+ * @param {function} setIsLoading - Loading state setter
+ */
+export function resendRegistrationCode(email, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/register-resend`,
+    'POST',
+    { email },
+    {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
 

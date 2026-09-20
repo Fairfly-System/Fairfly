@@ -4,7 +4,7 @@ import { Mail, Lock, User, Phone, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import "./register.css";
 import logo from "/FairflyLogo.png";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
-import { registerClient } from "../../../services/authService";
+import { initiateRegistration } from "../../../services/authService";
 import TermsPrivacyModal from "../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal";
 
 export default function Register() {
@@ -149,20 +149,27 @@ export default function Register() {
     e.preventDefault();
     if (disabled || isSubmitting) return;
 
-    registerClient(
+    const targetEmail = formData.email.trim().toLowerCase();
+
+    initiateRegistration(
       {
         fullName: formData.fullName.trim(),
-        email: formData.email.trim(),
+        email: targetEmail,
         phone: formData.phone.trim(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       },
       (res) => {
-        addToast(res?.message || "Registration successful! Please sign in.", "success");
-        navigate("/login");
+        addToast(res?.message || "Verification code sent! Please check your email inbox.", "success");
+        try {
+          sessionStorage.setItem("pendingVerificationEmail", targetEmail);
+        } catch (storageErr) {
+          console.warn("Could not save pending email to sessionStorage:", storageErr);
+        }
+        navigate("/verify-email", { state: { email: targetEmail } });
       },
       (error) => {
-        addToast(error?.message || "Could not create your account. Please check your details and try again.", "error");
+        addToast(error?.message || "Could not start registration. Please check your details and try again.", "error");
       },
       setIsSubmitting
     );

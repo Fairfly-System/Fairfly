@@ -187,26 +187,27 @@ export default function ClientAppointmentsPage() {
           Array.from({ length: 4 }).map((_, i) => (
             <article key={`skel-app-${i}`} className="appointment-card" aria-busy="true">
               <div className="appointment-card-header">
-                <div className="skeleton skeleton-badge" style={{ width: '9rem', height: '1.5rem' }} />
-                <div className="skeleton skeleton-badge" style={{ width: '5.5rem', height: '1.5rem' }} />
+                <div className="skeleton skeleton-badge" style={{ width: '6.5rem', height: '1.35rem' }} />
+                <div className="skeleton skeleton-badge" style={{ width: '5.5rem', height: '1.35rem' }} />
               </div>
-              <div className="skeleton skeleton-title" style={{ width: '70%', height: '1.25rem', margin: '0.75rem 0' }} />
+              <div className="skeleton skeleton-title" style={{ width: '75%', height: '1.35rem', margin: '0.5rem 0' }} />
+              <div className="skeleton skeleton-card" style={{ width: '100%', height: '3.5rem', borderRadius: 'var(--radius-md)' }} />
               <div className="appointment-details-list">
-                <div className="skeleton skeleton-text" style={{ width: '85%', height: '0.9rem', margin: '0.25rem 0' }} />
-                <div className="skeleton skeleton-text" style={{ width: '75%', height: '0.9rem', margin: '0.25rem 0' }} />
+                <div className="skeleton skeleton-text" style={{ width: '85%', height: '0.9rem' }} />
+                <div className="skeleton skeleton-text" style={{ width: '70%', height: '0.9rem' }} />
               </div>
-              <div className="skeleton skeleton-text" style={{ width: '95%', height: '2rem', marginTop: '0.75rem' }} />
+              <div className="skeleton skeleton-text" style={{ width: '100%', height: '1.5rem', marginTop: 'auto' }} />
             </article>
           ))
         ) : filteredAppointments.length === 0 ? (
-          <div className="tracking-empty-card" style={{ gridColumn: '1 / -1' }}>
-            <div className="tracking-empty-icon">
+          <div className="appointments-empty-card" style={{ gridColumn: '1 / -1' }}>
+            <div className="appointments-empty-icon">
               <i className="fa-regular fa-calendar-xmark"></i>
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>
+            <h3 className="appointments-empty-title">
               {searchQuery ? 'No Matching Appointments' : 'No Appointments in this View'}
             </h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', maxWidth: '28rem', margin: 0 }}>
+            <p className="appointments-empty-desc">
               {searchQuery
                 ? 'Try searching with a different branch or service keyword.'
                 : 'Need to meet our agency team in person? Schedule a branch visit for personalized assistance.'}
@@ -230,16 +231,16 @@ export default function ClientAppointmentsPage() {
                 ? 'cancelled'
                 : 'pending';
 
+            const refCode = app.id ? String(app.id).substring(0, 8).toUpperCase() : 'APPT';
+
             return (
               <article key={app.id} className="appointment-card">
-                {/* Header with Date and Status */}
+                {/* Header with Reference and Status Pill */}
                 <div className="appointment-card-header">
-                  <div className="appointment-date-badge">
-                    <i className="fa-regular fa-calendar-day"></i>
-                    <span>{app.preferredDate || 'Scheduled Date'}</span>
-                    <span>·</span>
-                    <span>{app.preferredTime || '10:00 AM'}</span>
-                  </div>
+                  <span className="appointment-ref-tag">
+                    <i className="fa-solid fa-hashtag"></i>
+                    {refCode}
+                  </span>
 
                   <span className={`appointment-status-pill ${statusClass}`}>
                     <i
@@ -257,43 +258,71 @@ export default function ClientAppointmentsPage() {
 
                 {/* Service Title */}
                 <h3 className="appointment-service-title">
-                  {app.serviceType || 'General Consultation'}
+                  <i className="fa-solid fa-handshake"></i>
+                  <span>{app.serviceType || 'General Consultation'}</span>
                 </h3>
 
-                {/* Details Box */}
-                <div className="appointment-details-list">
-                  <div className="appointment-detail-row">
-                    <i className="fa-solid fa-building"></i>
-                    <span>
-                      <strong>Branch:</strong> {app.branchName || app.preferredBranchLocation || 'Main Office'}
-                    </span>
+                {/* Prominent Schedule Banner */}
+                <div className="appointment-schedule-banner">
+                  <div className="appointment-schedule-item">
+                    <i className="fa-solid fa-calendar-day"></i>
+                    <div>
+                      <span className="schedule-item-label">Visit Date</span>
+                      <strong className="schedule-item-val">{app.preferredDate || 'To be scheduled'}</strong>
+                    </div>
                   </div>
-
-                  <div className="appointment-detail-row">
-                    <i className="fa-solid fa-user"></i>
-                    <span>
-                      <strong>Client:</strong> {app.clientName} ({app.clientPhone})
-                    </span>
+                  <div className="appointment-schedule-divider" />
+                  <div className="appointment-schedule-item">
+                    <i className="fa-regular fa-clock"></i>
+                    <div>
+                      <span className="schedule-item-label">Time Window</span>
+                      <strong className="schedule-item-val">{app.preferredTime || '10:00 AM'}</strong>
+                    </div>
                   </div>
                 </div>
 
-                {/* Purpose Notes */}
+                {/* Branch & Contact Details Box */}
+                <div className="appointment-details-list">
+                  <div className="appointment-detail-row">
+                    <i className="fa-solid fa-store"></i>
+                    <div>
+                      <span className="detail-row-label">Branch:</span>
+                      <strong className="detail-row-value">{app.branchName || app.preferredBranchLocation || 'Main Branch'}</strong>
+                    </div>
+                  </div>
+
+                  <div className="appointment-detail-row">
+                    <i className="fa-solid fa-phone"></i>
+                    <div>
+                      <span className="detail-row-label">Client Contact:</span>
+                      <span className="detail-row-value">{app.clientName} ({app.clientPhone})</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Purpose / Visit Notes Callout */}
                 {app.purpose && (
-                  <p className="appointment-purpose-box">
-                    <strong>Notes:</strong> {app.purpose}
-                  </p>
+                  <div className="appointment-purpose-box">
+                    <div className="appointment-purpose-header">
+                      <i className="fa-regular fa-clipboard"></i>
+                      <span>Visit Purpose &amp; Requirements</span>
+                    </div>
+                    <p className="appointment-purpose-text">{app.purpose}</p>
+                  </div>
                 )}
 
-                {/* Footer */}
+                {/* Card Footer with Auto-margin for Equal Alignment */}
                 <div className="appointment-card-footer">
-                  <span>
+                  <span className="appointment-booked-date">
+                    <i className="fa-regular fa-clock"></i>
                     Booked:{' '}
                     {app.createdAt
-                      ? new Date(app.createdAt).toLocaleDateString()
+                      ? new Date(app.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                       : 'Recently'}
                   </span>
-                  <span style={{ fontWeight: 600, color: 'var(--purple)' }}>
-                    Ref #{app.id.substring(0, 8).toUpperCase()}
+                  <span className="appointment-branch-badge">
+                    <i className="fa-solid fa-location-dot"></i>
+                    In-Person Visit
                   </span>
                 </div>
               </article>

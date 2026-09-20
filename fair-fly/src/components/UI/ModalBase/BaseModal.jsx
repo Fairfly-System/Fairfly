@@ -11,6 +11,7 @@ const BaseModal = forwardRef(({
   isOpen: controlledIsOpen,
   maxWidth,
   width,
+  size,
   className = '',
   isLoading = false,
 }, ref) => {
@@ -51,9 +52,28 @@ const BaseModal = forwardRef(({
 
   if (!isOpen) return null;
 
+  // Compute container dimensions from size or explicit props
+  let defaultMaxWidth = undefined;
+  let defaultWidth = undefined;
+  if (size === 'large') {
+    defaultMaxWidth = '54rem';
+    defaultWidth = '94%';
+  } else if (size === 'xl') {
+    defaultMaxWidth = '66rem';
+    defaultWidth = '96%';
+  } else if (size === 'medium') {
+    defaultMaxWidth = '40rem';
+    defaultWidth = '92%';
+  } else if (size === 'small') {
+    defaultMaxWidth = '28.125rem';
+    defaultWidth = '90%';
+  }
+
   const containerStyle = {};
-  if (maxWidth) containerStyle.maxWidth = maxWidth;
-  if (width) containerStyle.width = width;
+  const effectiveMaxWidth = maxWidth || defaultMaxWidth;
+  const effectiveWidth = width || defaultWidth;
+  if (effectiveMaxWidth) containerStyle.maxWidth = effectiveMaxWidth;
+  if (effectiveWidth) containerStyle.width = effectiveWidth;
 
   return createPortal(
     <div

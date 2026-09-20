@@ -1,18 +1,56 @@
 const express = require('express');
 const router = express.Router();
-const { requestClientPasswordReset, registerClient } = require('../controllers/authController');
+const { 
+  requestClientPasswordReset, 
+  registerClient,
+  initiateRegistration,
+  verifyRegistrationCode,
+  resendRegistrationCode
+} = require('../controllers/authController');
 const { publicRateLimiter } = require('../middleware/rateLimiter');
 const { allowedFields } = require('../middleware/allowedFields');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 
-// Public route for client registration (rate-limited, protected fields)
+// Public route for client registration initiation (rate-limited, protected fields)
 router.post(
   '/register',
   performanceProfiler(
     'POST /auth/register',
     publicRateLimiter,
     allowedFields(['fullName', 'email', 'phone', 'password', 'confirmPassword']),
-    registerClient
+    initiateRegistration
+  )
+);
+
+router.post(
+  '/register-initiate',
+  performanceProfiler(
+    'POST /auth/register-initiate',
+    publicRateLimiter,
+    allowedFields(['fullName', 'email', 'phone', 'password', 'confirmPassword']),
+    initiateRegistration
+  )
+);
+
+// Public route for verifying 6-character registration code (rate-limited, protected fields)
+router.post(
+  '/register-verify',
+  performanceProfiler(
+    'POST /auth/register-verify',
+    publicRateLimiter,
+    allowedFields(['email', 'code']),
+    verifyRegistrationCode
+  )
+);
+
+// Public route for resending 6-character registration code (rate-limited, protected fields)
+router.post(
+  '/register-resend',
+  performanceProfiler(
+    'POST /auth/register-resend',
+    publicRateLimiter,
+    allowedFields(['email']),
+    resendRegistrationCode
   )
 );
 
