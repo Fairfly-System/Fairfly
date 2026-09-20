@@ -10,7 +10,8 @@ const getTransporter = () => {
   if (transporter) return transporter;
 
   const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
+  // Strip any spaces from Google App Passwords (e.g. 'xxxx xxxx xxxx xxxx' -> 'xxxxxxxxxxxxxxxx')
+  const pass = process.env.SMTP_PASS?.trim().replace(/\s+/g, '');
 
   if (user && pass) {
     const isGmail = user.endsWith('@gmail.com') || (process.env.SMTP_HOST || '').includes('gmail');
@@ -204,7 +205,15 @@ const generateVerificationEmailHtml = ({ fullName, code, expiryMinutes = 10 }) =
  */
 const sendVerificationCodeEmail = async (toEmail, fullName, code) => {
   const mailTransporter = getTransporter();
-  const fromAddress = process.env.EMAIL_FROM || '"FairFly Verification" <no-reply@fairfly.com>';
+  const smtpUser = process.env.SMTP_USER?.trim();
+
+  // If EMAIL_FROM contains a placeholder or unverified domain (e.g. no-reply@fairfly.com),
+  // Gmail SMTP will either trigger SPF/DKIM failure (landing straight in Spam) or be rejected.
+  // When using Gmail SMTP, always sender-align with the authenticated Gmail account.
+  let fromAddress = process.env.EMAIL_FROM?.trim();
+  if (!fromAddress || fromAddress.includes('no-reply@fairfly.com')) {
+    fromAddress = smtpUser ? `"FairFly Verification" <${smtpUser}>` : '"FairFly Verification" <no-reply@fairfly.com>';
+  }
 
   const mailOptions = {
     from: fromAddress,
