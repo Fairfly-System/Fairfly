@@ -253,7 +253,225 @@ const sendVerificationCodeEmail = async (toEmail, fullName, code) => {
   }
 };
 
+/**
+ * Generate responsive branded HTML template for FairFly password reset
+ */
+const generatePasswordResetEmailHtml = ({ fullName, resetLink, expiryMinutes = 60 }) => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your FairFly Password</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1E293B;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #F8FAFC;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 540px;
+      margin: 0 auto;
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #5558E3;
+      padding: 32px 32px 28px 32px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      color: #FFFFFF;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      margin: 6px 0 0 0;
+      color: #E0E7FF;
+      font-size: 14px;
+    }
+    .content {
+      padding: 36px 32px;
+    }
+    .greeting {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0F172A;
+      margin-bottom: 12px;
+    }
+    .text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #475569;
+      margin: 0 0 20px 0;
+    }
+    .btn-wrap {
+      text-align: center;
+      margin: 32px 0;
+    }
+    .reset-btn {
+      background-color: #5558E3;
+      color: #FFFFFF !important;
+      padding: 14px 32px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 8px;
+      display: inline-block;
+      box-shadow: 0 4px 6px -1px rgba(85, 88, 227, 0.25);
+    }
+    .fallback-box {
+      background-color: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 24px;
+      word-break: break-all;
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.5;
+    }
+    .fallback-box a {
+      color: #5558E3;
+      text-decoration: underline;
+    }
+    .expiry-note {
+      font-size: 13px;
+      color: #64748B;
+      background-color: #F1F5F9;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 24px 0 0 0;
+      border-left: 4px solid #5558E3;
+    }
+    .security-notice {
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.5;
+      margin-top: 24px;
+      border-top: 1px solid #F1F5F9;
+      padding-top: 20px;
+    }
+    .footer {
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      padding: 20px 32px;
+      text-align: center;
+      font-size: 12px;
+      color: #94A3B8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>FairFly Portal</h1>
+        <p>Client Account Security &amp; Password Recovery</p>
+      </div>
+      <div class="content">
+        <div class="greeting">Hello ${fullName || 'Valued Traveler'},</div>
+        <p class="text">
+          We received a request to reset the password for your FairFly client account. Please click the button below to securely choose your new password:
+        </p>
+
+        <div class="btn-wrap">
+          <a href="${resetLink}" class="reset-btn" target="_blank" rel="noopener noreferrer">Reset My Password</a>
+        </div>
+
+        <div class="expiry-note">
+          <strong>Security Notice:</strong> This link is valid for <strong>${expiryMinutes} minutes</strong> and can only be used once.
+        </div>
+
+        <div class="fallback-box">
+          If the button above does not work, copy and paste this link into your browser:<br>
+          <a href="${resetLink}" target="_blank" rel="noopener noreferrer">${resetLink}</a>
+        </div>
+
+        <div class="security-notice">
+          If you did not request a password reset, you can safely disregard this email. Your password will remain unchanged and your account is secure.
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} FairFly Travel &amp; Tours System. All rights reserved.<br>
+        Standardized Cloud Platform • ISO 9001:2000 Ready Architecture
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Send password reset link via Email
+ * @param {string} toEmail - Recipient email address
+ * @param {string} fullName - Recipient full name
+ * @param {string} resetLink - Firebase Auth password reset URL
+ * @returns {Promise<{ sent: boolean, mode: string, error?: string }>}
+ */
+const sendPasswordResetEmail = async (toEmail, fullName, resetLink) => {
+  const mailTransporter = getTransporter();
+  const smtpUser = process.env.SMTP_USER?.trim();
+
+  let fromAddress = process.env.EMAIL_FROM?.trim();
+  if (!fromAddress || fromAddress.includes('no-reply@fairfly.com')) {
+    fromAddress = smtpUser ? `"FairFly Account Recovery" <${smtpUser}>` : '"FairFly Account Recovery" <no-reply@fairfly.com>';
+  }
+
+  const mailOptions = {
+    from: fromAddress,
+    to: toEmail,
+    subject: `Reset your FairFly account password`,
+    text: `Hello ${fullName || 'User'},\n\nWe received a request to reset the password for your FairFly client account. Click the following link to choose a new password:\n\n${resetLink}\n\nThis link is valid for 60 minutes. If you did not request this, please ignore this email.\n\nFairFly Travel & Tours System`,
+    html: generatePasswordResetEmailHtml({ fullName, resetLink, expiryMinutes: 60 })
+  };
+
+  if (mailTransporter) {
+    try {
+      const info = await mailTransporter.sendMail(mailOptions);
+      console.log(`[EmailService] Password reset email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return { sent: true, mode: 'smtp', messageId: info.messageId };
+    } catch (err) {
+      console.error(`[EmailService] Error sending password reset email to ${toEmail}:`, err.message);
+      console.log(`\n=============================================================`);
+      console.log(`[FALLBACK DEV PASSWORD RESET LINK]`);
+      console.log(`Recipient: ${toEmail} (${fullName})`);
+      console.log(`Reset Link: ${resetLink}`);
+      console.log(`Expires In: 60 minutes`);
+      console.log(`=============================================================\n`);
+      return { sent: false, mode: 'fallback-logged', error: err.message };
+    }
+  } else {
+    console.log(`\n=============================================================`);
+    console.log(`[EmailService: NO SMTP CREDENTIALS IN .ENV — DEV LOGGING MODE]`);
+    console.log(`Recipient: ${toEmail} (${fullName})`);
+    console.log(`Reset Link: ${resetLink}`);
+    console.log(`Expires In: 60 minutes`);
+    console.log(`=============================================================\n`);
+    return { sent: true, mode: 'dev-console' };
+  }
+};
+
 module.exports = {
   sendVerificationCodeEmail,
-  generateVerificationEmailHtml
+  generateVerificationEmailHtml,
+  sendPasswordResetEmail,
+  generatePasswordResetEmailHtml
 };
+

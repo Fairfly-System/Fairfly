@@ -1,24 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router';
-import { Mail, ArrowLeft, CheckCircle2, RotateCw } from 'lucide-react';
-import './reset-password.css';
-import logo from '/FairflyLogo.png';
-import { auth } from '../../../firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { useToast } from '../../../components/UI/toast/ToastProvider';
-import { requestClientPasswordReset } from '../../../services/authService';
-import toFriendlyMessage from '../../../utils/friendlyErrors';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router";
+import { Mail, ArrowLeft, RotateCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import "./reset-password.css";
+import logo from "/FairflyLogo.png";
+import { useToast } from "../../../components/UI/toast/ToastProvider";
+import { requestClientPasswordReset } from "../../../services/authService";
+import toFriendlyMessage from "../../../utils/friendlyErrors";
 
 export default function ResetPassword() {
   const { addToast } = useToast();
 
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
-  // Handle resend countdown timer
+  // Handle resend countdown timer (60s)
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -30,14 +28,14 @@ export default function ResetPassword() {
   const validateEmail = (val) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!val.trim()) {
-      setError('Email address is required.');
+      setError("Email address is required.");
       return false;
     }
     if (!emailRegex.test(val.trim())) {
-      setError('Please enter a valid email address.');
+      setError("Please enter a valid email address.");
       return false;
     }
-    setError('');
+    setError("");
     return true;
   };
 
@@ -54,28 +52,23 @@ export default function ResetPassword() {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // 1. Verify Client role via secure Backend API first
+    // Secure Backend API call:
+    // Only sends reset email if account is a client.
+    // Privileged accounts (admin/operator) are silently suppressed.
     requestClientPasswordReset(
       trimmedEmail,
-      async (backendRes) => {
-        try {
-          // 2. Dispatch official Firebase password reset verification email
-          await sendPasswordResetEmail(auth, trimmedEmail);
-          setIsSuccess(true);
-          setCountdown(60); // 60s cooldown
-          addToast('Verification email sent! Please check your inbox.', 'success');
-        } catch (firebaseErr) {
-          console.error('Firebase reset error:', firebaseErr);
-          // If already verified by backend, we still acknowledge or report friendly message
-          setIsSuccess(true);
-          setCountdown(60);
-          addToast('Verification request processed. Please check your inbox.', 'success');
-        }
+      (res) => {
+        setIsSuccess(true);
+        setCountdown(60);
+        addToast(
+          res?.message || "Password reset instructions have been sent to your email.",
+          "success"
+        );
       },
-      (backendErr) => {
-        const errorMsg = backendErr?.message || 'Could not verify account for password reset.';
+      (err) => {
+        const errorMsg = err?.message || "Could not process password reset request.";
         setError(errorMsg);
-        addToast(toFriendlyMessage(backendErr, errorMsg), 'error');
+        addToast(toFriendlyMessage(err, errorMsg), "error");
       },
       setIsLoading
     );
@@ -87,137 +80,213 @@ export default function ResetPassword() {
   };
 
   return (
-    <main className="reset-page page-fade-in">
-      <div className="reset-container">
-        <Link to="/login" className="back-button">
-          <ArrowLeft size={16} />
-          <span>Back to Sign In</span>
-        </Link>
+    <div className="auth-split-layout reset-split-page">
+      {/* 50% Left Side: Visual Showcase */}
+      <div className="auth-side-showcase">
+        <img
+          src="/auth/login-hero.jpg"
+          alt="Philippine Travel & FairFly Portal"
+          className="auth-showcase-bg"
+          onError={(e) => {
+            e.currentTarget.src =
+              "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1400&q=80";
+          }}
+        />
+        <div className="auth-showcase-overlay" />
 
-        <div className="reset-card card">
-          <div className="reset-header">
-            <Link to="/home">
-              <img src={logo} alt="FairFly Logo" className="logo" />
-            </Link>
+        <div className="auth-showcase-content">
+          <div className="auth-showcase-header">
+            <img src={logo} alt="Fairfly Logo" className="auth-showcase-logo" />
+            <span className="auth-showcase-brand">Fairfly System</span>
+          </div>
 
-            <div className="reset-role-badge">
+          <div className="auth-showcase-main">
+            <div className="auth-showcase-badge">
               <i className="fa-solid fa-shield-halved"></i>
               <span>Client Account Recovery</span>
             </div>
 
-            <h1>{isSuccess ? 'Verification Email Sent' : 'Reset Password'}</h1>
-            <p>
-              {isSuccess
-                ? 'Check your inbox for your secure verification link'
-                : 'Enter your registered client email to receive a password reset link'}
+            <h2 className="auth-showcase-title">
+              Securely Recover Your <span className="auth-showcase-title-highlight">Client Portal</span>.
+            </h2>
+
+            <p className="auth-showcase-desc">
+              Regain immediate access to your flight itineraries, visa applications, and traveler records. Verified client accounts receive a time-limited reset link directly to their registered email.
             </p>
+
+            <div className="auth-showcase-benefits">
+              <div className="auth-benefit-item">
+                <i className="fa-solid fa-circle-check"></i>
+                <span>Encrypted 60-minute single-use reset links</span>
+              </div>
+              <div className="auth-benefit-item">
+                <i className="fa-solid fa-circle-check"></i>
+                <span>Protected against credential tampering & enumeration</span>
+              </div>
+              <div className="auth-benefit-item">
+                <i className="fa-solid fa-circle-check"></i>
+                <span>Instant automated recovery for verified travelers</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-showcase-stats">
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">100%</span>
+              <span className="auth-stat-label">Secure Access</span>
+            </div>
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">256-bit</span>
+              <span className="auth-stat-label">SSL Encrypted</span>
+            </div>
+            <div className="auth-stat-item">
+              <span className="auth-stat-val">ISO:9001</span>
+              <span className="auth-stat-label">QMS Certified</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 50% Right Side: Form / Success State */}
+      <div className="auth-side-form">
+        <div className="auth-form-inner">
+          <Link to="/login" className="auth-back-link">
+            <ArrowLeft size={16} />
+            <span>Back to Sign In</span>
+          </Link>
+
+          {/* Mobile brand header */}
+          <div className="auth-mobile-brand">
+            <img src={logo} alt="Fairfly Logo" className="auth-mobile-logo" />
+            <span className="auth-mobile-name">Fairfly</span>
           </div>
 
           {isSuccess ? (
             /* Success State */
-            <div className="reset-success-view">
-              <div className="success-icon-wrap">
-                <i className="fa-solid fa-envelope-circle-check"></i>
+            <div className="reset-success-card">
+              <div className="reset-success-icon-badge">
+                <CheckCircle2 size={28} />
               </div>
 
-              <div className="success-message-box">
-                <p className="success-lead">
-                  We have sent an email verification button to:
-                </p>
-                <p className="success-email-highlight">{email.trim().toLowerCase()}</p>
-                <p className="success-instructions">
-                  Click the password reset button in the email to securely choose a new password. If you don't see it within a few moments, please check your spam or junk folder.
+              <div className="auth-form-header">
+                <h1>Check Your Email</h1>
+                <p>We have dispatched password reset instructions to:</p>
+              </div>
+
+              <div className="reset-target-email-pill">
+                <Mail size={15} />
+                <span>{email.trim().toLowerCase()}</span>
+              </div>
+
+              <div className="reset-info-box">
+                <p>
+                  Click the link in the email to choose a new password. If you don't see it within a minute, please check your spam or junk folder.
                 </p>
               </div>
 
-              <div className="reset-actions">
+              <div className="reset-actions-group">
                 <button
                   type="button"
-                  className="resend-button"
+                  className="reset-resend-btn"
                   onClick={handleResend}
                   disabled={countdown > 0 || isLoading}
                 >
-                  <RotateCw size={15} className={isLoading ? 'spinning' : ''} />
+                  <RotateCw size={14} className={isLoading ? "spinning" : ""} />
                   <span>
                     {countdown > 0
-                      ? `Resend Email in ${countdown}s`
+                      ? `Resend link in ${countdown}s`
                       : isLoading
-                      ? 'Sending...'
-                      : 'Resend Verification Email'}
+                      ? "Sending..."
+                      : "Resend Reset Link"}
                   </span>
                 </button>
 
-                <Link to="/login" className="btn-primary full-width reset-login-cta">
-                  <i className="fa-solid fa-right-to-bracket"></i> Return to Sign In
+                <Link to="/login" className="auth-submit-btn reset-return-btn">
+                  <i className="fa-solid fa-right-to-bracket"></i>
+                  <span>Return to Sign In</span>
                 </Link>
               </div>
             </div>
           ) : (
             /* Request Form */
-            <form onSubmit={handleSubmit} className="reset-form" noValidate>
-              <div className="input-group">
-                <label htmlFor="reset-email">Registered Client Email</label>
-                <div className={`input-wrapper ${error ? 'has-error' : ''}`}>
-                  <Mail className="icon" size={18} />
-                  <input
-                    id="reset-email"
-                    type="email"
-                    placeholder="client.name@example.com"
-                    value={email}
-                    onChange={handleEmailChange}
-                    autoComplete="email"
-                    required
-                  />
+            <div className="reset-form-container">
+              <div className="auth-form-header">
+                <div className="reset-header-icon-badge">
+                  <Mail size={22} />
                 </div>
-                {error && (
-                  <p className="error-message" role="alert">
-                    <i className="fa-solid fa-circle-exclamation"></i> {error}
-                  </p>
-                )}
+                <h1>Reset Password</h1>
+                <p>Enter your registered client email to receive a password reset link.</p>
               </div>
 
-              <div className="client-notice-callout">
-                <i className="fa-solid fa-circle-info"></i>
-                <div>
-                  <strong>Client Portal Notice:</strong> This password reset service is strictly designated for <em>FairFly Client</em> accounts. Franchise Operators and Administrators must contact Head Office Support directly for credential updates.
+              <form onSubmit={handleSubmit} className="auth-form" noValidate>
+                <div className="auth-input-group">
+                  <label className="auth-input-label" htmlFor="reset-email">
+                    Registered Client Email
+                  </label>
+                  <div className={`auth-input-wrapper ${error ? "has-error" : ""}`}>
+                    <Mail className="auth-input-icon" size={18} />
+                    <input
+                      id="reset-email"
+                      type="email"
+                      className="auth-input"
+                      placeholder="client.name@example.com"
+                      value={email}
+                      onChange={handleEmailChange}
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                  {error && (
+                    <div className="auth-field-error" role="alert">
+                      <AlertCircle size={14} />
+                      <span>{error}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                className="reset-submit-button"
-                disabled={isLoading || !email.trim()}
-              >
-                {isLoading ? (
-                  <>
-                    <i className="fa-solid fa-spinner fa-spin"></i> Verifying & Sending...
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-paper-plane"></i> Send Verification Email
-                  </>
-                )}
-              </button>
+                <div className="reset-notice-card">
+                  <i className="fa-solid fa-circle-info"></i>
+                  <div>
+                    <strong>Client Portal Notice:</strong> This password reset service is strictly designated for <em>FairFly Client</em> accounts. Franchise Operators and Administrators must contact Head Office Support directly for credential updates.
+                  </div>
+                </div>
 
-              <div className="reset-footer-links">
-                <span>Remember your password?</span>{' '}
-                <Link to="/login" className="reset-link-accent">
-                  Sign In
-                </Link>
-              </div>
-            </form>
+                <button
+                  type="submit"
+                  className="auth-submit-btn"
+                  disabled={isLoading || !email.trim()}
+                >
+                  {isLoading ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      <span>Verifying & Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-paper-plane"></i>
+                      <span>Send Reset Link</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="auth-switch-prompt">
+                  <span>Remember your password?</span>{" "}
+                  <Link to="/login" className="auth-switch-link">
+                    Sign In
+                  </Link>
+                </div>
+              </form>
+            </div>
           )}
 
-          <div className="signup-switch-text">
-            Don't have a client account?{' '}
-            <Link to="/register">Create Account</Link>
+          <div className="auth-legal-footer">
+            Don't have a client account?{" "}
+            <Link to="/register" className="auth-switch-link">
+              Create Account
+            </Link>
           </div>
         </div>
-
-        <div className="footer-text">
-          FairFly Travel & Tours • Standardized Cloud Platform
-        </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,5 +1,41 @@
 # Update Logs
 
+## [2026-09-23] Feature: Client Forgot Password Backend Implementation & Modern 50/50 Split Reset Page Redesign
+
+### Overview
+Implemented the secure backend for the Client Forgot Password feature in `fly-api` and overhauled the client-facing Password Reset page (`/forgot-password`, `/reset-password`) in `fair-fly`. The backend enforces role-specific handling: password reset links are generated and emailed strictly for accounts with `role === 'client'`. Privileged accounts (`admin` and `operator`) as well as unregistered email addresses are silently masked—returning a uniform `200 OK` generic response without dispatching emails, preventing account and role enumeration attacks. Also redesigned the Password Reset page to adopt the modern 50/50 split authentication layout matching `Login.jsx` and `Register.jsx`, resolving unapplied input styles and eliminating the insecure client-side Firebase Auth email dispatch.
+
+### Key Changes
+
+1. **Transactional Email Service (`fly-api/src/services/emailService.js`)**:
+   - Added `generatePasswordResetEmailHtml`: responsive, branded HTML email template featuring FairFly header (`#5558E3`), recipient greeting, prominent "Reset My Password" CTA button, copyable fallback URL, 60-minute single-use validity notice, and security disclaimers.
+   - Added `sendPasswordResetEmail`: transmits transactional password reset emails via Nodemailer with Gmail SMTP (with automatic fallback console logging for dev mode).
+
+2. **Backend Password Reset Controller & Role Filtering (`fly-api/src/controllers/authController.js` & `authRoutes.js`)**:
+   - Refactored `requestClientPasswordReset`:
+     - Normalizes incoming email addresses (`trim().toLowerCase()`) and performs regex format validation.
+     - Searches Firestore `users` collection. If no account exists, silently suppresses email dispatch and returns uniform `200 OK` (`GENERIC_RESET_SUCCESS_MESSAGE`).
+     - If the account role is `admin`, `operator`, or any non-client privilege, silently logs suppression to internal server logs and returns the identical generic `200 OK` response with 0 emails dispatched.
+     - If the account role is `client`, verifies Firebase Auth existence, generates an official reset link via `admin.auth().generatePasswordResetLink()`, sends the branded email, and returns `200 OK`.
+   - Updated `authRoutes.js`: wrapped `/client-forgot-password`, `/forgot-password`, and `/reset-password` route aliases with `publicRateLimiter` and `allowedFields(['email'])`.
+
+3. **Frontend 50/50 Split Password Reset Redesign (`ResetPassword.jsx` & `reset-password.css`)**:
+   - Upgraded `ResetPassword.jsx` to the established 50/50 split authentication layout (`.auth-split-layout`, `.auth-side-showcase`, `.auth-side-form`) strictly adhering to `.agents/rules/style-guide-components.md`.
+   - Left Panel: Inspiring Philippine travel showcase image, Fairfly system brand header, `Client Account Recovery` badge, security assurances, and 100% security KPI stats.
+   - Right Panel: Clean flat SaaS form with styled `.auth-input-wrapper`, `Mail` icon, client portal notice card, and full-width `.auth-submit-btn`.
+   - Success View: Displays email confirmation icon, highlighted target email pill (`.reset-target-email-pill`), instructions card, 60-second cooldown resend countdown timer (`Resend link in Xs`), and a return to sign in button.
+   - Removed client-side `sendPasswordResetEmail(auth, email)` call to eliminate the security loophole of browser-initiated auth actions.
+
+4. **Verification**:
+   - Tested backend endpoints via PowerShell with client (`gp@gm.com`), admin (`admin@gmail.com`), operator (`manila@email.com`), and unregistered test emails:
+     - Client email: generated reset link and successfully dispatched email via Gmail SMTP (`MessageId: <ef45d398-8c3c-e2ef-6204-420ec5a4cdb0@gmail.com>`).
+     - Admin/Operator emails: returned `200 OK` with uniform message; suppressed email sending.
+     - Unregistered email: returned `200 OK` with uniform message; suppressed email sending.
+   - Tested frontend in browser subagent: verified initial form rendering, input styling, submission flow, transition to success screen, and 60s cooldown timer.
+   - Verified Vite production build (`npm run build`) in `fair-fly`, passing in 7.03s with 0 errors.
+
+---
+
 ## [2026-09-21] Fix: Client Branch Appointments Cards Redesign & Client Inquiry Modal (`SAF-01-002`) Unapplied Styles Fix
 
 ### Overview

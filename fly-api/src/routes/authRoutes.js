@@ -54,10 +54,19 @@ router.post(
   )
 );
 
-// Public route for requesting client password reset (rate-limited) with aliases
-router.post('/client-forgot-password', performanceProfiler('POST /auth/client-forgot-password', publicRateLimiter, requestClientPasswordReset));
-router.post('/forgot-password', performanceProfiler('POST /auth/forgot-password', publicRateLimiter, requestClientPasswordReset));
-router.post('/reset-password', performanceProfiler('POST /auth/reset-password', publicRateLimiter, requestClientPasswordReset));
+// Public route for requesting client password reset (rate-limited, protected fields) with aliases
+router.post(
+  '/client-forgot-password',
+  performanceProfiler('POST /auth/client-forgot-password', publicRateLimiter, allowedFields(['email']), requestClientPasswordReset)
+);
+router.post(
+  '/forgot-password',
+  performanceProfiler('POST /auth/forgot-password', publicRateLimiter, allowedFields(['email']), requestClientPasswordReset)
+);
+router.post(
+  '/reset-password',
+  performanceProfiler('POST /auth/reset-password', publicRateLimiter, allowedFields(['email']), requestClientPasswordReset)
+);
 
 module.exports = router;
 

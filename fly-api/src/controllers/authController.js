@@ -1,12 +1,19 @@
 const { admin, db } = require('../config/firebase');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 const COLLECTIONS = {
   USERS: 'users'
 };
 
+const GENERIC_RESET_SUCCESS_MESSAGE = 'If an account associated with this email is eligible, a password reset link has been sent.';
+
 /**
  * Request password reset for client accounts only
  * Payload: { email }
+ *
+ * Security requirements:
+ * 1. Generates and sends reset password link ONLY if account role === 'client'
+ * 2. If account is admin, operator, or unregistered: returns generic 200 success without sending email (prevents account & role enumeration)
  */
 const requestClientPasswordReset = async (req, res) => {
   try {
@@ -36,10 +43,12 @@ const requestClientPasswordReset = async (req, res) => {
         .get();
     }
 
-    // If no record found in users collection
+    // If no record found in users collection, return generic success (prevents account enumeration)
     if (userSnapshot.empty) {
-      return res.status(404).json({
-        error: 'No registered client account found with this email address. Please check your spelling or register for a new account.'
+      console.log(`[Auth] Password reset requested for non-existent email: ${normalizedEmail}. Email suppressed.`);
+      return res.status(200).json({
+        success: true,
+        message: GENERIC_RESET_SUCCESS_MESSAGE
       });
     }
 
@@ -47,30 +56,43 @@ const requestClientPasswordReset = async (req, res) => {
     const userData = userDoc.data();
     const userRole = (userData.role || '').toLowerCase();
 
-    // 2. Strict Role Check: Client accounts only
+    // 2. Strict Role Check: Privileged accounts (admin, operator, etc.) are silently suppressed
     if (userRole !== 'client') {
-      return res.status(403).json({
-        error: 'Password reset via this portal is only available for Client accounts. Franchise operators and Administrators must contact Head Office Support to recover account credentials.'
+      console.log(`[Auth] Password reset requested for privileged account (${userRole}): ${normalizedEmail}. Reset email suppressed for security.`);
+      return res.status(200).json({
+        success: true,
+        message: GENERIC_RESET_SUCCESS_MESSAGE
       });
     }
 
-    // 3. Generate Firebase Password Reset Link / Verify Auth Record
+    // 3. Client account verification and reset link dispatch
+    let authUser = null;
     try {
-      // Validate that user exists in Firebase Auth
-      await admin.auth().getUserByEmail(normalizedEmail);
+      authUser = await admin.auth().getUserByEmail(normalizedEmail);
     } catch (authErr) {
       if (authErr.code === 'auth/user-not-found') {
-        return res.status(404).json({
-          error: 'No authentication credentials found for this email. Please register for a client account.'
+        console.warn(`[Auth] Client Firestore record exists for ${normalizedEmail}, but no corresponding Firebase Auth user found.`);
+        return res.status(200).json({
+          success: true,
+          message: GENERIC_RESET_SUCCESS_MESSAGE
         });
       }
-      console.warn('Firebase Auth user lookup warning:', authErr.message);
+      console.error('[Auth] Firebase Auth lookup error:', authErr);
+      throw authErr;
     }
+
+    // 4. Generate official Firebase Auth Password Reset Link
+    const resetLink = await admin.auth().generatePasswordResetLink(normalizedEmail);
+
+    // 5. Send branded transactional email containing the reset link via Nodemailer
+    const recipientName = userData.fullName || userData.name || authUser?.displayName || 'Valued Traveler';
+    await sendPasswordResetEmail(normalizedEmail, recipientName, resetLink);
+
+    console.log(`[Auth] Password reset link generated and emailed to client: ${normalizedEmail}`);
 
     return res.status(200).json({
       success: true,
-      email: normalizedEmail,
-      message: 'Client verification confirmed. A password reset link will be sent to your email.'
+      message: GENERIC_RESET_SUCCESS_MESSAGE
     });
   } catch (error) {
     console.error('Error in requestClientPasswordReset:', error);
