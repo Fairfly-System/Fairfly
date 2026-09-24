@@ -6,7 +6,11 @@ const {
 } = require('../services/firebaseService');
 const { db } = require('../config/firebase');
 const admin = require('firebase-admin');
-const { createNotification } = require('../services/notificationService');
+const {
+  createNotification,
+  notifyBranch,
+  notifyAdmins
+} = require('../services/notificationService');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
@@ -215,6 +219,40 @@ const createActiveService = async (req, res) => {
     };
 
     const docId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, newService);
+
+    // 1. Notify Assigned Branch Operator(s)
+    notifyBranch({
+      branchUid: targetBranchUid,
+      branchName: newService.branchName,
+      title: 'New Service Request Assigned',
+      message: `${newService.clientName} submitted a new request for "${newService.serviceType}".`,
+      type: 'service',
+      link: '/operator/services',
+      metadata: { activeServiceId: docId, serviceType: newService.serviceType }
+    }).catch(err => console.warn('Active service operator notification warning:', err.message));
+
+    // 2. Notify Admins
+    notifyAdmins({
+      title: 'New Service Request',
+      message: `${newService.clientName} requested "${newService.serviceType}" at ${newService.branchName}.`,
+      type: 'service',
+      link: '/admin/services',
+      metadata: { activeServiceId: docId, branchName: newService.branchName }
+    }).catch(err => console.warn('Admin service notification warning:', err.message));
+
+    // 3. Receipt notification for Client (if registered)
+    if (newService.clientUid) {
+      createNotification({
+        recipientUid: newService.clientUid,
+        recipientRole: 'client',
+        title: 'Service Request Submitted',
+        message: `Your request for "${newService.serviceType}" has been submitted to ${newService.branchName}. Track live progress anytime in Tracking.`,
+        type: 'service',
+        link: '/client/tracking',
+        metadata: { activeServiceId: docId, serviceType: newService.serviceType }
+      }).catch(err => console.warn('Client service request receipt notification warning:', err.message));
+    }
+
     return res.status(201).json({ id: docId, ...newService, message: 'Active service record created successfully' });
   } catch (error) {
     console.error('Error creating active service:', error);
@@ -312,26 +350,42 @@ const updateStepStatus = async (req, res) => {
         updatedAt: now
       });
 
-      // When service fulfillment completes, send in-app notification to the client
-      if (allCompleted && serviceRecord.clientUid) {
+      // Send in-app notification to the client
+      if (serviceRecord.clientUid) {
         try {
-          await createNotification({
-            recipientUid: serviceRecord.clientUid,
-            recipientRole: 'client',
-            title: 'Service Completed & Fulfilled',
-            message: `Your service "${serviceRecord.serviceType}" has been successfully completed and fulfilled by ${serviceRecord.branchName || 'FairFly'}.`,
-            type: 'service',
-            link: '/tracking',
-            metadata: {
-              serviceId: id,
-              status: 'Completed',
-              serviceType: serviceRecord.serviceType,
-              completedAt: now,
-              revenueAmount: creditedAmount
-            }
-          });
+          if (allCompleted) {
+            await createNotification({
+              recipientUid: serviceRecord.clientUid,
+              recipientRole: 'client',
+              title: 'Service Completed & Fulfilled',
+              message: `Your service "${serviceRecord.serviceType}" has been successfully completed and fulfilled by ${serviceRecord.branchName || 'FairFly'}.`,
+              type: 'service',
+              link: '/client/tracking',
+              metadata: {
+                serviceId: id,
+                status: 'Completed',
+                serviceType: serviceRecord.serviceType,
+                completedAt: now,
+                revenueAmount: creditedAmount
+              }
+            });
+          } else {
+            await createNotification({
+              recipientUid: serviceRecord.clientUid,
+              recipientRole: 'client',
+              title: 'Service Progress Update',
+              message: `Step ${targetIdx + 1} (${steps[targetIdx]?.title || 'Processing'}) for "${serviceRecord.serviceType}" was completed by ${serviceRecord.branchName || 'FairFly'}.`,
+              type: 'service',
+              link: '/client/tracking',
+              metadata: {
+                serviceId: id,
+                stepIndex: targetIdx,
+                serviceType: serviceRecord.serviceType
+              }
+            });
+          }
         } catch (notifErr) {
-          console.error('Error sending completion notification to client:', notifErr);
+          console.error('Error sending step notification to client:', notifErr);
         }
       }
 

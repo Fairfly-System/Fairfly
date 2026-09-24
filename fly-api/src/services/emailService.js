@@ -468,10 +468,401 @@ const sendPasswordResetEmail = async (toEmail, fullName, resetLink) => {
   }
 };
 
+/**
+ * Generate branded HTML template for account approval notification
+ */
+const generateAccountApprovedEmailHtml = ({ fullName, loginUrl }) => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your FairFly Account is Approved!</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1E293B;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #F8FAFC;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 540px;
+      margin: 0 auto;
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #16A34A;
+      padding: 32px 32px 28px 32px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      color: #FFFFFF;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      margin: 6px 0 0 0;
+      color: #DCFCE7;
+      font-size: 14px;
+    }
+    .content {
+      padding: 36px 32px;
+    }
+    .greeting {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0F172A;
+      margin-bottom: 12px;
+    }
+    .text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #334155;
+      margin: 0 0 20px 0;
+    }
+    .badge-box {
+      background-color: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .badge-text {
+      color: #15803D;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .btn-wrap {
+      text-align: center;
+      margin: 28px 0;
+    }
+    .action-btn {
+      display: inline-block;
+      background-color: #16A34A;
+      color: #FFFFFF !important;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+    .footer {
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      padding: 24px 32px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>FairFly Portal</h1>
+        <p>Identity Verification &bull; Account Approved</p>
+      </div>
+      <div class="content">
+        <div class="greeting">Hello ${fullName || 'Valued Traveler'},</div>
+        <p class="text">
+          Great news! Our administration team has reviewed and verified your uploaded government ID. Your FairFly client account is now <strong>fully approved and ready to use</strong>.
+        </p>
+
+        <div class="badge-box">
+          <div class="badge-text">&#10004; Government ID Verified &bull; Account Active</div>
+        </div>
+
+        <p class="text">
+          You can now sign in to book travel services, schedule consular filings, track passport renewals, and connect directly with authorized franchise branch operators across the Philippines.
+        </p>
+
+        <div class="btn-wrap">
+          <a href="${loginUrl}" class="action-btn" target="_blank" rel="noopener noreferrer">Sign In to FairFly</a>
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} FairFly Travel &amp; Tours System. All rights reserved.<br>
+        Standardized Cloud Platform &bull; ISO 9001:2000 Ready Architecture
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Send account approved email
+ */
+const sendAccountApprovedEmail = async (toEmail, fullName, loginUrl) => {
+  const mailTransporter = getTransporter();
+  const smtpUser = process.env.SMTP_USER?.trim();
+
+  let fromAddress = process.env.EMAIL_FROM?.trim();
+  if (!fromAddress || fromAddress.includes('no-reply@fairfly.com')) {
+    fromAddress = smtpUser ? `"FairFly Account Services" <${smtpUser}>` : '"FairFly Account Services" <no-reply@fairfly.com>';
+  }
+
+  const mailOptions = {
+    from: fromAddress,
+    to: toEmail,
+    subject: `Your FairFly Account is Approved! Ready to Sign In`,
+    text: `Hello ${fullName || 'Valued Traveler'},\n\nGreat news! Our administration team has reviewed and verified your uploaded government ID. Your FairFly client account is now fully approved and ready to use.\n\nSign in here:\n${loginUrl}\n\nFairFly Travel & Tours System`,
+    html: generateAccountApprovedEmailHtml({ fullName, loginUrl })
+  };
+
+  if (mailTransporter) {
+    try {
+      const info = await mailTransporter.sendMail(mailOptions);
+      console.log(`[EmailService] Account approval email sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return { sent: true, mode: 'smtp', messageId: info.messageId };
+    } catch (err) {
+      console.error(`[EmailService] Error sending approval email to ${toEmail}:`, err.message);
+      return { sent: false, mode: 'fallback-logged', error: err.message };
+    }
+  } else {
+    console.log(`\n=============================================================`);
+    console.log(`[EmailService: DEV MODE — ACCOUNT APPROVED EMAIL]`);
+    console.log(`Recipient: ${toEmail} (${fullName})`);
+    console.log(`Login URL: ${loginUrl}`);
+    console.log(`=============================================================\n`);
+    return { sent: true, mode: 'dev-console' };
+  }
+};
+
+/**
+ * Generate branded HTML template for account rejection with re-upload link
+ */
+const generateAccountRejectedEmailHtml = ({ fullName, reason, reuploadUrl }) => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Action Required: FairFly ID Verification</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1E293B;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #F8FAFC;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 540px;
+      margin: 0 auto;
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #DC2626;
+      padding: 32px 32px 28px 32px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      color: #FFFFFF;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      margin: 6px 0 0 0;
+      color: #FEE2E2;
+      font-size: 14px;
+    }
+    .content {
+      padding: 36px 32px;
+    }
+    .greeting {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0F172A;
+      margin-bottom: 12px;
+    }
+    .text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #334155;
+      margin: 0 0 20px 0;
+    }
+    .reason-box {
+      background-color: #FEF2F2;
+      border-left: 4px solid #DC2626;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .reason-title {
+      color: #991B1B;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .reason-desc {
+      color: #7F1D1D;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .btn-wrap {
+      text-align: center;
+      margin: 28px 0;
+    }
+    .action-btn {
+      display: inline-block;
+      background-color: #5558E3;
+      color: #FFFFFF !important;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+    .fallback-box {
+      background-color: #F8FAFC;
+      border: 1px dashed #CBD5E1;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      color: #64748B;
+      word-break: break-all;
+      margin-top: 20px;
+    }
+    .footer {
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      padding: 24px 32px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>FairFly Portal</h1>
+        <p>Identity Verification &bull; Re-upload Required</p>
+      </div>
+      <div class="content">
+        <div class="greeting">Hello ${fullName || 'Valued Traveler'},</div>
+        <p class="text">
+          Thank you for registering with FairFly. Our administration team has reviewed the government ID document you submitted, but could not approve it due to the following reason:
+        </p>
+
+        <div class="reason-box">
+          <div class="reason-title">Reviewer Feedback:</div>
+          <div class="reason-desc">${reason || 'The submitted ID image was blurry, incomplete, or could not be clearly verified. Please submit a clear photo of the front and back of your valid government ID.'}</div>
+        </div>
+
+        <p class="text">
+          Don't worry! You can easily re-upload a clear copy of the front and back of your valid government-issued ID by clicking the button below:
+        </p>
+
+        <div class="btn-wrap">
+          <a href="${reuploadUrl}" class="action-btn" target="_blank" rel="noopener noreferrer">Re-upload Valid ID</a>
+        </div>
+
+        <div class="fallback-box">
+          If the button above does not work, visit this secure link directly:<br>
+          <a href="${reuploadUrl}" target="_blank" rel="noopener noreferrer">${reuploadUrl}</a>
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} FairFly Travel &amp; Tours System. All rights reserved.<br>
+        Standardized Cloud Platform &bull; ISO 9001:2000 Ready Architecture
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Send account rejected email with re-upload link
+ */
+const sendAccountRejectedEmail = async (toEmail, fullName, reason, reuploadUrl) => {
+  const mailTransporter = getTransporter();
+  const smtpUser = process.env.SMTP_USER?.trim();
+
+  let fromAddress = process.env.EMAIL_FROM?.trim();
+  if (!fromAddress || fromAddress.includes('no-reply@fairfly.com')) {
+    fromAddress = smtpUser ? `"FairFly Account Verification" <${smtpUser}>` : '"FairFly Account Verification" <no-reply@fairfly.com>';
+  }
+
+  const mailOptions = {
+    from: fromAddress,
+    to: toEmail,
+    subject: `Action Required: Re-upload Government ID for FairFly Account`,
+    text: `Hello ${fullName || 'Valued Traveler'},\n\nOur administration team reviewed your uploaded government ID, but could not approve it:\n\nReason: ${reason || 'ID image was blurry or could not be verified'}\n\nPlease visit the following link to re-upload a clear copy of your valid ID (front and back):\n${reuploadUrl}\n\nFairFly Travel & Tours System`,
+    html: generateAccountRejectedEmailHtml({ fullName, reason, reuploadUrl })
+  };
+
+  if (mailTransporter) {
+    try {
+      const info = await mailTransporter.sendMail(mailOptions);
+      console.log(`[EmailService] Rejection email sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return { sent: true, mode: 'smtp', messageId: info.messageId };
+    } catch (err) {
+      console.error(`[EmailService] Error sending rejection email to ${toEmail}:`, err.message);
+      return { sent: false, mode: 'fallback-logged', error: err.message };
+    }
+  } else {
+    console.log(`\n=============================================================`);
+    console.log(`[EmailService: DEV MODE — ACCOUNT REJECTED EMAIL]`);
+    console.log(`Recipient: ${toEmail} (${fullName})`);
+    console.log(`Reason: ${reason}`);
+    console.log(`Re-upload URL: ${reuploadUrl}`);
+    console.log(`=============================================================\n`);
+    return { sent: true, mode: 'dev-console' };
+  }
+};
+
 module.exports = {
   sendVerificationCodeEmail,
   generateVerificationEmailHtml,
   sendPasswordResetEmail,
-  generatePasswordResetEmailHtml
+  generatePasswordResetEmailHtml,
+  sendAccountApprovedEmail,
+  generateAccountApprovedEmailHtml,
+  sendAccountRejectedEmail,
+  generateAccountRejectedEmailHtml
 };
+
 

@@ -195,6 +195,20 @@ const updateTicketStatus = async (req, res) => {
     }
 
     await updateToDatabase(dbPath, updateData);
+
+    // Notify Operator of status change
+    if (existing.operatorId) {
+      createNotification({
+        recipientUid: existing.operatorId,
+        recipientRole: 'operator',
+        title: 'Ticket Status Updated',
+        message: `Your ticket "${existing.title}" is now marked as ${normalizedStatus}.`,
+        type: 'ticket',
+        link: '/operator/tickets',
+        metadata: { ticketId: id, status: normalizedStatus }
+      }).catch(e => console.warn('Ticket status operator notification warning:', e.message));
+    }
+
     return res.status(200).json({ message: `Ticket status updated to ${normalizedStatus}` });
   } catch (error) {
     console.error('Error updating ticket status:', error);
@@ -309,6 +323,30 @@ const closeTicket = async (req, res) => {
       closedBy: closedBy,
       updatedAt: now
     });
+
+    const isClosedByAdmin = req.userDetails?.role === 'admin';
+
+    // If closed by admin, notify the operator
+    if (isClosedByAdmin && existingTicket.operatorId) {
+      createNotification({
+        recipientUid: existingTicket.operatorId,
+        recipientRole: 'operator',
+        title: 'Ticket Closed',
+        message: `Your ticket "${existingTicket.title}" has been closed by ${closedBy}.`,
+        type: 'ticket',
+        link: '/operator/tickets',
+        metadata: { ticketId: id, status: 'Closed' }
+      }).catch(e => console.warn('Ticket close operator notification warning:', e.message));
+    } else if (!isClosedByAdmin) {
+      // If closed by operator, notify admins
+      notifyAdmins({
+        title: 'Ticket Closed by Operator',
+        message: `Ticket "${existingTicket.title}" was resolved and closed by ${closedBy}.`,
+        type: 'ticket',
+        link: '/admin/tickets',
+        metadata: { ticketId: id, status: 'Closed' }
+      }).catch(e => console.warn('Ticket close admin notification warning:', e.message));
+    }
 
     return res.status(200).json({ message: 'Ticket thread has been closed', closedAt: now, closedBy });
   } catch (error) {

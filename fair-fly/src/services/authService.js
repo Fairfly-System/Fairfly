@@ -82,4 +82,24 @@ export function resendRegistrationCode(email, successCallback, errorCallback, se
   );
 }
 
+/**
+ * Re-upload government ID for rejected client
+ * @param {object} payload - { email, token, idType, idFrontUrl, idBackUrl, idFrontName, idBackName }
+ * @param {function} successCallback - Success callback handler
+ * @param {function} errorCallback - Error callback handler
+ * @param {function} setIsLoading - Loading state setter
+ */
+export function reuploadId(payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/reupload-id`,
+    'POST',
+    payload,
+    {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+
 

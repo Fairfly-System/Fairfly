@@ -1,5 +1,147 @@
 # Update Logs
 
+## [2026-09-25] Fix: Client Table Filter Chips, Bulk Actions Standard Layout & Service Workflows Real-Time Listing
+
+### Overview
+Addressed user-reported issues across the Client Management and Service Workflow modules:
+1. **Client Table Filter Chips & Standard Component Layout**: Fixed the filter chips in `ClientsContent.jsx` which were not switching filters. Standardized the Client table layout using the shared `DataTable`, `Pagination`, `table-toolbar`, and `search-box` components matching the Operators and Workflows tables.
+2. **Client Bulk Operations**: Added bulk selection checkboxes, multi-row selection state, and bulk action buttons (`onBulkEnable`, `onBulkDisable`, `onBulkDelete`) with confirmation dialogs. Implemented matching backend endpoints `PATCH /api/clients/bulk-status` and `POST /api/clients/bulk-delete` in `clientController.js` and `clientRoutes.js` with Firebase Auth and Firestore cascade synchronization.
+3. **Service Workflows Listing & Real-Time Attachment**: Fixed the bug where workflows were not listed when adding/attaching workflows to a service. Added `/api/workflows` route aliases in `workflowRoutes.js`, upgraded `ServiceWorkflowsModal.jsx` with real-time Firestore sync (`onSnapshot`) and an in-modal "+ New Workflow" creation flow. Upgraded `ServiceDetailPage.jsx` and `OperatorServiceDetailPage.jsx` to resolve and render all attached workflows, stage checklists, file attachments, and updated KPI counters.
+
+### Key Changes
+1. **FilterChipGroup & Clients Filter Chips (`FilterChipGroup.jsx`, `ClientsContent.jsx`)**:
+   - Enhanced `FilterChipGroup` to seamlessly accept `activeFilter` and `onFilterChange` aliases in addition to `activeChip` / `onChipChange`.
+   - Updated `ClientsContent.jsx` to bind `activeChip={statusFilter}` and `onChipChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}`.
+2. **Client Table Layout & Bulk Actions (`ClientsContent.jsx`, `admin-clients.css`, `clientController.js`, `clientRoutes.js`, `adminService.js`)**:
+   - Aligned table container structure to `.card.clients-table-card`, `.table-toolbar`, and `.search-box`.
+   - Enabled `selectable={true}` on `DataTable` with `selectedIds`, `onSelectionChange`, `onBulkEnable`, `onBulkDisable`, and `onBulkDelete`.
+   - Added confirmation modals for bulk activating, disabling, and permanently deleting selected accounts.
+   - Built `bulkStatusClients` (`PATCH /api/clients/bulk-status`) to bulk toggle client status in Firestore.
+   - Built `bulkDeleteClients` (`POST /api/clients/bulk-delete`) to bulk purge accounts from Firebase Auth and Firestore.
+3. **Workflow Route Aliases & Workflow Service (`workflowRoutes.js`, `workflowService.js`)**:
+   - Added direct route aliases `/` (GET, POST, bulk-delete) and `/:id` (GET, PUT, PATCH, DELETE) to `workflowRoutes.js` so client calls to `/api/workflows` resolve properly.
+4. **Service Workflows Modal Real-Time Sync & In-Modal Creation (`ServiceWorkflowsModal.jsx`)**:
+   - Subscribed to `onSnapshot(collection(firestore, 'workflowTemplates'))` with API fallback for instantaneous real-time workflow discovery.
+   - Integrated `WorkflowModal` directly into `ServiceWorkflowsModal`, allowing administrators to create a brand-new workflow template on the fly and have it automatically attached.
+5. **Service Detail Workflows Resolution & Presentation (`ServiceDetailPage.jsx`, `OperatorServiceDetailPage.jsx`, `service-detail.css`)**:
+   - Resolved `service.workflowIds` against `workflowTemplates` via real-time Firestore listener.
+   - Replaced empty `service.steps` display with individual attached workflow cards featuring name, service type badge, step count, full checklist steps, third-party links, and document attachments.
+   - Updated the KPI card from 0 stages to reflect total attached workflows and aggregated steps.
+   - Removed the misplaced "Perform Service SOP" callout banner from `OperatorServiceDetailPage.jsx` since execution procedures belong exclusively to active client transaction orders on the Operator Dashboard.
+
+---
+
+
+## [2026-09-25] Feature: Client Government ID Verification, Admin Review Tabs, Approval/Rejection Flow, and Anti-Spam Protection
+
+### Overview
+Implemented a client registration verification and anti-spam system to protect the platform from bot and spam account creation. Client registration now mandates selecting an official Philippine government ID type and uploading dual high-resolution scans/photos (Front and Back side) alongside an information modal detailing acceptable documents. Accounts remain in a pending state until vetted by an administrator. Administrators can inspect front and back IDs via a dedicated "Identity Verification" tab in the Client Detail Record with high-resolution lightbox inspection, approve accounts (with automated welcome email), reject submissions with customized feedback (with automated email containing a secure re-upload link), or permanently purge spam accounts from both Firebase Auth and Firestore.
+
+### Key Changes
+
+1. **Client Registration & Valid ID Upload (`ValidIdUpload.jsx`, `ValidIdInfoModal.jsx`, `Register.jsx`)**:
+   - Built reusable `ValidIdUpload` component with ID type selector (16 accepted Philippine government IDs), info modal button, and dual dropzones for front and back images with real-time preview thumbnails, file validation (JPG/PNG/WEBP/PDF, <=10MB), and removal controls.
+   - Built `ValidIdInfoModal` displaying accepted Primary (Passport, UMID, Driver's License, PhilID National ID, PRC ID, SSS ID) and Secondary IDs, plus compliance guidelines (clear lighting, all 4 corners visible, unexpired).
+   - Integrated validation into `Register.jsx` to mandate `idType` and `idFrontUrl` (and optional/recommended `idBackUrl`) prior to submission.
+   - Adjusted `VerifyEmail.jsx` so email verification leads to an "Application Under Review" confirmation screen rather than premature direct login.
+
+2. **Pending Client Login Guard (`login.jsx`)**:
+   - If a client with `status === 'Pending'` attempts to log in, Firebase Auth immediately signs out, navigation is aborted, and a persistent informative Toast notification is displayed informing the user that their account registration is under administrator review and an email will be sent upon approval.
+
+3. **Admin Client Management & KPI Metrics (`ClientsContent.jsx`, `admin-clients.css`)**:
+   - Added a 4th KPI summary card "Pending Verification" with amber badge indicators for accounts awaiting review.
+   - Added a "Pending Approval" filter chip filter with real-time count badges.
+   - Enhanced the table Status column to display amber `Pending Review` pills with clock icons and rose `Rejected` pills.
+   - Added warning banner in `alertBarProps` highlighting when pending ID verifications require attention.
+   - Quick action link directly routes to the new verification tab with amber highlight.
+
+4. **Client Detail Record "Identity Verification" Tab & Lightbox (`ClientDetailPage.jsx`, `IdPreviewModal.jsx`, `RejectClientModal.jsx`)**:
+   - Added tab switcher between "Account Overview" and "Identity Verification".
+   - If client is `Pending`, defaults directly to the "Identity Verification" tab on page load.
+   - Side-by-side front and back ID display cards with full-width preview frame, hover zoom overlay, "Inspect Full Size" button, and "Open Original" link.
+   - Built `IdPreviewModal` providing a high-resolution darkroom lightbox view of either side.
+   - Built `RejectClientModal` with preset feedback suggestions ("Blurry or unreadable photo", "Document is expired", "Name does not match account", etc.) and custom feedback textarea.
+   - Added top header actions and in-page decision action panel:
+     - **Approve Account**: Marks account as `Active` / `Approved` and triggers automated approval email to client.
+     - **Reject Application**: Marks account as `Rejected`, creates `reuploadToken`, and emails client with rejection reason and secure reupload link.
+     - **Delete Spam**: Permanently deletes the client account from both Firebase Auth and Firestore database.
+
+5. **Client ID Resubmission Portal (`ReuploadId.jsx`, `reupload-id.css`, `App.jsx`)**:
+   - Created `/reupload-id` route and page allowing rejected applicants to enter the email link token, inspect admin feedback, select and re-upload corrected front/back ID images, and resubmit for review.
+   - Resubmission transitions the account back to `Pending` and dispatches a high-priority in-app notification to administrators.
+
+6. **Backend Verification & Email Dispatch Pipeline (`fly-api`)**:
+   - `emailService.js`: Added branded HTML templates and sender functions `sendAccountApprovedEmail` and `sendAccountRejectedEmail` with secure deep links and graceful dev fallback.
+   - `verificationService.js`: Added `idType`, `idFrontUrl`, `idBackUrl` validation in `createPendingRegistration`, and `notifyAdmins` notification on client submission.
+   - `clientController.js`: Added `approveClient` (with email + in-app notification) and `rejectClient` (with secure token generation, email with reupload URL, and in-app notification). Verified `deleteClient` purges both Firebase Auth and Firestore.
+   - `authController.js` & `authRoutes.js`: Added `POST /api/auth/reupload-id` endpoint with secure token verification, status reset to `Pending`, and admin in-app notification.
+
+### Verification
+- Executed `npm run build` in `fair-fly`, passing cleanly with 0 compilation errors.
+- Verified backend server running with nodemon on port 5001 with Firebase Admin SDK successfully connected.
+- Tested component rendering, modal states, tab switching, and auth status checks.
+
+---
+
+
+## [2026-09-23] Feature: Client Preferred Branch Debounced Search & System-Wide Real-Time In-App Notifications
+
+### Overview
+Addressed the issue where the "Preferred Processing Branch" field in the Client Inquiry Modal (`ClientInquiryModal.jsx`, Form `SAF-01-002`) displayed no options by building a reusable debounced searchable branch selection component (`BranchSelectSearch`). Additionally, implemented comprehensive, system-wide real-time in-app notifications across all core workflows—including Client Inquiry intake, Quotations, Active Service requests & step progress, Appointments, Support Tickets, Qualifications, Franchise applications, and Service Catalog publishing.
+
+### Key Changes
+
+1. **Client Preferred Branch Debounced Search (`BranchSelectSearch.jsx`, `branch-select-search.css`)**:
+   - **Root Cause Resolution**: The branch API `/api/operators/branches` returned `branchName` and `address` fields, but `ClientInquiryModal.jsx` expected `branch.name`, causing the HTML `<select>` to render empty blank options. Added dual alias support (`name` / `branchName`, `address` / `location`) in `fly-api/src/controllers/operatorController.js` and added Firestore fallback loading.
+   - **Reusable Component**: Built `BranchSelectSearch` conforming to `.agents/rules/style-guide-components.md` and `AGENTS.md` (reusable components for repeated UI elements):
+     - 300ms query debouncing with instant input responsiveness.
+     - Clear button (`xmark`) to quickly reset filters.
+     - Active selection badge with branch name, address, and quick "Change" action.
+     - Empty states with helpful suggestions and loading spinner.
+     - Keyboard accessibility and click-outside dropdown closure.
+   - **Integration in Client Intake Modal (`ClientInquiryModal.jsx`)**:
+     - Replaced native `<select>` with `<BranchSelectSearch />`.
+     - Preserved form validity and updated submit payload to cleanly fallback between `branchName` and `name`.
+
+2. **Backend Real-Time Notification Pipeline (`fly-api/src/services/notificationService.js`)**:
+   - Added `notifyBranch({ branchUid, branchName, title, message, type, link, metadata })`:
+     - Dispatches notification directly to `recipientUid: branchUid` (where branch UID equals the operator account ID).
+     - Simultaneously queries matching operators by `branchName` to ensure all operators for that branch receive the update without duplicates.
+     - Safely falls back to `notifyAllOperators` if no specific branch operator is resolved.
+
+3. **System-Wide Workflow Notifications (`fly-api/src/controllers/`)**:
+   - **Client Inquiries (`inquiryController.js`)**:
+     - `createInquiry`: Notifies the assigned Branch Operator (`notifyBranch`), Admins (`notifyAdmins`), and Client (`createNotification` receipt).
+     - `confirmInquiry`: Notifies Client with direct quotation reference (`/client/tracking`) and Admins upon operator confirmation.
+   - **Quotations (`quotationController.js`)**:
+     - `createQuotation`: Notifies Client of new quotation available with total fee summary.
+     - `updateQuotationStatus`: Notifies Client when quotation is marked `'Sent'`; notifies Operator when marked `'Rejected'` or `'Cancelled'`.
+     - `acceptQuotation`: Notifies Branch Operator and Admins of client acceptance; sends confirmation notification to Client.
+   - **Active Services & Service Requests (`activeServiceController.js`)**:
+     - `createActiveService`: Notifies Branch Operator, Admins, and Client on service requests submitted via the marketplace modal.
+     - `updateStepStatus`: Sends live step progress updates to Client as operators complete each milestone; notifies upon final fulfillment with corrected link (`/client/tracking`).
+   - **Appointments (`appointmentController.js`)**:
+     - `createAppointment`: Notifies Branch Operator via `notifyBranch`, Admins, and Client with appointment details.
+     - `updateAppointmentStatus`: Notifies Admins when appointments are confirmed or cancelled.
+   - **Support Tickets (`ticketController.js`)**:
+     - `updateTicketStatus`: Notifies Operator when admin updates status to `'Ongoing'` or `'Closed'`.
+     - `closeTicket`: Notifies Operator if closed by admin, or Admins if closed by operator.
+   - **Qualification Requests (`qualificationController.js`)**:
+     - `reviewQualificationApplication`: Notifies Operator upon approval (`Qualification Approved! 🎉`) or rejection with admin notes.
+   - **Franchise Applications (`franchiseController.js`)**:
+     - `updateApplicationStatus`: Notifies applicant if registered user on status changes.
+   - **Service Catalog (`serviceController.js`)**:
+     - `createService`: Notifies all operators when admin publishes a new catalog service; notifies admins when an operator creates a branch-exclusive service.
+
+4. **Frontend Notification Dropdown Categories (`NotificationBell.jsx`)**:
+   - Extended `getCategoryIcon` to map `'inquiry'`, `'quotation'`, and `'qualification'` types to dedicated FontAwesome icons (`fa-file-invoice`, `fa-file-circle-dollar`, `fa-award`).
+
+5. **Verification**:
+   - Verified frontend Vite build (`npm run build`) in `fair-fly`, passing with 0 errors.
+   - Executed live test inquiry submission to `http://localhost:5001/api/inquiries` targeting Manila branch operator (`CIQvnx68jRM6SHU1BM7JeaFCzIv2`). Verified in Firestore that real-time notifications were created for both the branch operator and administrators, and cleaned up test records.
+
+---
+
 ## [2026-09-23] Feature: Client Forgot Password Backend Implementation & Modern 50/50 Split Reset Page Redesign
 
 ### Overview

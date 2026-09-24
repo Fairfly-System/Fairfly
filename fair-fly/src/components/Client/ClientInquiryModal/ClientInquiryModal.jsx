@@ -5,6 +5,7 @@ import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { createInquiry } from '../../../services/inquiryService';
+import BranchSelectSearch from '../../UI/BranchSelectSearch/BranchSelectSearch';
 import './client-inquiry-modal.css';
 
 const OFFICIAL_SERVICES = [
@@ -56,6 +57,35 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   useEffect(() => {
     if (!isOpen) return;
 
+    const fetchBranchesFirestore = async () => {
+      try {
+        const { collection, getDocs, query, where } = await import('firebase/firestore');
+        const { db } = await import('../../../firebase');
+        const q = query(collection(db, 'users'), where('role', '==', 'operator'));
+        const snap = await getDocs(q);
+        const list = snap.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            uid: doc.id,
+            id: doc.id,
+            branchName: d.branchName || d.name || 'Branch Operator',
+            name: d.branchName || d.name || 'Branch Operator',
+            address: d.address || d.location || '',
+            location: d.location || d.address || '',
+            email: d.email || ''
+          };
+        });
+        if (list.length > 0) {
+          setBranchesList(list);
+          setSelectedBranchUid((prev) => prev || list[0].uid);
+        }
+        setLoadingBranches(false);
+      } catch (err) {
+        console.warn('Firestore fallback branch load failed:', err);
+        setLoadingBranches(false);
+      }
+    };
+
     setLoadingBranches(true);
     ApiCaller(
       `${API_BASE_URL}/api/operators/branches`,
@@ -64,15 +94,17 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       userToken ? { Authorization: `Bearer ${userToken}` } : {},
       (data) => {
         const branches = Array.isArray(data) ? data : [];
-        setBranchesList(branches);
-        if (branches.length > 0 && !selectedBranchUid) {
-          setSelectedBranchUid(branches[0].uid);
+        if (branches.length > 0) {
+          setBranchesList(branches);
+          setSelectedBranchUid((prev) => prev || branches[0].uid || branches[0].id);
+          setLoadingBranches(false);
+        } else {
+          fetchBranchesFirestore();
         }
-        setLoadingBranches(false);
       },
       (err) => {
-        console.warn('Could not load branch operators from API:', err);
-        setLoadingBranches(false);
+        console.warn('Could not load branch operators from API, attempting fallback:', err);
+        fetchBranchesFirestore();
       }
     );
   }, [isOpen, userToken]);
@@ -115,7 +147,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       return;
     }
 
-    const selectedBranchObj = branchesList.find((b) => b.uid === selectedBranchUid);
+    const selectedBranchObj = branchesList.find((b) => (b.uid || b.id) === selectedBranchUid);
 
     const payload = {
       clientUid: user?.uid || null,
@@ -129,7 +161,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       contractNo: contractNo.trim(),
       isNo: isNo.trim(),
       branchUid: selectedBranchUid || null,
-      branchName: selectedBranchObj?.name || 'Main Branch',
+      branchName: selectedBranchObj?.branchName || selectedBranchObj?.name || 'Main Branch',
       servicesOffered: selectedServices,
       serviceType: selectedServices.join(', '),
       specifiedRequirements: specifiedRequirements.trim(),
@@ -283,23 +315,16 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
               />
             </div>
 
-            {branchesList.length > 0 && (
-              <div className="inquiry-field-group col-span-2">
-                <label htmlFor="preferredBranch">Preferred Processing Branch</label>
-                <select
-                  id="preferredBranch"
-                  className="input-base"
-                  value={selectedBranchUid}
-                  onChange={(e) => setSelectedBranchUid(e.target.value)}
-                >
-                  {branchesList.map((branch) => (
-                    <option key={branch.uid} value={branch.uid}>
-                      {branch.name} {branch.location ? `— ${branch.location}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="inquiry-field-group col-span-2">
+              <BranchSelectSearch
+                branches={branchesList}
+                selectedBranchUid={selectedBranchUid}
+                onSelectBranch={(uid) => setSelectedBranchUid(uid)}
+                isLoading={loadingBranches}
+                label="Preferred Processing Branch"
+                placeholder="Search branch by name, address, or location..."
+              />
+            </div>
           </div>
         </div>
 

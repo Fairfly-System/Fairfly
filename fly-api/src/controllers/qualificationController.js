@@ -5,7 +5,7 @@ const {
   updateToDatabase 
 } = require('../services/firebaseService');
 const { userCache } = require('../services/cacheService');
-const { notifyAdmins } = require('../services/notificationService');
+const { createNotification, notifyAdmins } = require('../services/notificationService');
 
 const COLLECTIONS = {
   QUALIFICATION_APPLICATIONS: 'qualificationApplications',
@@ -241,6 +241,21 @@ const reviewQualificationApplication = async (req, res) => {
           userCache.del(application.operatorId);
         }
       }
+    }
+
+    // Notify Operator of qualification decision
+    if (application.operatorId) {
+      createNotification({
+        recipientUid: application.operatorId,
+        recipientRole: 'operator',
+        title: isApproved ? 'Qualification Approved! 🎉' : 'Qualification Application Update',
+        message: isApproved
+          ? 'Congratulations! Your branch has been approved as a Qualified Operator. You can now create and manage custom services.'
+          : `Your qualification application has been reviewed and was not approved at this time.${adminNotes ? ` Note: ${adminNotes}` : ''}`,
+        type: 'qualification',
+        link: '/operator/services',
+        metadata: { applicationId: id, status }
+      }).catch(e => console.warn('Qualification decision notification warning:', e.message));
     }
 
     return res.status(200).json({

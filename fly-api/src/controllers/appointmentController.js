@@ -6,6 +6,7 @@ const {
 } = require('../services/firebaseService');
 const { 
   createNotification, 
+  notifyBranch,
   notifyAdmins, 
   notifyBranchOperators 
 } = require('../services/notificationService');
@@ -57,14 +58,38 @@ const createAppointment = async (req, res) => {
 
     const docId = await addToDatabase(COLLECTIONS.APPOINTMENTS, newAppointment);
 
-    // Dispatch background notifications
-    notifyBranchOperators({
+    // 1. Dispatch branch notifications via notifyBranch (handles branchUid & branchName)
+    notifyBranch({
+      branchUid: newAppointment.branchUid,
       branchName: newAppointment.branchName,
       title: 'New Appointment Booking',
       message: `${newAppointment.clientName} booked for ${newAppointment.serviceType} on ${newAppointment.preferredDate} (${newAppointment.preferredTime})`,
       type: 'appointment',
-      link: '/operator/appointments'
-    }).catch(e => console.warn('Appointment notification warning:', e.message));
+      link: '/operator/appointments',
+      metadata: { appointmentId: docId, clientName: newAppointment.clientName, serviceType: newAppointment.serviceType }
+    }).catch(e => console.warn('Appointment branch notification warning:', e.message));
+
+    // 2. Dispatch notification to Admins
+    notifyAdmins({
+      title: 'New Appointment Booking',
+      message: `${newAppointment.clientName} booked ${newAppointment.serviceType} for ${newAppointment.branchName} on ${newAppointment.preferredDate}`,
+      type: 'appointment',
+      link: '/admin',
+      metadata: { appointmentId: docId, branchName: newAppointment.branchName }
+    }).catch(e => console.warn('Appointment admin notification warning:', e.message));
+
+    // 3. Receipt notification to Client (if registered)
+    if (newAppointment.clientUid) {
+      createNotification({
+        recipientUid: newAppointment.clientUid,
+        recipientRole: 'client',
+        title: 'Appointment Booking Pending',
+        message: `Your appointment for ${newAppointment.serviceType} on ${newAppointment.preferredDate} (${newAppointment.preferredTime}) at ${newAppointment.branchName} is pending operator confirmation.`,
+        type: 'appointment',
+        link: '/client/appointments',
+        metadata: { appointmentId: docId, status: 'Pending' }
+      }).catch(e => console.warn('Appointment client receipt notification warning:', e.message));
+    }
 
     return res.status(201).json({ id: docId, ...newAppointment, message: 'Appointment requested successfully' });
   } catch (error) {
@@ -141,6 +166,15 @@ const updateAppointmentStatus = async (req, res) => {
         metadata: { appointmentId: id, status: normalizedStatus }
       }).catch(e => console.warn('Appointment status notification warning:', e.message));
     }
+
+    // Notify Admins
+    notifyAdmins({
+      title: `Appointment ${normalizedStatus}`,
+      message: `Appointment for ${existing.clientName} (${existing.serviceType}) at ${existing.branchName} was marked ${normalizedStatus.toLowerCase()}.`,
+      type: 'appointment',
+      link: '/admin',
+      metadata: { appointmentId: id, status: normalizedStatus }
+    }).catch(e => console.warn('Appointment status admin notification warning:', e.message));
 
     return res.status(200).json({ message: `Appointment status updated to ${normalizedStatus}` });
   } catch (error) {

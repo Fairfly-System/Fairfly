@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { admin, db } = require('../config/firebase');
 const { sendVerificationCodeEmail } = require('./emailService');
+const { notifyAdmins } = require('./notificationService');
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -28,7 +29,17 @@ const generateSecure6DigitCode = () => {
 /**
  * Initiate registration and send 6-character code
  */
-const createPendingRegistration = async ({ fullName, email, phone, password }) => {
+const createPendingRegistration = async ({
+  fullName,
+  email,
+  phone,
+  password,
+  idType,
+  idFrontUrl,
+  idBackUrl,
+  idFrontName,
+  idBackName
+}) => {
   // 1. Validation
   if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2) {
     return { status: 400, error: 'Name must be at least 2 characters long.' };
@@ -60,6 +71,19 @@ const createPendingRegistration = async ({ fullName, email, phone, password }) =
   const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
   if (!strongPasswordRegex.test(password)) {
     return { status: 400, error: 'Password must be at least 8 characters and include uppercase, lowercase, and a number.' };
+  }
+
+  // ID Validation (Anti-spam / Bot prevention)
+  if (!idType || typeof idType !== 'string' || !idType.trim()) {
+    return { status: 400, error: 'Please select an accepted Government ID type.' };
+  }
+
+  if (!idFrontUrl || typeof idFrontUrl !== 'string' || !idFrontUrl.trim()) {
+    return { status: 400, error: 'Please upload the front image or document of your valid Government ID.' };
+  }
+
+  if (!idBackUrl || typeof idBackUrl !== 'string' || !idBackUrl.trim()) {
+    return { status: 400, error: 'Please upload the back image or document of your valid Government ID.' };
   }
 
   // 2. Check if user already exists in Firebase Auth or Firestore
@@ -111,6 +135,11 @@ const createPendingRegistration = async ({ fullName, email, phone, password }) =
     email: normalizedEmail,
     phone: phone.trim(),
     password, // temporary server-side storage until verification completes
+    idType: idType.trim(),
+    idFrontUrl: idFrontUrl.trim(),
+    idBackUrl: idBackUrl.trim(),
+    idFrontName: idFrontName ? idFrontName.trim() : null,
+    idBackName: idBackName ? idBackName.trim() : null,
     codeHash,
     attemptsLeft: MAX_ATTEMPTS,
     expiresAt: now + EXPIRY_WINDOW_MS,
@@ -134,7 +163,7 @@ const createPendingRegistration = async ({ fullName, email, phone, password }) =
 };
 
 /**
- * Verify code and complete user registration with auto sign-in token
+ * Verify code and complete user registration with Pending admin review state
  */
 const verifyRegistrationCode = async ({ email, code }) => {
   if (!email || typeof email !== 'string') {
@@ -213,7 +242,7 @@ const verifyRegistrationCode = async ({ email, code }) => {
     };
   }
 
-  // 4. Code verified! Create Auth user & Firestore user profile
+  // 4. Code verified! Create Auth user & Firestore user profile in Pending state
   let uid = null;
   try {
     const userRecord = await admin.auth().createUser({
@@ -239,7 +268,14 @@ const verifyRegistrationCode = async ({ email, code }) => {
     email: pendingData.email,
     phone: pendingData.phone,
     role: 'client',
-    status: 'Active',
+    status: 'Pending',
+    approvalStatus: 'Pending',
+    idType: pendingData.idType || 'Government ID',
+    idFrontUrl: pendingData.idFrontUrl || null,
+    idBackUrl: pendingData.idBackUrl || null,
+    idFrontName: pendingData.idFrontName || null,
+    idBackName: pendingData.idBackName || null,
+    idSubmittedAt: now,
     emailVerified: true,
     createdAt: now,
     updatedAt: now
@@ -262,20 +298,30 @@ const verifyRegistrationCode = async ({ email, code }) => {
   // 5. Clean up pending registration record
   await pendingDocRef.delete();
 
-  // 6. Generate Firebase Custom Token for seamless automatic sign-in
-  let customToken = null;
+  // 6. Notify Administrators via in-app notification of new pending client verification
   try {
-    customToken = await admin.auth().createCustomToken(uid);
-  } catch (tokenErr) {
-    console.warn('Warning: Could not create custom token for auto-login:', tokenErr.message);
+    await notifyAdmins({
+      title: 'New Client ID Verification Required',
+      message: `${pendingData.fullName} registered and submitted a valid government ID (${pendingData.idType}) for review.`,
+      type: 'system',
+      link: `/admin/clients/${uid}`,
+      metadata: {
+        clientUid: uid,
+        fullName: pendingData.fullName,
+        email: pendingData.email,
+        idType: pendingData.idType
+      }
+    });
+  } catch (notifErr) {
+    console.error('Error dispatching admin notification for new client registration:', notifErr);
   }
 
   return {
     status: 200,
     success: true,
-    message: 'Email verified successfully! Welcome to FairFly.',
-    userId: uid,
-    customToken
+    isPending: true,
+    message: 'Email verified successfully! Your account and government ID have been submitted for administrator review.',
+    userId: uid
   };
 };
 

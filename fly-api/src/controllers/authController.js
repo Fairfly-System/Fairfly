@@ -151,6 +151,105 @@ const resendRegistrationCodeController = async (req, res) => {
   }
 };
 
+const { notifyAdmins } = require('../services/notificationService');
+const { updateToDatabase } = require('../services/firebaseService');
+const { userCache } = require('../services/cacheService');
+
+/**
+ * Re-upload government ID for rejected client account
+ * Payload: { email, token, idType, idFrontUrl, idBackUrl, idFrontName, idBackName }
+ */
+const reuploadIdController = async (req, res) => {
+  try {
+    const { email, token, idType, idFrontUrl, idBackUrl, idFrontName, idBackName } = req.body;
+
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Please provide a valid email address.' });
+    }
+
+    if (!token || typeof token !== 'string' || !token.trim()) {
+      return res.status(400).json({ error: 'Security token is missing or invalid. Please click the link sent to your email.' });
+    }
+
+    if (!idType || typeof idType !== 'string' || !idType.trim()) {
+      return res.status(400).json({ error: 'Please select an accepted Government ID type.' });
+    }
+
+    if (!idFrontUrl || typeof idFrontUrl !== 'string' || !idFrontUrl.trim()) {
+      return res.status(400).json({ error: 'Please upload the front copy of your valid Government ID.' });
+    }
+
+    if (!idBackUrl || typeof idBackUrl !== 'string' || !idBackUrl.trim()) {
+      return res.status(400).json({ error: 'Please upload the back copy of your valid Government ID.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const userSnapshot = await db.collection(COLLECTIONS.USERS)
+      .where('email', '==', normalizedEmail)
+      .limit(1)
+      .get();
+
+    if (userSnapshot.empty) {
+      return res.status(404).json({ error: 'No account found matching this email address.' });
+    }
+
+    const userDoc = userSnapshot.docs[0];
+    const userData = userDoc.data();
+
+    if (userData.role !== 'client') {
+      return res.status(403).json({ error: 'Only client accounts can submit ID documents.' });
+    }
+
+    if (userData.reuploadToken !== token.trim()) {
+      return res.status(401).json({ error: 'Invalid or expired re-upload link. Please check your email for the latest link or contact support.' });
+    }
+
+    const now = new Date().toISOString();
+    const updates = {
+      status: 'Pending',
+      approvalStatus: 'Pending',
+      idType: idType.trim(),
+      idFrontUrl: idFrontUrl.trim(),
+      idBackUrl: idBackUrl.trim(),
+      idFrontName: idFrontName ? idFrontName.trim() : null,
+      idBackName: idBackName ? idBackName.trim() : null,
+      rejectionReason: null,
+      reuploadToken: null,
+      idSubmittedAt: now,
+      updatedAt: now
+    };
+
+    await updateToDatabase(`${COLLECTIONS.USERS}/${userDoc.id}`, updates);
+    userCache.delete(userDoc.id);
+
+    // Notify administrators of resubmission
+    try {
+      await notifyAdmins({
+        title: 'Client Re-submitted ID for Review',
+        message: `${userData.fullName || userData.name || 'Client'} has re-uploaded their valid government ID (${idType.trim()}) for review.`,
+        type: 'system',
+        link: `/admin/clients/${userDoc.id}`,
+        metadata: {
+          clientUid: userDoc.id,
+          fullName: userData.fullName || userData.name,
+          email: normalizedEmail,
+          idType: idType.trim()
+        }
+      });
+    } catch (notifErr) {
+      console.error('Error notifying admins on ID re-upload:', notifErr);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your government ID has been re-submitted successfully! An administrator will review your application shortly.'
+    });
+  } catch (error) {
+    console.error('Error in reuploadIdController:', error);
+    return res.status(500).json({ error: 'Failed to re-upload ID: ' + error.message });
+  }
+};
+
 /**
  * Legacy registerClient endpoint - delegates to initiateRegistration for secure verification flow
  */
@@ -161,6 +260,8 @@ module.exports = {
   registerClient,
   initiateRegistration,
   verifyRegistrationCode: verifyRegistrationCodeController,
-  resendRegistrationCode: resendRegistrationCodeController
+  resendRegistrationCode: resendRegistrationCodeController,
+  reuploadId: reuploadIdController
 };
+
 

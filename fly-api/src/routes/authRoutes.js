@@ -5,11 +5,25 @@ const {
   registerClient,
   initiateRegistration,
   verifyRegistrationCode,
-  resendRegistrationCode
+  resendRegistrationCode,
+  reuploadId
 } = require('../controllers/authController');
 const { publicRateLimiter } = require('../middleware/rateLimiter');
 const { allowedFields } = require('../middleware/allowedFields');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
+
+const REGISTER_ALLOWED_FIELDS = [
+  'fullName',
+  'email',
+  'phone',
+  'password',
+  'confirmPassword',
+  'idType',
+  'idFrontUrl',
+  'idBackUrl',
+  'idFrontName',
+  'idBackName'
+];
 
 // Public route for client registration initiation (rate-limited, protected fields)
 router.post(
@@ -17,7 +31,7 @@ router.post(
   performanceProfiler(
     'POST /auth/register',
     publicRateLimiter,
-    allowedFields(['fullName', 'email', 'phone', 'password', 'confirmPassword']),
+    allowedFields(REGISTER_ALLOWED_FIELDS),
     initiateRegistration
   )
 );
@@ -27,7 +41,7 @@ router.post(
   performanceProfiler(
     'POST /auth/register-initiate',
     publicRateLimiter,
-    allowedFields(['fullName', 'email', 'phone', 'password', 'confirmPassword']),
+    allowedFields(REGISTER_ALLOWED_FIELDS),
     initiateRegistration
   )
 );
@@ -51,6 +65,17 @@ router.post(
     publicRateLimiter,
     allowedFields(['email']),
     resendRegistrationCode
+  )
+);
+
+// Public route for re-uploading ID document for rejected client (token-protected)
+router.post(
+  '/reupload-id',
+  performanceProfiler(
+    'POST /auth/reupload-id',
+    publicRateLimiter,
+    allowedFields(['email', 'token', 'idType', 'idFrontUrl', 'idBackUrl', 'idFrontName', 'idBackName']),
+    reuploadId
   )
 );
 

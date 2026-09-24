@@ -30,6 +30,12 @@ function formatTimeAgo(isoString) {
  */
 function getCategoryIcon(type) {
   switch (type) {
+    case 'inquiry':
+      return { icon: 'fa-solid fa-file-invoice', className: 'service' };
+    case 'quotation':
+      return { icon: 'fa-solid fa-file-circle-dollar', className: 'service' };
+    case 'qualification':
+      return { icon: 'fa-solid fa-award', className: 'franchise' };
     case 'appointment':
       return { icon: 'fa-solid fa-calendar-check', className: 'appointment' };
     case 'service':

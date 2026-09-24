@@ -229,6 +229,7 @@ const getOperatorById = async (req, res) => {
 
 /**
  * Get active branches/operators list (Specifically for Form dropdown selection)
+ * Supports optional search filtering via ?search= or ?q=
  */
 const getBranches = async (req, res) => {
   try {
@@ -237,16 +238,32 @@ const getBranches = async (req, res) => {
       filters: [{ field: 'role', operator: '==', value: 'operator' }]
     });
 
-    const activeBranches = operators
+    let activeBranches = operators
       .filter((op) => op.status !== 'Inactive')
-      .map((op) => ({
-        uid: op.id,
-        branchName: op.branchName || op.name || 'Branch Operator',
-        address: op.address || '',
-        email: op.email || '',
-        contactNumber: op.contactNumber || '',
-        isQualified: op.isQualified === true
-      }));
+      .map((op) => {
+        const branchTitle = op.branchName || op.name || 'Branch Operator';
+        const branchLocation = op.address || op.location || '';
+        return {
+          uid: op.id,
+          id: op.id,
+          branchName: branchTitle,
+          name: branchTitle,
+          address: branchLocation,
+          location: branchLocation,
+          email: op.email || '',
+          contactNumber: op.contactNumber || op.phone || '',
+          isQualified: op.isQualified === true
+        };
+      });
+
+    const search = (req.query.search || req.query.q || '').trim().toLowerCase();
+    if (search) {
+      activeBranches = activeBranches.filter((b) =>
+        (b.branchName || '').toLowerCase().includes(search) ||
+        (b.address || '').toLowerCase().includes(search) ||
+        (b.email || '').toLowerCase().includes(search)
+      );
+    }
 
     return res.status(200).json(activeBranches);
   } catch (error) {

@@ -6,6 +6,11 @@ const {
   deleteFromDatabase 
 } = require('../services/firebaseService');
 const { compileWorkflowStepsForService } = require('./activeServiceController');
+const {
+  createNotification,
+  notifyBranch,
+  notifyAdmins
+} = require('../services/notificationService');
 
 const COLLECTIONS = {
   QUOTATIONS: 'quotations',
@@ -116,6 +121,19 @@ const createQuotation = async (req, res) => {
       }
     }
 
+    // Notify Client of new quotation
+    if (effectiveClientUid) {
+      createNotification({
+        recipientUid: effectiveClientUid,
+        recipientRole: 'client',
+        title: 'New Quotation Available',
+        message: `${effectiveBranchName} prepared a quotation for "${newQuotation.serviceTitle}" (${newQuotation.quoteNo}) - ${newQuotation.rateBreakdown || '₱' + newQuotation.totalAmount}`,
+        type: 'quotation',
+        link: '/client/tracking',
+        metadata: { quotationId: docId, quoteNo: newQuotation.quoteNo }
+      }).catch(err => console.warn('Client quotation notification warning:', err.message));
+    }
+
     return res.status(201).json({ id: docId, ...newQuotation, message: 'Quotation created successfully' });
   } catch (error) {
     console.error('Error creating quotation:', error);
@@ -197,6 +215,32 @@ const updateQuotationStatus = async (req, res) => {
           console.error(`Failed to update inquiry status on quotation status change:`, inqErr);
         }
       }
+    }
+
+    // Notify Client when quotation is marked Sent
+    if (status === 'Sent' && existing.clientUid) {
+      createNotification({
+        recipientUid: existing.clientUid,
+        recipientRole: 'client',
+        title: 'Quotation Ready for Review',
+        message: `Quotation ${existing.quoteNo} for "${existing.serviceTitle}" is ready for your review.`,
+        type: 'quotation',
+        link: '/client/tracking',
+        metadata: { quotationId: id, quoteNo: existing.quoteNo }
+      }).catch(err => console.warn('Quotation sent notification warning:', err.message));
+    }
+
+    // Notify Operator when quotation is Rejected or Cancelled
+    if ((status === 'Rejected' || status === 'Cancelled') && (existing.branchUid || existing.operatorId)) {
+      notifyBranch({
+        branchUid: existing.branchUid || existing.operatorId,
+        branchName: existing.branchName,
+        title: `Quotation ${status}`,
+        message: `Quotation ${existing.quoteNo} for ${existing.clientName} was ${status.toLowerCase()}.`,
+        type: 'quotation',
+        link: '/operator/quotations',
+        metadata: { quotationId: id, quoteNo: existing.quoteNo, status }
+      }).catch(err => console.warn('Quotation status operator notification warning:', err.message));
     }
 
     return res.status(200).json({ message: `Quotation status updated to ${status}` });
@@ -290,6 +334,39 @@ const acceptQuotation = async (req, res) => {
       } catch (inqErr) {
         console.error(`Failed to update inquiry ${quotation.inquiryId} on quotation acceptance:`, inqErr);
       }
+    }
+
+    // 1. Notify Branch Operator
+    notifyBranch({
+      branchUid: quotation.branchUid || quotation.operatorId,
+      branchName: quotation.branchName,
+      title: 'Quotation Accepted by Client',
+      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} for "${serviceTitle}". Active service initialized!`,
+      type: 'quotation',
+      link: '/operator/quotations',
+      metadata: { quotationId: id, activeServiceId: activeServiceDocId }
+    }).catch(err => console.warn('Operator quotation accepted notification warning:', err.message));
+
+    // 2. Notify Admins
+    notifyAdmins({
+      title: 'Quotation Accepted',
+      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} at ${quotation.branchName || 'Branch'}.`,
+      type: 'quotation',
+      link: '/admin/inquiry-history',
+      metadata: { quotationId: id, activeServiceId: activeServiceDocId }
+    }).catch(err => console.warn('Admin quotation accepted notification warning:', err.message));
+
+    // 3. Notify Client
+    if (quotation.clientUid || req.user?.uid) {
+      createNotification({
+        recipientUid: quotation.clientUid || req.user?.uid,
+        recipientRole: 'client',
+        title: 'Service Order Confirmed',
+        message: `You accepted Quotation ${quotation.quoteNo}. ${quotation.branchName || 'FairFly'} has started processing your request.`,
+        type: 'service',
+        link: '/client/tracking',
+        metadata: { quotationId: id, activeServiceId: activeServiceDocId }
+      }).catch(err => console.warn('Client quotation accepted notification warning:', err.message));
     }
 
     return res.status(200).json({

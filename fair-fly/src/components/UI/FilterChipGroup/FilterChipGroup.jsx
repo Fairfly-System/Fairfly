@@ -18,14 +18,16 @@ export default function FilterChipGroup({
   chips = [],
   activeChip,
   activeValue,
+  activeFilter,
   value: controlledValue,
   onChipChange,
   onChange,
   onSelect,
+  onFilterChange,
   className = '',
 }) {
-  const currentActive = activeChip ?? activeValue ?? controlledValue ?? '';
-  const handleChange = onChipChange || onChange || onSelect;
+  const currentActive = activeChip ?? activeValue ?? activeFilter ?? controlledValue ?? '';
+  const handleChange = onChipChange || onChange || onSelect || onFilterChange;
 
   return (
     <div className={`filter-chips ${className}`.trim()}>

@@ -1,0 +1,189 @@
+/* Valid ID Info Modal Styles */
+.valid-id-modal {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.valid-id-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.valid-id-modal-icon-badge {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+  background-color: var(--purple-light-2, #ede9fe);
+  color: var(--purple, #5558e3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.valid-id-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.valid-id-modal-subtitle {
+  margin: 0.35rem 0 0 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.valid-id-modal-body {
+  padding: 1.25rem 1.5rem;
+  max-height: 65vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.valid-id-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.875rem 0;
+}
+
+.valid-id-section-title i {
+  font-size: 0.875rem;
+}
+
+.valid-id-list-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .valid-id-list-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.valid-id-card-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.valid-id-card-item:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.valid-id-card-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: var(--purple, #5558e3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9375rem;
+  flex-shrink: 0;
+}
+
+.valid-id-card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.valid-id-card-text strong {
+  font-size: 0.8125rem;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.valid-id-card-text span {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.valid-id-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .valid-id-rules-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.valid-id-rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.valid-id-rule-item.do {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.valid-id-rule-item.do i {
+  color: #16a34a;
+  margin-top: 0.125rem;
+}
+
+.valid-id-rule-item.dont {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.valid-id-rule-item.dont i {
+  color: #dc2626;
+  margin-top: 0.125rem;
+}
+
+.valid-id-rule-item strong {
+  display: block;
+  font-size: 0.8125rem;
+  margin-bottom: 0.125rem;
+}
+
+.valid-id-rule-item span {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+.valid-id-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+}

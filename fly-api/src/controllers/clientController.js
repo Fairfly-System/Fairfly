@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const admin = require('firebase-admin');
 const { db } = require('../config/firebase');
 const { 
@@ -5,6 +6,13 @@ const {
   deleteFromDatabase 
 } = require('../services/firebaseService');
 const { userCache } = require('../services/cacheService');
+const { 
+  sendAccountApprovedEmail, 
+  sendAccountRejectedEmail 
+} = require('../services/emailService');
+const { createNotification } = require('../services/notificationService');
+
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || process.env.CLIENT_URL || 'http://localhost:5173';
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -187,9 +195,224 @@ const deleteClient = async (req, res) => {
   }
 };
 
+/**
+ * Approve a client account and government ID (Admin only)
+ */
+const approveClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Client ID is required' });
+
+    const clientDoc = await db.collection(COLLECTIONS.USERS).doc(id).get();
+    if (!clientDoc.exists) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const clientData = clientDoc.data();
+    if (clientData.role !== 'client') {
+      return res.status(400).json({ error: 'User is not a client account' });
+    }
+
+    const now = new Date().toISOString();
+    const updates = {
+      status: 'Active',
+      approvalStatus: 'Approved',
+      rejectionReason: null,
+      reuploadToken: null,
+      approvedAt: now,
+      approvedBy: req.user?.uid || 'admin',
+      updatedAt: now
+    };
+
+    await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, updates);
+    userCache.delete(id);
+
+    // Send congratulatory approval email with direct login link
+    const clientName = clientData.fullName || clientData.name || 'Valued Traveler';
+    const loginUrl = `${CLIENT_BASE_URL}/login`;
+    try {
+      await sendAccountApprovedEmail(clientData.email, clientName, loginUrl);
+    } catch (emailErr) {
+      console.error('Error sending account approved email:', emailErr);
+    }
+
+    // In-app notification for client
+    try {
+      await createNotification({
+        recipientUid: id,
+        recipientRole: 'client',
+        title: 'Account Approved! 🎉',
+        message: 'Your government ID has been verified and your account is now fully active.',
+        type: 'system',
+        link: '/client'
+      });
+    } catch (notifErr) {
+      console.warn('Could not dispatch client approval notification:', notifErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Client account approved successfully',
+      id,
+      ...updates
+    });
+  } catch (error) {
+    console.error('Error in approveClient:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
+/**
+ * Reject client government ID with a reason and send re-upload email link (Admin only)
+ */
+const rejectClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Client ID is required' });
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ error: 'Please provide a reason for rejecting the ID.' });
+    }
+
+    const clientDoc = await db.collection(COLLECTIONS.USERS).doc(id).get();
+    if (!clientDoc.exists) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const clientData = clientDoc.data();
+    if (clientData.role !== 'client') {
+      return res.status(400).json({ error: 'User is not a client account' });
+    }
+
+    const now = new Date().toISOString();
+    const reuploadToken = crypto.randomUUID();
+    const trimmedReason = reason.trim();
+
+    const updates = {
+      status: 'Rejected',
+      approvalStatus: 'Rejected',
+      rejectionReason: trimmedReason,
+      reuploadToken,
+      rejectedAt: now,
+      rejectedBy: req.user?.uid || 'admin',
+      updatedAt: now
+    };
+
+    await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, updates);
+    userCache.delete(id);
+
+    // Send rejection email with secure re-upload link
+    const clientName = clientData.fullName || clientData.name || 'Valued Traveler';
+    const reuploadUrl = `${CLIENT_BASE_URL}/reupload-id?email=${encodeURIComponent(clientData.email)}&token=${reuploadToken}`;
+    try {
+      await sendAccountRejectedEmail(clientData.email, clientName, trimmedReason, reuploadUrl);
+    } catch (emailErr) {
+      console.error('Error sending account rejected email:', emailErr);
+    }
+
+    // In-app notification for client
+    try {
+      await createNotification({
+        recipientUid: id,
+        recipientRole: 'client',
+        title: 'Action Required: Government ID Verification',
+        message: `Your ID verification could not be approved: ${trimmedReason}. Please re-upload a clear copy.`,
+        type: 'system',
+        link: '/reupload-id'
+      });
+    } catch (notifErr) {
+      console.warn('Could not dispatch client rejection notification:', notifErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Client account rejected and notification email sent',
+      id,
+      ...updates
+    });
+  } catch (error) {
+    console.error('Error in rejectClient:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
+/**
+ * Bulk update client status (Active / Deactivated)
+ */
+const bulkStatusClients = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !status) {
+      return res.status(400).json({ error: 'ids array and status are required' });
+    }
+
+    const validStatuses = ['Active', 'Deactivated'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    await Promise.all(
+      ids.map(async (id) => {
+        await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, {
+          status,
+          updatedAt: new Date().toISOString()
+        });
+        userCache.delete(id);
+      })
+    );
+
+    return res.status(200).json({
+      message: `${ids.length} client(s) updated to ${status} successfully`,
+      count: ids.length
+    });
+  } catch (error) {
+    console.error('Error in bulkStatusClients:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
+/**
+ * Bulk delete clients (From Auth + Firestore)
+ */
+const bulkDeleteClients = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          await admin.auth().deleteUser(id);
+        } catch (authErr) {
+          console.warn(`Could not delete Auth user ${id}:`, authErr.message);
+        }
+        await deleteFromDatabase(`${COLLECTIONS.USERS}/${id}`);
+        userCache.delete(id);
+      })
+    );
+
+    return res.status(200).json({
+      message: `${ids.length} client account(s) permanently deleted`,
+      count: ids.length
+    });
+  } catch (error) {
+    console.error('Error in bulkDeleteClients:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
 module.exports = {
   getClients,
   getClientById,
   updateClient,
-  deleteClient
+  deleteClient,
+  approveClient,
+  rejectClient,
+  bulkStatusClients,
+  bulkDeleteClients
 };
+
+

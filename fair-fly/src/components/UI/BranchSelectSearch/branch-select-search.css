@@ -1,0 +1,408 @@
+/* ==========================================================================
+   BranchSelectSearch Component Styles
+   Flat Modern SaaS Design strictly following style-guide-components.md
+   ========================================================================== */
+
+.branch-select-search-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.branch-search-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.branch-search-label .req-star {
+  color: #ef4444;
+}
+
+/* Trigger Box */
+.branch-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  min-height: 2.875rem;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.branch-search-trigger:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.branch-select-search-container.is-open .branch-search-trigger {
+  border-color: #5558e3;
+  box-shadow: 0 0 0 3px rgba(85, 88, 227, 0.12);
+  background-color: #ffffff;
+}
+
+.branch-trigger-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  background-color: #eef2ff;
+  color: #5558e3;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.branch-trigger-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.branch-trigger-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.branch-trigger-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-trigger-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 9999px;
+  background-color: #dcfce7;
+  color: #15803d;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.branch-trigger-address {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-trigger-address i {
+  color: #94a3b8;
+  font-size: 0.6875rem;
+}
+
+.branch-trigger-placeholder {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.branch-trigger-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.branch-change-btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5558e3;
+  padding: 0.1875rem 0.4375rem;
+  border-radius: 0.25rem;
+  background-color: #f1f5f9;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.branch-change-btn:hover {
+  background-color: #e2e8f0;
+  color: #4338ca;
+}
+
+.branch-trigger-chevron {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  transition: transform 0.15s ease;
+}
+
+/* Dropdown Menu Container */
+.branch-search-dropdown {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.625rem;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: branchDropdownFade 0.15s ease-out;
+}
+
+@keyframes branchDropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search Header inside Dropdown */
+.branch-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: #f8fafc;
+}
+
+.branch-search-input-icon {
+  position: absolute;
+  left: 1.125rem;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  pointer-events: none;
+}
+
+.branch-search-input {
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 2rem 0 2.125rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  background-color: #ffffff;
+  font-size: 0.8125rem;
+  color: #0f172a;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.branch-search-input:focus {
+  border-color: #5558e3;
+  box-shadow: 0 0 0 2px rgba(85, 88, 227, 0.15);
+}
+
+.branch-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.branch-search-clear-btn {
+  position: absolute;
+  right: 1.125rem;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  border-radius: 50%;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.branch-search-clear-btn:hover {
+  color: #0f172a;
+  background-color: #e2e8f0;
+}
+
+/* Meta Bar */
+.branch-search-meta-bar {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Options Scroll List */
+.branch-options-list {
+  max-height: 15rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.branch-options-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.branch-options-list::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.branch-options-list::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* Option Row */
+.branch-option-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6875rem 0.875rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f8fafc;
+  transition: background-color 0.12s ease;
+}
+
+.branch-option-row:last-child {
+  border-bottom: none;
+}
+
+.branch-option-row:hover {
+  background-color: #f1f5f9;
+}
+
+.branch-option-row.selected {
+  background-color: #eef2ff;
+}
+
+.branch-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 0.375rem;
+  background-color: #f1f5f9;
+  color: #64748b;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.branch-option-row.selected .branch-option-icon {
+  background-color: #e0e7ff;
+  color: #5558e3;
+}
+
+.branch-option-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.branch-option-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.branch-option-location {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-option-location i {
+  color: #94a3b8;
+  font-size: 0.625rem;
+}
+
+.branch-option-end {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.branch-option-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background-color: #5558e3;
+  color: #ffffff;
+  font-size: 0.6875rem;
+}
+
+.branch-option-select-action {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.branch-option-row:hover .branch-option-select-action {
+  opacity: 1;
+  color: #5558e3;
+}
+
+/* Empty State */
+.branch-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #64748b;
+  gap: 0.375rem;
+}
+
+.branch-search-empty i {
+  font-size: 1.5rem;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+
+.branch-search-empty .empty-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.branch-search-empty .empty-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  max-width: 18rem;
+}

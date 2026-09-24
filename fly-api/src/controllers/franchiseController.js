@@ -4,7 +4,7 @@ const {
   queryDatabaseAdvanced, 
   updateToDatabase 
 } = require('../services/firebaseService');
-const { notifyAdmins } = require('../services/notificationService');
+const { createNotification, notifyAdmins } = require('../services/notificationService');
 
 const COLLECTIONS = {
   FRANCHISE_APPLICATIONS: 'franchiseApplications'
@@ -148,6 +148,19 @@ const updateApplicationStatus = async (req, res) => {
       status,
       updatedAt: new Date().toISOString()
     });
+
+    // Notify applicant if registered user
+    if (existing.userId && existing.userId !== 'anonymous') {
+      createNotification({
+        recipientUid: existing.userId,
+        recipientRole: 'client',
+        title: 'Franchise Application Update',
+        message: `Your franchise application for ${existing.preferredBranchLocation} has been marked as ${status}.`,
+        type: 'franchise',
+        link: '/client',
+        metadata: { applicationId: id, status }
+      }).catch(e => console.warn('Franchise applicant notification warning:', e.message));
+    }
 
     return res.status(200).json({ message: `Application status updated to ${status}` });
   } catch (error) {

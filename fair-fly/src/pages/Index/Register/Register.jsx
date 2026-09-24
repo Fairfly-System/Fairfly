@@ -6,6 +6,7 @@ import logo from "/FairflyLogo.png";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import { initiateRegistration } from "../../../services/authService";
 import TermsPrivacyModal from "../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal";
+import ValidIdUpload from "../../../components/Shared/ValidIdUpload/ValidIdUpload";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -19,6 +20,11 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
+
+  // Government ID Verification state
+  const [idType, setIdType] = useState("");
+  const [idFront, setIdFront] = useState(null);
+  const [idBack, setIdBack] = useState(null);
 
   const [errors, setErrors] = useState({});
   const [disabled, setDisabled] = useState(true);
@@ -139,8 +145,10 @@ export default function Register() {
       (field) => formData[field] === ""
     );
 
-    setDisabled(hasErrors || isNotFilled);
-  }, [errors, formData]);
+    const isIdIncomplete = !idType || !idFront?.url || !idBack?.url;
+
+    setDisabled(hasErrors || isNotFilled || isIdIncomplete);
+  }, [errors, formData, idType, idFront, idBack]);
 
   // -----------------------
   // SUBMIT
@@ -148,6 +156,11 @@ export default function Register() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (disabled || isSubmitting) return;
+
+    if (!idType || !idFront?.url || !idBack?.url) {
+      addToast("Please select your ID type and upload both the front and back of your valid government ID.", "error");
+      return;
+    }
 
     const targetEmail = formData.email.trim().toLowerCase();
 
@@ -158,6 +171,11 @@ export default function Register() {
         phone: formData.phone.trim(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
+        idType,
+        idFrontUrl: idFront.url,
+        idBackUrl: idBack.url,
+        idFrontName: idFront.name || null,
+        idBackName: idBack.name || null,
       },
       (res) => {
         addToast(res?.message || "Verification code sent! Please check your email inbox.", "success");
@@ -385,6 +403,19 @@ export default function Register() {
                 <p className="auth-input-error">{errors.confirmPassword}</p>
               )}
             </div>
+
+            {/* VALID GOVERNMENT ID UPLOAD */}
+            <ValidIdUpload
+              idType={idType}
+              onChangeIdType={setIdType}
+              idFront={idFront}
+              idBack={idBack}
+              onUploadFront={setIdFront}
+              onUploadBack={setIdBack}
+              onRemoveFront={() => setIdFront(null)}
+              onRemoveBack={() => setIdBack(null)}
+              disabled={isSubmitting}
+            />
 
             <button
               type="submit"

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -11,6 +11,8 @@ import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import ServiceCarouselGallery from '../../../components/UI/ServiceCarouselGallery/ServiceCarouselGallery';
+import { firestore } from '../../../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import './service-detail.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -38,15 +40,36 @@ export default function ServiceDetailPage() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
+  const [allWorkflowTemplates, setAllWorkflowTemplates] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(firestore, 'workflowTemplates'),
+      (snapshot) => {
+        setAllWorkflowTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      },
+      (err) => {
+        console.warn('Error loading workflow templates in ServiceDetailPage:', err);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
   const service = useMemo(() => {
     if (!services || !id) return null;
     return services.find((s) => s.id === id) || null;
   }, [services, id]);
+
+  const attachedWorkflows = useMemo(() => {
+    if (!service || !Array.isArray(service.workflowIds) || service.workflowIds.length === 0) return [];
+    return service.workflowIds
+      .map(wfId => allWorkflowTemplates.find(t => t.id === wfId))
+      .filter(Boolean);
+  }, [service, allWorkflowTemplates]);
 
   const UNIT_LABELS = {
     days: 'Day/s',
@@ -235,7 +258,12 @@ export default function ServiceDetailPage() {
 
   const coverUrl = service?.coverImage || service?.coverPhoto || service?.coverPhotoUrl;
   const requirementsCount = service?.requirements?.length || 0;
-  const stepsCount = service?.steps?.length || 0;
+  const totalStepsCount = useMemo(() => {
+    if (attachedWorkflows.length > 0) {
+      return attachedWorkflows.reduce((acc, wf) => acc + (Array.isArray(wf.steps) ? wf.steps.length : 0), 0);
+    }
+    return service?.steps?.length || 0;
+  }, [attachedWorkflows, service]);
 
   return (
     <RecordDetailLayout
@@ -308,9 +336,11 @@ export default function ServiceDetailPage() {
                 <i className="fa-solid fa-diagram-project"></i>
               </div>
               <div className="service-kpi-info">
-                <span className="service-kpi-label">Workflow Steps</span>
+                <span className="service-kpi-label">Attached Workflows</span>
                 <span className="service-kpi-val">
-                  {stepsCount} {stepsCount === 1 ? 'Stage' : 'Stages'}
+                  {attachedWorkflows.length > 0
+                    ? `${attachedWorkflows.length} (${totalStepsCount} Step${totalStepsCount !== 1 ? 's' : ''})`
+                    : `${totalStepsCount} ${totalStepsCount === 1 ? 'Stage' : 'Stages'}`}
                 </span>
               </div>
             </div>
@@ -474,22 +504,106 @@ export default function ServiceDetailPage() {
 
             {/* Connected Workflows */}
             <article className="card detail-panel">
-              <h2 className="panel-title">
-                <i className="fa-solid fa-diagram-project"></i> Workflow Checklist Steps ({stepsCount})
-              </h2>
-              <div className="detail-workflows-list">
-                {service.steps && service.steps.length > 0 ? (
-                  service.steps.map((step, sIdx) => (
-                    <div key={sIdx} className="workflow-step-line">
-                      <span className="step-number-badge">{step.stepNumber || sIdx + 1}</span>
-                      <div className="step-content">
-                        <span className="step-title">{step.title}</span>
-                        {step.description && <p className="step-description">{step.description}</p>}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 className="panel-title" style={{ margin: 0 }}>
+                  <i className="fa-solid fa-diagram-project"></i> Attached Workflows ({attachedWorkflows.length > 0 ? attachedWorkflows.length : (service.steps?.length ? 1 : 0)})
+                </h2>
+                {attachedWorkflows.length > 0 && (
+                  <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
+                    {totalStepsCount} Total Step{totalStepsCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              <div className="detail-workflows-container">
+                {attachedWorkflows.length > 0 ? (
+                  attachedWorkflows.map((wf, wfIdx) => (
+                    <div key={wf.id || wfIdx} className="attached-workflow-card">
+                      <div className="attached-workflow-header">
+                        <div className="attached-workflow-title-wrap">
+                          <i className="fa-solid fa-diagram-project" style={{ color: 'var(--purple)' }}></i>
+                          <h3 className="attached-workflow-title">{wf.name}</h3>
+                          {wf.serviceType && (
+                            <span className="status-pill" style={{ fontSize: '0.6875rem' }}>
+                              {wf.serviceType}
+                            </span>
+                          )}
+                        </div>
+                        <span className="status-pill status-active" style={{ fontSize: '0.6875rem' }}>
+                          {Array.isArray(wf.steps) ? wf.steps.length : 0} Step{Array.isArray(wf.steps) && wf.steps.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+
+                      {wf.description && (
+                        <p className="attached-workflow-desc">{wf.description}</p>
+                      )}
+
+                      <div className="detail-workflows-list">
+                        {Array.isArray(wf.steps) && wf.steps.length > 0 ? (
+                          wf.steps.map((step, sIdx) => {
+                            const stepTitle = typeof step === 'string' ? step : (step.title || step.name || `Step ${sIdx + 1}`);
+                            const stepDesc = typeof step === 'object' ? (step.description || step.instructions) : '';
+                            const stepLink = typeof step === 'object' ? (step.thirdPartyLink || step.link || step.url) : null;
+                            const stepFile = typeof step === 'object' ? (step.file || step.attachment) : null;
+                            const linkUrl = typeof stepLink === 'string' ? stepLink : stepLink?.url;
+                            const linkTitle = typeof stepLink === 'object' ? (stepLink?.title || 'Open Portal') : 'Open Portal';
+                            const fileUrl = typeof stepFile === 'string' ? stepFile : stepFile?.url;
+                            const fileName = typeof stepFile === 'object' ? (stepFile?.name || 'Attached Document') : 'Attached Document';
+
+                            return (
+                              <div key={sIdx} className="workflow-step-line">
+                                <span className="step-number-badge">{sIdx + 1}</span>
+                                <div className="step-content">
+                                  <span className="step-title">{stepTitle}</span>
+                                  {stepDesc && <p className="step-description">{stepDesc}</p>}
+                                  {(linkUrl || fileUrl) && (
+                                    <div style={{ display: 'flex', gap: '0.625rem', marginTop: '0.375rem', flexWrap: 'wrap' }}>
+                                      {linkUrl && (
+                                        <a href={linkUrl} target="_blank" rel="noreferrer" className="req-attachment-link" style={{ fontSize: '0.75rem' }}>
+                                          <i className="fa-solid fa-arrow-up-right-from-square"></i> {linkTitle}
+                                        </a>
+                                      )}
+                                      {fileUrl && (
+                                        <a href={fileUrl} target="_blank" rel="noreferrer" className="req-attachment-link" style={{ fontSize: '0.75rem' }}>
+                                          <i className="fa-solid fa-paperclip"></i> {fileName}
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="no-items-text" style={{ fontSize: '0.8125rem' }}>No steps in this workflow template.</p>
+                        )}
                       </div>
                     </div>
                   ))
+                ) : service.steps && service.steps.length > 0 ? (
+                  <div className="detail-workflows-list">
+                    {service.steps.map((step, sIdx) => (
+                      <div key={sIdx} className="workflow-step-line">
+                        <span className="step-number-badge">{step.stepNumber || sIdx + 1}</span>
+                        <div className="step-content">
+                          <span className="step-title">{step.title}</span>
+                          {step.description && <p className="step-description">{step.description}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <p className="no-items-text">No workflow pipeline checklist configured for this catalog item.</p>
+                  <div className="no-items-text" style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                    <p style={{ margin: '0 0 0.75rem 0' }}>No workflow pipeline checklist configured for this catalog item.</p>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setIsModalOpen(true)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+                    >
+                      <i className="fa-solid fa-diagram-project"></i> Attach Workflow
+                    </button>
+                  </div>
                 )}
               </div>
             </article>

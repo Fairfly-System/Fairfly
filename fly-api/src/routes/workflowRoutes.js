@@ -24,6 +24,15 @@ router.post('/templates/bulk-delete', performanceProfiler('POST /workflow/templa
 router.patch('/templates/:id', performanceProfiler('PATCH /workflow/templates/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateTemplate));
 router.delete('/templates/:id', performanceProfiler('DELETE /workflow/templates/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteTemplate));
 
+// Direct /workflows aliases
+router.get('/', performanceProfiler('GET /workflows', verifyFirebaseToken, apiRateLimiter, getTemplates));
+router.post('/bulk-delete', performanceProfiler('POST /workflows/bulk-delete', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkDeleteTemplates));
+router.post('/', performanceProfiler('POST /workflows', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, createTemplate));
+router.get('/:id', performanceProfiler('GET /workflows/:id', verifyFirebaseToken, apiRateLimiter, getTemplateById));
+router.patch('/:id', performanceProfiler('PATCH /workflows/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateTemplate));
+router.put('/:id', performanceProfiler('PUT /workflows/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateTemplate));
+router.delete('/:id', performanceProfiler('DELETE /workflows/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, deleteTemplate));
+
 // Workflow Instances (Readable by Admin/Operator/Client, mutable by Admin/Operator)
 router.get('/instances', performanceProfiler('GET /workflow/instances', verifyFirebaseToken, apiRateLimiter, getInstances));
 router.get('/instances/:id', performanceProfiler('GET /workflow/instances/:id', verifyFirebaseToken, apiRateLimiter, getInstanceById));

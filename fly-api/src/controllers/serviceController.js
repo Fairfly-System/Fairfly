@@ -7,6 +7,7 @@ const {
 } = require('../services/firebaseService');
 const { staticDataCache } = require('../services/cacheService');
 const { deleteRecordStorageFiles, extractStorageUrls, deleteFilesFromStorage } = require('../services/storageService');
+const { notifyAdmins, notifyAllOperators } = require('../services/notificationService');
 
 const COLLECTIONS = {
   SERVICES: 'services',
@@ -66,6 +67,25 @@ const createService = async (req, res) => {
 
     // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.SERVICES);
+
+    // Dispatch in-app notifications
+    if (isOperator) {
+      notifyAdmins({
+        title: 'Branch Service Created',
+        message: `${branchName} published branch-exclusive service: "${serviceData.name}".`,
+        type: 'service',
+        link: '/admin/services',
+        metadata: { serviceId: docId, branchName, name: serviceData.name }
+      }).catch(e => console.warn('Branch service admin notification warning:', e.message));
+    } else {
+      notifyAllOperators({
+        title: 'New Service Catalog Added',
+        message: `A new service "${serviceData.name}" has been published in the official catalog.`,
+        type: 'service',
+        link: '/operator/services',
+        metadata: { serviceId: docId, name: serviceData.name }
+      }).catch(e => console.warn('Service catalog notification warning:', e.message));
+    }
 
     return res.status(201).json({ id: docId, message: 'Service created successfully' });
   } catch (error) {

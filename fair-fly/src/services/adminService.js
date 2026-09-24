@@ -208,3 +208,53 @@ export function deleteClient(token, id, successCallback, errorCallback, setIsLoa
   );
 }
 
+export function approveClient(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/${id}/approve`,
+    'POST',
+    {},
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function rejectClient(token, id, reason, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/${id}/reject`,
+    'POST',
+    { reason },
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function bulkStatusClients(token, ids, status, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/bulk-status`,
+    'PATCH',
+    { ids, status },
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function bulkDeleteClients(token, ids, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/clients/bulk-delete`,
+    'POST',
+    { ids },
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+
+

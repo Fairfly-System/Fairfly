@@ -5,27 +5,50 @@ export default function ConfirmationModal({
   isOpen,
   onClose,
   Icon,
+  icon,
   Title,
+  title,
   Desc,
+  desc,
+  message,
   BtnColor = 'var(--purple)',
   OnConfirm,
+  onConfirm,
   confirmText = 'Confirm',
+  confirmLabel,
   cancelText = 'Cancel',
+  cancelLabel,
   isLoading = false,
+  isDanger: explicitDanger = false,
 }) {
+  const displayTitle = title || Title;
+  const displayDesc = message || desc || Desc;
+  const handleAction = onConfirm || OnConfirm;
+  const finalConfirmText = confirmLabel || confirmText;
+  const finalCancelText = cancelLabel || cancelText;
+  const ActiveIcon = icon || Icon;
 
   const handleConfirm = async () => {
-    if (OnConfirm) {
-      await OnConfirm();
+    if (handleAction) {
+      await handleAction();
     }
   };
 
-  const isDanger = typeof BtnColor === 'string' && (BtnColor.includes('red') || BtnColor.includes('error'));
+  const isDanger = explicitDanger || (typeof BtnColor === 'string' && (BtnColor.includes('red') || BtnColor.includes('error')));
+
+  const renderIcon = () => {
+    if (!ActiveIcon) return null;
+    if (typeof ActiveIcon === 'string') {
+      return <i className={ActiveIcon} style={{ color: isDanger ? 'var(--red)' : BtnColor, fontSize: '1.375rem' }} />;
+    }
+    const IconComponent = ActiveIcon;
+    return <IconComponent style={{ color: isDanger ? 'var(--red)' : BtnColor, fontSize: '1.375rem' }} />;
+  };
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="26.25rem" width="100%" isLoading={isLoading}>
       <div className="modalForm" style={{ textAlign: 'center', alignItems: 'center' }}>
-        {Icon && (
+        {ActiveIcon && (
           <div
             style={{
               width: '3.5rem',
@@ -38,19 +61,19 @@ export default function ConfirmationModal({
               margin: '0 auto 0.5rem',
             }}
           >
-            <Icon style={{ color: isDanger ? 'var(--red)' : BtnColor, fontSize: '1.375rem' }} />
+            {renderIcon()}
           </div>
         )}
 
-        {Title && (
+        {displayTitle && (
           <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-dark)' }}>
-            {Title}
+            {displayTitle}
           </h3>
         )}
 
-        {Desc && (
+        {displayDesc && (
           <p style={{ margin: '0.25rem 0 0.5rem', fontSize: '0.875rem', color: 'var(--text-mid)' }}>
-            {Desc}
+            {displayDesc}
           </p>
         )}
 

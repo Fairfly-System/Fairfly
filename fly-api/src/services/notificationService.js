@@ -140,8 +140,64 @@ const notifyAllOperators = async ({ title, message, type = 'system', link = '/op
   }
 };
 
+/**
+ * Notify a specific branch operator (by branchUid and/or branchName)
+ * Targets the operator by branchUid and any operator users matching branchName without duplicates.
+ * Falls back to notifying all active operators if no specific branch operator is found.
+ */
+const notifyBranch = async ({
+  branchUid = null,
+  branchName = null,
+  title,
+  message,
+  type = 'system',
+  link = '/operator',
+  metadata = {}
+}) => {
+  try {
+    const targetUids = new Set();
+
+    if (branchUid) {
+      targetUids.add(branchUid);
+    }
+
+    if (branchName) {
+      const opSnaps = await db.collection(COLLECTIONS.USERS)
+        .where('role', '==', 'operator')
+        .where('branchName', '==', branchName)
+        .get();
+
+      opSnaps.docs.forEach(doc => targetUids.add(doc.id));
+    }
+
+    // If no operators found via UID or branchName, fallback to notifying all active operators
+    if (targetUids.size === 0) {
+      console.warn(`notifyBranch: No operator matched for branchUid "${branchUid}" or branchName "${branchName}". Falling back to all operators.`);
+      return await notifyAllOperators({ title, message, type, link, metadata });
+    }
+
+    const promises = Array.from(targetUids).map(uid =>
+      createNotification({
+        recipientUid: uid,
+        recipientRole: 'operator',
+        title,
+        message,
+        type,
+        link,
+        metadata
+      })
+    );
+
+    return await Promise.all(promises);
+  } catch (error) {
+    console.error(`Error notifying branch (${branchUid || branchName}):`, error);
+    return [];
+  }
+};
+
 module.exports = {
   createNotification,
+  notifyBranch,
   notifyAdmins,
   notifyBranchOperators,
   notifyAllOperators

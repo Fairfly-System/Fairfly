@@ -6,6 +6,11 @@ const {
   deleteFromDatabase 
 } = require('../services/firebaseService');
 const { compileWorkflowStepsForService } = require('./activeServiceController');
+const {
+  createNotification,
+  notifyBranch,
+  notifyAdmins
+} = require('../services/notificationService');
 
 const COLLECTIONS = {
   INQUIRIES: 'inquiries',
@@ -156,6 +161,40 @@ const createInquiry = async (req, res) => {
     };
 
     const docId = await addToDatabase(COLLECTIONS.INQUIRIES, newInquiry);
+
+    // 1. Notify Assigned Branch Operator(s)
+    notifyBranch({
+      branchUid: effectiveBranchUid,
+      branchName: effectiveBranchName,
+      title: 'New Client Inquiry Intake',
+      message: `${resolvedName} submitted an inquiry for ${newInquiry.serviceType} (Form: ${newInquiry.formNo}, Control No: ${newInquiry.controlNo})`,
+      type: 'inquiry',
+      link: '/operator/inquiry-forms',
+      metadata: { inquiryId: docId, controlNo: newInquiry.controlNo, clientName: resolvedName }
+    }).catch(err => console.warn('Branch operator inquiry notification warning:', err.message));
+
+    // 2. Notify Admins
+    notifyAdmins({
+      title: 'New Client Inquiry Intake',
+      message: `${resolvedName} submitted inquiry for branch "${effectiveBranchName}" (${newInquiry.serviceType})`,
+      type: 'inquiry',
+      link: '/admin/inquiry-history',
+      metadata: { inquiryId: docId, branchName: effectiveBranchName }
+    }).catch(err => console.warn('Admin inquiry notification warning:', err.message));
+
+    // 3. Receipt notification for Client (if registered)
+    if (effectiveClientUid) {
+      createNotification({
+        recipientUid: effectiveClientUid,
+        recipientRole: 'client',
+        title: 'Inquiry Received',
+        message: `Your inquiry for ${newInquiry.serviceType} has been received by ${effectiveBranchName}. Our operators are reviewing your specifications.`,
+        type: 'inquiry',
+        link: '/client/tracking',
+        metadata: { inquiryId: docId, controlNo: newInquiry.controlNo }
+      }).catch(err => console.warn('Client inquiry receipt notification warning:', err.message));
+    }
+
     return res.status(201).json({ id: docId, ...newInquiry, message: 'Inquiry form created successfully' });
   } catch (error) {
     console.error('Error creating inquiry:', error);
@@ -382,7 +421,6 @@ const confirmInquiry = async (req, res) => {
 
     const activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
 
-    // 6. Update Inquiry with confirmation status and cross references
     await updateToDatabase(dbPath, {
       status: 'confirmed',
       confirmedAt: now,
@@ -390,6 +428,28 @@ const confirmInquiry = async (req, res) => {
       confirmedActiveServiceId: activeServiceDocId,
       updatedAt: now
     });
+
+    // Notify Client of confirmation and quotation readiness
+    if (inquiry.clientUid) {
+      createNotification({
+        recipientUid: inquiry.clientUid,
+        recipientRole: 'client',
+        title: 'Inquiry Confirmed & Quotation Ready',
+        message: `Your inquiry (${inquiry.formNo || inquiry.controlNo}) has been confirmed by ${branchName}. Quotation ${quoteNo} is ready for your review.`,
+        type: 'quotation',
+        link: '/client/tracking',
+        metadata: { inquiryId: id, quotationId: quotationDocId, activeServiceId: activeServiceDocId }
+      }).catch(err => console.warn('Client inquiry confirmation notification warning:', err.message));
+    }
+
+    // Notify Admins of confirmation
+    notifyAdmins({
+      title: 'Inquiry Confirmed by Branch',
+      message: `${branchName} confirmed inquiry for ${inquiry.clientName || inquiry.fullName} and generated Quotation ${quoteNo}.`,
+      type: 'inquiry',
+      link: '/admin/inquiry-history',
+      metadata: { inquiryId: id, quotationId: quotationDocId, branchName }
+    }).catch(err => console.warn('Admin inquiry confirm notification warning:', err.message));
 
     return res.status(200).json({
       message: 'Inquiry confirmed successfully. Quotation created and Active Service initialized.',

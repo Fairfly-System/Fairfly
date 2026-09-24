@@ -3,8 +3,9 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { Mail, Lock, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import "./login.css";
 import logo from "/FairflyLogo.png";
-import { auth } from "../../../firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, firestore } from "../../../firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import TermsPrivacyModal from '../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal';
@@ -30,21 +31,53 @@ export default function Login() {
 
   const isFormValid = Boolean(email.trim() && password);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!isFormValid || isLoading) return;
 
     setIsLoading(true);
-    signInWithEmailAndPassword(auth, email.trim(), password)
-      .then(() => {
-        setIsLoading(false);
-        navigate("/client");
-        addToast("Welcome back! You have successfully signed in.", "success");
-      })
-      .catch((error) => {
-        setIsLoading(false);
-        addToast(toFriendlyMessage(error, "Incorrect email or password. Please double-check and try again."), "error");
-      });
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const uid = userCredential.user.uid;
+
+      // Check Firestore user profile status
+      const userSnap = await getDoc(doc(firestore, 'users', uid));
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+
+        // If client and status is Pending
+        if (userData.role === 'client' && (userData.status === 'Pending' || userData.approvalStatus === 'Pending')) {
+          await signOut(auth);
+          setIsLoading(false);
+          addToast("Your account is currently pending administrator verification. You will be notified via email once approved.", "info");
+          return;
+        }
+
+        // If client and status is Rejected
+        if (userData.role === 'client' && (userData.status === 'Rejected' || userData.approvalStatus === 'Rejected')) {
+          await signOut(auth);
+          setIsLoading(false);
+          const reason = userData.rejectionReason ? ` Reason: ${userData.rejectionReason}` : '';
+          addToast(`Your registration was not approved.${reason} Please check your email to re-upload your valid ID.`, "error");
+          return;
+        }
+
+        // If deactivated
+        if (userData.status === 'Deactivated') {
+          await signOut(auth);
+          setIsLoading(false);
+          addToast("Your account has been deactivated. Please contact FairFly support.", "error");
+          return;
+        }
+      }
+
+      setIsLoading(false);
+      navigate("/client");
+      addToast("Welcome back! You have successfully signed in.", "success");
+    } catch (error) {
+      setIsLoading(false);
+      addToast(toFriendlyMessage(error, "Incorrect email or password. Please double-check and try again."), "error");
+    }
   };
 
   return (

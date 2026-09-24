@@ -5,7 +5,11 @@ const {
   getClients,
   getClientById,
   updateClient,
-  deleteClient
+  deleteClient,
+  approveClient,
+  rejectClient,
+  bulkStatusClients,
+  bulkDeleteClients
 } = require('../controllers/clientController');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
@@ -17,9 +21,32 @@ router.get(
   performanceProfiler('GET /clients', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, getClients)
 );
 
+// Bulk operations (Must be defined before /:id)
+router.patch(
+  '/bulk-status',
+  performanceProfiler('PATCH /clients/bulk-status', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkStatusClients)
+);
+
+router.post(
+  '/bulk-delete',
+  performanceProfiler('POST /clients/bulk-delete', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, bulkDeleteClients)
+);
+
 router.get(
   '/:id',
   performanceProfiler('GET /clients/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, getClientById)
+);
+
+// Approve client account & valid ID — Admin only
+router.post(
+  '/:id/approve',
+  performanceProfiler('POST /clients/:id/approve', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, approveClient)
+);
+
+// Reject client account ID with reason & trigger re-upload email link — Admin only
+router.post(
+  '/:id/reject',
+  performanceProfiler('POST /clients/:id/reject', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, rejectClient)
 );
 
 // Update client profile — Non-sensitive fields only
@@ -42,3 +69,4 @@ router.delete(
 );
 
 module.exports = router;
+

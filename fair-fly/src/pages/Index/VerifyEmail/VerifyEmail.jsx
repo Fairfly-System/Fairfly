@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
-import { ArrowLeft, Mail, ShieldCheck, RotateCw, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Mail, ShieldCheck, RotateCw, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import "./verify-email.css";
 import logo from "/FairflyLogo.png";
 import { auth } from "../../../firebase";
@@ -37,6 +37,8 @@ export default function VerifyEmail() {
   const [isLockedOut, setIsLockedOut] = useState(false);
 
   const inputRefs = useRef([]);
+
+  const [isSubmittedPending, setIsSubmittedPending] = useState(false);
 
   // Auto-focus first input on initial load
   useEffect(() => {
@@ -154,22 +156,9 @@ export default function VerifyEmail() {
       { email, code: fullCode },
       async (res) => {
         try {
-          if (res?.customToken) {
-            // Automatically sign the user in with Firebase Custom Token
-            await signInWithCustomToken(auth, res.customToken);
-            sessionStorage.removeItem("pendingVerificationEmail");
-            addToast("Email verified successfully! Welcome to Fairfly.", "success");
-            navigate("/client", { replace: true });
-          } else {
-            // Fallback to sign-in page if custom token was not issued
-            sessionStorage.removeItem("pendingVerificationEmail");
-            addToast("Account verified successfully! Please sign in.", "success");
-            navigate("/login", { replace: true });
-          }
-        } catch (authErr) {
-          console.error("Auto sign-in error after verification:", authErr);
-          addToast("Account verified! Please sign in with your credentials.", "success");
-          navigate("/login", { replace: true });
+          sessionStorage.removeItem("pendingVerificationEmail");
+          setIsSubmittedPending(true);
+          addToast("Email verified successfully! Your application and valid ID have been submitted for administrator review.", "success");
         } finally {
           setIsVerifying(false);
         }
@@ -318,137 +307,212 @@ export default function VerifyEmail() {
             <span className="auth-mobile-name">Fairfly</span>
           </div>
 
-          <div className="verify-page-header">
-            <div className="verify-icon-badge">
-              <Mail size={24} className="verify-badge-icon" />
-            </div>
-            <h1>Check Your Email</h1>
-            <p className="verify-header-desc">
-              We have dispatched a 6-digit confirmation code to:
-            </p>
-            <div className="verify-target-email-pill">
-              <Mail size={14} />
-              <span>{email || "your email address"}</span>
-            </div>
-          </div>
-
-          {/* Expiration or Lockout Alerts */}
-          {isLockedOut ? (
-            <div className="verify-alert verify-alert-danger" role="alert">
-              <AlertCircle size={18} />
-              <div>
-                <strong>Security Lockout:</strong> Too many incorrect attempts. This verification code has been invalidated. Please restart registration.
+          {isSubmittedPending ? (
+            <div className="verify-page-header" style={{ alignItems: 'center', textAlign: 'center' }}>
+              <div
+                className="verify-icon-badge"
+                style={{
+                  width: '3.75rem',
+                  height: '3.75rem',
+                  backgroundColor: '#f0fdf4',
+                  color: '#16a34a',
+                  margin: '0 auto 0.75rem',
+                }}
+              >
+                <CheckCircle2 size={32} />
               </div>
-            </div>
-          ) : isExpired ? (
-            <div className="verify-alert verify-alert-warning" role="alert">
-              <Clock size={18} />
-              <div>
-                <strong>Code Expired:</strong> Your 10-minute verification window has lapsed. Please click below to request a new code.
+
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem 0' }}>
+                Application Under Review
+              </h1>
+
+              <p className="verify-header-desc" style={{ color: '#475569', fontSize: '0.875rem', lineHeight: '1.55' }}>
+                Your email has been verified! Your client account registration and uploaded government ID have been submitted to our administration team for review.
+              </p>
+
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '0.75rem',
+                  padding: '1.25rem',
+                  margin: '1.25rem 0',
+                  textAlign: 'left',
+                  width: '100%',
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '0.875rem',
+                    color: '#1e293b',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <ShieldCheck size={16} className="text-purple" />
+                  What happens next?
+                </div>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: '1.25rem',
+                    fontSize: '0.8125rem',
+                    color: '#64748b',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  <li>Our administrators review your ID to protect against spam &amp; bots.</li>
+                  <li>Once approved, you'll receive an email notification at <strong>{email}</strong>.</li>
+                  <li>You will then be able to log in and access all client features.</li>
+                </ul>
               </div>
-            </div>
-          ) : errorMessage ? (
-            <div className="verify-alert verify-alert-danger" role="alert">
-              <AlertCircle size={18} />
-              <div>{errorMessage}</div>
-            </div>
-          ) : null}
 
-          {/* Verification Form */}
-          <form onSubmit={handleVerify} className="verify-form" noValidate>
-            <div className="verify-otp-container">
-              <label className="verify-otp-label" htmlFor="otp-digit-0">
-                Enter 6-Digit Code
-              </label>
-
-              <div className="verify-otp-boxes" onPaste={handlePaste}>
-                {digits.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    id={`otp-digit-${idx}`}
-                    ref={(el) => (inputRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={1}
-                    className={`verify-otp-box ${digit ? "filled" : ""} ${
-                      errorMessage ? "has-error" : ""
-                    }`}
-                    value={digit}
-                    disabled={isVerifying || isExpired || isLockedOut}
-                    onChange={(e) => handleDigitChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(idx, e)}
-                    aria-label={`Digit ${idx + 1} of 6`}
-                  />
-                ))}
+              <Link
+                to="/login"
+                className="auth-submit-btn"
+                style={{ textDecoration: 'none', justifyContent: 'center', width: '100%' }}
+              >
+                Go to Sign In
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="verify-page-header">
+                <div className="verify-icon-badge">
+                  <Mail size={24} className="verify-badge-icon" />
+                </div>
+                <h1>Check Your Email</h1>
+                <p className="verify-header-desc">
+                  We have dispatched a 6-digit confirmation code to:
+                </p>
+                <div className="verify-target-email-pill">
+                  <Mail size={14} />
+                  <span>{email || "your email address"}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Countdown and Status Indicators */}
-            <div className="verify-status-bar">
-              <div className="verify-timer-indicator">
-                <Clock size={14} className={expiryTime < 60 ? "urgent" : ""} />
-                <span>
-                  {isExpired ? (
-                    <strong className="text-expired">Expired</strong>
-                  ) : (
-                    <>Expires in: <strong>{formatTime(expiryTime)}</strong></>
+              {/* Expiration or Lockout Alerts */}
+              {isLockedOut ? (
+                <div className="verify-alert verify-alert-danger" role="alert">
+                  <AlertCircle size={18} />
+                  <div>
+                    <strong>Security Lockout:</strong> Too many incorrect attempts. This verification code has been invalidated. Please restart registration.
+                  </div>
+                </div>
+              ) : isExpired ? (
+                <div className="verify-alert verify-alert-warning" role="alert">
+                  <Clock size={18} />
+                  <div>
+                    <strong>Code Expired:</strong> Your 10-minute verification window has lapsed. Please click below to request a new code.
+                  </div>
+                </div>
+              ) : errorMessage ? (
+                <div className="verify-alert verify-alert-danger" role="alert">
+                  <AlertCircle size={18} />
+                  <div>{errorMessage}</div>
+                </div>
+              ) : null}
+
+              {/* Verification Form */}
+              <form onSubmit={handleVerify} className="verify-form" noValidate>
+                <div className="verify-otp-container">
+                  <label className="verify-otp-label" htmlFor="otp-digit-0">
+                    Enter 6-Digit Code
+                  </label>
+
+                  <div className="verify-otp-boxes" onPaste={handlePaste}>
+                    {digits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        id={`otp-digit-${idx}`}
+                        ref={(el) => (inputRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={1}
+                        className={`verify-otp-box ${digit ? "filled" : ""} ${
+                          errorMessage ? "has-error" : ""
+                        }`}
+                        value={digit}
+                        disabled={isVerifying || isExpired || isLockedOut}
+                        onChange={(e) => handleDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(idx, e)}
+                        aria-label={`Digit ${idx + 1} of 6`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Countdown and Status Indicators */}
+                <div className="verify-status-bar">
+                  <div className="verify-timer-indicator">
+                    <Clock size={14} className={expiryTime < 60 ? "urgent" : ""} />
+                    <span>
+                      {isExpired ? (
+                        <strong className="text-expired">Expired</strong>
+                      ) : (
+                        <>Expires in: <strong>{formatTime(expiryTime)}</strong></>
+                      )}
+                    </span>
+                  </div>
+
+                  {attemptsLeft !== null && attemptsLeft > 0 && !isLockedOut && (
+                    <div className="verify-attempts-indicator">
+                      <ShieldCheck size={14} />
+                      <span>{attemptsLeft} attempts remaining</span>
+                    </div>
                   )}
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="auth-submit-btn verify-submit-btn"
+                  disabled={!isCodeComplete || isVerifying || isExpired || isLockedOut}
+                >
+                  {isVerifying ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Submit &amp; Verify Email</span>
+                  )}
+                </button>
+              </form>
+
+              {/* Resend Action */}
+              <div className="verify-resend-section">
+                <p className="verify-resend-text">Didn't receive the email?</p>
+                <button
+                  type="button"
+                  className="verify-resend-btn"
+                  onClick={handleResend}
+                  disabled={resendCooldown > 0 || isResending}
+                >
+                  <RotateCw size={14} className={isResending ? "spinning" : ""} />
+                  <span>
+                    {resendCooldown > 0
+                      ? `Resend code in ${resendCooldown}s`
+                      : isResending
+                      ? "Sending fresh code..."
+                      : "Resend verification code"}
+                  </span>
+                </button>
+              </div>
+
+              {/* Footnote Notice */}
+              <div className="verify-footer-security">
+                <ShieldCheck size={16} />
+                <span>
+                  Secure multi-factor identity validation. Never share this code with anyone.
                 </span>
               </div>
-
-              {attemptsLeft !== null && attemptsLeft > 0 && !isLockedOut && (
-                <div className="verify-attempts-indicator">
-                  <ShieldCheck size={14} />
-                  <span>{attemptsLeft} attempts remaining</span>
-                </div>
-              )}
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="auth-submit-btn verify-submit-btn"
-              disabled={!isCodeComplete || isVerifying || isExpired || isLockedOut}
-            >
-              {isVerifying ? (
-                <>
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                  <span>Verifying &amp; Signing In...</span>
-                </>
-              ) : (
-                <span>Verify &amp; Activate Account</span>
-              )}
-            </button>
-          </form>
-
-          {/* Resend Action */}
-          <div className="verify-resend-section">
-            <p className="verify-resend-text">Didn't receive the email?</p>
-            <button
-              type="button"
-              className="verify-resend-btn"
-              onClick={handleResend}
-              disabled={resendCooldown > 0 || isResending}
-            >
-              <RotateCw size={14} className={isResending ? "spinning" : ""} />
-              <span>
-                {resendCooldown > 0
-                  ? `Resend code in ${resendCooldown}s`
-                  : isResending
-                  ? "Sending fresh code..."
-                  : "Resend verification code"}
-              </span>
-            </button>
-          </div>
-
-          {/* Footnote Notice */}
-          <div className="verify-footer-security">
-            <ShieldCheck size={16} />
-            <span>
-              Secure multi-factor identity validation. Never share this code with anyone.
-            </span>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

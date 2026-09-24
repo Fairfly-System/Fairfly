@@ -11,7 +11,13 @@ import DataTable from '../../../components/UI/DataTable/DataTable';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import ClientEditModal from '../../../components/Admin/Modals/ClientEditModal/ClientEditModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
-import { fetchClients, updateClient, deleteClient } from '../../../services/adminService';
+import {
+  fetchClients,
+  updateClient,
+  deleteClient,
+  bulkStatusClients,
+  bulkDeleteClients
+} from '../../../services/adminService';
 import useDebounce from '../../../hooks/useDebounce';
 import './admin-clients.css';
 
@@ -24,6 +30,9 @@ export default function ClientsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Row selection for bulk actions
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
@@ -104,12 +113,15 @@ export default function ClientsContent() {
 
   // Delete Client
   const handleDeletePrompt = (clientItem) => {
+    const isPending = clientItem.status === 'Pending' || clientItem.approvalStatus === 'Pending';
     setConfirmState({
       type: 'delete',
       client: clientItem,
-      title: 'Delete Client Account?',
-      message: `Are you sure you want to permanently delete ${clientItem.fullName || clientItem.name || 'this client'} (${clientItem.email})? This will delete both authentication credentials and account records. This action cannot be undone.`,
-      confirmLabel: 'Delete Permanently',
+      title: isPending ? 'Delete Spam / Pending Account?' : 'Delete Client Account?',
+      message: isPending
+        ? `Are you sure you want to permanently delete this registration for ${clientItem.fullName || clientItem.name || 'this applicant'} (${clientItem.email})? This will purge both auth credentials and database records to completely remove spam. This action cannot be undone.`
+        : `Are you sure you want to permanently delete ${clientItem.fullName || clientItem.name || 'this client'} (${clientItem.email})? This will delete both authentication credentials and account records. This action cannot be undone.`,
+      confirmLabel: isPending ? 'Delete Spam Account' : 'Delete Permanently',
       confirmIcon: 'fa-solid fa-trash-can',
       isDanger: true
     });
@@ -149,13 +161,65 @@ export default function ClientsContent() {
         },
         setIsConfirmLoading
       );
+    } else if (confirmState.type === 'bulk-enable') {
+      bulkStatusClients(
+        userToken,
+        confirmState.ids,
+        'Active',
+        () => {
+          addToast(`${confirmState.ids.length} client(s) activated successfully!`, 'success');
+          setSelectedIds([]);
+          setConfirmState(null);
+          loadClients();
+        },
+        (error) => {
+          console.error('Error bulk activating clients:', error);
+          addToast(error?.message || 'Failed to update clients', 'error');
+        },
+        setIsConfirmLoading
+      );
+    } else if (confirmState.type === 'bulk-disable') {
+      bulkStatusClients(
+        userToken,
+        confirmState.ids,
+        'Deactivated',
+        () => {
+          addToast(`${confirmState.ids.length} client(s) deactivated successfully!`, 'success');
+          setSelectedIds([]);
+          setConfirmState(null);
+          loadClients();
+        },
+        (error) => {
+          console.error('Error bulk deactivating clients:', error);
+          addToast(error?.message || 'Failed to update clients', 'error');
+        },
+        setIsConfirmLoading
+      );
+    } else if (confirmState.type === 'bulk-delete') {
+      bulkDeleteClients(
+        userToken,
+        confirmState.ids,
+        () => {
+          addToast(`${confirmState.ids.length} client(s) permanently deleted!`, 'success');
+          setSelectedIds([]);
+          setConfirmState(null);
+          loadClients();
+        },
+        (error) => {
+          console.error('Error bulk deleting clients:', error);
+          addToast(error?.message || 'Failed to delete clients', 'error');
+        },
+        setIsConfirmLoading
+      );
     }
   };
 
   // KPI Calculations
   const totalClients = clients.length;
-  const activeClients = clients.filter((c) => c.status === 'Active').length;
+  const pendingClients = clients.filter((c) => c.status === 'Pending' || c.approvalStatus === 'Pending').length;
+  const activeClients = clients.filter((c) => c.status === 'Active' && c.approvalStatus !== 'Pending').length;
   const deactivatedClients = clients.filter((c) => c.status === 'Deactivated').length;
+  const rejectedClients = clients.filter((c) => c.status === 'Rejected' || c.approvalStatus === 'Rejected').length;
 
   // Filter & Search Logic
   const filteredClients = useMemo(() => {
@@ -168,13 +232,19 @@ export default function ClientsContent() {
         client.name?.toLowerCase().includes(query) ||
         client.email?.toLowerCase().includes(query) ||
         client.phone?.toLowerCase().includes(query) ||
-        client.address?.toLowerCase().includes(query);
+        client.address?.toLowerCase().includes(query) ||
+        client.idType?.toLowerCase().includes(query);
 
       // Status filter
+      const isPending = client.status === 'Pending' || client.approvalStatus === 'Pending';
+      const isRejected = client.status === 'Rejected' || client.approvalStatus === 'Rejected';
+
       const matchStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'Active' && client.status === 'Active') ||
-        (statusFilter === 'Deactivated' && client.status === 'Deactivated');
+        (statusFilter === 'Pending' && isPending) ||
+        (statusFilter === 'Active' && client.status === 'Active' && !isPending) ||
+        (statusFilter === 'Deactivated' && client.status === 'Deactivated') ||
+        (statusFilter === 'Rejected' && isRejected);
 
       return matchSearch && matchStatus;
     });
@@ -190,13 +260,16 @@ export default function ClientsContent() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds([]);
   }, [debouncedSearch, statusFilter, pageSize]);
 
   // Filter Chips Configuration
   const filterChips = [
     { label: 'All Accounts', value: 'all', count: totalClients },
+    { label: 'Pending Approval', value: 'Pending', count: pendingClients },
     { label: 'Active', value: 'Active', count: activeClients },
-    { label: 'Deactivated', value: 'Deactivated', count: deactivatedClients }
+    { label: 'Deactivated', value: 'Deactivated', count: deactivatedClients },
+    ...(rejectedClients > 0 ? [{ label: 'Rejected', value: 'Rejected', count: rejectedClients }] : [])
   ];
 
   // Helper for Initials
@@ -243,11 +316,32 @@ export default function ClientsContent() {
       key: 'status',
       header: 'Status',
       sortable: true,
-      render: (row) => (
-        <span className={`status-pill ${row.status === 'Active' ? 'status-pill--active' : 'status-pill--disabled'}`}>
-          {row.status || 'Active'}
-        </span>
-      )
+      render: (row) => {
+        const isPending = row.status === 'Pending' || row.approvalStatus === 'Pending';
+        const isRejected = row.status === 'Rejected' || row.approvalStatus === 'Rejected';
+
+        if (isPending) {
+          return (
+            <span className="status-pill status-pill--pending">
+              <i className="fa-solid fa-clock" style={{ marginRight: '0.35rem', fontSize: '0.75rem' }}></i>
+              Pending Review
+            </span>
+          );
+        }
+        if (isRejected) {
+          return (
+            <span className="status-pill status-pill--danger">
+              <i className="fa-solid fa-circle-xmark" style={{ marginRight: '0.35rem', fontSize: '0.75rem' }}></i>
+              Rejected
+            </span>
+          );
+        }
+        return (
+          <span className={`status-pill ${row.status === 'Active' ? 'status-pill--active' : 'status-pill--disabled'}`}>
+            {row.status || 'Active'}
+          </span>
+        );
+      }
     },
     {
       key: 'createdAt',
@@ -268,14 +362,17 @@ export default function ClientsContent() {
       className: 'actions-col',
       render: (row) => {
         const isDeactivated = row.status === 'Deactivated';
+        const isPending = row.status === 'Pending' || row.approvalStatus === 'Pending';
+
         return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
             <Link
               to={`/admin/clients/${row.id}`}
               className="icon-btn view"
-              title="View Details"
+              title={isPending ? 'Review ID & Application' : 'View Details'}
+              style={isPending ? { borderColor: '#f59e0b', color: '#d97706', backgroundColor: '#fffbeb' } : {}}
             >
-              <i className="fa-solid fa-eye"></i>
+              <i className={`fa-solid ${isPending ? 'fa-id-card' : 'fa-eye'}`}></i>
             </Link>
             <button
               type="button"
@@ -290,7 +387,7 @@ export default function ClientsContent() {
               type="button"
               className={`icon-btn ${isDeactivated ? 'check' : 'ban'}`}
               title={isDeactivated ? 'Activate Client' : 'Deactivate Client'}
-              disabled={isSubmitting || isConfirmLoading}
+              disabled={isSubmitting || isConfirmLoading || isPending}
               onClick={() => handleToggleStatus(row)}
             >
               <i className={`fa-solid ${isDeactivated ? 'fa-circle-check' : 'fa-ban'}`}></i>
@@ -298,7 +395,7 @@ export default function ClientsContent() {
             <button
               type="button"
               className="icon-btn delete"
-              title="Delete Client"
+              title={isPending ? 'Delete / Reject Spam' : 'Delete Client'}
               disabled={isSubmitting || isConfirmLoading}
               onClick={() => handleDeletePrompt(row)}
             >
@@ -316,6 +413,12 @@ export default function ClientsContent() {
     if (totalClients === 0) {
       return { message: 'No client accounts have been registered yet.', type: 'info' };
     }
+    if (pendingClients > 0) {
+      return {
+        message: `${pendingClients} client account${pendingClients !== 1 ? 's are' : ' is'} pending government ID verification. Please review their submitted documents to approve access or reject spam accounts.`,
+        type: 'warning'
+      };
+    }
     if (deactivatedClients > 0) {
       return {
         message: `${deactivatedClients} client account${deactivatedClients !== 1 ? 's are' : ' is'} currently deactivated. ${activeClients} of ${totalClients} account${totalClients !== 1 ? 's are' : ' is'} active in good standing.`,
@@ -326,7 +429,7 @@ export default function ClientsContent() {
       message: `All ${totalClients} registered client accounts are active. Client passwords and emails are protected and cannot be modified by administrators.`,
       type: 'success'
     };
-  }, [loading, totalClients, activeClients, deactivatedClients]);
+  }, [loading, totalClients, pendingClients, activeClients, deactivatedClients]);
 
   return (
     <div className="admin-clients-page">
@@ -354,6 +457,17 @@ export default function ClientsContent() {
           iconColor="#6b21a8"
           badge="All"
           badgeType="neutral"
+          isLoading={loading}
+        />
+
+        <KpiCard
+          title="Pending Verification"
+          value={pendingClients}
+          detail="Awaiting ID review & approval"
+          icon="fa-solid fa-id-card"
+          iconColor="#d97706"
+          badge={pendingClients > 0 ? `${pendingClients} Pending` : 'All Clear'}
+          badgeType={pendingClients > 0 ? 'warn' : 'ok'}
           isLoading={loading}
         />
 
@@ -386,82 +500,99 @@ export default function ClientsContent() {
       />
 
       {/* Table Card */}
-      <div className="clients-table-card">
-        {/* Controls: Search & Filters */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <FilterChipGroup
-            chips={filterChips}
-            activeFilter={statusFilter}
-            onFilterChange={setStatusFilter}
-          />
-
-          <div style={{ position: 'relative', minWidth: '18rem' }}>
+      <section className="card clients-table-card">
+        {/* Controls: Search & Filters Toolbar */}
+        <div className="table-toolbar">
+          <div className="search-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
             <input
               type="text"
-              className="form-input"
-              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', fontSize: '0.875rem' }}
+              className="search-input"
               placeholder="Search by name, email, phone, or address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {searchTerm ? (
+            {searchTerm && (
               <button
                 type="button"
+                className="search-clear-btn"
                 onClick={() => setSearchTerm('')}
-                style={{
-                  position: 'absolute',
-                  right: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-light)',
-                  cursor: 'pointer'
-                }}
                 aria-label="Clear search"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
-            ) : (
-              <i
-                className="fa-solid fa-magnifying-glass"
-                style={{
-                  position: 'absolute',
-                  right: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-light)',
-                  pointerEvents: 'none'
-                }}
-              />
             )}
           </div>
+
+          <FilterChipGroup
+            chips={filterChips}
+            activeChip={statusFilter}
+            onChipChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
-        {/* DataTable */}
+        {/* The Reusable DataTable Component with Bulk Actions */}
         <DataTable
           columns={columns}
           data={paginatedClients}
+          selectable={true}
+          selectedIds={selectedIds}
           isLoading={loading}
-          emptyMessage={
-            searchTerm || statusFilter !== 'all'
+          disabled={isConfirmLoading || isSubmitting}
+          onSelectionChange={setSelectedIds}
+          onBulkEnable={(ids) =>
+            setConfirmState({
+              type: 'bulk-enable',
+              ids,
+              title: `Activate ${ids.length} Client Account${ids.length !== 1 ? 's' : ''}?`,
+              message: `Are you sure you want to activate ${ids.length} selected client account${ids.length !== 1 ? 's' : ''}? Access to customer services will be restored.`,
+              confirmLabel: 'Activate Accounts',
+              confirmIcon: 'fa-solid fa-circle-check',
+              isDanger: false
+            })
+          }
+          onBulkDisable={(ids) =>
+            setConfirmState({
+              type: 'bulk-disable',
+              ids,
+              title: `Deactivate ${ids.length} Client Account${ids.length !== 1 ? 's' : ''}?`,
+              message: `Are you sure you want to deactivate ${ids.length} selected client account${ids.length !== 1 ? 's' : ''}? They will be unable to book services or make appointments while deactivated.`,
+              confirmLabel: 'Deactivate Accounts',
+              confirmIcon: 'fa-solid fa-ban',
+              isDanger: true
+            })
+          }
+          onBulkDelete={(ids) =>
+            setConfirmState({
+              type: 'bulk-delete',
+              ids,
+              title: `Delete ${ids.length} Client Account${ids.length !== 1 ? 's' : ''} Permanently?`,
+              message: `Are you sure you want to permanently delete ${ids.length} client account${ids.length !== 1 ? 's' : ''}? This will delete both authentication credentials and database records from Firebase Auth and Firestore. This action cannot be undone.`,
+              confirmLabel: 'Delete Permanently',
+              confirmIcon: 'fa-solid fa-trash-can',
+              isDanger: true
+            })
+          }
+          emptyState={{
+            icon: 'fa-solid fa-user-slash',
+            message: searchTerm || statusFilter !== 'all'
               ? 'No client accounts match your search and filter criteria.'
               : 'No client accounts have been registered yet.'
-          }
+          }}
         />
 
-        {/* Pagination */}
-        {!loading && filteredClients.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            pageSize={pageSize}
-            onPageSizeChange={setPageSize}
-            totalItems={filteredClients.length}
-          />
-        )}
-      </div>
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredClients.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </section>
 
       {/* Edit Client Modal */}
       <ClientEditModal
