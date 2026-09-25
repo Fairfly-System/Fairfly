@@ -17,12 +17,16 @@ const resourceRoutes = require('./resourceRoutes');
 const authRoutes = require('./authRoutes');
 const qualificationRoutes = require('./qualificationRoutes');
 const clientRoutes = require('./clientRoutes');
+const chatbotRoutes = require('./chatbotRoutes');
+const adminAnalyticsRoutes = require('./adminAnalyticsRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/qualifications', qualificationRoutes);
 router.use('/clients', clientRoutes);
 router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
+router.use('/chatbot', chatbotRoutes);
+router.use('/admin/analytics', adminAnalyticsRoutes);
 router.use('/operators', operatorRoutes);
 router.use('/workflows', workflowRoutes);
 router.use('/workflow', workflowRoutes); // Support both /workflow and /workflows

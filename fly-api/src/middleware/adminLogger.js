@@ -17,6 +17,7 @@ const METHOD_ACTION_MAP = {
  * `/api/services/quicklinks` matches before `/api/services`.
  */
 const RESOURCE_PATTERNS = [
+  { pattern: '/api/chatbot', type: 'chatbot' },
   { pattern: '/api/services/quicklinks', type: 'quicklink' },
   { pattern: '/api/services/active', type: 'activeService' },
   { pattern: '/api/services', type: 'service' },
