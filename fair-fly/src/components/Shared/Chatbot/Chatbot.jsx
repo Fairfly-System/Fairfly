@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_SYSTEM_INSTRUCTION } from "./botPersona";
+import { fetchServices } from "../../../services/serviceService";
+import { fetchChatbotConfig, fetchChatbotFaqs } from "../../../services/chatbotService";
+import { buildGeminiSystemInstruction } from "./botPersona";
 import "./chatbot.css"; 
 
 export default function Chatbot() {
@@ -9,10 +11,6 @@ export default function Chatbot() {
   const isHiddenRoute =
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/operator");
-
-  if (isHiddenRoute) {
-    return null;
-  }
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -23,17 +21,75 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [catalogStatus, setCatalogStatus] = useState("loading");
+  const [configStatus, setConfigStatus] = useState("loading");
+  const [services, setServices] = useState([]);
+  const [chatbotConfig, setChatbotConfig] = useState(null);
+  const [faqs, setFaqs] = useState([]);
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (isHiddenRoute) return undefined;
+
+    let isMounted = true;
+
+    fetchServices(
+      (data) => {
+        if (!isMounted) return;
+
+        const activeServices = (Array.isArray(data) ? data : []).filter(
+          (service) => service.status !== "Disabled" && service.status !== "Inactive"
+        );
+        setServices(activeServices);
+        setCatalogStatus(activeServices.length > 0 ? "ready" : "unavailable");
+      },
+      (error) => {
+        if (!isMounted) return;
+
+        console.error("Service catalog Error:", error);
+        setCatalogStatus("unavailable");
+      }
+    );
+
+    fetchChatbotConfig(
+      (data) => {
+        if (!isMounted) return;
+        setChatbotConfig(data);
+        setConfigStatus(data?.systemInstruction ? "ready" : "unavailable");
+      },
+      (error) => {
+        if (!isMounted) return;
+        console.error("Chatbot config Error:", error);
+        setConfigStatus("unavailable");
+      }
+    );
+
+    fetchChatbotFaqs(
+      (data) => {
+        if (!isMounted) return;
+        setFaqs(Array.isArray(data) ? data : []);
+      },
+      (error) => {
+        if (!isMounted) return;
+        console.error("Chatbot FAQ Error:", error);
+      }
+    );
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isHiddenRoute]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
+  const handleSend = async (e, selectedPrompt = "") => {
+    e?.preventDefault();
+    const messageToSend = selectedPrompt || input.trim();
+    if (!messageToSend || loading || catalogStatus !== "ready" || configStatus !== "ready") return;
 
-    const userMessage = input.trim();
+    const userMessage = messageToSend;
     setInput("");
     setLoading(true);
 
@@ -45,7 +101,7 @@ export default function Chatbot() {
       
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash-lite",
-        systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+        systemInstruction: buildGeminiSystemInstruction(services, chatbotConfig),
       });
 
       
@@ -81,6 +137,10 @@ export default function Chatbot() {
         }
       };
 
+  if (isHiddenRoute) {
+    return null;
+  }
+
   return (
     <>
       {/* FLOATING LAUNCHER BUTTON */}
@@ -100,7 +160,8 @@ export default function Chatbot() {
               <div className="chatbot-header-info">
                 <span className="chatbot-bot-name">Chat with Fairfly</span>
                 <span className="chatbot-status">
-                  <span className="chatbot-green-dot"></span> Online Now
+                  <span className="chatbot-green-dot"></span>
+                  {configStatus !== "ready" || catalogStatus === "loading" ? " Loading chatbot..." : catalogStatus === "ready" ? " Online Now" : " Temporarily unavailable"}
                 </span>
               </div>
             </div>
@@ -124,17 +185,36 @@ export default function Chatbot() {
             <div ref={chatEndRef} />
           </div>
 
+          {faqs.length > 0 && (
+            <div className="chatbot-quick-access" aria-label="Frequently asked questions">
+              <span className="chatbot-quick-access-title">Quick questions</span>
+              <div className="chatbot-quick-access-list">
+                {faqs.map((faq) => (
+                  <button
+                    type="button"
+                    key={faq.id}
+                    className="chatbot-quick-access-button"
+                    onClick={() => handleSend(null, faq.prompt)}
+                    disabled={loading || catalogStatus !== "ready" || configStatus !== "ready"}
+                  >
+                    {faq.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Footer Input Form */}
           <form onSubmit={handleSend} className="chatbot-input-area">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything..."
+              placeholder={catalogStatus === "ready" ? "Ask me anything..." : "Service information is unavailable"}
               className="chatbot-input-field"
-              disabled={loading}
+              disabled={loading || catalogStatus !== "ready" || configStatus !== "ready"}
             />
-            <button type="submit" className="chatbot-send-button" disabled={loading || !input.trim()}><i className="fa-regular fa-paper-plane"></i></button>
+            <button type="submit" className="chatbot-send-button" disabled={loading || catalogStatus !== "ready" || configStatus !== "ready" || !input.trim()}><i className="fa-regular fa-paper-plane"></i></button>
           </form>
         </div>
       )}

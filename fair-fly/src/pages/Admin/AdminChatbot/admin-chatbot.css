@@ -1,0 +1,195 @@
+.admin-chatbot-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-chatbot-panel {
+  padding: 1.5rem;
+}
+
+.admin-chatbot-section-heading,
+.admin-chatbot-faq-heading,
+.admin-chatbot-form-actions,
+.admin-chatbot-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-chatbot-section-heading h2,
+.admin-chatbot-faq-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.admin-chatbot-section-heading h2 i,
+.admin-chatbot-faq-heading h2 i {
+  color: var(--purple);
+}
+
+.admin-chatbot-section-heading p,
+.admin-chatbot-faq-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--text-light);
+}
+
+.admin-chatbot-form,
+.admin-chatbot-faq-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.admin-chatbot-form textarea,
+.admin-chatbot-form input,
+.admin-chatbot-faq-form textarea,
+.admin-chatbot-faq-form input,
+.admin-chatbot-list-toolbar input {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.8rem;
+  color: var(--text-dark);
+  background: var(--surface, #fff);
+  font: inherit;
+  resize: vertical;
+}
+
+.admin-chatbot-form textarea:focus,
+.admin-chatbot-form input:focus,
+.admin-chatbot-faq-form textarea:focus,
+.admin-chatbot-faq-form input:focus,
+.admin-chatbot-list-toolbar input:focus {
+  outline: 2px solid color-mix(in srgb, var(--purple) 30%, transparent);
+  border-color: var(--purple);
+}
+
+.admin-chatbot-faq-form {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.25rem;
+}
+
+.admin-chatbot-faq-form h3 {
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.admin-chatbot-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 8rem auto;
+  align-items: end;
+  gap: 1rem;
+}
+
+.admin-chatbot-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.6rem;
+  color: var(--text-dark);
+}
+
+.admin-chatbot-checkbox input {
+  width: auto;
+}
+
+.admin-chatbot-count,
+.admin-chatbot-status {
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.admin-chatbot-count {
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 10%, white);
+}
+
+.admin-chatbot-status.is-enabled {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.admin-chatbot-status.is-disabled {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.admin-chatbot-list-toolbar {
+  margin: 1.25rem 0 0.75rem;
+}
+
+.admin-chatbot-list-toolbar input {
+  max-width: 25rem;
+}
+
+.admin-chatbot-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-chatbot-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-chatbot-table th,
+.admin-chatbot-table td {
+  padding: 0.85rem 0.7rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-chatbot-table th {
+  color: var(--text-light);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.admin-chatbot-table td small {
+  display: block;
+  max-width: 34rem;
+  margin-top: 0.25rem;
+  color: var(--text-light);
+  white-space: normal;
+}
+
+.admin-chatbot-actions {
+  white-space: nowrap;
+}
+
+.admin-chatbot-empty {
+  padding: 2rem 0;
+  color: var(--text-light);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .admin-chatbot-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-chatbot-panel {
+    padding: 1rem;
+  }
+
+  .admin-chatbot-section-heading,
+  .admin-chatbot-faq-heading,
+  .admin-chatbot-form-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-chatbot-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

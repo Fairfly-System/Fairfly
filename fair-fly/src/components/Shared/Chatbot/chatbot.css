@@ -249,3 +249,46 @@
 
 
 }
+
+.chatbot-quick-access {
+  border-top: 1px solid #e5e7eb;
+  padding: 0.7rem 0.85rem;
+  background: #fafafa;
+}
+
+.chatbot-quick-access-title {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.chatbot-quick-access-list {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+.chatbot-quick-access-button {
+  flex: 0 0 auto;
+  border: 1px solid #d8c9f2;
+  border-radius: 999px;
+  padding: 0.42rem 0.7rem;
+  color: #5b21b6;
+  background: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.chatbot-quick-access-button:hover:not(:disabled) {
+  background: #f3eefe;
+}
+
+.chatbot-quick-access-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

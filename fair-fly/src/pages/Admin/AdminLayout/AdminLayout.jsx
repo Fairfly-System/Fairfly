@@ -21,6 +21,7 @@ const baseAdminLinks = [
   { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
   { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },
   { to: '/admin/quick-links', icon: 'fa-solid fa-link', label: 'Quick Links' },
+  { to: '/admin/chatbot', icon: 'fa-solid fa-robot', label: 'Chatbot' },
 ];
 
 export default function AdminLayout() {
