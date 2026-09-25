@@ -14,6 +14,14 @@
   .dashboard-charts {
     grid-template-columns: 1fr;
   }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-operators {
+    grid-row: auto;
+  }
 }
 
 .chart-card {
@@ -27,6 +35,318 @@
   margin-bottom: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.performance-overview,
+.report-summary {
+  padding: 1.5rem;
+}
+
+.performance-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.performance-overview > .analytics-controls {
+  align-self: flex-end;
+  margin-top: -4.25rem;
+}
+
+.performance-metrics {
+  border-top: 0.0625rem solid var(--border-color);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 1.25rem;
+}
+
+.performance-metric-card {
+  align-items: center;
+  background: var(--card-bg);
+  border: 0.0625rem solid var(--border-color);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.performance-metric-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.performance-metric-card span,
+.performance-metric-card small {
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.performance-metric-card strong {
+  color: var(--text-dark);
+  font-size: 1.5rem;
+}
+
+.performance-icon {
+  flex-shrink: 0;
+}
+
+.performance-icon--services {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.performance-icon--revenue {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.performance-chart {
+  border-top: 0.0625rem solid var(--border-color);
+  padding-top: 1.25rem;
+}
+
+.report-summary .activity-card-header {
+  margin-bottom: 1.25rem;
+}
+
+.report-summary .analytics-summary-grid {
+  margin-top: 0;
+}
+
+.analytics-panel .pagination-wrapper {
+  border-top: 0.0625rem solid var(--border-color);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.analytics-panel .pagination-size-selector {
+  display: none;
+}
+
+.analytics-toolbar,
+.analytics-panel {
+  padding: 1.25rem;
+}
+
+.analytics-toolbar,
+.analytics-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.analytics-toolbar .chart-title,
+.analytics-panel .chart-title {
+  margin-bottom: 0.25rem;
+}
+
+.analytics-period {
+  color: var(--text-light);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+.analytics-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.analytics-controls label,
+.analytics-panel-header select {
+  color: var(--text-mid);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 0.25rem;
+}
+
+.analytics-controls select,
+.analytics-controls input,
+.analytics-panel-header select {
+  background: var(--card-bg);
+  border: 0.0625rem solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-dark);
+  min-height: 2.25rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.analytics-loading,
+.analytics-empty {
+  color: var(--text-light);
+  padding: 2rem;
+  text-align: center;
+}
+
+.analytics-summary-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.analytics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.analytics-summary-grid div {
+  border-left: 0.1875rem solid #6b6ff5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-left: 0.75rem;
+}
+
+.analytics-summary-grid strong {
+  color: var(--text-dark);
+  font-size: 1.25rem;
+}
+
+.analytics-summary-grid span,
+.analytics-summary-scope {
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.analytics-summary-scope {
+  margin: 1.5rem 0 0;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(15rem, 0.8fr);
+  gap: 1.5rem;
+}
+
+.analytics-operators {
+  grid-row: span 2;
+}
+
+.analytics-table-wrap {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.analytics-table {
+  border-collapse: collapse;
+  min-width: 38rem;
+  width: 100%;
+}
+
+.analytics-table th,
+.analytics-table td {
+  border-bottom: 0.0625rem solid var(--border-color);
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.analytics-table th {
+  color: var(--text-light);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+}
+
+.analytics-table td {
+  color: var(--text-mid);
+  font-size: 0.8125rem;
+}
+
+.analytics-table td:first-child {
+  min-width: 9rem;
+}
+
+.analytics-table td small,
+.priority-ticket-row small {
+  color: var(--text-light);
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+
+.analytics-row-selected td {
+  background: #f1f5ff;
+}
+
+.analytics-select-button {
+  background: transparent;
+  border: 0;
+  color: #4f46e5;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.service-ranking-list,
+.priority-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.service-ranking-row,
+.priority-ticket-row {
+  align-items: center;
+  border-bottom: 0.0625rem solid var(--border-color);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+}
+
+.service-ranking-row {
+  color: var(--text-mid);
+  font-size: 0.8125rem;
+}
+
+.service-ranking-row span:nth-child(2) {
+  flex: 1;
+}
+
+.service-ranking-number {
+  align-items: center;
+  background: #eef2ff;
+  border-radius: 50%;
+  color: #4f46e5;
+  display: inline-flex;
+  font-size: 0.7rem;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.priority-ticket-row {
+  align-items: flex-start;
+}
+
+.priority-ticket-row strong {
+  color: var(--text-dark);
+  display: block;
+  font-size: 0.8125rem;
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.priority-ticket-row > span {
+  background: #fee2e2;
+  border-radius: var(--radius-xs);
+  color: #b91c1c;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.25rem 0.4rem;
 }
 
 /* ── Recent Activity Card ──────────────────────────────────────────────────── */
@@ -252,6 +572,38 @@
 }
 
 @media (max-width: 640px) {
+  .performance-overview,
+  .report-summary {
+    padding: 1rem;
+  }
+
+  .performance-overview > .analytics-controls {
+    align-self: stretch;
+    margin-top: 0;
+  }
+
+  .performance-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-toolbar,
+  .analytics-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analytics-controls {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .analytics-controls label,
+  .analytics-controls select,
+  .analytics-controls input,
+  .analytics-controls button {
+    flex: 1;
+  }
+
   .activity-card-header {
     flex-direction: column;
     align-items: flex-start;

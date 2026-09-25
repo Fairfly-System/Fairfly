@@ -47,7 +47,7 @@ export default function OperatorsContent() {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(5);
 
   // Confirmation modal state
   const [confirmState, setConfirmState] = useState(null);
@@ -631,6 +631,7 @@ export default function OperatorsContent() {
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
+        pageSizeOptions={[5]}
       />
       </section>
 

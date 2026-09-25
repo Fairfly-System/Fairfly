@@ -42,33 +42,54 @@ export function formatLogLine(log) {
   return `[${dateStr}] ${log.actionType} ${resource}${id} by ${log.adminEmail} (${log.adminUid}) — HTTP ${log.method} ${log.path} → ${log.statusCode}`;
 }
 
-// ── Chart Data ─────────────────────────────────────────────────────────────
-export const revenueData = [
-  { month: 'Jan', revenue: 185000 },
-  { month: 'Feb', revenue: 210000 },
-  { month: 'Mar', revenue: 195000 },
-  { month: 'Apr', revenue: 240000 },
-  { month: 'May', revenue: 220000 },
-  { month: 'Jun', revenue: 260000 },
-  { month: 'Jul', revenue: 275000 },
-  { month: 'Aug', revenue: 250000 },
-  { month: 'Sep', revenue: 290000 },
-  { month: 'Oct', revenue: 310000 },
-  { month: 'Nov', revenue: 295000 },
-  { month: 'Dec', revenue: 330000 },
+export const PERIOD_OPTIONS = [
+  { value: 'day', label: 'Today' },
+  { value: 'week', label: 'This week' },
+  { value: 'month', label: 'This month' },
+  { value: 'year', label: 'This year' },
+  { value: 'custom', label: 'Custom range' },
 ];
 
-export const servicesCompletedData = [
-  { month: 'Jan', completed: 32 },
-  { month: 'Feb', completed: 41 },
-  { month: 'Mar', completed: 38 },
-  { month: 'Apr', completed: 50 },
-  { month: 'May', completed: 47 },
-  { month: 'Jun', completed: 55 },
-  { month: 'Jul', completed: 60 },
-  { month: 'Aug', completed: 58 },
-  { month: 'Sep', completed: 63 },
-  { month: 'Oct', completed: 70 },
-  { month: 'Nov', completed: 66 },
-  { month: 'Dec', completed: 75 },
-];
+export function formatCurrency(value) {
+  return `₱${Number(value || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+}
+
+export function formatReportPeriod(analytics) {
+  if (!analytics?.range?.from && !analytics?.range?.to) return 'All available time';
+  const from = analytics.range.from ? new Date(analytics.range.from).toLocaleDateString() : 'Start';
+  const to = analytics.range.to ? new Date(analytics.range.to).toLocaleDateString() : 'Present';
+  return `${from} - ${to}`;
+}
+
+export function toRevenueChartData(revenueTrend = []) {
+  return revenueTrend.map(({ label, revenue }) => ({
+    month: label,
+    revenue: Number(revenue || 0),
+  }));
+}
+
+export function escapeCsvValue(value) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+export function buildAnalyticsCsv(analytics, scopeLabel = 'Overall') {
+  const lines = [
+    ['FairFly Analytics Report', scopeLabel, formatReportPeriod(analytics)],
+    [],
+    ['Operator', 'Completed Services', 'Revenue', 'Open Tickets', 'High Priority Tickets', 'Last Completed'],
+    ...(analytics?.operators || []).map((operator) => [
+      operator.name,
+      operator.completedServices,
+      operator.revenue,
+      operator.openTickets,
+      operator.highPriorityTickets,
+      operator.lastCompletedAt || '',
+    ]),
+    [],
+    ['Most Picked Completed Services', 'Completed'],
+    ...(analytics?.serviceRanking || []).map((service) => [service.serviceType, service.completed]),
+  ];
+
+  return lines.map((line) => line.map(escapeCsvValue).join(',')).join('\n');
+}

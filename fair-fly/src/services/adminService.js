@@ -1,6 +1,22 @@
 import ApiCaller from '../utils/ApiCaller';
 import { API_BASE_URL } from '../utils/config';
 
+export function fetchAdminAnalytics(token, params = {}, successCallback, errorCallback, setIsLoading) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  ).toString();
+
+  return ApiCaller(
+    `${API_BASE_URL}/api/admin/analytics${query ? `?${query}` : ''}`,
+    'GET',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
 // ── Admin Accounts ────────────────────────────────────────────────────────
 export function fetchAdmins(token, successCallback, errorCallback, setIsLoading) {
   return ApiCaller(

@@ -16,6 +16,8 @@ import { fetchTickets, createTicket, sendMessageToTicket, closeTicket, updateTic
 import { fetchOperators } from '../../../services/adminService';
 import useDebounce from '../../../hooks/useDebounce';
 
+const PRIORITY_RANK = { urgent: 4, high: 3, medium: 2, low: 1 };
+
 export default function TicketsContent() {
   const navigate = useNavigate();
   const { userToken, userDetails } = useAuthContext();
@@ -31,7 +33,9 @@ export default function TicketsContent() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(5);
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [ticketSort, setTicketSort] = useState('priority');
 
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,14 +113,21 @@ export default function TicketsContent() {
       const ticketStatus = (ticket.status || 'Pending').toLowerCase();
       const matchesStatus =
         statusFilter === 'all' || ticketStatus === statusFilter.toLowerCase();
+      const ticketPriority = (ticket.priority || 'Medium').toLowerCase();
+      const matchesPriority = priorityFilter === 'all' || ticketPriority === priorityFilter;
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesPriority;
     }).sort((a, b) => {
+      if (ticketSort === 'priority') {
+        const priorityDifference = (PRIORITY_RANK[(b.priority || 'medium').toLowerCase()] || 0)
+          - (PRIORITY_RANK[(a.priority || 'medium').toLowerCase()] || 0);
+        if (priorityDifference !== 0) return priorityDifference;
+      }
       const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
       const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [tickets, debouncedSearch, statusFilter, assignmentScope, assignedOperators]);
+  }, [tickets, debouncedSearch, statusFilter, priorityFilter, ticketSort, assignmentScope, assignedOperators]);
 
   // Paginated tickets slice
   const paginatedTickets = useMemo(() => {
@@ -337,6 +348,36 @@ export default function TicketsContent() {
                   setCurrentPage(1);
                 }}
               />
+
+              <FilterChipGroup
+                chips={[
+                  { value: 'all', label: `All Priorities (${totalTickets})` },
+                  { value: 'urgent', label: 'Urgent' },
+                  { value: 'high', label: 'High' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'low', label: 'Low' },
+                ]}
+                activeChip={priorityFilter}
+                onChipChange={(value) => {
+                  setPriorityFilter(value);
+                  setCurrentPage(1);
+                }}
+              />
+
+              <label className="ticket-sort-control">
+                <span>Sort</span>
+                <select
+                  value={ticketSort}
+                  onChange={(event) => {
+                    setTicketSort(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  aria-label="Sort tickets"
+                >
+                  <option value="priority">Priority</option>
+                  <option value="recent">Recent</option>
+                </select>
+              </label>
             </div>
 
             {/* Ticket Table */}
@@ -356,6 +397,7 @@ export default function TicketsContent() {
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               onPageSizeChange={setPageSize}
+              pageSizeOptions={[5]}
             />
           </section>
         </section>
