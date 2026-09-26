@@ -33,7 +33,7 @@ function getStepFile(step) {
 function ServiceProcedureContent() {
   const { id } = useParams();
   const { data: activeServices, loading } = useOperatorContext();
-  const { userToken } = useAuthContext();
+  const { userToken, user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -44,6 +44,14 @@ function ServiceProcedureContent() {
     if (!activeServices || !id) return null;
     return activeServices.find((s) => s.id === id) || null;
   }, [activeServices, id]);
+
+  const isUnauthorized = useMemo(() => {
+    if (!serviceRecord || !user?.uid) return false;
+    if (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator') {
+      return serviceRecord.operatorId !== user.uid && serviceRecord.branchUid !== user.uid;
+    }
+    return false;
+  }, [serviceRecord, user, userDetails]);
 
   if (loading) {
     return (
@@ -74,6 +82,23 @@ function ServiceProcedureContent() {
           ))}
         </div>
       </main>
+    );
+  }
+
+  if (isUnauthorized) {
+    return (
+      <div className="card op-procedure-page page-fade-in">
+        <div className="op-procedure-not-found">
+          <i className="fa-solid fa-lock op-procedure-not-found-icon"></i>
+          <h2 className="op-procedure-not-found-title">Access Restricted</h2>
+          <p className="op-procedure-not-found-text">
+            This service fulfillment procedure is assigned to another branch operator and cannot be managed by your account.
+          </p>
+          <Link to="/operator" className="op-procedure-back-btn op-procedure-not-found-link">
+            <i className="fa-solid fa-arrow-left"></i> Return to Dashboard
+          </Link>
+        </div>
+      </div>
     );
   }
 

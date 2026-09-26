@@ -168,8 +168,12 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
       rate: Number(formData.rate) || 0,
       taxAmount: Number(formData.taxAmount) || 0,
       totalAmount: Number(formData.totalAmount || formData.rate) || 0,
-      branchUid: userDetails?.role === 'operator' ? user?.uid : null,
-      branchName: userDetails?.branchName || userDetails?.name || 'Branch Office',
+      branchUid: (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator') 
+        ? user?.uid 
+        : (initialData?.branchUid || formData.branchUid || null),
+      branchName: (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')
+        ? (userDetails?.branchName || userDetails?.name || 'Branch Office')
+        : (initialData?.branchName || formData.branchName || 'Branch Office'),
     };
 
     setIsSubmitting(true);

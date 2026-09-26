@@ -55,22 +55,38 @@ const createQuotation = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const effectiveBranchUid = branchUid || req.userDetails?.branchUid || req.user?.uid || null;
-    const effectiveBranchName = branchName || req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
+    const isOperatorUser = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    let effectiveBranchUid = branchUid || req.userDetails?.branchUid || (isOperatorUser ? req.user?.uid : null);
+    let effectiveBranchName = branchName || req.userDetails?.branchName || null;
 
-    // If inquiryId is provided, fetch inquiry to inherit clientUid if missing
+    // If inquiryId is provided, fetch inquiry to inherit clientUid and branchUid if missing
     let effectiveClientUid = clientUid || null;
     let linkedInquiry = null;
 
     if (inquiryId) {
       try {
         linkedInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${inquiryId}`);
-        if (linkedInquiry && !effectiveClientUid) {
-          effectiveClientUid = linkedInquiry.clientUid || null;
+        if (linkedInquiry) {
+          if (!effectiveClientUid) {
+            effectiveClientUid = linkedInquiry.clientUid || null;
+          }
+          if (!effectiveBranchUid) {
+            effectiveBranchUid = linkedInquiry.branchUid || linkedInquiry.operatorId || null;
+          }
+          if (!effectiveBranchName) {
+            effectiveBranchName = linkedInquiry.branchName || null;
+          }
         }
       } catch (inqErr) {
         console.warn(`Could not load inquiry ${inquiryId} during quotation creation:`, inqErr);
       }
+    }
+
+    if (!effectiveBranchUid && isOperatorUser) {
+      effectiveBranchUid = req.user?.uid;
+    }
+    if (!effectiveBranchName) {
+      effectiveBranchName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
     }
 
     const newQuotation = {
@@ -103,7 +119,7 @@ const createQuotation = async (req, res) => {
       activeServiceId: null,
       createdAt: now,
       updatedAt: now,
-      operatorId: req.user?.uid || 'operator_admin'
+      operatorId: effectiveBranchUid || (isOperatorUser ? req.user?.uid : 'operator_admin')
     };
 
     const docId = await addToDatabase(COLLECTIONS.QUOTATIONS, newQuotation);
@@ -159,14 +175,18 @@ const getQuotations = async (req, res) => {
       options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
     }
 
+    // If operator user is calling, restrict to their branch quotations
+    if (req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') {
+      options.filters.push({ field: 'branchUid', operator: '==', value: req.user.uid });
+    } else if (branchUid && branchUid !== 'all') {
+      options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
+    }
+
     if (inquiryId) {
       options.filters.push({ field: 'inquiryId', operator: '==', value: inquiryId });
     }
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });
-    }
-    if (branchUid && branchUid !== 'all') {
-      options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
     }
     if (limit) {
       options.limit = parseInt(limit, 10);
@@ -280,9 +300,43 @@ const acceptQuotation = async (req, res) => {
     // Compile workflow steps for this custom service
     const compiledSteps = await compileWorkflowStepsForService(quotation.serviceId, serviceTitle);
 
+    // Strictly resolve the specified operator for this service fulfillment
+    let assignedOperatorId = quotation.branchUid || quotation.operatorId || null;
+    let assignedBranchName = quotation.branchName || null;
+
+    if (!assignedOperatorId && quotation.inquiryId) {
+      try {
+        const originatingInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`);
+        if (originatingInquiry) {
+          assignedOperatorId = originatingInquiry.branchUid || originatingInquiry.operatorId || null;
+          if (!assignedBranchName) assignedBranchName = originatingInquiry.branchName || null;
+        }
+      } catch (err) {
+        console.warn('Could not inspect originating inquiry for branch:', err.message);
+      }
+    }
+
+    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    if (!assignedOperatorId && isOperator) {
+      assignedOperatorId = req.user?.uid;
+      assignedBranchName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
+    }
+
+    if (assignedOperatorId && !assignedBranchName && assignedOperatorId !== 'OP-ACCOUNT') {
+      try {
+        const opUser = await getFromDatabase(`users/${assignedOperatorId}`);
+        if (opUser) {
+          assignedBranchName = opUser.branchName || opUser.name || 'Branch Office';
+        }
+      } catch (err) {}
+    }
+
+    assignedOperatorId = assignedOperatorId || 'OP-ACCOUNT';
+    assignedBranchName = assignedBranchName || 'Branch Office';
+
     // Build Custom Service record in activeServices
     const activeServicePayload = {
-      clientUid: quotation.clientUid || req.user?.uid || null,
+      clientUid: quotation.clientUid || (req.userDetails?.role === 'client' ? req.user?.uid : null),
       clientName: quotation.clientName || 'Valued Client',
       clientEmail: quotation.clientEmail || '',
       clientPhone: quotation.clientPhone || '',
@@ -300,9 +354,9 @@ const acceptQuotation = async (req, res) => {
       startedAt: now,
       completedAt: null,
       steps: compiledSteps,
-      operatorId: quotation.branchUid || quotation.operatorId || 'OP-ACCOUNT',
-      branchUid: quotation.branchUid || quotation.operatorId || 'OP-ACCOUNT',
-      branchName: quotation.branchName || 'Branch Office',
+      operatorId: assignedOperatorId,
+      branchUid: assignedOperatorId,
+      branchName: assignedBranchName,
       additionalNotes: `Custom Service created from Quotation ${quotation.quoteNo || id}.\nTour Date: ${quotation.tourDates || 'N/A'}\nInclusions: ${quotation.inclusions || 'N/A'}\nExclusions: ${quotation.exclusions || 'N/A'}\nRemarks: ${quotation.remarks || 'N/A'}`,
       inquiryId: quotation.inquiryId || null,
       quotationId: id,
@@ -311,12 +365,28 @@ const acceptQuotation = async (req, res) => {
       updatedAt: now
     };
 
-    const activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
+    let activeServiceDocId = quotation.activeServiceId || null;
+    if (activeServiceDocId) {
+      const existingService = await getFromDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${activeServiceDocId}`);
+      if (existingService) {
+        await updateToDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${activeServiceDocId}`, {
+          ...activeServicePayload,
+          updatedAt: now
+        });
+      } else {
+        activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
+      }
+    } else {
+      activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
+    }
 
     // Update Quotation record
     await updateToDatabase(quotationPath, {
       status: 'Accepted',
       activeServiceId: activeServiceDocId,
+      branchUid: assignedOperatorId,
+      operatorId: assignedOperatorId,
+      branchName: assignedBranchName,
       acceptedAt: now,
       acceptedBy: req.user?.uid || 'client',
       updatedAt: now

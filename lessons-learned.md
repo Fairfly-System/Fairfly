@@ -71,4 +71,13 @@
 ## [2026-09-03] Unscoped Constant Mapping in Refactored Modal Form
 - **Problem**: `Uncaught ReferenceError: PRIORITIES is not defined at CreateTicketModal (CreateTicketModal.jsx:234:18)`.
 - **Root Cause**: During inline CSS refactoring and component cleanup, `<select name="priority">` was rewritten to map over `PRIORITIES.map(...)`, but `PRIORITIES` was not defined at the top of `CreateTicketModal.jsx`.
-- **Prevention**: Whenever mapping options over an array constant in JSX, verify that the constant is explicitly exported/imported or defined at the module level in the same file. Always test the modal trigger or verify imports across JSX templates.
+- **Prevention**: Whenever mapping options over an array constant in JSX, verify that the constant is explicitly exported/imported or defined at the module level in the same file. Always test the modal trigger or verify imports across JSX templates.
+
+## [2026-09-26] Flawed Conditional Fallback In Multi-Tenant Operator Scoping
+- **Problem**: In Operator Dashboard and Layout, active service fulfillments were shared across all operators when an operator had no assigned services. Furthermore, when an operator or client accepted a quotation, the operator's active procedures suddenly displayed only that specific quotation and all other active services were removed from the view.
+- **Root Cause**: 
+  1. `OperatorDashboard.jsx` implemented a conditional fallback: `if (assigned.length > 0) list = assigned;`. If an operator had zero assigned services (`assigned.length === 0`), `list` fell back to `dbServices` (the global array containing every operator's active services).
+  2. The moment a quotation was accepted for that operator, `assigned.length` became 1, so the condition became true and `list` switched to only that single quotation record, causing all other previously visible services to vanish.
+  3. `OperatorLayout.jsx` had a matching `userHasScoped` check that leaked total system counts to operators who had no records assigned to their branch.
+  4. Backend controller queries did not enforce role-based ownership on operator GET requests, and intake forms risked assigning the submitting client's UID as the operator when branch selections were absent.
+- **Prevention**: Never use `if (filtered.length > 0)` as a fallback for user/tenant scoping. If a tenant or operator has 0 assigned records, the collection MUST evaluate to an empty list `[]` and show an appropriate empty state, never falling back to global data. Always enforce tenant/operator scoping at both the frontend useMemo level and the backend API controller level.

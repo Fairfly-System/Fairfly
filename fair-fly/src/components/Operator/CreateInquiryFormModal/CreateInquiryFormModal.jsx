@@ -139,7 +139,7 @@ export default function CreateInquiryFormModal({ onClose }) {
     const payload = {
       ...form,
       formNo: 'SAF-01-002',
-      branchUid: userDetails?.role === 'operator' ? user?.uid : null,
+      branchUid: (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator') ? user?.uid : null,
       branchName: userDetails?.branchName || userDetails?.name || 'Branch Office',
       status: 'submitted',
       notes: form.remarks

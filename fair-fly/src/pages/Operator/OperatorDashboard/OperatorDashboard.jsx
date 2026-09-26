@@ -107,21 +107,18 @@ function DashboardContent() {
     }
   };
 
-  const filteredServices = useMemo(() => {
+  const operatorScopedServices = useMemo(() => {
     if (!dbServices) return [];
-
-    // Filter by branch operator if role is operator
-    let list = dbServices;
-    if (user?.uid && userDetails?.role === 'operator') {
-      const assigned = dbServices.filter(
+    if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
+      return dbServices.filter(
         (s) => s.operatorId === user.uid || s.branchUid === user.uid
       );
-      if (assigned.length > 0) {
-        list = assigned;
-      }
     }
+    return dbServices;
+  }, [dbServices, user, userDetails]);
 
-    return list.filter((s) => {
+  const filteredServices = useMemo(() => {
+    return operatorScopedServices.filter((s) => {
       const nameStr = (s.clientName || s.name || '').toLowerCase();
       const typeStr = (s.serviceType || s.type || '').toLowerCase();
       const branchStr = (s.branchName || '').toLowerCase();
@@ -133,7 +130,7 @@ function DashboardContent() {
 
       return matchesSearch && matchesPriority;
     });
-  }, [dbServices, user, userDetails, debouncedSearch, priorityFilter]);
+  }, [operatorScopedServices, debouncedSearch, priorityFilter]);
 
   const paginatedServices = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -276,9 +273,9 @@ function DashboardContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'all', label: `All (${(dbServices || []).length})` },
-              { value: 'high', label: `High Priority (${(dbServices || []).filter((s) => s.priorityType === 'high').length})` },
-              { value: 'normal', label: `Normal Priority (${(dbServices || []).filter((s) => s.priorityType === 'normal').length})` },
+              { value: 'all', label: `All (${operatorScopedServices.length})` },
+              { value: 'high', label: `High Priority (${operatorScopedServices.filter((s) => s.priorityType === 'high').length})` },
+              { value: 'normal', label: `Normal Priority (${operatorScopedServices.filter((s) => s.priorityType === 'normal').length})` },
             ]}
             activeChip={priorityFilter}
             onChipChange={(val) => {

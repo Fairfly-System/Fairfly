@@ -112,11 +112,21 @@ async function compileWorkflowStepsForService(serviceId, serviceType, providedWo
  */
 const getActiveServices = async (req, res) => {
   try {
-    const { status, limit } = req.query;
+    const { status, limit, operatorId, branchUid, clientUid } = req.query;
     const options = {
       filters: [],
       orderBy: { field: 'startedAt', direction: 'desc' }
     };
+
+    if (req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') {
+      options.filters.push({ field: 'operatorId', operator: '==', value: req.user.uid });
+    } else if (req.userDetails?.role === 'client') {
+      options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
+    } else {
+      if (operatorId) options.filters.push({ field: 'operatorId', operator: '==', value: operatorId });
+      if (branchUid) options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
+      if (clientUid) options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+    }
 
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });
@@ -179,20 +189,24 @@ const createActiveService = async (req, res) => {
     const compiledSteps = await compileWorkflowStepsForService(serviceId, finalServiceTitle, workflowIds);
     const now = new Date().toISOString();
 
+    const isOperatorUser = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
     let targetBranchUid = isBranchExclusive && exclusiveBranchUid
       ? exclusiveBranchUid
-      : (operatorId || branchUid || req.user?.uid || 'OP-ACCOUNT');
+      : (branchUid || operatorId || (isOperatorUser ? req.user?.uid : null));
 
     let resolvedBranchName = isBranchExclusive && exclusiveBranchName
       ? exclusiveBranchName
       : (branchName || '');
 
-    if (!resolvedBranchName && targetBranchUid !== 'OP-ACCOUNT') {
+    if (!resolvedBranchName && targetBranchUid && targetBranchUid !== 'OP-ACCOUNT') {
       const branchUser = await getFromDatabase(`users/${targetBranchUid}`);
       if (branchUser) {
         resolvedBranchName = branchUser.branchName || branchUser.name || '';
       }
     }
+
+    targetBranchUid = targetBranchUid || 'OP-ACCOUNT';
+    resolvedBranchName = resolvedBranchName || 'Branch Office';
 
     const newService = {
       clientUid: req.user?.uid || req.body.clientUid || null,
@@ -276,6 +290,11 @@ const updateStepStatus = async (req, res) => {
     const serviceRecord = await getFromDatabase(dbPath);
     if (!serviceRecord) {
       return res.status(404).json({ error: 'Active service record not found' });
+    }
+
+    if ((req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') &&
+        serviceRecord.operatorId !== req.user.uid && serviceRecord.branchUid !== req.user.uid) {
+      return res.status(403).json({ error: 'Unauthorized: This service fulfillment is assigned to another operator.' });
     }
 
     const steps = [...(serviceRecord.steps || [])];
@@ -423,6 +442,11 @@ const cancelActiveService = async (req, res) => {
     const serviceRecord = await getFromDatabase(dbPath);
     if (!serviceRecord) {
       return res.status(404).json({ error: 'Active service record not found' });
+    }
+
+    if ((req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') &&
+        serviceRecord.operatorId !== req.user.uid && serviceRecord.branchUid !== req.user.uid) {
+      return res.status(403).json({ error: 'Unauthorized: This service fulfillment is assigned to another operator.' });
     }
 
     if (serviceRecord.status === 'Completed') {

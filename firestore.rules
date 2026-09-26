@@ -98,6 +98,13 @@ service cloud.firestore {
       allow update: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
       allow delete: if isAdmin();
     }
+    match /activeServices/{activeId} {
+      allow read: if isAdmin() 
+        || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
 
     // ── Appointments ──────────────────────────────────────────────
     match /appointments/{appointmentId} {

@@ -1,5 +1,37 @@
 # Update Logs
 
+## [2026-09-26] Bug Fix: Operator Service Fulfillment Scoping, Quotation Acceptance Active Service Preservation, and Data Wipe
+
+### Overview
+Fixed critical issues where:
+1. When an operator or client accepted a quotation, the operator's active procedures list on the dashboard suddenly only displayed that single quotation while all other services vanished.
+2. Active service fulfillment was previously shared across all operators when an operator had 0 assigned services due to an improper fallback check (`if (assigned.length > 0) list = assigned`), allowing unassigned or foreign services to bleed into an operator's dashboard view.
+3. Quotations, inquiries, and service fulfillments were wiped clean across Firestore per request to allow fresh end-to-end testing with strict operator assignments.
+
+### Key Changes
+1. **Operator Dashboard Scoping (`OperatorDashboard.jsx`)**:
+   - Replaced conditional `if (assigned.length > 0) list = assigned` fallback with strict, non-leaking operator scoping: `operatorScopedServices = dbServices.filter(s => s.operatorId === user.uid || s.branchUid === user.uid)`. Operators now strictly and exclusively view service fulfillments assigned to their branch.
+   - Updated priority chip counters (`All`, `High Priority`, `Normal Priority`) to compute against `operatorScopedServices` rather than `dbServices`, preventing discrepancies where chips counted services belonging to other operators.
+2. **Operator Layout Metrics (`OperatorLayout.jsx`)**:
+   - Removed `userHasScoped` check that leaked total global counts to operators who had no assigned services. Active and completed metrics badges in the operator sidebar now strictly reflect records where `operatorId === user.uid || branchUid === user.uid`.
+3. **Operator Service Procedure Access Control (`OperatorServiceProcedure.jsx`)**:
+   - Added an authorization guard (`isUnauthorized`) to prevent operators from viewing or executing procedure steps for services assigned to another operator. Displays a secure "Access Restricted" view.
+4. **Operator Quotations & Inquiries Scoping (`OperatorQuotations.jsx`, `OperatorInquiryForms.jsx`)**:
+   - Scoped quotation lists and inquiry form lists to the authenticated operator's UID (`branchUid === user.uid || operatorId === user.uid`).
+   - Updated filter chip badges to reflect operator-specific counts.
+5. **Backend Quotation & Inquiry Controllers (`quotationController.js`, `inquiryController.js`, `activeServiceController.js`)**:
+   - In `acceptQuotation`: Strictly resolves `assignedOperatorId` and `assignedBranchName` from the quotation, originating inquiry, or accepting operator. Reuses existing `activeServiceId` if present instead of creating an orphaned duplicate service fulfillment.
+   - In `createQuotation`: Ensures `branchUid`, `branchName`, and `operatorId` inherit from linked inquiries or the logged-in operator.
+   - In `createInquiry`: Fixed bug where client's UID was previously assigned to `effectiveBranchUid` and `operatorId`. Intake forms now preserve selected `branchUid` and assign operator ID appropriately.
+   - In `getActiveServices`, `getQuotations`, and `getInquiries`: Added server-side role filters restricting operator queries strictly to `operatorId === req.user.uid` or `branchUid === req.user.uid`.
+   - In `updateStepStatus` and `cancelActiveService`: Enforced server-side operator ownership verification (403 Forbidden if not assigned).
+6. **Firestore Security Rules (`firestore.rules`)**:
+   - Added `match /activeServices/{activeId}` matching `active_services` so security rules explicitly cover the camelCase collection name.
+7. **Database Clean Purge**:
+   - Successfully deleted all documents from `activeServices`, `active_services`, `quotations`, `quotation_requests`, and `inquiries` in Firestore.
+
+---
+
 ## [2026-09-25] Enhancement: Defer Government ID Upload until "Create Account" Clicked
 
 ### Overview

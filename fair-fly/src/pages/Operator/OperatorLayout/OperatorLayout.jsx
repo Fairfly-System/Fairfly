@@ -34,12 +34,13 @@ export default function OperatorLayout() {
     const unsubServices = onSnapshot(collection(firestore, 'activeServices'), (snapshot) => {
       let active = 0;
       let completed = 0;
-      const userHasScoped = user?.uid && snapshot.docs.some((d) => d.data().operatorId === user.uid || d.data().branchUid === user.uid);
 
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        if (userHasScoped && data.operatorId !== user.uid && data.branchUid !== user.uid) {
-          return;
+        if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
+          if (data.operatorId !== user.uid && data.branchUid !== user.uid) {
+            return;
+          }
         }
         if (data.status === 'Completed' || data.status === 'completed') completed++;
         else if (data.status !== 'Cancelled' && data.status !== 'cancelled') active++;

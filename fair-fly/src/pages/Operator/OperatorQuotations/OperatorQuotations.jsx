@@ -19,7 +19,7 @@ import { fetchServices } from '../../../services/serviceService';
 
 export function QuotationsContent() {
   const { data: quotations, loading } = useOperatorContext();
-  const { userToken } = useAuthContext();
+  const { userToken, user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,9 +29,16 @@ export function QuotationsContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  const filteredQuotations = useMemo(() => {
+  const operatorQuotations = useMemo(() => {
     if (!quotations) return [];
-    return quotations.filter((q) => {
+    if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
+      return quotations.filter((q) => q.branchUid === user.uid || q.operatorId === user.uid);
+    }
+    return quotations;
+  }, [quotations, user, userDetails]);
+
+  const filteredQuotations = useMemo(() => {
+    return operatorQuotations.filter((q) => {
       const clientStr = (q.clientName || '').toLowerCase();
       const serviceStr = (q.serviceTitle || '').toLowerCase();
       const quoteNoStr = (q.quoteNo || '').toLowerCase();
@@ -48,7 +55,7 @@ export function QuotationsContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [quotations, debouncedSearch, statusFilter]);
+  }, [operatorQuotations, debouncedSearch, statusFilter]);
 
   const paginatedQuotations = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -112,7 +119,7 @@ export function QuotationsContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'all', label: `All (${(quotations || []).length})` },
+              { value: 'all', label: `All (${operatorQuotations.length})` },
               { value: 'draft', label: 'Draft' },
               { value: 'sent', label: 'Sent' },
               { value: 'confirmed', label: 'Confirmed' },

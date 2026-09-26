@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Outlet, Link } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { useAuthContext } from '../../../context/AuthContext';
 import CreateInquiryFormModal from '../../../components/Operator/CreateInquiryFormModal/CreateInquiryFormModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
@@ -10,6 +11,7 @@ import './operator-inquiry-forms.css';
 
 export function InquiryContent() {
   const { data: inquiryForms, loading } = useOperatorContext();
+  const { user, userDetails } = useAuthContext();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -18,15 +20,22 @@ export function InquiryContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  const filteredForms = useMemo(() => {
+  const operatorForms = useMemo(() => {
     if (!inquiryForms) return [];
+    if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
+      return inquiryForms.filter((f) => f.branchUid === user.uid || f.operatorId === user.uid);
+    }
+    return inquiryForms;
+  }, [inquiryForms, user, userDetails]);
+
+  const filteredForms = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
-    return inquiryForms.filter((f) =>
-      (f.fullName || f.title || '').toLowerCase().includes(q) ||
+    return operatorForms.filter((f) =>
+      (f.fullName || f.clientName || f.title || '').toLowerCase().includes(q) ||
       (f.formNo || '').toLowerCase().includes(q) ||
       (f.serviceType || '').toLowerCase().includes(q)
     );
-  }, [inquiryForms, debouncedSearch]);
+  }, [operatorForms, debouncedSearch]);
 
   const paginatedForms = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

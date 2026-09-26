@@ -101,8 +101,19 @@ const createInquiry = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const effectiveBranchUid = branchUid || req.userDetails?.branchUid || req.user?.uid || null;
-    const effectiveBranchName = branchName || req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
+    const isOperatorUser = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    let effectiveBranchUid = branchUid || req.userDetails?.branchUid || (isOperatorUser ? req.user?.uid : null);
+    let effectiveBranchName = branchName || req.userDetails?.branchName || null;
+
+    if (effectiveBranchUid && !effectiveBranchName) {
+      try {
+        const branchUser = await getFromDatabase(`users/${effectiveBranchUid}`);
+        if (branchUser) {
+          effectiveBranchName = branchUser.branchName || branchUser.name || 'Branch Office';
+        }
+      } catch (err) {}
+    }
+    effectiveBranchName = effectiveBranchName || 'Branch Office';
     const effectiveClientUid = req.user?.uid || clientUid || null;
 
     // Resolve services offered array
@@ -142,7 +153,7 @@ const createInquiry = async (req, res) => {
       requirements: Array.isArray(requirements) ? requirements : (resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []),
       notes: notes || remarks || resolvedSpecReqs || '',
       remarks: remarks || notes || '',
-      agentName: agentName || (req.userDetails?.role === 'operator' ? req.userDetails?.name : 'Online Intake'),
+      agentName: agentName || (isOperatorUser ? req.userDetails?.name : 'Online Intake'),
       agentSignature: agentSignature || '',
       agentContact: req.userDetails?.phone || req.userDetails?.phoneNumber || '',
       acknowledgedBy: acknowledgedBy || '',
@@ -155,7 +166,7 @@ const createInquiry = async (req, res) => {
       status: status || 'submitted',
       createdAt: now,
       updatedAt: now,
-      operatorId: req.user?.uid || 'system_intake',
+      operatorId: effectiveBranchUid || (isOperatorUser ? req.user?.uid : 'system_intake'),
       confirmedQuotationId: null,
       confirmedActiveServiceId: null
     };
@@ -220,11 +231,15 @@ const getInquiries = async (req, res) => {
       options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
     }
 
+    // If operator user is calling, restrict to their branch inquiries
+    if (req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') {
+      options.filters.push({ field: 'branchUid', operator: '==', value: req.user.uid });
+    } else if (branchUid && branchUid !== 'all') {
+      options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
+    }
+
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });
-    }
-    if (branchUid && branchUid !== 'all') {
-      options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
     }
     if (limit) {
       options.limit = parseInt(limit, 10);
