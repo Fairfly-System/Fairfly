@@ -7,6 +7,7 @@ const {
   deleteFromDatabase 
 } = require('../services/firebaseService');
 const { deleteRecordStorageFiles } = require('../services/storageService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   WORKFLOW_TEMPLATES: 'workflowTemplates',
@@ -125,7 +126,7 @@ const createTemplate = async (req, res) => {
       version: 1
     };
 
-    const docId = await addToDatabase(COLLECTIONS.WORKFLOW_TEMPLATES, sanitizedData);
+    const docId = await addToDatabase(COLLECTIONS.WORKFLOW_TEMPLATES, sanitizedData, ID_PREFIXES.WORKFLOW_TEMPLATE);
     return res.status(201).json({ id: docId, message: 'Template created successfully' });
   } catch (error) {
     console.error('Error creating workflow template:', error);
@@ -283,7 +284,7 @@ const createInstance = async (req, res) => {
       }))
     };
 
-    const docId = await addToDatabase(COLLECTIONS.WORKFLOW_INSTANCES, sanitizedData);
+    const docId = await addToDatabase(COLLECTIONS.WORKFLOW_INSTANCES, sanitizedData, ID_PREFIXES.WORKFLOW_INSTANCE);
     return res.status(201).json({ id: docId, message: 'Workflow instance created successfully' });
   } catch (error) {
     console.error('Error creating workflow instance:', error);

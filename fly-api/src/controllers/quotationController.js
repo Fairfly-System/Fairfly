@@ -11,6 +11,7 @@ const {
   notifyBranch,
   notifyAdmins
 } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   QUOTATIONS: 'quotations',
@@ -122,7 +123,7 @@ const createQuotation = async (req, res) => {
       operatorId: effectiveBranchUid || (isOperatorUser ? req.user?.uid : 'operator_admin')
     };
 
-    const docId = await addToDatabase(COLLECTIONS.QUOTATIONS, newQuotation);
+    const docId = await addToDatabase(COLLECTIONS.QUOTATIONS, newQuotation, ID_PREFIXES.QUOTATION);
 
     // If linked to an inquiry, update inquiry status to quotation_created
     if (inquiryId) {
@@ -374,10 +375,10 @@ const acceptQuotation = async (req, res) => {
           updatedAt: now
         });
       } else {
-        activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
+        activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload, ID_PREFIXES.ACTIVE_SERVICE);
       }
     } else {
-      activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
+      activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload, ID_PREFIXES.ACTIVE_SERVICE);
     }
 
     // Update Quotation record

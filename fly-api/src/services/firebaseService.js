@@ -1,14 +1,20 @@
 const { db } = require('../config/firebase');
+const { generatePrefixedId } = require('../utils/idGenerator');
 
 /**
- * Adds a new document to a Firestore collection with an auto-generated ID.
+ * Adds a new document to a Firestore collection with an auto-generated (or prefixed) ID.
  * @param {string} collectionName 
  * @param {Object} data 
+ * @param {string|null} prefix - Optional prefix (e.g. 'INQ', 'SVC')
  * @returns {Promise<string>} The new document ID
  */
-const addToDatabase = async (collectionName, data) => {
+const addToDatabase = async (collectionName, data, prefix = null) => {
   try {
-    const docRef = await db.collection(collectionName).add(data);
+    const docId = prefix ? generatePrefixedId(prefix) : null;
+    const docRef = docId 
+      ? db.collection(collectionName).doc(docId)
+      : db.collection(collectionName).doc();
+    await docRef.set(data);
     return docRef.id;
   } catch (error) {
     console.error(`Firebase Admin SDK: Error adding to ${collectionName}:`, error);

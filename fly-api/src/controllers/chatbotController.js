@@ -6,6 +6,7 @@ const {
   updateToDatabase,
   deleteFromDatabase,
 } = require('../services/firebaseService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   CONFIG: 'chatbotConfig',
@@ -91,7 +92,7 @@ async function seedFaqsIfEmpty() {
       enabled: true,
       createdAt: timestamp,
       updatedAt: timestamp,
-    });
+    }, ID_PREFIXES.FAQ);
     return { id, ...faq, enabled: true, createdAt: timestamp, updatedAt: timestamp };
   }));
 }
@@ -145,7 +146,7 @@ const createFaq = async (req, res) => {
   try {
     const faq = normalizeFaqPayload(req.body);
     const timestamp = now();
-    const id = await addToDatabase(COLLECTIONS.FAQS, { ...faq, createdAt: timestamp, updatedAt: timestamp });
+    const id = await addToDatabase(COLLECTIONS.FAQS, { ...faq, createdAt: timestamp, updatedAt: timestamp }, ID_PREFIXES.FAQ);
     return res.status(201).json({ id, ...faq, createdAt: timestamp, updatedAt: timestamp });
   } catch (error) {
     const status = error.message?.includes('required') || error.message?.includes('must') ? 400 : 500;

@@ -201,7 +201,7 @@ export default function Dashboard() {
             <span className="activity-resource">{humanResourceType(log.resourceType)}</span>
             {log.resourceId && (
               <span className="activity-id" title={log.resourceId}>
-                {log.resourceId.slice(0, 8)}…
+                {log.resourceId.length > 14 ? `${log.resourceId.slice(0, 14)}…` : log.resourceId}
               </span>
             )}
           </p>

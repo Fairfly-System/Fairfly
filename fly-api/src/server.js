@@ -9,7 +9,7 @@ const apiRoutes = require('./routes');
 const app = express();
 
 // Set the port from environment variables or default to 5001
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 
 // Set up middleware
 app.use(cors({

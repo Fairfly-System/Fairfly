@@ -1,6 +1,7 @@
 const { db } = require('../config/firebase');
 const { createNotification, notifyAllOperators } = require('../services/notificationService');
 const { deleteRecordStorageFiles, extractStorageUrls, deleteFilesFromStorage } = require('../services/storageService');
+const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -233,7 +234,9 @@ const getOrCreateConversation = async (req, res) => {
       updatedAt: now
     };
 
-    const docRef = await db.collection(COLLECTIONS.CONVERSATIONS).add(newConversationData);
+    const convId = generatePrefixedId(ID_PREFIXES.CONVERSATION);
+    const docRef = db.collection(COLLECTIONS.CONVERSATIONS).doc(convId);
+    await docRef.set(newConversationData);
 
     return res.status(201).json({
       id: docRef.id,
@@ -318,7 +321,9 @@ const postMessage = async (req, res) => {
     };
 
     // Add to subcollection: conversations/{id}/messages
-    const msgRef = await convRef.collection(COLLECTIONS.MESSAGES).add(messagePayload);
+    const msgId = generatePrefixedId(ID_PREFIXES.MESSAGE);
+    const msgRef = convRef.collection(COLLECTIONS.MESSAGES).doc(msgId);
+    await msgRef.set(messagePayload);
 
     // Update parent conversation
     const currentUnread = convData.unreadCount || {};
@@ -455,7 +460,9 @@ const postAnnouncement = async (req, res) => {
       updatedAt: now
     };
 
-    const docRef = await db.collection(COLLECTIONS.ANNOUNCEMENTS).add(announcementData);
+    const annId = generatePrefixedId(ID_PREFIXES.ANNOUNCEMENT);
+    const docRef = db.collection(COLLECTIONS.ANNOUNCEMENTS).doc(annId);
+    await docRef.set(announcementData);
 
     // Broadcast in-app notification to all operators
     notifyAllOperators({
@@ -463,11 +470,11 @@ const postAnnouncement = async (req, res) => {
       message: announcementData.content.substring(0, 100),
       type: 'system',
       link: '/operator/announcements',
-      metadata: { announcementId: docRef.id, priority }
+      metadata: { announcementId: annId, priority }
     }).catch(err => console.warn('Announcement broadcast notification failed:', err));
 
     return res.status(201).json({
-      id: docRef.id,
+      id: annId,
       ...announcementData,
       message: 'Announcement broadcasted successfully'
     });

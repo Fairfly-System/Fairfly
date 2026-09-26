@@ -158,13 +158,13 @@ export default function AdminLogsModal({
                       <span className="activity-resource">{humanResourceType(log.resourceType)}</span>
                       {log.resourceId && (
                         <span className="activity-id" title={log.resourceId}>
-                          {log.resourceId.slice(0, 8)}…
+                          {log.resourceId.length > 14 ? `${log.resourceId.slice(0, 14)}…` : log.resourceId}
                         </span>
                       )}
                     </p>
                     <p className="activity-meta">
                       <span className="activity-uid" title={log.adminUid}>
-                        UID: {log.adminUid?.slice(0, 10)}…
+                        UID: {log.adminUid?.length > 14 ? `${log.adminUid.slice(0, 14)}…` : log.adminUid}
                       </span>
                       <span className="activity-dot">·</span>
                       <span>{log.adminEmail}</span>

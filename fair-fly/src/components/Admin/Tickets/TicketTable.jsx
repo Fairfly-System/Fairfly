@@ -21,7 +21,7 @@ export default function TicketTable({
         render: (ticket) => (
           <div className="ticket-title-info">
             <span className="ticket-op-name">{ticket.title || 'Untitled Support Request'}</span>
-            <span className="ticket-col-id">ID: {ticket.id ? ticket.id.slice(0, 10) : 'N/A'}</span>
+            <span className="ticket-col-id">ID: {ticket.id || 'N/A'}</span>
           </div>
         ),
       },

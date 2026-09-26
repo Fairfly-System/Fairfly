@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { admin, db } = require('../config/firebase');
 const { sendVerificationCodeEmail } = require('./emailService');
 const { notifyAdmins } = require('./notificationService');
+const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -245,7 +246,9 @@ const verifyRegistrationCode = async ({ email, code }) => {
   // 4. Code verified! Create Auth user & Firestore user profile in Pending state
   let uid = null;
   try {
+    const generatedUid = generatePrefixedId(ID_PREFIXES.CLIENT);
     const userRecord = await admin.auth().createUser({
+      uid: generatedUid,
       email: pendingData.email,
       password: pendingData.password,
       displayName: pendingData.fullName,

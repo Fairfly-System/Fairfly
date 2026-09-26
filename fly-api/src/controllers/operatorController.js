@@ -7,6 +7,7 @@ const {
   addToDocumentWithId
 } = require('../services/firebaseService');
 const { staticDataCache, userCache } = require('../services/cacheService');
+const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 const admin = require('firebase-admin');
 const COLLECTIONS = {
   USERS: 'users',
@@ -21,12 +22,14 @@ const createOperator = async (req, res) => {
   try {
     const operatorData = req.body;
     try {
+      const generatedUid = generatePrefixedId(ID_PREFIXES.OPERATOR);
       const userRecord = await admin.auth().createUser({
+        uid: generatedUid,
         email: operatorData.email,
         password: operatorData.password,
         displayName: operatorData.branchName
       });
-      console.log('Successfully created new user:', userRecord.uid);
+      console.log('Successfully created new operator user:', userRecord.uid);
       uid = userRecord.uid;
     } catch (error) {
       console.error('Error creating new user:', error);

@@ -11,6 +11,7 @@ const {
   notifyBranch,
   notifyAdmins
 } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
@@ -232,7 +233,7 @@ const createActiveService = async (req, res) => {
       additionalNotes: additionalNotes ? additionalNotes.trim() : ''
     };
 
-    const docId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, newService);
+    const docId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, newService, ID_PREFIXES.ACTIVE_SERVICE);
 
     // 1. Notify Assigned Branch Operator(s)
     notifyBranch({

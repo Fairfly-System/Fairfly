@@ -5,6 +5,7 @@ const {
   updateToDatabase 
 } = require('../services/firebaseService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   TICKETS: 'tickets'
@@ -82,7 +83,7 @@ const createTicket = async (req, res) => {
       messages: [initialMessageObj]
     };
 
-    const docId = await addToDatabase(COLLECTIONS.TICKETS, newTicketData);
+    const docId = await addToDatabase(COLLECTIONS.TICKETS, newTicketData, ID_PREFIXES.TICKET);
 
     // Notify admins
     notifyAdmins({

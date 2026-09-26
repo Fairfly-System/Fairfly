@@ -121,9 +121,12 @@ function adminLogger(req, res, next) {
         timestamp: new Date().toISOString(),
       };
 
+      const { generatePrefixedId, ID_PREFIXES } = require('../utils/idGenerator');
       // Fire-and-forget write — never throw from here
+      const logId = generatePrefixedId(ID_PREFIXES.ADMIN_LOG);
       db.collection(COLLECTION)
-        .add(logEntry)
+        .doc(logId)
+        .set(logEntry)
         .catch((err) => {
           console.error('[adminLogger] Failed to write log entry:', err.message);
         });

@@ -11,6 +11,7 @@ const {
   notifyBranch,
   notifyAdmins
 } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   INQUIRIES: 'inquiries',
@@ -171,7 +172,7 @@ const createInquiry = async (req, res) => {
       confirmedActiveServiceId: null
     };
 
-    const docId = await addToDatabase(COLLECTIONS.INQUIRIES, newInquiry);
+    const docId = await addToDatabase(COLLECTIONS.INQUIRIES, newInquiry, ID_PREFIXES.INQUIRY);
 
     // 1. Notify Assigned Branch Operator(s)
     notifyBranch({
@@ -403,7 +404,7 @@ const confirmInquiry = async (req, res) => {
       operatorId: branchUid
     };
 
-    const quotationDocId = await addToDatabase(COLLECTIONS.QUOTATIONS, quotationPayload);
+    const quotationDocId = await addToDatabase(COLLECTIONS.QUOTATIONS, quotationPayload, ID_PREFIXES.QUOTATION);
 
     // 5. Auto-initialize Ongoing Active Service with workflow steps in activeServices collection
     const compiledSteps = await compileWorkflowStepsForService(inquiry.serviceId, serviceTitle, adminService?.workflowIds);
@@ -434,7 +435,7 @@ const confirmInquiry = async (req, res) => {
       quotationId: quotationDocId
     };
 
-    const activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload);
+    const activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload, ID_PREFIXES.ACTIVE_SERVICE);
 
     await updateToDatabase(dbPath, {
       status: 'confirmed',

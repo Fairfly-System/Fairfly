@@ -6,6 +6,7 @@ const {
 } = require('../services/firebaseService');
 const { userCache } = require('../services/cacheService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   QUALIFICATION_APPLICATIONS: 'qualificationApplications',
@@ -94,7 +95,7 @@ const submitQualificationApplication = async (req, res) => {
       updatedAt: now
     };
 
-    const docId = await addToDatabase(COLLECTIONS.QUALIFICATION_APPLICATIONS, applicationData);
+    const docId = await addToDatabase(COLLECTIONS.QUALIFICATION_APPLICATIONS, applicationData, ID_PREFIXES.QUALIFICATION);
 
     // Notify Super Admins
     const docCountText = validatedDocuments.length > 0 ? ` (${validatedDocuments.length} document${validatedDocuments.length !== 1 ? 's' : ''} attached)` : '';

@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase');
+const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
@@ -45,8 +46,10 @@ const createNotification = async ({
       updatedAt: now
     };
 
-    const docRef = await db.collection(COLLECTIONS.NOTIFICATIONS).add(notifDoc);
-    return { id: docRef.id, ...notifDoc };
+    const notifId = generatePrefixedId(ID_PREFIXES.NOTIFICATION);
+    const docRef = db.collection(COLLECTIONS.NOTIFICATIONS).doc(notifId);
+    await docRef.set(notifDoc);
+    return { id: notifId, ...notifDoc };
   } catch (error) {
     console.error('Error creating notification in notificationService:', error);
     return null;

@@ -1,5 +1,30 @@
 # Update Logs
 
+## [2026-09-26] Feature: Domain-Specific Entity ID Prefixes & Comprehensive Auth / Firestore Database Migration
+
+### Overview
+Revamped entity ID generation and storage across the Fairfly ecosystem. Previously, random raw 20-character Firestore Auto-IDs were assigned to documents and users without domain context. We introduced a centralized prefixing architecture (`idGenerator.js`) and migrated all existing Firestore documents and Firebase Auth accounts to domain-prefixed UIDs (e.g. `USR-CLT-`, `USR-OPR-`, `USR-ADM-`, `USR-SUA-`, `INQ-`, `QTN-`, `SVC-`, `CAT-`, `WFL-`, `TKT-`, `APT-`, `CNV-`, `MSG-`, `RES-`, `ANN-`, `QAP-`, `FRA-`, `NTF-`, `FAQ-`, `LOG-`). All foreign key relationships and participant arrays across the entire database were systematically updated to maintain complete referential integrity.
+
+### Key Changes
+1. **Centralized ID Generator (`idGenerator.js`)**:
+   - Defined canonical `ID_PREFIXES` covering all domain entities.
+   - Implemented `generatePrefixedId(prefix)`, `parsePrefix(id)`, `getRawId(id)`, and `hasPrefix(id, prefix)` utility functions.
+2. **Database Service (`firebaseService.js`)**:
+   - Enhanced `addToDatabase(collectionName, data, prefix)` to generate prefixed document IDs natively while retaining Firestore Auto-ID entropy.
+3. **Backend Controllers & Services**:
+   - Updated `adminController.js`, `operatorController.js`, and `verificationService.js` to create Firebase Auth users and corresponding Firestore user documents with synchronized, role-specific prefixes (`USR-ADM-`, `USR-OPR-`, `USR-CLT-`).
+   - Integrated prefixes across `inquiryController.js` (`INQ-`), `quotationController.js` (`QTN-`), `activeServiceController.js` (`SVC-`), `serviceController.js` (`CAT-`, `QLK-`), `workflowController.js` (`WFL-`, `WFI-`), `ticketController.js` (`TKT-`), `appointmentController.js` (`APT-`), `chatController.js` (`CNV-`, `MSG-`, `ANN-`), `chatbotController.js` (`FAQ-`), `qualificationController.js` (`QAP-`), `franchiseController.js` (`FRA-`), `notificationService.js` (`NTF-`), and `adminLogger.js` (`LOG-`).
+4. **UI Refinements for Prefixed IDs**:
+   - Updated `CreateTicketModal.jsx`, `TicketTable.jsx`, `AdminDashboard.jsx`, and `AdminLogsModal.jsx` to prevent premature truncation or 8-character slicing of IDs, ensuring prefixed IDs are cleanly rendered with meaningful characters.
+5. **Database Migration Script (`migratePrefixes.js`)**:
+   - Successfully executed migration across the entire live database:
+     - 44 Firebase Auth user accounts migrated to prefixed UIDs with SCRYPT password hashes and user metadata strictly preserved.
+     - 40 Firestore user documents migrated with all role and profile data preserved.
+     - 7 Services, 6 Workflow Templates, 6 Quick Links, 5 Support Tickets, 7 Appointments, 1 Resource, 15 Conversations & Messages subcollections, 2 Announcements, 1 Qualification Application, 2 Franchise Applications, 1 Active Service, 167 Notifications, and 5 Chatbot FAQs migrated.
+     - All cross-references and foreign keys (`clientUid`, `operatorId`, `branchUid`, `userId`, `uploadedByUid`, `authorUid`, `participants`, `unreadCount`, `serviceId`, `workflowIds`, etc.) updated with 100% referential integrity.
+
+---
+
 ## [2026-09-26] Bug Fix: Operator Service Fulfillment Scoping, Quotation Acceptance Active Service Preservation, and Data Wipe
 
 ### Overview

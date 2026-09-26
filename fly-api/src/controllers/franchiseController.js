@@ -5,6 +5,7 @@ const {
   updateToDatabase 
 } = require('../services/firebaseService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   FRANCHISE_APPLICATIONS: 'franchiseApplications'
@@ -36,7 +37,7 @@ const submitApplication = async (req, res) => {
       userId: req.user?.uid || 'anonymous'
     };
 
-    const docId = await addToDatabase(COLLECTIONS.FRANCHISE_APPLICATIONS, sanitizedData);
+    const docId = await addToDatabase(COLLECTIONS.FRANCHISE_APPLICATIONS, sanitizedData, ID_PREFIXES.FRANCHISE);
 
     // Notify admins
     notifyAdmins({

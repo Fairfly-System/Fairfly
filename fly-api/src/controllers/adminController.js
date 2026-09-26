@@ -7,6 +7,7 @@ const {
   queryDatabaseAdvanced 
 } = require('../services/firebaseService');
 const { userCache } = require('../services/cacheService');
+const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -34,7 +35,9 @@ const createAdmin = async (req, res) => {
     const displayName = (fullName || username || '').trim();
 
     try {
+      const generatedUid = generatePrefixedId(ID_PREFIXES.ADMIN);
       const userRecord = await admin.auth().createUser({
+        uid: generatedUid,
         email: email.trim(),
         password: password,
         displayName: displayName

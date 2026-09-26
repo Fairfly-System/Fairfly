@@ -1,5 +1,6 @@
 const { db, admin } = require('../config/firebase');
 const { createNotification } = require('../services/notificationService');
+const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   RESOURCES: 'resources',
@@ -55,8 +56,10 @@ const createResource = async (req, res) => {
       updatedAt: now
     };
 
-    const docRef = await db.collection(COLLECTIONS.RESOURCES).add(newResource);
-    const createdData = { id: docRef.id, ...newResource };
+    const docId = generatePrefixedId(ID_PREFIXES.RESOURCE);
+    const docRef = db.collection(COLLECTIONS.RESOURCES).doc(docId);
+    await docRef.set(newResource);
+    const createdData = { id: docId, ...newResource };
 
     // Dispatch notifications to operators if visibility allows
     if (visibility !== 'admin') {

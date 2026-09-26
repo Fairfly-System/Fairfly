@@ -10,6 +10,7 @@ const {
   notifyAdmins, 
   notifyBranchOperators 
 } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   APPOINTMENTS: 'appointments'
@@ -56,7 +57,7 @@ const createAppointment = async (req, res) => {
       updatedAt: now
     };
 
-    const docId = await addToDatabase(COLLECTIONS.APPOINTMENTS, newAppointment);
+    const docId = await addToDatabase(COLLECTIONS.APPOINTMENTS, newAppointment, ID_PREFIXES.APPOINTMENT);
 
     // 1. Dispatch branch notifications via notifyBranch (handles branchUid & branchName)
     notifyBranch({

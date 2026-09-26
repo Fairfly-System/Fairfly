@@ -8,6 +8,7 @@ const {
 const { staticDataCache } = require('../services/cacheService');
 const { deleteRecordStorageFiles, extractStorageUrls, deleteFilesFromStorage } = require('../services/storageService');
 const { notifyAdmins, notifyAllOperators } = require('../services/notificationService');
+const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   SERVICES: 'services',
@@ -63,7 +64,7 @@ const createService = async (req, res) => {
       status: serviceData.status || 'Active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    });
+    }, ID_PREFIXES.SERVICE);
 
     // Invalidate Cache
     staticDataCache.delete(CACHE_KEYS.SERVICES);
@@ -322,7 +323,7 @@ const createQuickLink = async (req, res) => {
       category: category || 'Other',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    });
+    }, ID_PREFIXES.QUICK_LINK);
 
     staticDataCache.delete(CACHE_KEYS.QUICK_LINKS);
 

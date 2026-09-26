@@ -158,7 +158,7 @@ const CreateTicketModal = forwardRef(
                     <option value="" disabled>-- Choose Operator --</option>
                     {operatorsList.map((op) => (
                       <option key={op.id} value={op.id}>
-                        {op.branchName || op.name || op.email} ({op.id.slice(0, 8)}...)
+                        {op.branchName || op.name || op.email} ({op.id})
                       </option>
                     ))}
                   </select>
