@@ -1,5 +1,28 @@
 # Update Logs
 
+## [2026-09-27] Feature: Operator Analytics Integration in Operator Detail Page & Dashboard Redirection
+
+### Overview
+Per user request, the operator-specific analytics suite formerly embedded within the Admin Analytics/Dashboard view has been migrated and integrated into the dedicated Operator Detail page (`/admin/operators/:id`). The Operator performance table remains on the main Admin Dashboard (`/admin`), but clicking an operator row or its "View" action now navigates directly to the comprehensive operator page. The Operator Detail page now displays the complete analytics experience alongside all existing account management functions.
+
+### Key Changes
+1. **Admin Dashboard Redirection (`AdminDashboard.jsx`)**:
+   - Kept the Operator performance table on the main dashboard (`/admin`), presenting completed services count, total branch revenue, and open tickets.
+   - Removed the single-operator scoped state filter that previously restricted the entire dashboard view.
+   - Enhanced the Operator table rows and the "View" action button to navigate directly to `/admin/operators/${operator.id}`.
+2. **Operator Detail Page Analytics Suite (`OperatorDetailPage.jsx`)**:
+   - Replaced static/mock values with real-time analytics data fetched via `fetchAdminAnalytics` with scoped `operatorId: id` parameters.
+   - Integrated time period controls (`Today`, `This week`, `This month`, `This year`, `Custom range` with from/to date pickers).
+   - Added operator-scoped CSV report generation (`handleDownloadReport` via `buildAnalyticsCsv`).
+   - Integrated 4 performance KPI cards: Total Revenue (PESO currency format), Completed Services, Active Services in fulfillment (real-time Firestore listener), and Open Support Tickets.
+   - Added Recharts `LineChart` inside `ResponsiveContainer` to plot historical revenue trajectory for the operator.
+   - Added a 2-column layout containing Report Summary indicators, Most Picked Services ranking, support tickets sorted by priority or recency with pagination, alongside the existing Account Profile, Service Qualification toggles, active orders, and administration action modals.
+   - Fixed unimported `ApiCaller` by replacing it with standard `updateOperator` from `adminService.js`.
+3. **Styling Enhancements (`operator-detail.css`)**:
+   - Added styles for `.operator-analytics-controls-card`, `.operator-kpi-grid` (responsive grid), `.operator-chart-card`, `.operator-analytics-columns`, `.analytics-summary-grid`, `.service-ranking-list`, and `.priority-ticket-list`.
+
+---
+
 ## [2026-09-26] Fix: Notification Tab Routing, Delete-on-Read Bandwidth Optimization & Appointment Role Scoping
 
 ### Overview

@@ -1,5 +1,6 @@
 import './admin-dashboard.css';
 import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -32,6 +33,7 @@ import {
 
 export default function Dashboard() {
   const { user, userDetails, userToken } = useAuthContext();
+  const navigate = useNavigate();
 
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
@@ -39,7 +41,6 @@ export default function Dashboard() {
   const [period, setPeriod] = useState('month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
-  const [selectedOperatorId, setSelectedOperatorId] = useState('');
   const [operatorSort, setOperatorSort] = useState('completed');
   const [operatorPage, setOperatorPage] = useState(1);
   const [ticketPage, setTicketPage] = useState(1);
@@ -58,8 +59,8 @@ export default function Dashboard() {
     if (!userToken || (period === 'custom' && (!customFrom || !customTo))) return undefined;
 
     const params = period === 'custom'
-      ? { from: customFrom, to: customTo, operatorId: selectedOperatorId }
-      : { period, operatorId: selectedOperatorId };
+      ? { from: customFrom, to: customTo }
+      : { period };
 
     fetchAdminAnalytics(
       userToken,
@@ -73,7 +74,7 @@ export default function Dashboard() {
     );
 
     return undefined;
-  }, [userToken, period, customFrom, customTo, selectedOperatorId]);
+  }, [userToken, period, customFrom, customTo]);
 
   // ── Recent logs subscription ──────────────────────────────────────────────
   useEffect(() => {
@@ -142,7 +143,7 @@ export default function Dashboard() {
 
   const handleDownloadReport = () => {
     if (!analytics) return;
-    const csv = buildAnalyticsCsv(analytics, selectedOperatorId ? 'Selected operator' : formatReportPeriod(analytics));
+    const csv = buildAnalyticsCsv(analytics, formatReportPeriod(analytics));
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
@@ -173,9 +174,6 @@ export default function Dashboard() {
   const paginatedTickets = dashboardTickets.slice((ticketPage - 1) * 5, ticketPage * 5);
 
   const revenueData = toRevenueChartData(analytics?.revenueTrend);
-  const selectedOperator = selectedOperatorId
-    ? analytics?.operators?.find((operator) => operator.id === selectedOperatorId)
-    : null;
 
   // ── Render log row for Recent Activity card ────────────────────────────────
   const renderLogRow = (log, index) => {
@@ -292,7 +290,7 @@ export default function Dashboard() {
           <section className="report-summary card">
             <div className="activity-card-header">
               <div><h3 className="activity-card-title"><i className="fa-solid fa-chart-simple activity-card-icon" /> Report Summary</h3><p className="activity-card-subtitle">Selected period totals and operational indicators</p></div>
-              <span className="analytics-period">{selectedOperator ? selectedOperator.name : formatReportPeriod(analytics)}</span>
+              <span className="analytics-period">{formatReportPeriod(analytics)}</span>
             </div>
             <div className="analytics-summary-grid">
               <div><strong>{analytics.totals.completedServices}</strong><span>Completed services</span></div>
@@ -305,7 +303,10 @@ export default function Dashboard() {
           <section className="analytics-grid">
             <article className="card analytics-panel analytics-operators">
               <div className="analytics-panel-header">
-                <div><h3 className="chart-title">Operators</h3><p className="analytics-period">Select an operator to generate a focused report.</p></div>
+                <div>
+                  <h3 className="chart-title">Operators</h3>
+                  <p className="analytics-period">View branch operator performance and click to inspect full analytics.</p>
+                </div>
                 <select value={operatorSort} onChange={(event) => setOperatorSort(event.target.value)} aria-label="Sort operators">
                   <option value="completed">Most services completed</option>
                   <option value="recent">Most recent activity</option>
@@ -313,9 +314,58 @@ export default function Dashboard() {
               </div>
               <div className="analytics-table-wrap">
                 <table className="analytics-table">
-                  <thead><tr><th>Operator</th><th>Completed</th><th>Revenue</th><th>Tickets</th><th /></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Operator</th>
+                      <th>Completed</th>
+                      <th>Revenue</th>
+                      <th>Tickets</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {paginatedOperators.map((operator) => <tr key={operator.id} className={selectedOperatorId === operator.id ? 'analytics-row-selected' : ''}><td><strong>{operator.name}</strong><small>{operator.email}</small></td><td>{operator.completedServices}</td><td>{formatCurrency(operator.revenue)}</td><td>{operator.openTickets}</td><td><button className="analytics-select-button" onClick={() => setSelectedOperatorId(operator.id)}>View</button></td></tr>)}
+                    {paginatedOperators.map((operator) => (
+                      <tr
+                        key={operator.id}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/admin/operators/${operator.id}`)}
+                      >
+                        <td>
+                          <Link
+                            to={`/admin/operators/${operator.id}`}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <strong>{operator.name}</strong>
+                            <small>{operator.email}</small>
+                          </Link>
+                        </td>
+                        <td>{operator.completedServices}</td>
+                        <td>{formatCurrency(operator.revenue)}</td>
+                        <td>{operator.openTickets}</td>
+                        <td>
+                          <Link
+                            to={`/admin/operators/${operator.id}`}
+                            className="analytics-select-button"
+                            style={{
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.3rem 0.65rem',
+                              borderRadius: 'var(--radius-sm, 4px)',
+                              background: 'var(--purple-soft, #ede9fe)',
+                              color: 'var(--purple, #7c3aed)',
+                              fontWeight: 600
+                            }}
+                            title={`View ${operator.name} details & analytics`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.625rem' }} />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
