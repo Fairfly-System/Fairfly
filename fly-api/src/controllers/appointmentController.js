@@ -7,7 +7,6 @@ const {
 const { 
   createNotification, 
   notifyBranch,
-  notifyAdmins, 
   notifyBranchOperators 
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
@@ -40,6 +39,7 @@ const createAppointment = async (req, res) => {
     }
 
     const now = new Date().toISOString();
+    const effectiveOperatorId = branchUid || '';
     const newAppointment = {
       clientUid: req.user?.uid || clientUid || '',
       clientName: clientName.trim(),
@@ -48,6 +48,7 @@ const createAppointment = async (req, res) => {
       preferredBranchLocation: preferredBranchLocation || branchName || 'Main Branch',
       branchUid: branchUid || '',
       branchName: branchName || preferredBranchLocation || 'Main Branch',
+      operatorId: effectiveOperatorId,
       preferredDate: preferredDate,
       preferredTime: preferredTime || '10:00 AM',
       serviceType: serviceType || 'General Consultation',
@@ -59,7 +60,7 @@ const createAppointment = async (req, res) => {
 
     const docId = await addToDatabase(COLLECTIONS.APPOINTMENTS, newAppointment, ID_PREFIXES.APPOINTMENT);
 
-    // 1. Dispatch branch notifications via notifyBranch (handles branchUid & branchName)
+    // 1. Dispatch branch notification strictly to the specific branch operator
     notifyBranch({
       branchUid: newAppointment.branchUid,
       branchName: newAppointment.branchName,
@@ -70,16 +71,7 @@ const createAppointment = async (req, res) => {
       metadata: { appointmentId: docId, clientName: newAppointment.clientName, serviceType: newAppointment.serviceType }
     }).catch(e => console.warn('Appointment branch notification warning:', e.message));
 
-    // 2. Dispatch notification to Admins
-    notifyAdmins({
-      title: 'New Appointment Booking',
-      message: `${newAppointment.clientName} booked ${newAppointment.serviceType} for ${newAppointment.branchName} on ${newAppointment.preferredDate}`,
-      type: 'appointment',
-      link: '/admin',
-      metadata: { appointmentId: docId, branchName: newAppointment.branchName }
-    }).catch(e => console.warn('Appointment admin notification warning:', e.message));
-
-    // 3. Receipt notification to Client (if registered)
+    // 2. Receipt notification to Client (if registered)
     if (newAppointment.clientUid) {
       createNotification({
         recipientUid: newAppointment.clientUid,
@@ -110,9 +102,13 @@ const getAppointments = async (req, res) => {
       orderBy: { field: 'createdAt', direction: 'desc' }
     };
 
+    const userRole = req.userDetails?.role;
+
     // If client user is querying, enforce their clientUid
-    if (req.user?.role === 'client') {
+    if (userRole === 'client') {
       options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
+    } else if (userRole === 'operator' || userRole === 'branch_operator') {
+      options.filters.push({ field: 'branchUid', operator: '==', value: req.user.uid });
     } else if (clientUid) {
       options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
     }
@@ -167,15 +163,6 @@ const updateAppointmentStatus = async (req, res) => {
         metadata: { appointmentId: id, status: normalizedStatus }
       }).catch(e => console.warn('Appointment status notification warning:', e.message));
     }
-
-    // Notify Admins
-    notifyAdmins({
-      title: `Appointment ${normalizedStatus}`,
-      message: `Appointment for ${existing.clientName} (${existing.serviceType}) at ${existing.branchName} was marked ${normalizedStatus.toLowerCase()}.`,
-      type: 'appointment',
-      link: '/admin',
-      metadata: { appointmentId: id, status: normalizedStatus }
-    }).catch(e => console.warn('Appointment status admin notification warning:', e.message));
 
     return res.status(200).json({ message: `Appointment status updated to ${normalizedStatus}` });
   } catch (error) {

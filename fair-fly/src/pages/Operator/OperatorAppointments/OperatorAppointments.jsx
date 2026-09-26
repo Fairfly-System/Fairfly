@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Outlet, Link } from 'react-router';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
@@ -14,9 +15,16 @@ import './operator-appointments.css';
 
 export function AppointmentContent() {
   const { data: appointments, loading } = useOperatorContext();
-  const { userToken } = useAuthContext();
+  const { userToken, user } = useAuthContext();
+  const { clearNotificationsForTab } = useNotifications();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (clearNotificationsForTab) {
+      clearNotificationsForTab('/operator/appointments');
+    }
+  }, [clearNotificationsForTab]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -29,6 +37,12 @@ export function AppointmentContent() {
   const filteredAppointments = useMemo(() => {
     if (!appointments) return [];
     return appointments.filter((appt) => {
+      // Operator scoping: strictly view appointments assigned to this branch
+      if (user?.uid) {
+        const isAssigned = appt.branchUid === user.uid || appt.operatorId === user.uid;
+        if (!isAssigned) return false;
+      }
+
       const nameStr = (appt.clientName || appt.name || '').toLowerCase();
       const emailStr = (appt.clientEmail || appt.email || '').toLowerCase();
       const serviceStr = (appt.serviceType || appt.service || '').toLowerCase();
@@ -45,7 +59,7 @@ export function AppointmentContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [appointments, debouncedSearch, statusFilter]);
+  }, [appointments, debouncedSearch, statusFilter, user?.uid]);
 
   const paginatedAppointments = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -67,7 +81,7 @@ export function AppointmentContent() {
     );
   };
 
-  const pendingCount = (appointments || []).filter((a) => (a.status || '').toLowerCase() === 'pending').length;
+  const pendingCount = (filteredAppointments || []).filter((a) => (a.status || '').toLowerCase() === 'pending').length;
 
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/operator' },

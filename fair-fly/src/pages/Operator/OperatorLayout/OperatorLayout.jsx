@@ -52,14 +52,19 @@ export default function OperatorLayout() {
       setCompletedServices(0);
     });
 
-    // Real-time listener for appointments requiring action
+    // Real-time listener for appointments requiring action (strictly operator-scoped)
     const unsubAppointments = onSnapshot(collection(firestore, 'appointments'), (snapshot) => {
       let pending = 0;
       snapshot.docs.forEach((doc) => {
-        if (doc.data().status === 'Pending' || doc.data().status === 'pending') pending++;
+        const data = doc.data();
+        const isAssigned = !user?.uid || data.branchUid === user.uid || data.operatorId === user.uid;
+        if (isAssigned && (data.status === 'Pending' || data.status === 'pending')) {
+          pending++;
+        }
       });
       setPendingActions(pending);
-    }, () => {
+    }, (error) => {
+      console.warn('OperatorLayout appointments onSnapshot error:', error?.message);
       setPendingActions(0);
     });
 

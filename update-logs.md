@@ -1,5 +1,41 @@
 # Update Logs
 
+## [2026-09-26] Fix: Notification Tab Routing, Delete-on-Read Bandwidth Optimization & Appointment Role Scoping
+
+### Overview
+Addressed several notification routing, access control, and bandwidth efficiency issues:
+1. **Notifications Appearing on Wrong Tabs**: Notifications targeting subroute tabs (such as `/operator/appointments`) were incorrectly inflating the dashboard counter due to overly broad prefix matching (`startsWith('/operator')`), and permissions prevented the operator appointments badge from syncing correctly.
+2. **Notification Broadcast Bleed**: Client appointment bookings were notifying all Admins and falling back to all operators instead of being directed strictly to the selected branch operator.
+3. **Appointment Leak Across Clients**: Client appointments were visible to all clients due to a role-checking bug where `req.user?.role` was evaluated instead of `req.userDetails?.role` in the backend controller.
+4. **Operator Permission in Firestore Rules**: Operators were blocked from reading appointments in Firestore security rules (`isOperator()` was omitted from the read condition).
+5. **Delete on Read & Tab-Click Cleanup**: To minimize database bandwidth and storage usage, notifications are now permanently deleted from Firestore when read (or marked all read) rather than retaining read documents. Navigating to or clicking any tab that has notifications automatically clears and deletes matching notifications.
+
+### Key Changes
+1. **Firestore Security Rules (`firestore.rules`, `deployRules.js`)**:
+   - Added `match /announcements/{announcementId}` (`allow read: if isSignedIn(); allow write: if isAdmin();`), fixing `Missing or insufficient permissions` error when subscribing to head office announcements.
+   - Added camelCase aliases `match /workflowTemplates/{templateId}` and `match /workflowInstances/{instanceId}` alongside snake_case matches.
+   - Added `match /admin-logs/{logId}` (`allow read: if isAdmin(); allow write: if false;`).
+   - Updated `match /appointments/{appointmentId}` to allow read for `isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid)`.
+   - Verified `match /notifications/{notifId}` allows delete permissions for signed-in users.
+   - Built and ran `deployRules.js` (`npm run deploy:rules`) using the service account credentials to release the security ruleset directly to the live Firebase Firestore database.
+2. **Backend Appointment Controller & Notification Dispatching (`appointmentController.js`, `notificationService.js`)**:
+   - `createAppointment`: Removed `notifyAdmins` spam on client appointment bookings. Configured `notifyBranch` with direct destination `/operator/appointments` and operator ID assignment (`operatorId: branchUid`).
+   - `getAppointments`: Fixed role resolution to inspect `req.userDetails.role`. Applied strict query scoping: clients only retrieve appointments where `clientUid == req.user.uid`, operators only retrieve appointments where `branchUid == req.user.uid`.
+   - `notifyBranch`: Removed fallback broadcast that dispatched alerts to all operators when a specific branch operator was not matched.
+3. **Notification Deletion & Tab Clearing (`NotificationContext.jsx`, `NotificationBell.jsx`)**:
+   - `markAsRead`: Calls `deleteDoc(docRef)` to permanently remove read notifications from Firestore.
+   - `markAllAsRead`: Batches `batch.delete(docRef)` across all unread notifications.
+   - `clearNotificationsForTab`: Deletes all unread notifications associated with a tab route or type. Leverages `notificationsRef` for stable callback references.
+   - `NotificationBell.jsx`: Clicking any notification item unconditionally deletes the notification record from Firestore.
+4. **Navigation & Tab Badge Integration (`AppSidebar.jsx`, `AppNavbar.jsx`, `OperatorLayout.jsx`, `OperatorAppointments.jsx`, `ClientAppointmentsPage.jsx`)**:
+   - `AppSidebar.jsx`: Fixed root portal link matching so dashboard (`/operator`) does not swallow subroute notifications. Added `clearNotificationsForTab(link.to)` to the sidebar link `onClick` handler.
+   - `AppNavbar.jsx`: Added `clearNotificationsForTab` calls when client navigation links are clicked.
+   - `OperatorLayout.jsx`: Scoped real-time pending appointment snapshot listener to the logged-in operator's branch.
+   - `OperatorAppointments.jsx`: Scoped appointment filtering by operator branch and triggers tab notification cleanup on mount. Fixed `useEffect` import.
+   - `ClientAppointmentsPage.jsx`: Scoped queries with `{ clientUid: user?.uid }` and triggers tab notification cleanup on mount.
+
+---
+
 ## [2026-09-26] Feature: Domain-Specific Entity ID Prefixes & Comprehensive Auth / Firestore Database Migration
 
 ### Overview

@@ -24,7 +24,7 @@ export default function AppSidebar({
   onClose,
 }) {
   const { user, userDetails } = useAuthContext();
-  const { notifications } = useNotifications();
+  const { notifications, clearNotificationsForTab } = useNotifications();
 
   /** Derive initials for avatar fallback */
   const getInitials = () => {
@@ -76,12 +76,12 @@ export default function AppSidebar({
     if (typeof link.notifications === 'number') return link.notifications;
     if (typeof link.badge === 'number') return link.badge;
 
-    // 2. tabNotifications map prop
+    // 2. tabNotifications map prop (if explicitly provided and > 0)
     if (tabNotifications) {
-      if (typeof tabNotifications[link.to] === 'number') return tabNotifications[link.to];
+      if (typeof tabNotifications[link.to] === 'number' && tabNotifications[link.to] > 0) return tabNotifications[link.to];
       const slug = link.to.split('/').filter(Boolean).pop();
-      if (slug && typeof tabNotifications[slug] === 'number') return tabNotifications[slug];
-      if (typeof tabNotifications[link.label] === 'number') return tabNotifications[link.label];
+      if (slug && typeof tabNotifications[slug] === 'number' && tabNotifications[slug] > 0) return tabNotifications[slug];
+      if (typeof tabNotifications[link.label] === 'number' && tabNotifications[link.label] > 0) return tabNotifications[link.label];
     }
 
     // 3. Automated count from NotificationContext unread items
@@ -89,17 +89,32 @@ export default function AppSidebar({
       const unreadList = notifications.filter((n) => !n.read);
       const linkPath = link.to.toLowerCase();
       const tabSlug = linkPath.split('/').filter(Boolean).pop() || '';
+      const isPortalRoot = link.end === true || linkPath === '/operator' || linkPath === '/admin' || linkPath === '/client';
 
       const matchedCount = unreadList.filter((notif) => {
-        if (notif.link && notif.link.toLowerCase().startsWith(linkPath)) return true;
-        if (notif.type) {
-          const type = notif.type.toLowerCase();
-          if (tabSlug.includes(type) || (type === 'service' && tabSlug.includes('workflow'))) return true;
-          if (type === 'franchise' && tabSlug.includes('franchise')) return true;
-          if (type === 'appointment' && tabSlug.includes('appointment')) return true;
-          if (type === 'ticket' && tabSlug.includes('ticket')) return true;
-          if (type === 'message' && tabSlug.includes('message')) return true;
-          if (type === 'resource' && tabSlug.includes('resource')) return true;
+        const notifLink = (notif.link || '').toLowerCase();
+        const notifType = (notif.type || '').toLowerCase();
+
+        // Portal Root / Dashboard: Never greedily capture subroute notifications
+        if (isPortalRoot) {
+          return notifLink === linkPath && (notifType === 'system' || notifType === 'dashboard');
+        }
+
+        // Subroute tab: match if link explicitly targets this tab or subpath
+        if (notifLink && (notifLink === linkPath || notifLink.startsWith(linkPath + '/') || notifLink.startsWith(linkPath + '?'))) {
+          return true;
+        }
+
+        // Match by notification type to tab slug
+        if (notifType) {
+          if (tabSlug.includes(notifType) || (notifType === 'service' && tabSlug.includes('workflow'))) return true;
+          if (notifType === 'franchise' && tabSlug.includes('franchise')) return true;
+          if (notifType === 'appointment' && tabSlug.includes('appointment')) return true;
+          if (notifType === 'ticket' && tabSlug.includes('ticket')) return true;
+          if (notifType === 'message' && tabSlug.includes('message')) return true;
+          if (notifType === 'resource' && tabSlug.includes('resource')) return true;
+          if (notifType === 'inquiry' && (tabSlug.includes('inquir') || tabSlug.includes('inquiry-forms'))) return true;
+          if (notifType === 'quotation' && tabSlug.includes('quotation')) return true;
         }
         return false;
       }).length;
@@ -152,7 +167,12 @@ export default function AppSidebar({
                 key={index}
                 to={link.to}
                 end={link.end}
-                onClick={onClose}
+                onClick={() => {
+                  if (clearNotificationsForTab) {
+                    clearNotificationsForTab(link.to);
+                  }
+                  if (onClose) onClose();
+                }}
                 className={({ isActive }) => `sidebar-link-item ${isActive ? 'active' : ''}`}
               >
                 <i className={link.icon}></i>

@@ -20,7 +20,7 @@ export default function AppNavbar({
 }) {
   const navigate = useNavigate();
   const { user, userDetails } = useAuthContext();
-  const { notifications } = useNotifications();
+  const { notifications, clearNotificationsForTab } = useNotifications();
   const { addToast } = useToast();
   const logoutModalRef = useRef(null);
   const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
@@ -119,6 +119,11 @@ export default function AppNavbar({
 
             <NavLink
               to="/client/tracking"
+              onClick={() => {
+                if (clientTabCounts.tracking > 0 && clearNotificationsForTab) {
+                  clearNotificationsForTab('/client/tracking');
+                }
+              }}
               className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
             >
               <i className="fa-solid fa-list-check"></i>
@@ -132,6 +137,11 @@ export default function AppNavbar({
 
             <NavLink
               to="/client/appointments"
+              onClick={() => {
+                if (clientTabCounts.appointments > 0 && clearNotificationsForTab) {
+                  clearNotificationsForTab('/client/appointments');
+                }
+              }}
               className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
             >
               <i className="fa-solid fa-calendar-check"></i>
@@ -145,6 +155,11 @@ export default function AppNavbar({
 
             <NavLink
               to="/client/messages"
+              onClick={() => {
+                if (clientTabCounts.messages > 0 && clearNotificationsForTab) {
+                  clearNotificationsForTab('/client/messages');
+                }
+              }}
               className={({ isActive }) => `client-nav-link ${isActive ? 'active' : ''}`}
             >
               <i className="fa-solid fa-comments"></i>

@@ -85,4 +85,14 @@
 ## [2026-09-26] Firebase Auth SCRYPT Hash Import Requires Project-Specific Signer Key
 - **Problem**: Users were unable to log in with their existing passwords after migrating Firebase Auth accounts using `auth.importUsers()`, receiving `INVALID_LOGIN_CREDENTIALS` / `auth/invalid-credential`.
 - **Root Cause**: Firebase Auth uses a project-specific SCRYPT configuration including a secret `signerKey` and `saltSeparator`. When importing users, passing empty dummy values (`Buffer.from('')`) caused Firebase to register the password hashes under an empty key. When users subsequently attempted to log in, Firebase evaluated the password with the project's real signer key, causing hash mismatches and login rejections.
-- **Prevention**: When migrating or importing Firebase Auth password hashes, always retrieve the official project hash configuration via Google Cloud Identity Toolkit API (`https://identitytoolkit.googleapis.com/admin/v2/projects/{projectId}/config`) to obtain the exact base64 `signerKey` and `saltSeparator`. Never import SCRYPT hashes with blank dummy keys.
+- **Prevention**: When migrating or importing Firebase Auth password hashes, always retrieve the official project hash configuration via Google Cloud Identity Toolkit API (`https://identitytoolkit.googleapis.com/admin/v2/projects/{projectId}/config`) to obtain the exact base64 `signerKey` and `saltSeparator`. Never import SCRYPT hashes with blank dummy keys.
+
+## [2026-09-26] Missing Rules for Client-Read Collections in Firestore Security Rules
+- **Problem**: Runtime `Error in subscribeToAnnouncements: FirebaseError: Missing or insufficient permissions` occurred when subscribing to announcements via `chatService.js`.
+- **Root Cause**:
+  1. The `announcements` collection was subscribed to client-side via `onSnapshot`, but had no match block in `firestore.rules`. Firestore defaults to denying all reads and writes for unmatched collections.
+  2. Simply saving a local `firestore.rules` file in the repository does not push changes to the live cloud project until deployed.
+- **Prevention**:
+  1. Whenever a collection is read or written directly on the frontend via Firestore client SDK (`onSnapshot`, `getDocs`, `setDoc`), ensure explicit match rules are declared in `firestore.rules` with strict role and authentication guards.
+  2. Deploy security rules to the live project using the Firebase Rules API (`https://firebaserules.googleapis.com/v1/projects/{projectId}/rulesets` and `/releases/cloud.firestore`) using the project's service account credentials or Firebase CLI.
+

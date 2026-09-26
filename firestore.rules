@@ -85,9 +85,33 @@ service cloud.firestore {
       allow read: if isAdminOrOperator();
       allow write: if isAdmin();
     }
+    match /workflowTemplates/{templateId} {
+      allow read: if isAdminOrOperator();
+      allow write: if isAdmin();
+    }
     match /workflow_instances/{instanceId} {
       allow read: if isAdminOrOperator();
       allow write: if isAdminOrOperator();
+    }
+    match /workflowInstances/{instanceId} {
+      allow read: if isAdminOrOperator();
+      allow write: if isAdminOrOperator();
+    }
+
+    // ── Announcements (Head Office Broadcasts) ────────────────────
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Admin Audit Logs ──────────────────────────────────────────
+    match /admin-logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /admin_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // ── Active Client Services / Processing Requests ──────────────
@@ -108,8 +132,8 @@ service cloud.firestore {
 
     // ── Appointments ──────────────────────────────────────────────
     match /appointments/{appointmentId} {
-      allow read: if isAdmin() 
-        || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
+      allow read: if isAdminOrOperator() 
+        || (isSignedIn() && resource.data.clientUid == request.auth.uid);
       allow create: if isSignedIn();
       allow update: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
       allow delete: if isAdmin();

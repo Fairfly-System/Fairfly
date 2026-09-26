@@ -173,10 +173,10 @@ const notifyBranch = async ({
       opSnaps.docs.forEach(doc => targetUids.add(doc.id));
     }
 
-    // If no operators found via UID or branchName, fallback to notifying all active operators
+    // If no operators found via UID or branchName, log warning instead of broadcasting
     if (targetUids.size === 0) {
-      console.warn(`notifyBranch: No operator matched for branchUid "${branchUid}" or branchName "${branchName}". Falling back to all operators.`);
-      return await notifyAllOperators({ title, message, type, link, metadata });
+      console.warn(`notifyBranch: No operator matched for branchUid "${branchUid}" or branchName "${branchName}". Skipping broadcast.`);
+      return [];
     }
 
     const promises = Array.from(targetUids).map(uid =>

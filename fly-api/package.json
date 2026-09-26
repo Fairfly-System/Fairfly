@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "deploy:rules": "node src/scripts/deployRules.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

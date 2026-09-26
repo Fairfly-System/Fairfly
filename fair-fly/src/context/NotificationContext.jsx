@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { collection, onSnapshot, query, where, orderBy, limit, doc, updateDoc, writeBatch, deleteDoc, getDocs } from 'firebase/firestore';
 import { firestore } from '../firebase';
 import { useAuthContext } from './AuthContext';
@@ -11,6 +11,11 @@ export function NotificationProvider({ children }) {
   const { addToast } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const notificationsRef = useRef([]);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
 
   useEffect(() => {
     if (!user || !user.uid) {
@@ -53,48 +58,90 @@ export function NotificationProvider({ children }) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Mark single notification as read
+  // When a notification is marked as read, delete it from Firestore to save read/write bandwidth
   const markAsRead = useCallback(async (notificationId) => {
     try {
       const docRef = doc(firestore, 'notifications', notificationId);
-      await updateDoc(docRef, {
-        read: true,
-        updatedAt: new Date().toISOString()
-      });
+      await deleteDoc(docRef);
     } catch (error) {
-      console.error('Error marking notification as read in Firestore:', error);
+      console.error('Error deleting read notification from Firestore:', error);
     }
   }, []);
 
-  // Mark all notifications for current user as read
+  // Mark all notifications as read: delete all notifications for the current user
   const markAllAsRead = useCallback(async () => {
     try {
-      const unreadList = notifications.filter((n) => !n.read);
-      if (unreadList.length === 0) return;
+      const currentList = notificationsRef.current;
+      if (!currentList || currentList.length === 0) return;
 
       const batch = writeBatch(firestore);
-      const now = new Date().toISOString();
-
-      unreadList.forEach((n) => {
+      currentList.forEach((n) => {
         const docRef = doc(firestore, 'notifications', n.id);
-        batch.update(docRef, { read: true, updatedAt: now });
+        batch.delete(docRef);
       });
 
       await batch.commit();
-      addToast('All notifications marked as read', 'success');
+      addToast('All notifications cleared', 'success');
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      addToast('Failed to mark notifications as read', 'error');
+      console.error('Error clearing all notifications from Firestore:', error);
+      addToast('Failed to clear notifications', 'error');
     }
-  }, [notifications, addToast]);
+  }, [addToast]);
 
-  // Delete notification
+  // Delete notification directly
   const removeNotification = useCallback(async (notificationId) => {
     try {
       const docRef = doc(firestore, 'notifications', notificationId);
       await deleteDoc(docRef);
     } catch (error) {
       console.error('Error deleting notification:', error);
+    }
+  }, []);
+
+  // Delete all notifications belonging to a specific tab when the user clicks or views it
+  const clearNotificationsForTab = useCallback(async (tabLink) => {
+    const currentList = notificationsRef.current;
+    if (!tabLink || !Array.isArray(currentList) || currentList.length === 0) return;
+    try {
+      const linkPath = tabLink.toLowerCase();
+      const tabSlug = linkPath.split('/').filter(Boolean).pop() || '';
+      const isPortalRoot = linkPath === '/operator' || linkPath === '/admin' || linkPath === '/client';
+
+      const matchingNotifs = currentList.filter((notif) => {
+        const notifLink = (notif.link || '').toLowerCase();
+        const notifType = (notif.type || '').toLowerCase();
+
+        if (isPortalRoot) {
+          return notifLink === linkPath && (notifType === 'system' || notifType === 'dashboard');
+        }
+
+        if (notifLink && (notifLink === linkPath || notifLink.startsWith(linkPath + '/') || notifLink.startsWith(linkPath + '?'))) {
+          return true;
+        }
+
+        if (notifType) {
+          if (tabSlug.includes(notifType) || (notifType === 'service' && tabSlug.includes('workflow'))) return true;
+          if (notifType === 'franchise' && tabSlug.includes('franchise')) return true;
+          if (notifType === 'appointment' && tabSlug.includes('appointment')) return true;
+          if (notifType === 'ticket' && tabSlug.includes('ticket')) return true;
+          if (notifType === 'message' && tabSlug.includes('message')) return true;
+          if (notifType === 'resource' && tabSlug.includes('resource')) return true;
+          if (notifType === 'inquiry' && (tabSlug.includes('inquir') || tabSlug.includes('inquiry-forms'))) return true;
+          if (notifType === 'quotation' && tabSlug.includes('quotation')) return true;
+        }
+        return false;
+      });
+
+      if (matchingNotifs.length === 0) return;
+
+      const batch = writeBatch(firestore);
+      matchingNotifs.forEach((n) => {
+        const docRef = doc(firestore, 'notifications', n.id);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error('Error clearing notifications for tab:', error);
     }
   }, []);
 
@@ -106,7 +153,8 @@ export function NotificationProvider({ children }) {
         loading,
         markAsRead,
         markAllAsRead,
-        removeNotification
+        removeNotification,
+        clearNotificationsForTab
       }}
     >
       {children}

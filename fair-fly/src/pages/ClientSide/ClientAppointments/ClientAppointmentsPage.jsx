@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
 import SearchBar from '../../../components/UI/SearchBar/SearchBar';
 import { fetchAppointments } from '../../../services/appointmentService';
@@ -8,6 +9,7 @@ import './client-appointments.css';
 
 export default function ClientAppointmentsPage() {
   const { user, userDetails, userToken } = useAuthContext();
+  const { clearNotificationsForTab } = useNotifications();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'confirmed' | 'pending' | 'cancelled'
@@ -15,18 +17,26 @@ export default function ClientAppointmentsPage() {
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
+  useEffect(() => {
+    if (clearNotificationsForTab) {
+      clearNotificationsForTab('/client/appointments');
+    }
+  }, [clearNotificationsForTab]);
+
   // Fetch appointments via GET
   const loadAppointments = useCallback(() => {
     if (!userToken) return;
     setLoading(true);
     fetchAppointments(
       userToken,
-      {},
+      { clientUid: user?.uid },
       (data) => {
-        const list = (data || []).map((doc) => ({
-          id: doc.id || doc._id,
-          ...doc
-        }));
+        const list = (data || [])
+          .map((doc) => ({
+            id: doc.id || doc._id,
+            ...doc
+          }))
+          .filter((doc) => !user?.uid || doc.clientUid === user.uid);
         list.sort((a, b) => new Date(b.createdAt || b.preferredDate || 0) - new Date(a.createdAt || a.preferredDate || 0));
         setAppointments(list);
         setLoading(false);
@@ -37,7 +47,7 @@ export default function ClientAppointmentsPage() {
       },
       setLoading
     );
-  }, [userToken]);
+  }, [userToken, user?.uid]);
 
   useEffect(() => {
     loadAppointments();

@@ -86,9 +86,7 @@ export default function NotificationBell() {
   }, [isOpen]);
 
   const handleNotificationClick = (notif) => {
-    if (!notif.read) {
-      markAsRead(notif.id);
-    }
+    markAsRead(notif.id);
     setIsOpen(false);
     if (notif.link) {
       navigate(notif.link);
