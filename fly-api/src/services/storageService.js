@@ -73,7 +73,7 @@ function extractStorageUrls(obj) {
       if (item.includes('firebasestorage.googleapis.com') || item.includes('/o/')) {
         urls.push(item);
       }
-    } else if (Array.isArray(item)) {
+    } else if (Array.isArray(item)) { //IF array, check each indice for URL.
       item.forEach(traverse);
     } else if (typeof item === 'object') { // If it is an object, checks each fields to see if it contains a string that is a firebase storage upload link.
       Object.keys(item).forEach((key) => {

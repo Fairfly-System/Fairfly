@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, Trash2, Eye, Info, FileText } from 'lucide-react';
 import ValidIdInfoModal, { ACCEPTED_ID_TYPES } from '../ValidIdInfoModal/ValidIdInfoModal';
-import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import { useToast } from '../../UI/toast/ToastProvider';
 import './valid-id-upload.css';
 
@@ -19,13 +18,11 @@ export default function ValidIdUpload({
 }) {
   const { addToast } = useToast();
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [uploadingFront, setUploadingFront] = useState(false);
-  const [uploadingBack, setUploadingBack] = useState(false);
 
   const frontInputRef = useRef(null);
   const backInputRef = useRef(null);
 
-  const handleFileSelected = async (file, side) => {
+  const handleFileSelected = (file, side) => {
     if (!file) return;
 
     // Validate size (max 15MB)
@@ -41,28 +38,32 @@ export default function ValidIdUpload({
       return;
     }
 
-    const setUploading = side === 'front' ? setUploadingFront : setUploadingBack;
-    const onUploadSuccess = side === 'front' ? onUploadFront : onUploadBack;
-
-    setUploading(true);
-    try {
-      const res = await uploadFileToBackend(file, 'client_ids');
-      onUploadSuccess({
-        url: res.url,
-        name: res.fileName || file.name,
-        size: res.fileSize || file.size,
-        type: file.type,
-      });
-      addToast(`${side === 'front' ? 'Front' : 'Back'} of ID uploaded successfully!`, 'success');
-    } catch (err) {
-      console.error(`Error uploading ${side} of ID:`, err);
-      addToast(err?.message || `Failed to upload ${side} of ID. Please try again.`, 'error');
-    } finally {
-      setUploading(false);
+    // Clean up previous blob URL if exists
+    const previous = side === 'front' ? idFront : idBack;
+    if (previous?.previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(previous.previewUrl);
     }
+
+    const previewUrl = URL.createObjectURL(file);
+    const filePayload = {
+      file,
+      previewUrl,
+      url: previewUrl,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    };
+
+    if (side === 'front') {
+      onUploadFront(filePayload);
+    } else {
+      onUploadBack(filePayload);
+    }
+
+    addToast(`${side === 'front' ? 'Front' : 'Back'} of ID attached!`, 'success');
   };
 
-  const renderDropzone = (side, fileData, uploading, inputRef, onRemove) => {
+  const renderDropzone = (side, fileData, inputRef, onRemove) => {
     const isFront = side === 'front';
     const label = isFront ? 'Front Side of ID' : 'Back Side of ID';
     const isPdf = fileData?.name?.toLowerCase().endsWith('.pdf') || fileData?.type === 'application/pdf';
@@ -76,7 +77,7 @@ export default function ValidIdUpload({
           type="file"
           accept="image/jpeg,image/png,image/webp,image/jpg,application/pdf"
           style={{ display: 'none' }}
-          disabled={disabled || uploading}
+          disabled={disabled}
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               handleFileSelected(e.target.files[0], side);
@@ -94,7 +95,7 @@ export default function ValidIdUpload({
                 </div>
               ) : (
                 <img
-                  src={fileData.url}
+                  src={fileData.previewUrl || fileData.url}
                   alt={label}
                   className="id-thumbnail-img"
                   onError={(e) => {
@@ -109,7 +110,7 @@ export default function ValidIdUpload({
                 {fileData.name || label}
               </span>
               <span className="id-uploaded-size">
-                {fileData.size ? `${(fileData.size / 1024).toFixed(0)} KB` : 'Uploaded'}
+                {fileData.size ? `${(fileData.size / 1024).toFixed(0)} KB` : 'Attached'}
                 {' • '}
                 <span className="text-success font-semibold">
                   <CheckCircle2 size={12} style={{ display: 'inline', verticalAlign: '-1px' }} /> Ready
@@ -119,7 +120,7 @@ export default function ValidIdUpload({
 
             <div className="id-uploaded-actions">
               <a
-                href={fileData.url}
+                href={fileData.previewUrl || fileData.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="id-action-icon-btn view"
@@ -140,8 +141,8 @@ export default function ValidIdUpload({
           </div>
         ) : (
           <div
-            className={`id-dropzone-box ${uploading ? 'is-uploading' : ''}`}
-            onClick={() => !disabled && !uploading && inputRef.current?.click()}
+            className={`id-dropzone-box ${disabled ? 'is-disabled' : ''}`}
+            onClick={() => !disabled && inputRef.current?.click()}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -151,22 +152,15 @@ export default function ValidIdUpload({
               }
             }}
           >
-            {uploading ? (
-              <div className="id-dropzone-loading">
-                <i className="fa-solid fa-spinner fa-spin text-purple" style={{ fontSize: '1.5rem' }}></i>
-                <span>Uploading {label}...</span>
+            <div className="id-dropzone-content">
+              <div className="id-dropzone-icon-circle">
+                <UploadCloud size={20} />
               </div>
-            ) : (
-              <div className="id-dropzone-content">
-                <div className="id-dropzone-icon-circle">
-                  <UploadCloud size={20} />
-                </div>
-                <div className="id-dropzone-text">
-                  <strong>Click to upload {isFront ? 'Front' : 'Back'}</strong>
-                  <span>JPG, PNG, WEBP, or PDF (Max 15MB)</span>
-                </div>
+              <div className="id-dropzone-text">
+                <strong>Choose {isFront ? 'Front' : 'Back'} of ID</strong>
+                <span>JPG, PNG, WEBP, or PDF (Max 15MB)</span>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -215,8 +209,8 @@ export default function ValidIdUpload({
 
       {/* Dual Upload Slots (Front and Back) */}
       <div className="id-dual-upload-grid">
-        {renderDropzone('front', idFront, uploadingFront, frontInputRef, onRemoveFront)}
-        {renderDropzone('back', idBack, uploadingBack, backInputRef, onRemoveBack)}
+        {renderDropzone('front', idFront, frontInputRef, onRemoveFront)}
+        {renderDropzone('back', idBack, backInputRef, onRemoveBack)}
       </div>
 
       {error && <p className="auth-input-error">{error}</p>}

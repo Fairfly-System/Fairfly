@@ -7,6 +7,7 @@ import { useToast } from "../../../components/UI/toast/ToastProvider";
 import { initiateRegistration } from "../../../services/authService";
 import TermsPrivacyModal from "../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal";
 import ValidIdUpload from "../../../components/Shared/ValidIdUpload/ValidIdUpload";
+import { uploadFileToBackend } from "../../../utils/fileUploadApi";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -145,52 +146,85 @@ export default function Register() {
       (field) => formData[field] === ""
     );
 
-    const isIdIncomplete = !idType || !idFront?.url || !idBack?.url;
+    const isIdIncomplete = !idType || !idFront || !idBack;
 
     setDisabled(hasErrors || isNotFilled || isIdIncomplete);
   }, [errors, formData, idType, idFront, idBack]);
 
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (idFront?.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(idFront.previewUrl);
+      }
+      if (idBack?.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(idBack.previewUrl);
+      }
+    };
+  }, [idFront, idBack]);
+
   // -----------------------
   // SUBMIT
   // -----------------------
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (disabled || isSubmitting) return;
 
-    if (!idType || !idFront?.url || !idBack?.url) {
-      addToast("Please select your ID type and upload both the front and back of your valid government ID.", "error");
+    if (!idType || !idFront || !idBack) {
+      addToast("Please select your ID type and attach both the front and back of your valid government ID.", "error");
       return;
     }
 
     const targetEmail = formData.email.trim().toLowerCase();
+    setIsSubmitting(true);
 
-    initiateRegistration(
-      {
-        fullName: formData.fullName.trim(),
-        email: targetEmail,
-        phone: formData.phone.trim(),
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        idType,
-        idFrontUrl: idFront.url,
-        idBackUrl: idBack.url,
-        idFrontName: idFront.name || null,
-        idBackName: idBack.name || null,
-      },
-      (res) => {
-        addToast(res?.message || "Verification code sent! Please check your email inbox.", "success");
-        try {
-          sessionStorage.setItem("pendingVerificationEmail", targetEmail);
-        } catch (storageErr) {
-          console.warn("Could not save pending email to sessionStorage:", storageErr);
-        }
-        navigate("/verify-email", { state: { email: targetEmail } });
-      },
-      (error) => {
-        addToast(error?.message || "Could not start registration. Please check your details and try again.", "error");
-      },
-      setIsSubmitting
-    );
+    try {
+      // Upload Front ID only when Create Account is clicked
+      let finalFrontUrl = idFront.url;
+      if (idFront.file) {
+        const resFront = await uploadFileToBackend(idFront.file, "client_ids");
+        finalFrontUrl = resFront.url;
+      }
+
+      // Upload Back ID only when Create Account is clicked
+      let finalBackUrl = idBack.url;
+      if (idBack.file) {
+        const resBack = await uploadFileToBackend(idBack.file, "client_ids");
+        finalBackUrl = resBack.url;
+      }
+
+      initiateRegistration(
+        {
+          fullName: formData.fullName.trim(),
+          email: targetEmail,
+          phone: formData.phone.trim(),
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          idType,
+          idFrontUrl: finalFrontUrl,
+          idBackUrl: finalBackUrl,
+          idFrontName: idFront.name || null,
+          idBackName: idBack.name || null,
+        },
+        (res) => {
+          addToast(res?.message || "Verification code sent! Please check your email inbox.", "success");
+          try {
+            sessionStorage.setItem("pendingVerificationEmail", targetEmail);
+          } catch (storageErr) {
+            console.warn("Could not save pending email to sessionStorage:", storageErr);
+          }
+          navigate("/verify-email", { state: { email: targetEmail } });
+        },
+        (error) => {
+          addToast(error?.message || "Could not start registration. Please check your details and try again.", "error");
+        },
+        setIsSubmitting
+      );
+    } catch (err) {
+      console.error("Error uploading ID during registration:", err);
+      setIsSubmitting(false);
+      addToast(err?.message || "Failed to upload ID files. Please try again.", "error");
+    }
   };
 
   return (
@@ -412,8 +446,18 @@ export default function Register() {
               idBack={idBack}
               onUploadFront={setIdFront}
               onUploadBack={setIdBack}
-              onRemoveFront={() => setIdFront(null)}
-              onRemoveBack={() => setIdBack(null)}
+              onRemoveFront={() => {
+                if (idFront?.previewUrl?.startsWith("blob:")) {
+                  URL.revokeObjectURL(idFront.previewUrl);
+                }
+                setIdFront(null);
+              }}
+              onRemoveBack={() => {
+                if (idBack?.previewUrl?.startsWith("blob:")) {
+                  URL.revokeObjectURL(idBack.previewUrl);
+                }
+                setIdBack(null);
+              }}
               disabled={isSubmitting}
             />
 
@@ -425,7 +469,7 @@ export default function Register() {
               {isSubmitting ? (
                 <>
                   <i className="fa-solid fa-spinner fa-spin"></i>
-                  <span>Creating Account...</span>
+                  <span>Uploading ID & Creating Account...</span>
                 </>
               ) : (
                 <span>Create Account</span>

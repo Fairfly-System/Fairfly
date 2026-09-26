@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ArrowLeft, ShieldAlert, CheckCircle2, Lock } from 'lucide-react';
 import logo from '/FairflyLogo.png';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import ValidIdUpload from '../../../components/Shared/ValidIdUpload/ValidIdUpload';
 import { reuploadId } from '../../../services/authService';
+import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import './reupload-id.css';
 
 export default function ReuploadId() {
@@ -21,32 +22,65 @@ export default function ReuploadId() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const isFormValid = Boolean(idType && idFront?.url && idBack?.url && emailParam && tokenParam);
+  const isFormValid = Boolean(idType && idFront && idBack && emailParam && tokenParam);
 
-  const handleSubmit = (e) => {
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (idFront?.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(idFront.previewUrl);
+      }
+      if (idBack?.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(idBack.previewUrl);
+      }
+    };
+  }, [idFront, idBack]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid || isSubmitting) return;
 
     setIsSubmitting(true);
-    reuploadId(
-      {
-        email: emailParam.trim().toLowerCase(),
-        token: tokenParam.trim(),
-        idType,
-        idFrontUrl: idFront.url,
-        idBackUrl: idBack.url,
-        idFrontName: idFront.name || null,
-        idBackName: idBack.name || null,
-      },
-      (res) => {
-        setIsSuccess(true);
-        addToast(res?.message || 'Government ID re-uploaded successfully!', 'success');
-      },
-      (err) => {
-        addToast(err?.message || 'Failed to re-upload ID. Please make sure the link from your email is valid.', 'error');
-      },
-      setIsSubmitting
-    );
+
+    try {
+      // Upload Front ID only when submit button is clicked
+      let finalFrontUrl = idFront.url;
+      if (idFront.file) {
+        const resFront = await uploadFileToBackend(idFront.file, 'client_ids');
+        finalFrontUrl = resFront.url;
+      }
+
+      // Upload Back ID only when submit button is clicked
+      let finalBackUrl = idBack.url;
+      if (idBack.file) {
+        const resBack = await uploadFileToBackend(idBack.file, 'client_ids');
+        finalBackUrl = resBack.url;
+      }
+
+      reuploadId(
+        {
+          email: emailParam.trim().toLowerCase(),
+          token: tokenParam.trim(),
+          idType,
+          idFrontUrl: finalFrontUrl,
+          idBackUrl: finalBackUrl,
+          idFrontName: idFront.name || null,
+          idBackName: idBack.name || null,
+        },
+        (res) => {
+          setIsSuccess(true);
+          addToast(res?.message || 'Government ID re-uploaded successfully!', 'success');
+        },
+        (err) => {
+          addToast(err?.message || 'Failed to re-upload ID. Please make sure the link from your email is valid.', 'error');
+        },
+        setIsSubmitting
+      );
+    } catch (err) {
+      console.error('Error uploading ID during re-upload:', err);
+      setIsSubmitting(false);
+      addToast(err?.message || 'Failed to upload ID files. Please try again.', 'error');
+    }
   };
 
   const isMissingParams = !emailParam || !tokenParam;
@@ -182,8 +216,18 @@ export default function ReuploadId() {
                   idBack={idBack}
                   onUploadFront={setIdFront}
                   onUploadBack={setIdBack}
-                  onRemoveFront={() => setIdFront(null)}
-                  onRemoveBack={() => setIdBack(null)}
+                  onRemoveFront={() => {
+                    if (idFront?.previewUrl?.startsWith('blob:')) {
+                      URL.revokeObjectURL(idFront.previewUrl);
+                    }
+                    setIdFront(null);
+                  }}
+                  onRemoveBack={() => {
+                    if (idBack?.previewUrl?.startsWith('blob:')) {
+                      URL.revokeObjectURL(idBack.previewUrl);
+                    }
+                    setIdBack(null);
+                  }}
                   disabled={isSubmitting}
                 />
 
@@ -195,7 +239,7 @@ export default function ReuploadId() {
                   {isSubmitting ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin"></i>
-                      <span>Submitting for Review...</span>
+                      <span>Uploading ID & Submitting...</span>
                     </>
                   ) : (
                     <span>Submit ID for Admin Review</span>

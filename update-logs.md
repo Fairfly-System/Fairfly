@@ -1,5 +1,27 @@
 # Update Logs
 
+## [2026-09-25] Enhancement: Defer Government ID Upload until "Create Account" Clicked
+
+### Overview
+Updated the Client Registration and ID Re-upload forms so that attaching government ID files (Front and Back) does not prematurely upload files to the server or database upon file selection. Instead, selecting files creates local object URL previews for instant client-side inspection. Network uploads to `/api/upload` (`client_ids`) are triggered strictly on-demand only when the user clicks the "Create Account" (or "Submit ID for Admin Review") button.
+
+### Key Changes
+1. **ValidIdUpload (`ValidIdUpload.jsx`, `valid-id-upload.css`)**:
+   - Removed immediate backend upload API calls upon file selection in `handleFileSelected`.
+   - Generates client-side preview blob URLs (`URL.createObjectURL(file)`) with instantaneous local thumbnail rendering, size calculations, and high-resolution lightbox inspection.
+   - Cleans up and revokes previous object URLs when removing or replacing files.
+   - Added disabled styles and state handling for submission locking.
+2. **Register Page (`Register.jsx`)**:
+   - Updated form submit guard to recognize local attached file objects.
+   - Enhanced `handleSubmit` to asynchronously upload Front and Back ID files to `/api/upload` only upon clicking "Create Account".
+   - Displays dynamic loading indicator ("Uploading ID & Creating Account...") on the submit button.
+   - Added unmount cleanup effect to revoke allocated blob URLs from browser memory.
+3. **Re-upload ID Page (`ReuploadId.jsx`)**:
+   - Applied identical deferred upload pattern: Front and Back files are validated locally upon selection and only uploaded to the server when "Submit ID for Admin Review" is clicked.
+   - Revokes object URLs on unmount and removal.
+
+---
+
 ## [2026-09-25] Fix: Client Table Filter Chips, Bulk Actions Standard Layout & Service Workflows Real-Time Listing
 
 ### Overview
