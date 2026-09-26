@@ -26,13 +26,19 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   const [loadingBranches, setLoadingBranches] = useState(false);
 
   // Form State corresponding to SAF-01-002
-  const [clientName, setClientName] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
+  const [clientName, setClientName] = useState(
+    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
+  );
+  const [contactPerson, setContactPerson] = useState(
+    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
+  );
   const [population, setPopulation] = useState('');
-  const [address, setAddress] = useState('');
-  const [telNo, setTelNo] = useState('');
-  const [cellphone, setCellphone] = useState('');
-  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState(userDetails?.address || '');
+  const [telNo, setTelNo] = useState(userDetails?.telNo || userDetails?.telephoneNumber || '');
+  const [cellphone, setCellphone] = useState(
+    userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || ''
+  );
+  const [email, setEmail] = useState(userDetails?.email || user?.email || '');
   const [contractNo, setContractNo] = useState('');
   const [isNo, setIsNo] = useState('');
   const [selectedBranchUid, setSelectedBranchUid] = useState('');
@@ -40,16 +46,23 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   const [specifiedRequirements, setSpecifiedRequirements] = useState('');
   const [remarks, setRemarks] = useState('');
 
-  // Prefill user details when opening
+  // Prefill user details when opening or when user details become available
   useEffect(() => {
-    if (isOpen) {
-      if (userDetails || user) {
-        setClientName(userDetails?.name || userDetails?.displayName || user?.displayName || '');
-        setContactPerson(userDetails?.name || userDetails?.displayName || user?.displayName || '');
-        setEmail(userDetails?.email || user?.email || '');
-        setCellphone(userDetails?.phone || userDetails?.contactNumber || '');
-        setAddress(userDetails?.address || '');
+    if (isOpen && (userDetails || user)) {
+      const resolvedName = userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '';
+      const resolvedPhone = userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || '';
+      const resolvedEmail = userDetails?.email || user?.email || '';
+      const resolvedAddress = userDetails?.address || '';
+      const resolvedTel = userDetails?.telNo || userDetails?.telephoneNumber || '';
+
+      if (resolvedName) {
+        setClientName(resolvedName);
+        setContactPerson(resolvedName);
       }
+      if (resolvedPhone) setCellphone(resolvedPhone);
+      if (resolvedEmail) setEmail(resolvedEmail);
+      if (resolvedAddress) setAddress(resolvedAddress);
+      if (resolvedTel) setTelNo(resolvedTel);
     }
   }, [isOpen, user, userDetails]);
 

@@ -18,9 +18,13 @@ export default function ClientAppointmentForm({
   const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
 
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
+  const [clientName, setClientName] = useState(
+    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
+  );
+  const [clientEmail, setClientEmail] = useState(userDetails?.email || user?.email || '');
+  const [clientPhone, setClientPhone] = useState(
+    userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || ''
+  );
   const [serviceType, setServiceType] = useState(initialServiceType || 'Passport Processing');
   const [branchUid, setBranchUid] = useState(lockedBranchUid || '');
   const [branchName, setBranchName] = useState(lockedBranchName || '');
@@ -33,12 +37,16 @@ export default function ClientAppointmentForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
-  // Pre-fill user details
+  // Pre-fill user details when available or when modal opens
   useEffect(() => {
-    if (userDetails || user) {
-      setClientName(userDetails?.name || userDetails?.displayName || user?.displayName || '');
-      setClientEmail(userDetails?.email || user?.email || '');
-      setClientPhone(userDetails?.phone || userDetails?.contactNumber || '');
+    if (isOpen && (userDetails || user)) {
+      const resolvedName = userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '';
+      const resolvedEmail = userDetails?.email || user?.email || '';
+      const resolvedPhone = userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || '';
+
+      if (resolvedName) setClientName(resolvedName);
+      if (resolvedEmail) setClientEmail(resolvedEmail);
+      if (resolvedPhone) setClientPhone(resolvedPhone);
     }
   }, [user, userDetails, isOpen]);
 

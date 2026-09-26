@@ -25,9 +25,18 @@ export default function ClientServiceRequestModal({
 
   const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
   const [selectedBranchUid, setSelectedBranchUid] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
+  const [clientName, setClientName] = useState(
+    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
+  );
+  const [clientEmail, setClientEmail] = useState(userDetails?.email || user?.email || '');
+  const [clientPhone, setClientPhone] = useState(
+    userDetails?.phone ||
+    userDetails?.phoneNumber ||
+    userDetails?.contactNumber ||
+    userDetails?.cellphone ||
+    user?.phoneNumber ||
+    ''
+  );
   const [additionalNotes, setAdditionalNotes] = useState('');
 
   // Requirement Inputs State: { [index]: { textValue: '', file: File|null, previewUrl: '' } }
@@ -43,12 +52,19 @@ export default function ClientServiceRequestModal({
 
   // Prefill client information if user is logged in
   useEffect(() => {
-    if (userDetails || user) {
-      setClientName(userDetails?.name || userDetails?.displayName || user?.displayName || '');
+    if (isOpen && (userDetails || user)) {
+      setClientName(userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '');
       setClientEmail(userDetails?.email || user?.email || '');
-      setClientPhone(userDetails?.phone || userDetails?.contactNumber || '');
+      setClientPhone(
+        userDetails?.phone ||
+        userDetails?.phoneNumber ||
+        userDetails?.contactNumber ||
+        userDetails?.cellphone ||
+        user?.phoneNumber ||
+        ''
+      );
     }
-  }, [user, userDetails]);
+  }, [user, userDetails, isOpen]);
 
   // Fetch services and branch options for form dropdowns
   useEffect(() => {

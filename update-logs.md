@@ -1,5 +1,26 @@
 # Update Logs
 
+## [2026-09-27] Feature: Client Details Auto-Prefill Across Client Forms
+
+### Overview
+To streamline the client booking and inquiry experience, client-side modal forms now automatically prefill the client's Full Name, Contact Number, and Email Address from their authenticated profile (`userDetails` in Firestore and `user` in Firebase Auth). Previously, modal forms only checked `userDetails?.name`, which caused fields to remain empty for registered clients whose profile document stores their name under `fullName`, and phone numbers stored under various aliases (`phone`, `phoneNumber`, `contactNumber`, `cellphone`) were not consistently resolved. Furthermore, opening modals repeatedly did not resync fresh auth profile details.
+
+### Key Changes
+1. **Client Appointment Form (`ClientAppointmentForm.jsx`)**:
+   - Initialized `clientName`, `clientEmail`, and `clientPhone` with fallback resolution covering `fullName`, `name`, `displayName`, and all phone fields (`phone`, `phoneNumber`, `contactNumber`, `cellphone`).
+   - Extended `useEffect` to watch `[user, userDetails, isOpen]`, ensuring client details auto-populate whenever the appointment modal is opened.
+2. **Client Inquiry / Quotation Modal (`ClientInquiryModal.jsx`)**:
+   - Initialized form fields with comprehensive user details fallbacks for `clientName`, `contactPerson`, `cellphone`, `email`, `address`, and `telNo`.
+   - Updated `useEffect` dependency array with `[isOpen, user, userDetails]` so re-opening the inquiry modal dynamically updates the inputs with the latest client profile data.
+3. **Client Service Request Modal (`ClientServiceRequestModal.jsx`)**:
+   - Updated `useState` initializers for `clientName`, `clientEmail`, and `clientPhone` with comprehensive field fallbacks.
+   - Refactored `useEffect` to trigger on `[user, userDetails, isOpen]`, resolving `fullName` and all contact phone number variations.
+4. **Franchise Application Form (`FranchiseApplicationForm.jsx`)**:
+   - Connected `useAuthContext()` to access the authenticated client session.
+   - Added `useEffect` listening to `[isOpen, user, userDetails]` to prefill `fullName`, `phoneNumber`, and `email` for logged-in clients when opening the application form, while retaining custom edits if previously entered.
+
+---
+
 ## [2026-09-27] Feature: Operator Analytics Integration in Operator Detail Page & Dashboard Redirection
 
 ### Overview

@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 
 export default function FranchiseApplicationForm({ isOpen, onClose }) {
+  const { user, userDetails } = useAuthContext();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -23,6 +25,22 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
   const [disabled, setDisabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
+
+  // Prefill details for authenticated client
+  useEffect(() => {
+    if (isOpen && (userDetails || user)) {
+      const initialName = userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '';
+      const initialPhone = userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || '';
+      const initialEmail = userDetails?.email || user?.email || '';
+
+      setFormData((prev) => ({
+        ...prev,
+        fullName: prev.fullName?.trim() ? prev.fullName : initialName,
+        phoneNumber: prev.phoneNumber?.trim() ? prev.phoneNumber : initialPhone,
+        email: prev.email?.trim() ? prev.email : initialEmail,
+      }));
+    }
+  }, [isOpen, user, userDetails]);
 
   const handleInputChange = (value, name) => {
     setFormData((prev) => ({
