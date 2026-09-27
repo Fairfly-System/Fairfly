@@ -1,5 +1,30 @@
 # Update Logs
 
+## [2026-09-28] Feature: Operator Appointment Calendar View (Month & Week Views)
+
+### Overview
+Implemented a dedicated, interactive **Appointment Calendar View for Operators** in the FairFly system. Each branch operator can view, navigate, and manage scheduled consultations with visual day indicators, exact appointment times, and a comprehensive consultation details modal.
+
+### Architecture & Security Highlights
+1. **Operator-Specific Data Isolation & Zero-Trust Backend**:
+   - Guarded by `verifyFirebaseToken` and role checks.
+   - Strictly enforces multi-tenant boundary: only appointments where `branchUid === req.user.uid` are retrieved.
+2. **Date-Range Filtering with Resilient Index Fallback (`appointmentController.js`)**:
+   - Supported `startDate` and `endDate` parameters on `GET /api/appointments`.
+   - Bounded queries retrieve only appointments within visible calendar windows (`preferredDate >= startDate && preferredDate <= endDate`), eliminating full-collection downloads.
+   - Integrated compound range index fallback: if Firestore throws `FAILED_PRECONDITION` (code 9: missing composite index), automatically executes base branch filter and applies in-memory date range filtering and chronological sorting (`preferredDate ASC, preferredTime ASC`).
+   - Declared composite indexes (`branchUid` ASC + `preferredDate` ASC, `clientUid` ASC + `preferredDate` ASC) in `firestore.indexes.json`.
+3. **Frontend Calendar Component (`OperatorAppointmentCalendar.jsx`)**:
+   - Supports **Month View** (7-column grid Sun–Sat with highlighted today indicator and appointment count badges) and **Week View** (7-day chronological view showing time slots).
+   - Exact consultation times (`10:00 AM`), client names, and status color badges (Confirmed: green, Pending: orange, Cancelled: gray).
+   - In-memory period caching prevents redundant backend requests during back-and-forth calendar navigation.
+   - Built consultation details modal with `BaseModal` displaying date, start time, estimated duration (45 mins), client profile (name, email, phone), branch, status, remarks, quick Confirm/Cancel action buttons, and direct link to the full record (`/operator/appointments/:id`).
+4. **Seamless View Switcher (`OperatorAppointments.jsx`)**:
+   - Added view toggle buttons in the toolbar (`Calendar View` / `List View`), allowing operators to switch effortlessly between the calendar interface and the paginated list view.
+5. **Component Catalog**:
+   - Documented `OperatorAppointmentCalendar` in `component-list.md`.
+
+
 ## [2026-09-27] Bugfix: Client Service Store Request 400 (`Invalid fields in request body`)
 
 ### Overview

@@ -96,7 +96,7 @@ const createAppointment = async (req, res) => {
  */
 const getAppointments = async (req, res) => {
   try {
-    const { status, limit, clientUid } = req.query;
+    const { status, limit, clientUid, startDate, endDate } = req.query;
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
@@ -121,11 +121,51 @@ const getAppointments = async (req, res) => {
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });
     }
+
+    // Date range filtering for calendar view
+    const isDateRangeQuery = Boolean(startDate || endDate);
+    if (startDate) {
+      options.filters.push({ field: 'preferredDate', operator: '>=', value: startDate });
+    }
+    if (endDate) {
+      options.filters.push({ field: 'preferredDate', operator: '<=', value: endDate });
+    }
+    if (isDateRangeQuery) {
+      options.orderBy = { field: 'preferredDate', direction: 'asc' };
+    }
+
     if (limit) {
       options.limit = parseInt(limit, 10);
     }
 
-    const results = await queryDatabaseAdvanced(COLLECTIONS.APPOINTMENTS, options);
+    let results;
+    try {
+      results = await queryDatabaseAdvanced(COLLECTIONS.APPOINTMENTS, options);
+    } catch (queryErr) {
+      // Resilient fallback for unindexed compound range queries (code 9 / FAILED_PRECONDITION)
+      if (isDateRangeQuery && (queryErr.code === 9 || (queryErr.message && queryErr.message.includes('FAILED_PRECONDITION')))) {
+        console.warn('[appointmentController] Compound index missing, falling back to base filter + in-memory date range filter');
+        const fallbackOptions = {
+          filters: options.filters.filter(f => f.field !== 'preferredDate'),
+          orderBy: { field: 'createdAt', direction: 'desc' }
+        };
+        const rawResults = await queryDatabaseAdvanced(COLLECTIONS.APPOINTMENTS, fallbackOptions);
+        results = rawResults.filter(app => {
+          const d = app.preferredDate || app.date;
+          if (!d) return false;
+          if (startDate && d < startDate) return false;
+          if (endDate && d > endDate) return false;
+          return true;
+        }).sort((a, b) => {
+          const dateComp = (a.preferredDate || a.date || '').localeCompare(b.preferredDate || b.date || '');
+          if (dateComp !== 0) return dateComp;
+          return (a.preferredTime || a.time || '').localeCompare(b.preferredTime || b.time || '');
+        });
+      } else {
+        throw queryErr;
+      }
+    }
+
     return res.status(200).json(results);
   } catch (error) {
     console.error('Error listing appointments:', error);

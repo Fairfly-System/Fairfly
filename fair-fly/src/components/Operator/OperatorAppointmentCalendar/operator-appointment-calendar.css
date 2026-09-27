@@ -1,0 +1,790 @@
+/* ==========================================================================
+   Operator Appointment Calendar Component Styles
+   Governed by .agents/rules/style-guide-components.md
+   ========================================================================== */
+
+.op-cal-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Calendar Header Controls
+   -------------------------------------------------------------------------- */
+.op-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 0.5rem 0.5rem 0.5rem;
+}
+
+.op-cal-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.op-cal-nav-btn {
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg, #FFFFFF);
+  color: var(--text-mid);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  transition: all 0.15s ease;
+}
+
+.op-cal-nav-btn:hover {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+  border-color: var(--purple-light);
+}
+
+.op-cal-today-btn {
+  padding: 0 0.875rem;
+  height: 2.125rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg, #FFFFFF);
+  color: var(--text-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.op-cal-today-btn:hover {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+  border-color: var(--purple-light);
+}
+
+.op-cal-period-title {
+  margin: 0 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.01em;
+}
+
+.op-cal-loading-indicator {
+  color: var(--purple);
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.op-cal-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Status Filter Select */
+.op-cal-filter-select-wrapper {
+  position: relative;
+}
+
+.op-cal-filter-select {
+  height: 2.125rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+  background: var(--card-bg, #FFFFFF);
+  cursor: pointer;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.op-cal-filter-select:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 2px var(--purple-glow);
+}
+
+/* View Mode Switcher (Month / Week) */
+.op-cal-view-switch {
+  display: inline-flex;
+  background: #F1F5F9;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+  padding: 0.125rem;
+  gap: 0.125rem;
+}
+
+.op-cal-view-btn {
+  padding: 0.25rem 0.75rem;
+  height: 1.875rem;
+  border-radius: calc(var(--radius-sm, 0.375rem) - 0.125rem);
+  border: none;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.op-cal-view-btn:hover {
+  color: var(--purple);
+}
+
+.op-cal-view-btn.active {
+  background: #FFFFFF;
+  color: var(--purple-dark);
+  box-shadow: var(--shadow-xs);
+}
+
+.op-cal-refresh-btn {
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg, #FFFFFF);
+  color: var(--text-mid);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  transition: all 0.15s ease;
+}
+
+.op-cal-refresh-btn:hover {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+}
+
+/* --------------------------------------------------------------------------
+   Legend Bar
+   -------------------------------------------------------------------------- */
+.op-cal-legend {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-mid);
+  font-weight: 500;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.legend-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.legend-dot.status-confirmed {
+  background: var(--complete-green);
+}
+
+.legend-dot.status-pending {
+  background: var(--orange);
+}
+
+.legend-dot.status-cancelled {
+  background: var(--text-light);
+}
+
+/* --------------------------------------------------------------------------
+   Month Grid View
+   -------------------------------------------------------------------------- */
+.op-cal-month-container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 0.5rem);
+  overflow: hidden;
+  background: var(--card-bg, #FFFFFF);
+}
+
+.op-cal-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  background: #F8FAFC;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.op-cal-weekday-header {
+  padding: 0.625rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-light);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.op-cal-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(7.5rem, 1fr);
+  background: var(--border-color);
+  gap: 1px; /* Crisp grid borders */
+}
+
+.op-cal-day-cell {
+  background: #FFFFFF;
+  padding: 0.375rem 0.5rem 0.5rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-height: 7.5rem;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.op-cal-day-cell:hover {
+  background: #FAFAFD;
+}
+
+.op-cal-day-cell.other-month {
+  background: #F8FAFC;
+  opacity: 0.65;
+}
+
+.op-cal-day-cell.is-today {
+  background: #FAF5FF;
+}
+
+.day-cell-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.day-number {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.day-number.today-pill {
+  background: var(--purple);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.day-appt-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--purple-dark);
+  background: var(--purple-light-2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 1rem;
+}
+
+/* Day Appointments List & Chips */
+.day-appts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.op-cal-appt-chip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.375rem;
+  border-radius: var(--radius-xs, 0.25rem);
+  border: 1px solid transparent;
+  font-size: 0.6875rem;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.op-cal-appt-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+}
+
+.chip-time {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* Status variants */
+.op-cal-appt-chip.chip-confirmed {
+  background: var(--complete-green-light);
+  color: var(--complete-green-dark);
+  border-color: #BBF7D0;
+}
+
+.op-cal-appt-chip.chip-pending {
+  background: #FFF7ED;
+  color: #C2410C;
+  border-color: #FED7AA;
+}
+
+.op-cal-appt-chip.chip-cancelled {
+  background: #F1F5F9;
+  color: var(--text-light);
+  border-color: var(--border-color);
+  text-decoration: line-through;
+}
+
+.op-cal-more-btn {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--purple-dark);
+  background: none;
+  border: none;
+  padding: 0.125rem 0.25rem;
+  text-align: left;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.op-cal-more-btn:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Week Grid View
+   -------------------------------------------------------------------------- */
+.op-cal-week-container {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--card-bg, #FFFFFF);
+  overflow: hidden;
+}
+
+.op-cal-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  background: var(--border-color);
+  gap: 1px;
+}
+
+.op-cal-week-column {
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  min-height: 24rem;
+}
+
+.op-cal-week-column.is-today {
+  background: #FCFAFF;
+}
+
+.week-column-header {
+  padding: 0.75rem 0.5rem;
+  background: #F8FAFC;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.week-day-name {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-light);
+  letter-spacing: 0.04em;
+}
+
+.week-day-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  width: 1.875rem;
+  height: 1.875rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.week-day-number.today-pill {
+  background: var(--purple);
+  color: #FFFFFF;
+}
+
+.week-appts-content {
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.week-empty-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-light-2);
+  font-size: 0.75rem;
+  font-style: italic;
+  padding: 2rem 0.25rem;
+  text-align: center;
+}
+
+.week-appt-card {
+  padding: 0.625rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.week-appt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.week-appt-time {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--purple-dark);
+}
+
+.week-appt-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.week-appt-service {
+  font-size: 0.6875rem;
+  color: var(--text-mid);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.week-appt-pill {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.125rem 0.375rem;
+  border-radius: 1rem;
+  align-self: flex-start;
+}
+
+.pill-confirmed {
+  background: var(--complete-green-light);
+  color: var(--complete-green-dark);
+}
+
+.pill-pending {
+  background: #FFF7ED;
+  color: #C2410C;
+}
+
+.pill-cancelled {
+  background: #F1F5F9;
+  color: var(--text-light);
+}
+
+/* --------------------------------------------------------------------------
+   Calendar Detail Modal Styles
+   -------------------------------------------------------------------------- */
+.cal-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+}
+
+.cal-modal-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: #F8FAFC;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.client-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--purple);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.banner-client-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 0.125rem 0;
+}
+
+.banner-service {
+  font-size: 0.8125rem;
+  color: var(--text-mid);
+}
+
+.cal-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.cal-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+  background: #FFFFFF;
+}
+
+.cal-modal-section-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.cal-modal-section-title i {
+  color: var(--purple);
+}
+
+.cal-modal-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cal-modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.row-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.row-value {
+  font-size: 0.8125rem;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.cal-modal-purpose-box {
+  padding: 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.purpose-desc {
+  font-size: 0.8125rem;
+  color: var(--text-mid);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cal-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.cal-btn-view-record {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--purple-dark);
+  background: var(--purple-light-2);
+  border-radius: var(--radius-sm, 0.375rem);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.cal-btn-view-record:hover {
+  background: #E0E7FF;
+  color: var(--purple-dark);
+}
+
+.cal-modal-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cal-btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--complete-green);
+  border: none;
+  border-radius: var(--radius-sm, 0.375rem);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cal-btn-confirm:hover:not(:disabled) {
+  background: var(--complete-green-dark);
+}
+
+.cal-btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--error-red);
+  background: var(--error-red-light);
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-sm, 0.375rem);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-btn-cancel:hover:not(:disabled) {
+  background: #FEE2E2;
+}
+
+.cal-btn-close {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  background: var(--card-bg, #FFFFFF);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-btn-close:hover {
+  background: #F1F5F9;
+  color: var(--text-dark);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 64rem) {
+  .op-cal-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .op-cal-actions-group {
+    justify-content: flex-end;
+  }
+
+  .cal-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 48rem) {
+  .op-cal-month-grid {
+    grid-auto-rows: minmax(5rem, auto);
+  }
+
+  .op-cal-day-cell {
+    min-height: 5rem;
+    padding: 0.25rem;
+  }
+
+  .chip-time {
+    display: none;
+  }
+
+  .op-cal-week-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .op-cal-week-column {
+    min-height: auto;
+    border-bottom: 1px solid var(--border-color);
+  }
+}

@@ -66,6 +66,7 @@
    - [ServiceWorkflowModal](#serviceworkflowmodal)
    - [QualificationApplicationModal](#qualificationapplicationmodal)
    - [AddServiceModal](#addservicemodal)
+   - [OperatorAppointmentCalendar](#operatorappointmentcalendar)
 
 ---
 
@@ -675,3 +676,21 @@
 - **Location:** [`src/components/Operator/AddServiceModal/AddServiceModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/AddServiceModal/AddServiceModal.jsx)
 - **Functionality:** Operator modal to initiate fulfillment for walk-in or offline clients by picking an approved service from the head office catalog.
 - **Props:** `{ onClose }`
+
+---
+
+### `OperatorAppointmentCalendar`
+- **Location:** [`src/components/Operator/OperatorAppointmentCalendar/OperatorAppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/OperatorAppointmentCalendar/OperatorAppointmentCalendar.jsx)
+- **Style File:** [`src/components/Operator/OperatorAppointmentCalendar/operator-appointment-calendar.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/OperatorAppointmentCalendar/operator-appointment-calendar.css)
+- **Functionality:** Comprehensive, interactive calendar for branch operators. Supports:
+  - **Month View & Week View:** 7-column calendar grids with day-of-week headers, highlighted today indicator, and appointment count badges.
+  - **Time & Detail Chips:** Exact scheduled times (`10:00 AM`), client names, requested services, and status colors (Confirmed: green, Pending: amber, Cancelled: gray).
+  - **Selected Appointment Modal:** Displays consultation date, exact time, duration, client profile (name, email, phone), branch, status, remarks, direct link to full record (`/operator/appointments/:id`), and quick Confirm/Cancel action buttons.
+  - **Bounded Range Querying & Period Caching:** Queries backend strictly for visible calendar dates (`startDate` to `endDate`), caching period results in memory to eliminate redundant Firestore reads.
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `userToken` | `string` | `undefined` | Yes | Firebase JWT token for authenticated API requests |
+  | `userUid` | `string` | `undefined` | Yes | UID of the current operator for multi-tenant isolation |
+  | `onStatusUpdated` | `Function` | `undefined` | No | Callback invoked when an appointment status is confirmed or cancelled |
+
