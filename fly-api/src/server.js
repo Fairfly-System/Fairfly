@@ -12,7 +12,7 @@ const app = express();
 app.disable('x-powered-by');
 
 // Set the port from environment variables or default to 5001
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Allowed origins configuration
 const allowedOrigins = [

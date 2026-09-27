@@ -11,7 +11,7 @@ const { generatePrefixedId } = require('../utils/idGenerator');
 const addToDatabase = async (collectionName, data, prefix = null) => {
   try {
     const docId = prefix ? generatePrefixedId(prefix) : null;
-    const docRef = docId 
+    const docRef = docId
       ? db.collection(collectionName).doc(docId)
       : db.collection(collectionName).doc();
     await docRef.set(data);
@@ -136,41 +136,6 @@ const queryDatabaseAdvanced = async (collectionName, options = {}) => {
     const snapshot = await queryRef.get(); //Get the query results
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); //Returns the results in the format of { id: doc.id, ...doc.data() }
   } catch (error) {
-    // If the query fails due to a missing Firestore composite index (code 9 / FAILED_PRECONDITION),
-    // fallback gracefully: query with filters (enforcing strict security and data isolation) and sort in-memory.
-    if ((error.code === 9 || error.message?.includes('FAILED_PRECONDITION') || error.message?.includes('requires an index')) && options.orderBy) {
-      console.warn(`[queryDatabaseAdvanced] Notice: Missing composite index for ${collectionName}. Falling back to filtered in-memory sorting.`);
-      try {
-        let fallbackQuery = db.collection(collectionName);
-        if (options.filters && Array.isArray(options.filters)) {
-          options.filters.forEach(filter => {
-            fallbackQuery = fallbackQuery.where(filter.field, filter.operator || '==', filter.value);
-          });
-        }
-        if (options.limit) {
-          fallbackQuery = fallbackQuery.limit(Math.max(options.limit * 2, 100));
-        }
-        const snapshot = await fallbackQuery.get();
-        let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const sortField = options.orderBy.field;
-        const isDesc = (options.orderBy.direction || 'desc').toLowerCase() === 'desc';
-        docs.sort((a, b) => {
-          const valA = a[sortField] || 0;
-          const valB = b[sortField] || 0;
-          if (valA < valB) return isDesc ? 1 : -1;
-          if (valA > valB) return isDesc ? -1 : 1;
-          return 0;
-        });
-        if (options.limit && docs.length > options.limit) {
-          docs = docs.slice(0, options.limit);
-        }
-        return docs;
-      } catch (fallbackError) {
-        console.error(`Firebase Admin SDK: Fallback query failed for ${collectionName}:`, fallbackError);
-        throw fallbackError;
-      }
-    }
-
     console.error(`Firebase Admin SDK: Error querying ${collectionName}:`, error); //Log the error
     throw error; //Throw the error
   }

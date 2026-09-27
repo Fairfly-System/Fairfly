@@ -367,9 +367,9 @@ export default function ServiceContent() {
 
   // AlertBar logic
   const alertBarProps = useMemo(() => {
-    if (!service) return { message: 'Loading...', type: 'info' };
-    const total = service.length;
-    const disabled = service.filter(s => s.status === 'Disabled').length;
+    if (!services) return { message: 'Loading...', type: 'info' };
+    const total = counts.total || services.length;
+    const disabled = counts.disabled !== undefined ? counts.disabled : services.filter(s => s.status === 'Disabled').length;
 
     if (total === 0) {
       return { message: 'No services found. Add your first service to begin offering franchise options.', type: 'error' };
@@ -384,7 +384,7 @@ export default function ServiceContent() {
       message: `All ${total} service${total !== 1 ? 's' : ''} are active and visible to operators.`,
       type: 'success',
     };
-  }, [service]);
+  }, [services, counts]);
 
   const processPendingFilesForService = async (serviceData) => {
     if (!serviceData) return serviceData;

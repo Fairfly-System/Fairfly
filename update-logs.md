@@ -1,5 +1,43 @@
 # Update Logs
 
+## [2026-09-27] Bugfix: Admin Services ReferenceError (`service is not defined`) in ServiceContent
+
+### Overview
+Fixed runtime crash `Uncaught ReferenceError: service is not defined at ServiceContent (ServiceContent.jsx:387:7)` on the Admin Services page (`/admin/services`).
+
+### Root Cause
+In [`ServiceContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx), the paginated service array from `useFirestorePagination` was destructured as `data: services` (plural). An existing `alertBarProps` `useMemo` block was referencing the legacy variable name `service` (singular), causing a runtime reference error on render.
+
+### Fix
+- Updated [`ServiceContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx) `alertBarProps` to reference `services` (plural) and integrated server-aggregated `counts` (`counts.total`, `counts.disabled`) for accurate notification badges.
+- Verified compilation with `npm run build` (vite v8.0.16) — 0 errors.
+
+## [2026-09-27] Bugfix: Admin Quick Links Infinite Re-render & Network Query Loop Stabilization
+
+### Overview
+Diagnosed and resolved an issue on the Admin Quick Links page (`/admin/quick-links`) where unmemoized default parameters and closure dependencies in `useFirestorePagination.js` combined with redundant in-component count queries created an infinite re-render loop that flooded Firestore with queries, lagged the browser tab, and crashed the page.
+
+### Root Cause
+1. **Unstable Hook Arguments**: Consuming components omitting optional `filters` received `filters = []`, producing a new array reference in memory on every render.
+2. **Infinite Effect Triggering**: In `useFirestorePagination.js`, `fetchCount` had `[..., filters]` in its `useCallback` dependency array, and the query effect had `[..., searchFilterFn, filters]`. Each render generated new references, continuously re-executing `getCountFromServer` and tearing down/re-subscribing `onSnapshot` listeners in a rapid loop.
+3. **State Mutation Cascade**: Each snapshot and count response triggered `setTotalItems()` and `setData()`, forcing subsequent renders that immediately re-invoked the loop.
+4. **Component-Level Redundancy**: `QuickLinksContent.jsx` maintained a duplicate `fetchTotal` `useEffect` running additional `getCountFromServer` calls on mount and render.
+
+### Fixes & Protections Applied
+1. **Hook Parameter Stabilization (`useFirestorePagination.js`)**:
+   - Defined module-level immutable constant `const EMPTY_FILTERS = []` to prevent fresh reference allocation on default arguments.
+   - Decoupled `filters` and `searchFilterFn` from effect dependency arrays using `useRef` (`filtersRef`, `searchFilterFnRef`).
+   - Reduced `useEffect` dependency arrays strictly to primitive, stable identifiers (`collectionName`, `filterKey`, `orderByField`, `orderDirection`, `currentPage`, `pageSize`, `realtime`, `enabled`, `searchTerm`).
+   - Introduced `unfilteredTotal` state and `unfilteredTotalRef` to preserve total collection count while user searches/filters, cleanly restoring pagination limits when search criteria are cleared.
+2. **Consolidated Quick Links Component (`QuickLinksContent.jsx`)**:
+   - Removed redundant `fetchTotal` / `totalSystemCount` state and effect; directly utilized `unfilteredTotal` and `totalItems` from `useFirestorePagination`.
+   - Wired `refetchCount()` directly into Add, Edit, Delete, and Bulk Delete mutation callbacks for instant counter synchronization.
+   - Removed component-internal `TrashIcon` re-declaration, passing static string `icon="fa-solid fa-trash-can"` to `ConfirmationModal`.
+   - Removed early blocking loader to allow `PageHeader`, `Breadcrumbs`, `KpiCard` skeletons, and `DataTable` skeletons to render seamlessly in-place.
+3. **Verification**:
+   - Built frontend bundle via `npm run build` (vite v8.0.16) with 0 errors.
+   - Verified backend logs: zero recurring request floods or unhandled network exceptions.
+
 ## [2026-09-27] Bugfix: Client Appointment Query Index Fallback & Multi-Tenant Data Isolation
 
 ### Overview

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import './admin-quick-links.css';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import QuickLinkModal from '../../../components/Admin/Modals/QuickLinkModal/QuickLinkModal';
@@ -13,8 +13,6 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import { API_BASE_URL } from '../../../utils/config';
 import { useFirestorePagination } from '../../../hooks/useFirestorePagination';
-import { collection, getCountFromServer } from 'firebase/firestore';
-import { firestore } from '../../../firebase';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 
@@ -36,21 +34,6 @@ export default function QuickLinksContent() {
   const [deleteLinkTarget, setDeleteLinkTarget] = useState(null);
   const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const [totalSystemCount, setTotalSystemCount] = useState(0);
-
-  const fetchTotal = useCallback(async () => {
-    try {
-      const snap = await getCountFromServer(collection(firestore, 'quickLinks'));
-      setTotalSystemCount(snap.data().count);
-    } catch (e) {
-      console.warn('Quicklinks count notice:', e.message);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTotal();
-  }, [fetchTotal]);
 
   const searchFilterFn = useCallback(
     (link) => {
@@ -76,8 +59,10 @@ export default function QuickLinksContent() {
     currentPage,
     pageSize,
     totalItems,
+    unfilteredTotal,
     goToPage,
     changePageSize,
+    refetchCount,
   } = useFirestorePagination({
     collectionName: 'quickLinks',
     orderByField: 'createdAt',
@@ -87,8 +72,6 @@ export default function QuickLinksContent() {
     searchTerm: debouncedSearch || (categoryFilter !== 'all' ? categoryFilter : ''),
     searchFilterFn,
   });
-
-  const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
 
   const handleOpenAddModal = () => {
     setEditingLink(null);
@@ -190,6 +173,7 @@ export default function QuickLinksContent() {
         setIsModalOpen(false);
         setEditingLink(null);
         addToast('Quick link added successfully', 'success');
+        refetchCount?.();
       },
       (error) => {
         addToast(`Failed to add quick link: ${error.message}`, 'error');
@@ -208,6 +192,7 @@ export default function QuickLinksContent() {
         setIsModalOpen(false);
         setEditingLink(null);
         addToast('Quick link updated successfully', 'success');
+        refetchCount?.();
       },
       (error) => {
         addToast(`Failed to update quick link: ${error.message}`, 'error');
@@ -225,6 +210,7 @@ export default function QuickLinksContent() {
       () => {
         addToast('Quick link deleted successfully', 'success');
         setDeleteLinkTarget(null);
+        refetchCount?.();
       },
       (error) => {
         addToast(`Failed to delete quick link: ${error.message}`, 'error');
@@ -243,6 +229,7 @@ export default function QuickLinksContent() {
         addToast(`${ids.length} quick link(s) deleted successfully`, 'success');
         setSelectedIds([]);
         setBulkDeleteIds(null);
+        refetchCount?.();
       },
       (error) => {
         console.error('Error bulk deleting quick links:', error);
@@ -252,26 +239,12 @@ export default function QuickLinksContent() {
     );
   };
 
-  // Early loading return AFTER all hooks are declared
-  if (isQuickLinksLoading) {
-    return (
-      <div className="card quicklinks-page page-fade-in">
-        <div className="quicklinks-header">
-          <div>
-            <h2>Quick Links Management</h2>
-            <p>Loading quick links...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/admin' },
     { label: 'Quick Links' },
   ];
 
-  const totalLinks = totalSystemCount || totalItems;
+  const totalLinks = unfilteredTotal || totalItems;
   const categoriesCount = 5;
 
   return (
@@ -295,14 +268,14 @@ export default function QuickLinksContent() {
           value={totalLinks}
           icon="fa-solid fa-link"
           iconColor="var(--purple)"
-          isLoading={isLoading}
+          isLoading={isLoading || isQuickLinksLoading}
         />
         <KpiCard
           title="Resource Categories"
           value={categoriesCount}
           icon="fa-solid fa-folder-tree"
           iconColor="var(--blue-dark)"
-          isLoading={isLoading}
+          isLoading={isLoading || isQuickLinksLoading}
         />
       </section>
 
@@ -381,7 +354,7 @@ export default function QuickLinksContent() {
       <ConfirmationModal
         isOpen={!!deleteLinkTarget}
         onClose={() => !isDeleting && setDeleteLinkTarget(null)}
-        Icon={TrashIcon}
+        icon="fa-solid fa-trash-can"
         Title="Delete Quick Link?"
         Desc={`"${deleteLinkTarget?.title}" will be permanently removed. Continue?`}
         BtnColor="var(--error-red)"
@@ -394,7 +367,7 @@ export default function QuickLinksContent() {
       <ConfirmationModal
         isOpen={!!bulkDeleteIds}
         onClose={() => !isDeleting && setBulkDeleteIds(null)}
-        Icon={TrashIcon}
+        icon="fa-solid fa-trash-can"
         Title={`Delete ${bulkDeleteIds?.length || 0} selected quick links?`}
         Desc={`${bulkDeleteIds?.length || 0} quick links will be permanently removed. Continue?`}
         BtnColor="var(--error-red)"

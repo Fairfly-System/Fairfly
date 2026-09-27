@@ -41,11 +41,17 @@ const loadServiceAccountFromEnv = () => {
 };
 
 const loadServiceAccountFromFile = () => {
-  const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || path.join(__dirname, '../../service-account.json');
-  const resolvedPath = path.resolve(keyPath);
+  const envPath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  let resolvedPath = envPath ? path.resolve(process.cwd(), envPath) : null;
 
-  if (!fs.existsSync(resolvedPath)) {
-    return null;
+  if (!resolvedPath || !fs.existsSync(resolvedPath)) {
+    // Fallback to fly-api project root (two levels up from src/config)
+    const fallbackPath = path.resolve(__dirname, '../../service-account.json');
+    if (fs.existsSync(fallbackPath)) {
+      resolvedPath = fallbackPath;
+    } else {
+      return null;
+    }
   }
 
   console.log(`Loading Firebase Admin SDK credentials from file: ${resolvedPath}`);

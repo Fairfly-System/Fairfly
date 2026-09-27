@@ -95,4 +95,23 @@
 - **Prevention**:
   1. Whenever a collection is read or written directly on the frontend via Firestore client SDK (`onSnapshot`, `getDocs`, `setDoc`), ensure explicit match rules are declared in `firestore.rules` with strict role and authentication guards.
   2. Deploy security rules to the live project using the Firebase Rules API (`https://firebaserules.googleapis.com/v1/projects/{projectId}/rulesets` and `/releases/cloud.firestore`) using the project's service account credentials or Firebase CLI.
+
+## [2026-09-27] Unmemoized Default Object/Array Arguments in Custom Hooks Causing Rapid Query Infinite Loops
+- **Problem**: Navigating to Admin Quick Links (`/admin/quick-links`) caused the browser tab to lag severely, freeze, and crash due to repeated, nonstop network queries.
+- **Root Cause**:
+  1. In `useFirestorePagination.js`, parameter defaults like `filters = []` evaluated to a fresh array reference on every single component render when omitted by the consuming component (e.g. `QuickLinksContent.jsx`).
+  2. `fetchCount` was wrapped in `useCallback(..., [..., filters])`, causing `fetchCount` to change identity every render.
+  3. A `useEffect` invoked `fetchCount()`, which executed `getCountFromServer` and called `setTotalItems()`.
+  4. State mutation triggered a component re-render, repeating the cycle hundreds of times per second.
+  5. Consuming components also declared duplicate `getCountFromServer` effects, multiplying the request barrage.
+- **Prevention**:
+  1. Never use inline object/array literals as hook parameter defaults without module-level constants (e.g. `const EMPTY_FILTERS = []`).
+  2. Store complex non-primitive parameters (`filters`, callback functions) in React `useRef` to decouple effect triggers from object identity changes.
+  3. Restrict `useEffect` dependency arrays strictly to primitive, stable identifiers (`collectionName`, `filterKey`, `pageSize`, `currentPage`, `searchTerm`).
+  4. Return centralized counts (`totalItems`, `unfilteredTotal`, `refetchCount`) from the hook to eliminate duplicate count fetches in components.
+
+## [2026-09-27] Destructured Array Identifier Mismatch in Subordinate useMemo Hooks
+- **Problem**: Runtime `Uncaught ReferenceError: service is not defined at ServiceContent (ServiceContent.jsx:387:7)` crashed the Admin Services page.
+- **Root Cause**: When refactoring `ServiceContent.jsx` to `useFirestorePagination`, the returned data array was renamed to `data: services` (plural), but a downstream `alertBarProps` memoization block was referencing `service` (singular).
+- **Prevention**: Whenever renaming or aliasing destructured hook return values, conduct a project/file-wide audit of all references to the previous identifier, and utilize TypeScript/ESLint checks to catch undeclared variables before deployment.
 
