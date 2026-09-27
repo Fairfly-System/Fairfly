@@ -214,6 +214,15 @@ const updateQuotationStatus = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
 
+    const userRole = req.userDetails?.role;
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
+        (existing.operatorId && existing.operatorId === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only update quotations for your branch.' });
+      }
+    }
+
     const now = new Date().toISOString();
     await updateToDatabase(dbPath, {
       status,
@@ -284,6 +293,25 @@ const acceptQuotation = async (req, res) => {
     const quotation = await getFromDatabase(quotationPath);
     if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
 
+    const userRole = req.userDetails?.role;
+    const isClient = userRole === 'client';
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    if (isClient) {
+      if (quotation.clientUid && quotation.clientUid !== req.user.uid) {
+        return res.status(403).json({ error: 'Forbidden: You cannot accept a quotation prepared for another client.' });
+      }
+    } else if (isOperator) {
+      const isBranchMatch = (quotation.branchUid && quotation.branchUid === req.user.uid) ||
+        (quotation.operatorId && quotation.operatorId === req.user.uid);
+      if (!isBranchMatch && !isAdmin) {
+        return res.status(403).json({ error: 'Forbidden: You can only accept quotations for your branch.' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges to accept this quotation.' });
+    }
+
     if (quotation.status === 'Accepted' && quotation.activeServiceId) {
       return res.status(200).json({ 
         message: 'Quotation is already accepted',
@@ -317,7 +345,6 @@ const acceptQuotation = async (req, res) => {
       }
     }
 
-    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
     if (!assignedOperatorId && isOperator) {
       assignedOperatorId = req.user?.uid;
       assignedBranchName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
@@ -456,10 +483,20 @@ const acceptQuotation = async (req, res) => {
  */
 const deleteQuotation = async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+    const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Quotation not found' });
 
-    await deleteFromDatabase(`${COLLECTIONS.QUOTATIONS}/${id}`);
+    const userRole = req.userDetails?.role;
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
+        (existing.operatorId && existing.operatorId === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only delete quotations for your branch.' });
+      }
+    }
+
+    await deleteFromDatabase(dbPath);
     return res.status(200).json({ message: 'Quotation deleted successfully' });
   } catch (error) {
     console.error('Error deleting quotation:', error);
@@ -479,6 +516,15 @@ const updateQuotation = async (req, res) => {
     const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
+
+    const userRole = req.userDetails?.role;
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
+        (existing.operatorId && existing.operatorId === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only update quotations for your branch.' });
+      }
+    }
 
     // Handle number conversions if sent
     if (updates.rate !== undefined) updates.rate = Number(updates.rate) || 0;

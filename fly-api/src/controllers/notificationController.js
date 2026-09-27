@@ -46,9 +46,12 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ error: 'Notification not found' });
     }
 
-    // Ensure the notification belongs to this user or role
+    // Ensure the notification belongs to this user or caller is admin
     const data = doc.data();
-    if (data.recipientUid && data.recipientUid !== req.user.uid) {
+    const isAdmin = req.userDetails?.role === 'admin';
+    const isRecipient = Boolean(data.recipientUid && data.recipientUid === req.user.uid);
+
+    if (!isAdmin && !isRecipient) {
       return res.status(403).json({ error: 'Unauthorized to modify this notification' });
     }
 
@@ -115,7 +118,10 @@ const deleteNotification = async (req, res) => {
     }
 
     const data = doc.data();
-    if (data.recipientUid && data.recipientUid !== req.user.uid) {
+    const isAdmin = req.userDetails?.role === 'admin';
+    const isRecipient = Boolean(data.recipientUid && data.recipientUid === req.user.uid);
+
+    if (!isAdmin && !isRecipient) {
       return res.status(403).json({ error: 'Unauthorized to delete this notification' });
     }
 

@@ -59,9 +59,14 @@ const requireRole = (allowedRoles) => {
     }
 
     const userRole = req.userDetails.role; //Get the role of the user from the request object
-    const isAllowed = Array.isArray(allowedRoles)
-      ? allowedRoles.includes(userRole)
-      : allowedRoles === userRole;
+    const rolesList = Array.isArray(allowedRoles) ? [...allowedRoles] : [allowedRoles];
+
+    // Normalize operator role aliases (both 'operator' and 'branch_operator' are accepted when 'operator' is allowed)
+    if (rolesList.includes('operator') && !rolesList.includes('branch_operator')) {
+      rolesList.push('branch_operator');
+    }
+
+    const isAllowed = rolesList.includes(userRole);
 
     if (!isAllowed) {
       return res.status(403).json({ error: 'Forbidden: Insufficient privileges' });

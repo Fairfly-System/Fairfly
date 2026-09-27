@@ -106,17 +106,25 @@ const createTicket = async (req, res) => {
 const getTickets = async (req, res) => {
   try {
     const { status, operatorId, limit } = req.query;
+    const userRole = req.userDetails?.role;
+
+    if (userRole === 'client') {
+      return res.status(403).json({ error: 'Forbidden: Client accounts cannot access operator support tickets.' });
+    }
 
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
     };
 
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      options.filters.push({ field: 'operatorId', operator: '==', value: req.user.uid });
+    } else if (operatorId) {
+      options.filters.push({ field: 'operatorId', operator: '==', value: operatorId });
+    }
+
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });
-    }
-    if (operatorId) {
-      options.filters.push({ field: 'operatorId', operator: '==', value: operatorId });
     }
     if (limit) {
       options.limit = parseInt(limit, 10);
@@ -143,6 +151,14 @@ const getTicketById = async (req, res) => {
     const ticket = await getFromDatabase(`${COLLECTIONS.TICKETS}/${id}`);
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const userRole = req.userDetails?.role;
+    const isOwner = ticket.operatorId === req.user?.uid;
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view this ticket.' });
     }
 
     return res.status(200).json({ id, ...ticket });
@@ -236,6 +252,14 @@ const addMessageToThread = async (req, res) => {
     const existingTicket = await getFromDatabase(dbPath);
     if (!existingTicket) {
       return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const userRole = req.userDetails?.role;
+    const isOwner = existingTicket.operatorId === req.user?.uid;
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to post in this ticket thread.' });
     }
 
     if (existingTicket.status === 'Closed') {

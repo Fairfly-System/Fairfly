@@ -1,5 +1,65 @@
 # Update Logs
 
+## [2026-09-27] Security: Comprehensive Backend Hardening, BOLA/BFLA Remediation & Penetration Testing
+
+### Overview
+Conducted an exhaustive penetration test and security audit across all Express endpoints in `fly-api/src`. Identified and remediated critical privilege escalation flaws, Broken Object Level Authorization (BOLA/IDOR), Broken Function Level Authorization (BFLA), mass assignment vulnerabilities, route shadowing conflicts, and missing HTTP security headers. All 24 security regression and edge-case unit/integration tests passed successfully.
+
+### Vulnerabilities Remediated & Defenses Implemented
+
+1. **Active Services Step Privilege Escalation & Revenue Spoofing (`activeServiceRoutes.js`, `activeServiceController.js`)**:
+   - *Issue*: `PATCH /api/services/active/:id/step` lacked `requireRole` and the controller conditional only checked if caller was an operator, allowing client accounts to bypass checks, advance fulfillment steps to completion, and trigger `userRef.update` revenue increments on operator accounts.
+   - *Fix*: Added `requireRole(['admin', 'operator', 'branch_operator'])` on the route. Enforced strict role and operator branch assignment verification in `updateStepStatus`.
+   - *Cancellation Hardening*: In `cancelActiveService`, non-owner clients are blocked (HTTP 403), and client self-cancellation is restricted strictly to services still in `Pending` state with no steps commenced.
+
+2. **Quotation BOLA / IDOR & Unrestricted Price Alteration (`quotationRoutes.js`, `quotationController.js`)**:
+   - *Issue*: Quotation modification, status transitions, and deletion endpoints only required a generic Firebase token, permitting clients or rogue operators to arbitrarily modify pricing (`rate`, `totalAmount`), transition status, or delete quotations.
+   - *Fix*: Protected `PATCH /api/quotations/:id`, `PUT /api/quotations/:id`, `PATCH /api/quotations/:id/status`, and `DELETE /api/quotations/:id` with `requireRole(['admin', 'operator'])`. Enforced branch ownership checks in `updateQuotation`, `updateQuotationStatus`, and `deleteQuotation`.
+   - *Client Acceptance Validation*: In `POST /api/quotations/:id/accept`, added verification preventing clients from accepting quotations prepared for other clients (`quotation.clientUid !== req.user.uid`).
+   - *Mass Assignment Protection*: Added `allowedFields` whitelist to quotation updates and enabled `PUT` method handling to support frontend service caller conventions.
+
+3. **Inquiry BOLA & Mass Assignment Overwrite (`inquiryRoutes.js`, `inquiryController.js`)**:
+   - *Issue*: `PATCH /api/inquiries/:id` and `DELETE /api/inquiries/:id` lacked role and ownership checks, and `updateInquiry` merged unvalidated `req.body` directly into Firestore documents.
+   - *Fix*: Added `INQUIRY_ALLOWED_FIELDS` whitelist middleware. Added ownership verification in `updateInquiry` (Client owner, Assigned Branch Operator, or Admin only), `deleteInquiry` (Assigned Operator or Admin only), and `getInquiryById` (prevents cross-client data harvesting).
+
+4. **Appointment Status Tampering (`appointmentController.js`)**:
+   - *Issue*: `PATCH /api/appointments/:id/status` lacked role restriction, enabling clients to mark their own or others' bookings as `Confirmed`.
+   - *Fix*: Enforced that clients may only cancel their own appointment (`status: 'Cancelled'`). Operators and admins alone can confirm or reschedule appointments. Automated branch notification when client cancels.
+
+5. **Operator Support Ticket & Thread Protection (`ticketController.js`)**:
+   - *Issue*: `getTickets` and `getTicketById` exposed operational support threads across all operators to any authenticated client or third-party operator.
+   - *Fix*: Blocked client accounts from ticket routes (HTTP 403). Scoped operator queries strictly to their own `operatorId`. Blocked unauthorized users from injecting messages into ticket threads.
+
+6. **Workflow Instance Scoping (`workflowController.js`)**:
+   - *Issue*: `getInstances` and `getInstanceById` allowed clients to enumerate all internal workflow instances across the company.
+   - *Fix*: Automatically scoped client queries to `clientId == req.user.uid` and restricted `getInstanceById` to the instance owner or staff.
+
+7. **Internal Resource Download Protection (`resourceRoutes.js`)**:
+   - *Issue*: Internal operator resources and guidelines were readable by client accounts.
+   - *Fix*: Attached `requireRole(['admin', 'operator', 'branch_operator'])` to `GET /resources`, `GET /resources/:id`, and `POST /resources/:id/download`.
+
+8. **Service Quicklinks Route Shadowing Defect (`serviceRoutes.js`)**:
+   - *Issue*: Express route `GET /services/:id` was declared prior to `/services/quicklinks`, causing Express to treat `quicklinks` as a service ID parameter and returning `404 Not Found`.
+   - *Fix*: Reordered all `/quicklinks` route registrations above dynamic `/:id` parameterized handlers.
+
+9. **Broadcast Notification Deletion Integrity (`notificationController.js`)**:
+   - *Issue*: When notifications lacked `recipientUid` (e.g. system broadcasts), non-admins could delete them.
+   - *Fix*: Enforced that only administrators can modify or delete notifications without a specific `recipientUid`.
+
+10. **HTTP Security Headers & Environment-Scoped CORS (`server.js`)**:
+    - Added `X-Content-Type-Options: nosniff` (MIME confusion defense).
+    - Added `X-Frame-Options: DENY` (Clickjacking defense).
+    - Added `X-XSS-Protection: 1; mode=block`.
+    - Added `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
+    - Added `Referrer-Policy: strict-origin-when-cross-origin`.
+    - Disabled `X-Powered-By: Express` fingerprinting.
+    - Scoped CORS to authorized origins (`FRONTEND_URL`, `http://localhost:5173`, `http://localhost:3000`).
+
+11. **Verification Test Suite (`fly-api/src/scripts/testSecurityFixes.js`)**:
+    - Created automated verification test suite covering 24 test cases across all 9 security groups. Result: **24 Passed, 0 Failed**.
+
+---
+
 ## [2026-09-27] Security: Backend File Upload Hardening & Magic-Byte Validation
 
 ### Overview

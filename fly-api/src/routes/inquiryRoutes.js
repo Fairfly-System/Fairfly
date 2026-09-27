@@ -13,6 +13,47 @@ const {
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { publicRateLimiter, apiRateLimiter } = require('../middleware/rateLimiter');
+const { allowedFields } = require('../middleware/allowedFields');
+
+const INQUIRY_ALLOWED_FIELDS = [
+  'fullName',
+  'clientName',
+  'contactPerson',
+  'email',
+  'phoneNumber',
+  'cellphone',
+  'telNo',
+  'address',
+  'population',
+  'contractNo',
+  'isNo',
+  'dateInquired',
+  'serviceId',
+  'serviceType',
+  'servicesOffered',
+  'servicePrice',
+  'specifiedRequirements',
+  'requirements',
+  'notes',
+  'remarks',
+  'agentName',
+  'agentSignature',
+  'agentContact',
+  'acknowledgedBy',
+  'acknowledgedSignature',
+  'branchUid',
+  'branchName',
+  'formNo',
+  'controlNo',
+  'customFields',
+  'clientUid',
+  'status',
+  'confirmedQuotationId',
+  'confirmedActiveServiceId',
+  'id',
+  'createdAt',
+  'updatedAt'
+];
 
 // Dynamic Form Schema routes
 router.get('/schema', performanceProfiler('GET /inquiries/schema', publicRateLimiter, getInquirySchema));
@@ -26,8 +67,9 @@ router.post('/', publicRateLimiter, (req, res, next) => {
 
 router.get('/', performanceProfiler('GET /inquiries', verifyFirebaseToken, apiRateLimiter, getInquiries));
 router.get('/:id', performanceProfiler('GET /inquiries/:id', verifyFirebaseToken, apiRateLimiter, getInquiryById));
-router.patch('/:id', performanceProfiler('PATCH /inquiries/:id', verifyFirebaseToken, apiRateLimiter, updateInquiry));
-router.delete('/:id', performanceProfiler('DELETE /inquiries/:id', verifyFirebaseToken, apiRateLimiter, deleteInquiry));
+router.patch('/:id', performanceProfiler('PATCH /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
+router.put('/:id', performanceProfiler('PUT /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
+router.delete('/:id', performanceProfiler('DELETE /inquiries/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, deleteInquiry));
 
 // Confirm Inquiry -> creates Quotation and initializes Active Service
 router.post('/:id/confirm', performanceProfiler('POST /inquiries/:id/confirm', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, confirmInquiry));

@@ -147,13 +147,41 @@ const updateAppointmentStatus = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Appointment not found' });
 
+    const userRole = req.userDetails?.role;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((existing.branchUid && existing.branchUid === req.user?.uid) || (existing.operatorId && existing.operatorId === req.user?.uid));
+    const isAdmin = userRole === 'admin';
+    const isClientOwner = userRole === 'client' && existing.clientUid === req.user?.uid;
+
+    if (userRole === 'client') {
+      // Clients may ONLY cancel their own appointment
+      if (!isClientOwner) {
+        return res.status(403).json({ error: 'Forbidden: You do not have permission to modify this appointment.' });
+      }
+      if (normalizedStatus !== 'Cancelled') {
+        return res.status(403).json({ error: 'Forbidden: Clients may only cancel their appointments.' });
+      }
+    } else if (!isAdmin && !isAssignedOp) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges to update appointment status.' });
+    }
+
     await updateToDatabase(dbPath, {
       status: normalizedStatus,
       updatedAt: new Date().toISOString()
     });
 
-    // Notify client if clientUid exists
-    if (existing.clientUid) {
+    // Notify appropriate party based on who initiated the status change
+    if (userRole === 'client' && normalizedStatus === 'Cancelled' && (existing.branchUid || existing.operatorId)) {
+      notifyBranch({
+        branchUid: existing.branchUid || existing.operatorId,
+        branchName: existing.branchName,
+        title: 'Appointment Cancelled by Client',
+        message: `${existing.clientName} cancelled their appointment for ${existing.serviceType} scheduled on ${existing.preferredDate}.`,
+        type: 'appointment',
+        link: '/operator/appointments',
+        metadata: { appointmentId: id, status: 'Cancelled' }
+      }).catch(e => console.warn('Appointment cancel operator notification warning:', e.message));
+    } else if (existing.clientUid) {
       createNotification({
         recipientUid: existing.clientUid,
         title: `Appointment ${normalizedStatus}`,

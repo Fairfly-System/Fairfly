@@ -16,9 +16,9 @@ const { apiRateLimiter } = require('../middleware/rateLimiter');
 router.use(verifyFirebaseToken);
 
 // Accessible by Admins and Operators
-router.get('/', performanceProfiler('GET /resources', apiRateLimiter, getResources));
-router.get('/:id', performanceProfiler('GET /resources/:id', apiRateLimiter, getResourceById));
-router.post('/:id/download', performanceProfiler('POST /resources/:id/download', apiRateLimiter, recordDownload));
+router.get('/', performanceProfiler('GET /resources', requireRole(['admin', 'operator']), apiRateLimiter, getResources));
+router.get('/:id', performanceProfiler('GET /resources/:id', requireRole(['admin', 'operator']), apiRateLimiter, getResourceById));
+router.post('/:id/download', performanceProfiler('POST /resources/:id/download', requireRole(['admin', 'operator']), apiRateLimiter, recordDownload));
 
 // Admin only mutations
 router.post('/', requireRole(['admin']), performanceProfiler('POST /resources', apiRateLimiter, createResource));

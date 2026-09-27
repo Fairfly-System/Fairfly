@@ -265,6 +265,16 @@ const getInquiryById = async (req, res) => {
     const inquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${id}`);
     if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
 
+    const userRole = req.userDetails?.role;
+    const isOwnerClient = userRole === 'client' && inquiry.clientUid === req.user?.uid;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((inquiry.branchUid && inquiry.branchUid === req.user?.uid) || (inquiry.operatorId && inquiry.operatorId === req.user?.uid));
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp && !isOwnerClient) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view this inquiry.' });
+    }
+
     return res.status(200).json({ id, ...inquiry });
   } catch (error) {
     console.error('Error getting inquiry by ID:', error);
@@ -283,6 +293,16 @@ const updateInquiry = async (req, res) => {
     const dbPath = `${COLLECTIONS.INQUIRIES}/${id}`;
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Inquiry not found' });
+
+    const userRole = req.userDetails?.role;
+    const isOwnerClient = userRole === 'client' && existing.clientUid === req.user?.uid;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((existing.branchUid && existing.branchUid === req.user?.uid) || (existing.operatorId && existing.operatorId === req.user?.uid));
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp && !isOwnerClient) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to update this inquiry.' });
+    }
 
     const updateData = {
       ...req.body,
@@ -305,7 +325,20 @@ const deleteInquiry = async (req, res) => {
     const { id } = req.params;
     if (!id) return res.status(400).json({ error: 'Inquiry ID is required' });
 
-    await deleteFromDatabase(`${COLLECTIONS.INQUIRIES}/${id}`);
+    const dbPath = `${COLLECTIONS.INQUIRIES}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Inquiry not found' });
+
+    const userRole = req.userDetails?.role;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((existing.branchUid && existing.branchUid === req.user?.uid) || (existing.operatorId && existing.operatorId === req.user?.uid));
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp) {
+      return res.status(403).json({ error: 'Forbidden: Only administrators and the assigned branch operator can delete inquiries.' });
+    }
+
+    await deleteFromDatabase(dbPath);
     return res.status(200).json({ message: 'Inquiry deleted successfully' });
   } catch (error) {
     console.error('Error deleting inquiry:', error);

@@ -222,15 +222,21 @@ const bulkDeleteTemplates = async (req, res) => {
 const getInstances = async (req, res) => {
   try {
     const { templateId, status, clientId, limit } = req.query;
+    const userRole = req.userDetails?.role;
 
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
     };
 
-    if (templateId) options.filters.push({ field: 'templateId', value: templateId });
-    if (status) options.filters.push({ field: 'status', value: status });
-    if (clientId) options.filters.push({ field: 'clientId', value: clientId });
+    if (userRole === 'client') {
+      options.filters.push({ field: 'clientId', operator: '==', value: req.user.uid });
+    } else if (clientId) {
+      options.filters.push({ field: 'clientId', operator: '==', value: clientId });
+    }
+
+    if (templateId) options.filters.push({ field: 'templateId', operator: '==', value: templateId });
+    if (status) options.filters.push({ field: 'status', operator: '==', value: status });
     if (limit) options.limit = parseInt(limit, 10);
 
     const instances = await queryDatabaseAdvanced(COLLECTIONS.WORKFLOW_INSTANCES, options);
@@ -248,6 +254,14 @@ const getInstanceById = async (req, res) => {
 
     const instance = await getFromDatabase(`${COLLECTIONS.WORKFLOW_INSTANCES}/${id}`);
     if (!instance) return res.status(404).json({ error: 'Instance not found' });
+
+    const userRole = req.userDetails?.role;
+    const isOwner = instance.clientId === req.user?.uid;
+    const isStaff = userRole === 'admin' || userRole === 'operator' || userRole === 'branch_operator';
+
+    if (!isStaff && !isOwner) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view this workflow instance.' });
+    }
 
     return res.status(200).json({ id, ...instance });
   } catch (error) {

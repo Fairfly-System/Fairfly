@@ -293,7 +293,12 @@ const updateStepStatus = async (req, res) => {
       return res.status(404).json({ error: 'Active service record not found' });
     }
 
-    if ((req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') &&
+    const userRole = req.userDetails?.role;
+    if (userRole !== 'admin' && userRole !== 'operator' && userRole !== 'branch_operator') {
+      return res.status(403).json({ error: 'Forbidden: Only administrators and assigned operators can update service steps.' });
+    }
+
+    if ((userRole === 'operator' || userRole === 'branch_operator') &&
         serviceRecord.operatorId !== req.user.uid && serviceRecord.branchUid !== req.user.uid) {
       return res.status(403).json({ error: 'Unauthorized: This service fulfillment is assigned to another operator.' });
     }
@@ -445,9 +450,21 @@ const cancelActiveService = async (req, res) => {
       return res.status(404).json({ error: 'Active service record not found' });
     }
 
-    if ((req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') &&
-        serviceRecord.operatorId !== req.user.uid && serviceRecord.branchUid !== req.user.uid) {
-      return res.status(403).json({ error: 'Unauthorized: This service fulfillment is assigned to another operator.' });
+    const userRole = req.userDetails?.role;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      (serviceRecord.operatorId === req.user.uid || serviceRecord.branchUid === req.user.uid);
+    const isOwnerClient = userRole === 'client' && serviceRecord.clientUid === req.user.uid;
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp && !isOwnerClient) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to cancel this service fulfillment.' });
+    }
+
+    // Clients may only cancel before processing has commenced
+    if (isOwnerClient && !isAdmin && !isAssignedOp) {
+      if (serviceRecord.status !== 'Pending' || (serviceRecord.currentStepIndex || 0) > 0) {
+        return res.status(400).json({ error: 'Cannot cancel a service that has already commenced processing. Please contact support.' });
+      }
     }
 
     if (serviceRecord.status === 'Completed') {
