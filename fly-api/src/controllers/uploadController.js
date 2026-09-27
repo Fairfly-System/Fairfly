@@ -1,13 +1,10 @@
 const crypto = require('crypto');
 const { bucket } = require('../config/firebase');
-
-const PROHIBITED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.hta', '.cpl', '.msc'];
-
-function isProhibitedFile(filename) {
-  if (!filename) return false;
-  const clean = filename.toLowerCase();
-  return PROHIBITED_EXTENSIONS.some(ext => clean.endsWith(ext));
-}
+const { 
+  validateUploadMetadata, 
+  verifyFileContent, 
+  generateSafeDestination 
+} = require('../utils/fileSecurity');
 
 const uploadFile = async (req, res) => {
   try {
@@ -15,33 +12,46 @@ const uploadFile = async (req, res) => {
       return res.status(400).json({ error: 'No file provided' });
     }
 
-    if (isProhibitedFile(req.file.originalname)) {
-      return res.status(400).json({ error: 'Executable files (.exe, .bat, .sh, etc.) are prohibited for security.' });
+    // 1. Validate metadata (filename, double extensions, allowed whitelist)
+    const metaCheck = validateUploadMetadata(req.file.originalname, req.file.mimetype);
+    if (!metaCheck.valid) {
+      return res.status(400).json({ error: metaCheck.error });
     }
 
-    // Max 25MB limit
+    // 2. Validate file size (25MB limit)
     if (req.file.size > 25 * 1024 * 1024) {
-      return res.status(400).json({ error: 'File size exceeds 25MB limit.' });
+      return res.status(400).json({ error: 'File size exceeds maximum 25MB limit.' });
     }
 
-    const folder = req.body.folder || req.query.folder || 'uploads';
-    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const destination = `${folder}/${Date.now()}_${safeName}`;
+    // 3. Inspect buffer magic bytes and payload content
+    const contentCheck = verifyFileContent(req.file.buffer, metaCheck.ext);
+    if (!contentCheck.valid) {
+      return res.status(400).json({ 
+        error: contentCheck.error || 'Malicious or invalid file content detected.' 
+      });
+    }
+
+    // 4. Generate safe sanitized destination path
+    const rawFolder = req.body.folder || req.query.folder || 'uploads';
+    const destination = generateSafeDestination(rawFolder, req.file.originalname);
 
     const fileRef = bucket.file(destination);
     const downloadToken = crypto.randomUUID();
 
+    // 5. Store with canonical, verified MIME type (never trusting spoofed client MIME)
     await fileRef.save(req.file.buffer, {
       metadata: {
-        contentType: req.file.mimetype,
+        contentType: contentCheck.canonicalMime,
         metadata: {
           firebaseStorageDownloadTokens: downloadToken,
+          originalName: req.file.originalname,
+          uploadedBy: req.user?.uid || 'anonymous'
         }
       },
       resumable: false,
     });
 
-    // Construct Firebase Storage download URL format with secure download token
+    // 6. Construct Firebase Storage download URL with secure token
     const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media&token=${downloadToken}`;
 
     return res.status(200).json({
@@ -49,7 +59,8 @@ const uploadFile = async (req, res) => {
       url: downloadUrl,
       fileName: req.file.originalname,
       fileSize: req.file.size,
-      storagePath: destination
+      storagePath: destination,
+      contentType: contentCheck.canonicalMime
     });
   } catch (error) {
     console.error('Error uploading file in backend:', error);
@@ -60,3 +71,4 @@ const uploadFile = async (req, res) => {
 module.exports = {
   uploadFile
 };
+

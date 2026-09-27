@@ -1,5 +1,37 @@
 # Update Logs
 
+## [2026-09-27] Security: Backend File Upload Hardening & Magic-Byte Validation
+
+### Overview
+Conducted a comprehensive security audit on the Express backend (`fly-api`) upload pipeline. Identified and eliminated critical vulnerabilities in file upload handling, transitioning from an easily bypassable 15-extension blacklist to a strict multi-layer whitelist with magic-byte file signature validation, double-extension blocking, script tag sanitization, safe MIME derivation, and upload rate limiting.
+
+### Vulnerabilities Identified During Scan
+1. **Blacklist Bypass (`uploadController.js`)**: Previously checked a hardcoded `PROHIBITED_EXTENSIONS` list (`.exe`, `.bat`, etc.). Crucial web shell/script formats (e.g. `.php`, `.jsp`, `.asp`, `.py`, `.cgi`, `.html`, `.svg`) were completely unblocked, allowing arbitrary scripts to be saved to Firebase Storage.
+2. **Missing Magic Byte Verification (Extension Spoofing)**: Uploads were validated solely by string extension (`req.file.originalname`). An executable (`MZ` header) or PHP script renamed to `.pdf` or `.png` bypassed all checks and was accepted.
+3. **MIME Confusion & Stored XSS**: `req.file.mimetype` was blindly trusted from client request headers and stored directly in Firebase Storage metadata, enabling MIME-type confusion attacks.
+4. **Unfiltered Multer Memory Allocation (`uploadRoutes.js`)**: Multer lacked a `fileFilter`, meaning arbitrary files up to 25MB were fully buffered into server RAM before controller logic fired.
+5. **Missing Rate Limiting**: `apiRateLimiter` was imported in `uploadRoutes.js` but never attached to the `POST /api/upload` route.
+6. **Path Traversal in Target Folder**: `req.body.folder` was accepted without whitelist sanitization.
+
+### Key Changes & Remediations
+1. **Dedicated File Security Engine (`fly-api/src/utils/fileSecurity.js`)**:
+   - **Strict Whitelist**: Permitted extensions strictly mirror the frontend forms: Documents (`.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`), Images (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`), Archives (`.zip`), and Media (`.mp4`, `.webm`, `.mov`).
+   - **Magic Bytes Validation**: Added deep buffer inspection verifying actual binary headers (`%PDF-`, `FF D8 FF` JPEG, `89 50 4E 47` PNG, `RIFF...WEBP`, `PK\x03\x04` Office OpenXML/ZIP, `D0 CF 11 E0` OLE Office, `ftyp` MP4/MOV, `1A 45 DF A3` WebM).
+   - **Payload Anti-Malware / Anti-Script Heuristics**: Rejects files with executable headers (`MZ`, `\x7FELF`, Mach-O), shell shebangs (`#!`), or embedded script/HTML payloads (`<?php`, `<?=`, `<script`, `<html`, `<!doctype html`, `<svg`, `javascript:`).
+   - **Double-Extension Protection**: Identifies and blocks disguise patterns such as `invoice.php.pdf` or `photo.exe.jpg`.
+   - **Canonical MIME Mapping**: Automatically assigns verified canonical Content-Types based on genuine file signatures rather than spoofed client headers.
+   - **Folder Sanitization**: Restricts target folders to an approved list (`uploads`, `client_ids`, `service_requirements`, `workflow_documents`, `resources`, `announcements`, `inquiry_requirements`, `qualification_documents`, `chat_attachments`).
+2. **Multer Early-Rejection Pipeline (`fly-api/src/routes/uploadRoutes.js`)**:
+   - Added `fileFilter` to reject unapproved extensions before buffering files into memory.
+   - Applied `apiRateLimiter` to protect `/api/upload` from flooding and denial-of-service attempts.
+   - Added error-handling wrapper returning structured HTTP 400 responses with descriptive security rejection messages.
+3. **Controller Overhaul (`fly-api/src/controllers/uploadController.js`)**:
+   - Validates metadata and performs magic-byte buffer verification before bucket write.
+   - Generates collision-resistant, sanitized storage destinations using random cryptographic entropy.
+   - Saves files to Firebase Storage with verified canonical MIME types.
+
+---
+
 ## [2026-09-27] Feature: Client Details Auto-Prefill Across Client Forms
 
 ### Overview
