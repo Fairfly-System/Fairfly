@@ -39,6 +39,7 @@ function getCategoryIcon(type) {
     case 'appointment':
       return { icon: 'fa-solid fa-calendar-check', className: 'appointment' };
     case 'service':
+    case 'active_service':
       return { icon: 'fa-solid fa-clipboard-list', className: 'service' };
     case 'ticket':
       return { icon: 'fa-solid fa-ticket', className: 'ticket' };

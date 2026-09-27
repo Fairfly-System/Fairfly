@@ -243,8 +243,8 @@ const createActiveService = async (req, res) => {
       branchName: newService.branchName,
       title: 'New Service Request Assigned',
       message: `${newService.clientName} submitted a new request for "${newService.serviceType}".`,
-      type: 'service',
-      link: '/operator/services',
+      type: 'active_service',
+      link: `/operator/services/${docId}/procedure`,
       metadata: { activeServiceId: docId, serviceType: newService.serviceType }
     }).catch(err => console.warn('Active service operator notification warning:', err.message));
 

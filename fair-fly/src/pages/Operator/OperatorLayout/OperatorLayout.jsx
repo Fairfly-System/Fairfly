@@ -112,6 +112,7 @@ export default function OperatorLayout() {
   const tabNotifications = useMemo(() => ({
     '/operator/appointments': pendingActions,
     '/operator/tickets': openTickets,
+    '/operator/services': 0, // Keep Services tab strictly for catalog management, no badges from service requests
   }), [pendingActions, openTickets]);
 
   return (

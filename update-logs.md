@@ -1,5 +1,26 @@
 # Update Logs
 
+## [2026-09-28] Refactor: Suppress Notification Badges on Operator Services Tab from Client Service Requests
+
+### Overview
+Ensured that client-initiated service requests do not place an unwanted notification badge on the **Services** tab (`/operator/services`) in the Operator sidebar, keeping the Services tab strictly dedicated to Service Catalog management (standard and custom catalog items).
+
+### Fixes & Protections Applied
+1. **Direct Procedure Linking & Specific Type Assignment (`activeServiceController.js`)**:
+   - Updated `notifyBranch` payload on client service requests (`createActiveService`):
+     - `type`: Changed from generic `'service'` to `'active_service'`.
+     - `link`: Changed from generic `'/operator/services'` (catalog) to direct procedure execution `'/operator/services/${docId}/procedure'`.
+2. **Tab Notification Suppression & Explicit Zero-Badge Handling (`AppSidebar.jsx`)**:
+   - Updated `getTabNotificationCount` to respect numeric values of `0` in `tabNotifications`, allowing layouts to explicitly turn off badges on specific tabs without falling through to automated matching.
+   - Added explicit boundary guard: in the Operator portal, the `/operator/services` tab (catalog) is barred from receiving automated badges from client intake requests.
+3. **Layout Configuration (`OperatorLayout.jsx`)**:
+   - Explicitly declared `'/operator/services': 0` in `tabNotifications` to enforce zero-badge behavior for the Services catalog tab.
+4. **Notification Bell Visuals (`NotificationBell.jsx`)**:
+   - Added support for category `active_service` to render the clipboard list icon (`fa-solid fa-clipboard-list`).
+5. **Daemon Restart & Build Verification**:
+   - Restarted `fly-api` backend server daemon on port 5001.
+   - Built frontend bundle via `npm run build` (vite v8.0.16) with 0 errors.
+
 ## [2026-09-28] Feature: Operator Appointment Calendar View (Month & Week Views)
 
 ### Overview

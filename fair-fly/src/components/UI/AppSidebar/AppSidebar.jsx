@@ -76,12 +76,12 @@ export default function AppSidebar({
     if (typeof link.notifications === 'number') return link.notifications;
     if (typeof link.badge === 'number') return link.badge;
 
-    // 2. tabNotifications map prop (if explicitly provided and > 0)
+    // 2. tabNotifications map prop (if explicitly provided as a number, including 0)
     if (tabNotifications) {
-      if (typeof tabNotifications[link.to] === 'number' && tabNotifications[link.to] > 0) return tabNotifications[link.to];
+      if (typeof tabNotifications[link.to] === 'number') return tabNotifications[link.to];
       const slug = link.to.split('/').filter(Boolean).pop();
-      if (slug && typeof tabNotifications[slug] === 'number' && tabNotifications[slug] > 0) return tabNotifications[slug];
-      if (typeof tabNotifications[link.label] === 'number' && tabNotifications[link.label] > 0) return tabNotifications[link.label];
+      if (slug && typeof tabNotifications[slug] === 'number') return tabNotifications[slug];
+      if (typeof tabNotifications[link.label] === 'number') return tabNotifications[link.label];
     }
 
     // 3. Automated count from NotificationContext unread items
@@ -90,6 +90,12 @@ export default function AppSidebar({
       const linkPath = link.to.toLowerCase();
       const tabSlug = linkPath.split('/').filter(Boolean).pop() || '';
       const isPortalRoot = link.end === true || linkPath === '/operator' || linkPath === '/admin' || linkPath === '/client';
+
+      // Operator portal: the Services tab (/operator/services) is strictly Catalog Management.
+      // Client service requests (intake orders) should not place a badge on this tab.
+      if (portalName === 'Operator' && (linkPath === '/operator/services' || tabSlug === 'services')) {
+        return 0;
+      }
 
       const matchedCount = unreadList.filter((notif) => {
         const notifLink = (notif.link || '').toLowerCase();
