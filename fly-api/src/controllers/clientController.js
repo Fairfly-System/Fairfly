@@ -22,21 +22,82 @@ const COLLECTIONS = {
 };
 
 /**
- * Get all client accounts (Admin only)
+ * Get all client accounts (Admin only) with optional server-side pagination
  */
 const getClients = async (req, res) => {
   try {
-    const snapshot = await db.collection(COLLECTIONS.USERS)
-      .where('role', '==', 'client')
-      .get();
+    const { page, limit, status } = req.query;
+    let queryRef = db.collection(COLLECTIONS.USERS).where('role', '==', 'client');
 
-    const clients = snapshot.docs.map(doc => {
+    if (status && status !== 'all') {
+      queryRef = queryRef.where('status', '==', status);
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    if (pageNum || limitNum) {
+      const p = pageNum || 1;
+      const l = limitNum || 10;
+      let total = 0;
+      try {
+        const countSnap = await queryRef.count().get();
+        total = countSnap.data().count;
+      } catch (countErr) {
+        console.warn('Count notice for clients:', countErr.message);
+      }
+
+      let snapshot;
+      try {
+        snapshot = await queryRef
+          .orderBy('createdAt', 'desc')
+          .offset((p - 1) * l)
+          .limit(l)
+          .get();
+      } catch (orderErr) {
+        console.warn('Notice on getClients paginated ordering:', orderErr.message);
+        const fullSnap = await queryRef.get();
+        let docs = fullSnap.docs.map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, uid: doc.id, ...data, status: data.status || 'Active' };
+        });
+        docs.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        return res.status(200).json({
+          data: docs.slice((p - 1) * l, p * l),
+          total: docs.length,
+          page: p,
+          limit: l,
+          totalPages: Math.ceil(docs.length / l),
+        });
+      }
+
+      const clients = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          uid: doc.id,
+          ...data,
+          status: data.status || 'Active',
+        };
+      });
+
+      return res.status(200).json({
+        data: clients,
+        total: total || clients.length,
+        page: p,
+        limit: l,
+        totalPages: Math.ceil((total || clients.length) / l),
+      });
+    }
+
+    const snapshot = await queryRef.get();
+    const clients = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
         uid: doc.id,
         ...data,
-        status: data.status || 'Active'
+        status: data.status || 'Active',
       };
     });
 

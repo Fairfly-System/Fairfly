@@ -44,13 +44,26 @@ export default function ClientsContent() {
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
-  // Fetch client list via GET API
+  const [totalClientsCount, setTotalClientsCount] = useState(0);
+
+  // Fetch client list via GET API with server pagination
   const loadClients = useCallback(() => {
     if (!userToken) return;
     fetchClients(
       userToken,
-      (data) => {
-        setClients(data || []);
+      {
+        page: currentPage,
+        limit: pageSize,
+        status: statusFilter !== 'all' ? statusFilter : undefined
+      },
+      (res) => {
+        if (Array.isArray(res)) {
+          setClients(res);
+          setTotalClientsCount(res.length);
+        } else if (res && Array.isArray(res.data)) {
+          setClients(res.data);
+          setTotalClientsCount(res.total || 0);
+        }
       },
       (error) => {
         console.error('Error fetching clients:', error);
@@ -58,7 +71,7 @@ export default function ClientsContent() {
       },
       setLoading
     );
-  }, [userToken, addToast]);
+  }, [userToken, currentPage, pageSize, statusFilter, addToast]);
 
   useEffect(() => {
     loadClients();
@@ -215,7 +228,7 @@ export default function ClientsContent() {
   };
 
   // KPI Calculations
-  const totalClients = clients.length;
+  const totalClients = totalClientsCount || clients.length;
   const pendingClients = clients.filter((c) => c.status === 'Pending' || c.approvalStatus === 'Pending').length;
   const activeClients = clients.filter((c) => c.status === 'Active' && c.approvalStatus !== 'Pending').length;
   const deactivatedClients = clients.filter((c) => c.status === 'Deactivated').length;
@@ -250,12 +263,14 @@ export default function ClientsContent() {
     });
   }, [clients, debouncedSearch, statusFilter]);
 
-  // Pagination Slice
-  const totalPages = Math.max(1, Math.ceil(filteredClients.length / pageSize));
+  // Pagination Slice: When search is empty, backend already returns the requested page slice
   const paginatedClients = useMemo(() => {
+    if (!debouncedSearch) {
+      return clients;
+    }
     const start = (currentPage - 1) * pageSize;
     return filteredClients.slice(start, start + pageSize);
-  }, [filteredClients, currentPage, pageSize]);
+  }, [clients, debouncedSearch, filteredClients, currentPage, pageSize]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -587,7 +602,7 @@ export default function ClientsContent() {
         {/* Pagination Component */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredClients.length}
+          totalItems={debouncedSearch ? filteredClients.length : (totalClientsCount || clients.length)}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}

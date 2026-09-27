@@ -12,6 +12,21 @@ const {
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
+const { allowedFields } = require('../middleware/allowedFields');
+
+const RESOURCE_ALLOWED_FIELDS = [
+  'title',
+  'description',
+  'category',
+  'tags',
+  'fileUrl',
+  'fileName',
+  'fileSize',
+  'fileType',
+  'fileExtension',
+  'visibility'
+];
+
 // All resource endpoints require authentication
 router.use(verifyFirebaseToken);
 
@@ -21,8 +36,8 @@ router.get('/:id', performanceProfiler('GET /resources/:id', requireRole(['admin
 router.post('/:id/download', performanceProfiler('POST /resources/:id/download', requireRole(['admin', 'operator']), apiRateLimiter, recordDownload));
 
 // Admin only mutations
-router.post('/', requireRole(['admin']), performanceProfiler('POST /resources', apiRateLimiter, createResource));
-router.patch('/:id', requireRole(['admin']), performanceProfiler('PATCH /resources/:id', apiRateLimiter, updateResource));
+router.post('/', requireRole(['admin']), allowedFields(RESOURCE_ALLOWED_FIELDS), performanceProfiler('POST /resources', apiRateLimiter, createResource));
+router.patch('/:id', requireRole(['admin']), allowedFields(RESOURCE_ALLOWED_FIELDS), performanceProfiler('PATCH /resources/:id', apiRateLimiter, updateResource));
 router.delete('/:id', requireRole(['admin']), performanceProfiler('DELETE /resources/:id', apiRateLimiter, deleteResource));
 
 module.exports = router;

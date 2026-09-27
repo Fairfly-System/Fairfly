@@ -31,7 +31,8 @@ export default function ClientAppointmentsPage() {
       userToken,
       { clientUid: user?.uid },
       (data) => {
-        const list = (data || [])
+        const rawList = Array.isArray(data) ? data : (data?.data || []);
+        const list = rawList
           .map((doc) => ({
             id: doc.id || doc._id,
             ...doc
@@ -344,6 +345,15 @@ export default function ClientAppointmentsPage() {
       {/* Appointment Booking Modal Form */}
       <ClientAppointmentForm
         isOpen={isFormOpen}
+        onAppointmentCreated={(newAppt) => {
+          if (newAppt && (!user?.uid || newAppt.clientUid === user.uid)) {
+            setAppointments((prev) => {
+              const formatted = { id: newAppt.id || newAppt._id, ...newAppt };
+              const filtered = prev.filter((a) => a.id !== formatted.id);
+              return [formatted, ...filtered];
+            });
+          }
+        }}
         onClose={() => {
           setIsFormOpen(false);
           loadAppointments();

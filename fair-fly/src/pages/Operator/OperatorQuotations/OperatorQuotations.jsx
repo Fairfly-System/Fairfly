@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Outlet, Link } from 'react-router';
-import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { where } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
@@ -9,6 +9,7 @@ import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import { createQuotation, updateQuotationStatus } from '../../../services/quotationService';
+import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-quotations.css';
@@ -18,7 +19,6 @@ import CreateQuotationModal from '../../../components/Operator/CreateQuotationMo
 import { fetchServices } from '../../../services/serviceService';
 
 export function QuotationsContent() {
-  const { data: quotations, loading } = useOperatorContext();
   const { userToken, user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const [showModal, setShowModal] = useState(false);
@@ -26,41 +26,49 @@ export function QuotationsContent() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
-
-  const operatorQuotations = useMemo(() => {
-    if (!quotations) return [];
-    if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
-      return quotations.filter((q) => q.branchUid === user.uid || q.operatorId === user.uid);
+  // Query-level Firestore filters: strictly scoped to this operator
+  const firestoreFilters = useMemo(() => {
+    const list = [];
+    if (user?.uid) {
+      list.push(where('branchUid', '==', user.uid));
     }
-    return quotations;
-  }, [quotations, user, userDetails]);
+    if (statusFilter && statusFilter !== 'all') {
+      const capStatus = statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1);
+      list.push(where('status', '==', capStatus));
+    }
+    return list;
+  }, [user?.uid, statusFilter]);
 
-  const filteredQuotations = useMemo(() => {
-    return operatorQuotations.filter((q) => {
-      const clientStr = (q.clientName || '').toLowerCase();
-      const serviceStr = (q.serviceTitle || '').toLowerCase();
-      const quoteNoStr = (q.quoteNo || '').toLowerCase();
-      const search = debouncedSearch.toLowerCase();
+  // Client search predicate for bounded candidate pool
+  const searchFilterFn = useCallback((q) => {
+    if (!debouncedSearch) return true;
+    const clientStr = (q.clientName || '').toLowerCase();
+    const serviceStr = (q.serviceTitle || '').toLowerCase();
+    const quoteNoStr = (q.quoteNo || '').toLowerCase();
+    const search = debouncedSearch.toLowerCase();
+    return clientStr.includes(search) || serviceStr.includes(search) || quoteNoStr.includes(search);
+  }, [debouncedSearch]);
 
-      const matchesSearch =
-        clientStr.includes(search) ||
-        serviceStr.includes(search) ||
-        quoteNoStr.includes(search);
-
-      const statusStr = (q.status || 'Draft').toLowerCase();
-      const matchesStatus =
-        statusFilter === 'all' || statusStr === statusFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [operatorQuotations, debouncedSearch, statusFilter]);
-
-  const paginatedQuotations = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredQuotations.slice(start, start + pageSize);
-  }, [filteredQuotations, currentPage, pageSize]);
+  const {
+    data: quotations,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    setCurrentPage,
+    setPageSize,
+    refetchCount
+  } = useFirestorePagination({
+    collectionName: 'quotations',
+    filters: firestoreFilters,
+    filterKey: `${user?.uid || ''}-${statusFilter}`,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 5,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+    enabled: Boolean(user?.uid)
+  });
 
   const handleStatusChange = (id, newStatus) => {
     updateQuotationStatus(
@@ -119,7 +127,7 @@ export function QuotationsContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'all', label: `All (${operatorQuotations.length})` },
+              { value: 'all', label: `All (${totalItems})` },
               { value: 'draft', label: 'Draft' },
               { value: 'sent', label: 'Sent' },
               { value: 'confirmed', label: 'Confirmed' },
@@ -156,13 +164,13 @@ export function QuotationsContent() {
                 </div>
               </article>
             ))
-          ) : paginatedQuotations.length === 0 ? (
+          ) : quotations.length === 0 ? (
             <div className="empty-state-box">
               <i className="fa-regular fa-folder-open empty-icon"></i>
               <p>No quotation forms match your criteria</p>
             </div>
           ) : (
-            paginatedQuotations.map((q) => (
+            quotations.map((q) => (
               <article key={q.id} className="op-quotation-card">
                 <div className="op-quotation-top">
                   <div>
@@ -215,7 +223,7 @@ export function QuotationsContent() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredQuotations.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
@@ -228,9 +236,5 @@ export function QuotationsContent() {
 }
 
 export default function OperatorQuotations() {
-  return (
-    <OperatorProvider targetCollection="quotations">
-      <Outlet />
-    </OperatorProvider>
-  );
+  return <Outlet />;
 }

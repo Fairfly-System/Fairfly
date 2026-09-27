@@ -19,9 +19,15 @@ db.doc = (path) => {
         data: () => ({ ...mockDocStore[path] }),
         id: path.split('/').pop()
       }),
-      update: async () => {},
-      delete: async () => {},
-      set: async () => {}
+      update: async (updates) => {
+        Object.assign(mockDocStore[path], updates);
+      },
+      delete: async () => {
+        delete mockDocStore[path];
+      },
+      set: async (data) => {
+        mockDocStore[path] = { ...data };
+      }
     };
   }
   return originalDoc(path);
@@ -41,13 +47,19 @@ db.collection = (name) => {
           data: () => ({ ...mockDocStore[fullPath] }),
           id
         }),
-        update: async () => {},
-        delete: async () => {},
-        set: async () => {},
+        update: async (updates) => {
+          Object.assign(mockDocStore[fullPath], updates);
+        },
+        delete: async () => {
+          delete mockDocStore[fullPath];
+        },
+        set: async (data) => {
+          mockDocStore[fullPath] = { ...data };
+        },
         collection: coll.collection ? coll.collection.bind(coll) : () => ({})
       };
     }
-    return origDoc(id);
+    return id !== undefined ? origDoc(id) : origDoc();
   };
   return coll;
 };
@@ -456,6 +468,42 @@ async function runTests() {
 
     await ticketController.addMessageToThread(req, res);
     assert.strictEqual(res.statusCode, 403, 'Unassociated user cannot reply to ticket');
+  });
+
+  await asyncTest('createTicket blocks client accounts from creating support tickets', async () => {
+    const req = {
+      body: { title: 'Client attempting ticket', initialMessage: 'Help me' },
+      user: { uid: 'attacker_client_uid' },
+      userDetails: { role: 'client' }
+    };
+    const res = createMockRes();
+
+    await ticketController.createTicket(req, res);
+    assert.strictEqual(res.statusCode, 403, 'Client accounts must be forbidden from creating operator tickets');
+  });
+
+  await asyncTest('addMessageToThread ignores client spoofed senderRole in body and enforces token role', async () => {
+    mockDocStore['tickets/tkt_spoof_test'] = {
+      id: 'tkt_spoof_test',
+      operatorId: 'operator_owner',
+      status: 'Pending',
+      messages: []
+    };
+
+    const req = {
+      params: { id: 'tkt_spoof_test' },
+      body: { message: 'Legitimate message', senderRole: 'admin', senderName: 'Fake Super Admin' },
+      user: { uid: 'operator_owner' },
+      userDetails: { role: 'operator', branchName: 'Branch North' }
+    };
+    const res = createMockRes();
+
+    await ticketController.addMessageToThread(req, res);
+    assert.strictEqual(res.statusCode, 200, 'Message should succeed');
+    const updated = mockDocStore['tickets/tkt_spoof_test'];
+    const lastMsg = updated.messages[updated.messages.length - 1];
+    assert.strictEqual(lastMsg.senderRole, 'operator', 'senderRole must be forced to operator, not spoofed admin');
+    assert.strictEqual(lastMsg.senderId, 'operator_owner', 'senderId must match token UID');
   });
 
   // --------------------------------------------------------------------------

@@ -67,7 +67,8 @@ export default function OperatorResources() {
     fetchResources(
       userToken,
       (data) => {
-        const list = (data || []).filter((r) => r.visibility === 'all' || r.visibility === 'operator');
+        const raw = Array.isArray(data) ? data : (data?.data || []);
+        const list = raw.filter((r) => r.visibility === 'all' || r.visibility === 'operator');
         list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         setResources(list);
         setLoading(false);

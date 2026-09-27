@@ -10,7 +10,7 @@ const allowedFields = (allowedFields) => {
         //Get the keys of the request body
         const requestFields = Object.keys(req.body);
         //Check if all request fields are allowed
-        if(!requestFields.every(field => allowedFields.includes(field))) {
+        if (!requestFields.every(field => allowedFields.includes(field))) {
             return res.status(400).json({ error: 'Bad Request: Invalid fields in request body' });
         }
         //If all fields are allowed, proceed to the next middleware or route handler
@@ -19,4 +19,4 @@ const allowedFields = (allowedFields) => {
 
 }
 
-module.exports = {allowedFields};
+module.exports = { allowedFields };

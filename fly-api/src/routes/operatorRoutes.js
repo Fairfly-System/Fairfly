@@ -21,7 +21,7 @@ router.get('/:id', performanceProfiler('GET /operators/:id', verifyFirebaseToken
 router.post('/', performanceProfiler('POST /operators', verifyFirebaseToken, requireSuperAdmin, allowedFields(['branchName', 'email', 'password', 'address', 'contactNumber', 'isQualified']), apiRateLimiter, createOperator));
 router.post('/bulk-status', performanceProfiler('POST /operators/bulk-status', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, bulkStatusOperators));
 router.post('/bulk-delete', performanceProfiler('POST /operators/bulk-delete', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, bulkDeleteOperators));
-router.patch('/:id', performanceProfiler('PATCH /operators/:id', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, updateOperator));
+router.patch('/:id', performanceProfiler('PATCH /operators/:id', verifyFirebaseToken, requireSuperAdmin, allowedFields(['branchName', 'address', 'contactNumber', 'isQualified', 'status']), apiRateLimiter, updateOperator));
 router.delete('/:id', performanceProfiler('DELETE /operators/:id', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, deleteOperator));
 
 module.exports = router;

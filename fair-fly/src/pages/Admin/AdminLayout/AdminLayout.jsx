@@ -4,7 +4,7 @@ import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { useEffect, useState, useMemo } from 'react';
 import { firestore } from '../../../firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, limit, getCountFromServer } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 
 const baseAdminLinks = [
@@ -56,56 +56,44 @@ export default function AdminLayout() {
   const [openTickets, setOpenTickets] = useState(0);
 
   useEffect(() => {
-    // ── Services ──
-    const unsubServices = onSnapshot(collection(firestore, 'services'), (snapshot) => {
-      let active = 0;
-      let disabled = 0;
-      snapshot.docs.forEach((doc) => {
-        if (doc.data().status === 'Active') active++;
-        else disabled++;
-      });
-      setActiveServices(active);
-      setDisabledServices(disabled);
-    });
+    // 1. Lightweight Server Aggregation for Total Counts (Zero document bodies streamed)
+    const fetchCounters = async () => {
+      try {
+        const [activeSrv, totalSrv, activeOp, disabledOp, clientsSnap] = await Promise.all([
+          getCountFromServer(query(collection(firestore, 'services'), where('status', '==', 'Active'))),
+          getCountFromServer(collection(firestore, 'services')),
+          getCountFromServer(query(collection(firestore, 'users'), where('role', '==', 'operator'), where('status', '==', 'Active'))),
+          getCountFromServer(query(collection(firestore, 'users'), where('role', '==', 'operator'), where('status', '==', 'Disabled'))),
+          getCountFromServer(query(collection(firestore, 'users'), where('role', '==', 'client')))
+        ]);
 
-    // ── Users (Operators & Clients) ──
-    const qUsers = query(
-      collection(firestore, 'users'),
-      where('role', 'in', ['operator', 'client'])
-    );
-    const unsubUsers = onSnapshot(qUsers, (snapshot) => {
-      let activeOp = 0;
-      let disabledOp = 0;
-      let clientCount = 0;
+        setActiveServices(activeSrv.data().count);
+        setDisabledServices(Math.max(0, totalSrv.data().count - activeSrv.data().count));
+        setActiveOperators(activeOp.data().count);
+        setDisabledOperators(disabledOp.data().count);
+        setClients(clientsSnap.data().count);
+      } catch (err) {
+        console.warn('AdminLayout getCountFromServer notice:', err?.message);
+      }
+    };
 
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        if (data.role === 'operator') {
-          if (data.status === 'Active') activeOp++;
-          else disabledOp++;
-        } else if (data.role === 'client') {
-          clientCount++;
-        }
-      });
+    fetchCounters();
+    const interval = setInterval(fetchCounters, 60000);
 
-      setActiveOperators(activeOp);
-      setDisabledOperators(disabledOp);
-      setClients(clientCount);
-    });
-
-    // ── Franchise Applications (pending) ──
+    // 2. Real-time badge indicators (capped to limit(100))
     const qFranchise = query(
       collection(firestore, 'franchiseApplications'),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      limit(100)
     );
     const unsubFranchise = onSnapshot(qFranchise, (snapshot) => {
       setPendingApps(snapshot.size);
-    });
+    }, () => setPendingApps(0));
 
-    // ── Open Tickets ──
     const qTickets = query(
       collection(firestore, 'tickets'),
-      where('status', 'in', ['Open', 'open', 'In Progress', 'in_progress', 'pending'])
+      where('status', 'in', ['Open', 'open', 'In Progress', 'in_progress', 'pending']),
+      limit(100)
     );
     const unsubTickets = onSnapshot(
       qTickets,
@@ -118,8 +106,7 @@ export default function AdminLayout() {
     );
 
     return () => {
-      unsubServices();
-      unsubUsers();
+      clearInterval(interval);
       unsubFranchise();
       unsubTickets();
     };

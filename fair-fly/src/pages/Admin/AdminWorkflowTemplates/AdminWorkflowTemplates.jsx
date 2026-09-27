@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import './admin-workflow-templates.css';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import WorkflowModal from '../../../components/Admin/Modals/WorkflowModal/WorkflowModal';
@@ -8,13 +8,15 @@ import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import DataTable from '../../../components/UI/DataTable/DataTable';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import useDebounce from '../../../hooks/useDebounce';
+import { useFirestorePagination } from '../../../hooks/useFirestorePagination';
+import { collection, getCountFromServer } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 const TrashIcon = (props) => (
@@ -22,7 +24,6 @@ const TrashIcon = (props) => (
 );
 
 export default function AdminWorkflowTemplates() {
-  const { data: templates, loading } = useAdminContext();
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
@@ -39,52 +40,74 @@ export default function AdminWorkflowTemplates() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
+  const [totalSystemCount, setTotalSystemCount] = useState(0);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  // Fetch total template count for chip badge
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTotal = async () => {
+      try {
+        const snap = await getCountFromServer(collection(firestore, 'workflowTemplates'));
+        if (isMounted) setTotalSystemCount(snap.data().count);
+      } catch (err) {
+        console.warn('Total count notice for workflowTemplates:', err.message);
+      }
+    };
+    fetchTotal();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Search and filter function for bounded query
+  const searchFilterFn = useCallback(
+    (tmpl) => {
+      const q = debouncedSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (tmpl.name || '').toLowerCase().includes(q) ||
+        (tmpl.serviceType || tmpl.type || '').toLowerCase().includes(q) ||
+        (tmpl.description || '').toLowerCase().includes(q);
+
+      const type = (tmpl.serviceType || tmpl.type || '').toLowerCase();
+      const matchesType =
+        serviceTypeFilter === 'all' ||
+        type.includes(serviceTypeFilter.toLowerCase());
+
+      return matchesSearch && matchesType;
+    },
+    [debouncedSearch, serviceTypeFilter]
+  );
+
+  // Query-level cursor pagination hook
+  const {
+    data: templates,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    goToPage,
+    changePageSize,
+  } = useFirestorePagination({
+    collectionName: 'workflowTemplates',
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 8,
+    realtime: true,
+    searchTerm: debouncedSearch || (serviceTypeFilter !== 'all' ? serviceTypeFilter : ''),
+    searchFilterFn,
+  });
 
   const alertBarProps = useMemo(() => {
-    if (!templates) return { message: 'Loading...', type: 'info' };
-    const total      = templates.length;
-    const emptySteps = templates.filter(t => !t.steps || t.steps.length === 0).length;
-    const totalSteps = templates.reduce((acc, t) => acc + (t.steps?.length || 0), 0);
+    if (loading && templates.length === 0) return { message: 'Loading workflow templates...', type: 'info' };
+    const total = totalItems || totalSystemCount;
 
     if (total === 0) {
       return { message: 'No workflow templates yet. Create one to start defining reusable service processes.', type: 'info' };
     }
-    if (emptySteps > 0) {
-      return {
-        message: `${emptySteps} template${emptySteps !== 1 ? 's have' : ' has'} no steps defined yet. Add steps before assigning them to services.`,
-        type: 'warning',
-      };
-    }
     return {
-      message: `${total} template${total !== 1 ? 's' : ''} ready — ${totalSteps} total step${totalSteps !== 1 ? 's' : ''} across all workflows.`,
+      message: `${total} workflow template${total !== 1 ? 's' : ''} available for service automation.`,
       type: 'success',
     };
-  }, [templates]);
-
-  const filteredTemplates = useMemo(() => {
-    if (!templates) return [];
-    return templates.filter((tmpl) => {
-      const q = debouncedSearch.toLowerCase();
-      const matchesSearch =
-        (tmpl.name || '').toLowerCase().includes(q) ||
-        (tmpl.serviceType || '').toLowerCase().includes(q);
-
-      const matchesType =
-        serviceTypeFilter === 'all' ||
-        (tmpl.serviceType || '').toLowerCase() === serviceTypeFilter.toLowerCase();
-
-      return matchesSearch && matchesType;
-    });
-  }, [templates, debouncedSearch, serviceTypeFilter]);
-
-  const paginatedTemplates = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredTemplates.slice(start, start + pageSize);
-  }, [filteredTemplates, currentPage, pageSize]);
+  }, [loading, templates.length, totalItems, totalSystemCount]);
 
   const handleOpenAddModal = () => {
     setEditingTemplate(null);
@@ -305,8 +328,6 @@ export default function AdminWorkflowTemplates() {
     { label: 'Workflows' },
   ];
 
-  const totalTemplates = Array.isArray(templates) ? templates.length : 0;
-
   return (
     <main className="workflow-template-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
@@ -333,18 +354,12 @@ export default function AdminWorkflowTemplates() {
               type="text"
               placeholder="Search by template name or type..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button
                 className="clear-search-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setSearchTerm('')}
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
@@ -353,23 +368,20 @@ export default function AdminWorkflowTemplates() {
 
           <FilterChipGroup
             chips={[
-              { value: 'all', label: `All (${totalTemplates})` },
+              { value: 'all', label: `All (${totalSystemCount || totalItems})` },
               { value: 'psa', label: 'PSA' },
               { value: 'passport', label: 'Passport' },
               { value: 'visa', label: 'Visa' },
             ]}
             activeChip={serviceTypeFilter}
-            onChipChange={(val) => {
-              setServiceTypeFilter(val);
-              setCurrentPage(1);
-            }}
+            onChipChange={(val) => setServiceTypeFilter(val)}
           />
         </div>
 
         {/* Reusable DataTable */}
         <DataTable
           columns={columns}
-          data={paginatedTemplates}
+          data={templates}
           keyField="id"
           selectable={true}
           selectedIds={selectedIds}
@@ -386,10 +398,10 @@ export default function AdminWorkflowTemplates() {
         {/* Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredTemplates.length}
+          totalItems={totalItems}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
         />
       </section>
 

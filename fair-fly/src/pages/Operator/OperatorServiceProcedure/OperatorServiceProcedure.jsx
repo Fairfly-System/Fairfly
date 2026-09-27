@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
-import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
@@ -30,9 +31,10 @@ function getStepFile(step) {
   return null;
 }
 
-function ServiceProcedureContent() {
+export default function OperatorServiceProcedure() {
   const { id } = useParams();
-  const { data: activeServices, loading } = useOperatorContext();
+  const [serviceRecord, setServiceRecord] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { userToken, user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,10 +42,31 @@ function ServiceProcedureContent() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
-  const serviceRecord = useMemo(() => {
-    if (!activeServices || !id) return null;
-    return activeServices.find((s) => s.id === id) || null;
-  }, [activeServices, id]);
+  // Directly subscribe to the specific active service document
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const docRef = doc(firestore, 'activeServices', id);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setServiceRecord({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setServiceRecord(null);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to activeService document:', error);
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [id]);
 
   const isUnauthorized = useMemo(() => {
     if (!serviceRecord || !user?.uid) return false;
@@ -562,13 +585,5 @@ function ServiceProcedureContent() {
         </div>
       )}
     </main>
-  );
-}
-
-export default function OperatorServiceProcedure() {
-  return (
-    <OperatorProvider targetCollection="activeServices">
-      <ServiceProcedureContent />
-    </OperatorProvider>
   );
 }

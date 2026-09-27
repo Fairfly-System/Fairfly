@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -51,7 +50,6 @@ const formatFileSize = (bytes) => {
 export default function AdminQualificationDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: cachedApplications, loading: contextLoading } = useAdminContext();
   const { userToken, userDetails, user } = useAuthContext();
   const { addToast } = useToast();
 
@@ -60,12 +58,9 @@ export default function AdminQualificationDetailPage() {
     userDetails?.email === 'admin@gmail.com' ||
     user?.email === 'admin@gmail.com';
 
-  const [application, setApplication] = useState(() => {
-    if (!cachedApplications || !id) return null;
-    return cachedApplications.find((app) => app.id === id) || null;
-  });
+  const [application, setApplication] = useState(null);
   const [operator, setOperator] = useState(null);
-  const [loading, setLoading] = useState(!application);
+  const [loading, setLoading] = useState(true);
   const [adminNotes, setAdminNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState(null); // 'approve' | 'reject' | null

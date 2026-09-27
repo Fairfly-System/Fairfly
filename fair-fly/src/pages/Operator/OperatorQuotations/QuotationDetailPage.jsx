@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { useOperatorContext } from '../../../context/OperatorContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -16,7 +17,8 @@ const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i
 export default function QuotationDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: quotations, loading } = useOperatorContext();
+  const [quotation, setQuotation] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
@@ -27,11 +29,29 @@ export default function QuotationDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
 
-  // Sync with Firestore context data
-  const quotation = useMemo(() => {
-    if (!quotations || !id) return null;
-    return quotations.find((q) => q.id === id) || null;
-  }, [quotations, id]);
+  // Directly subscribe to the specific quotation document (1 document read instead of entire collection)
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(firestore, 'quotations', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setQuotation({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setQuotation(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('[QuotationDetailPage] Document error:', err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [id]);
 
   // Form state for inline editing
   const [formData, setFormData] = useState({

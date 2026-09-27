@@ -30,8 +30,13 @@ const createTicket = async (req, res) => {
       return res.status(400).json({ error: 'Ticket title/subject is required' });
     }
 
-    // Prioritize authenticated Operator UID from token
-    let opId = (req.userDetails?.role === 'operator' && req.user?.uid)
+    const userRole = req.userDetails?.role;
+    if (userRole === 'client') {
+      return res.status(403).json({ error: 'Client accounts cannot create operator tickets' });
+    }
+
+    // Authenticated Operator uses their own UID
+    const opId = (userRole === 'operator' || userRole === 'branch_operator')
       ? req.user.uid
       : (operatorId || req.user?.uid);
 
@@ -105,7 +110,7 @@ const createTicket = async (req, res) => {
  */
 const getTickets = async (req, res) => {
   try {
-    const { status, operatorId, limit } = req.query;
+    const { status, operatorId, limit, page } = req.query;
     const userRole = req.userDetails?.role;
 
     if (userRole === 'client') {
@@ -126,6 +131,22 @@ const getTickets = async (req, res) => {
     if (status && status !== 'all') {
       options.filters.push({ field: 'status', operator: '==', value: status });
     }
+
+    if (page) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 10;
+      const allResults = await queryDatabaseAdvanced(COLLECTIONS.TICKETS, options);
+      const total = allResults.length;
+      const paginated = allResults.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+      return res.status(200).json({
+        data: paginated,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      });
+    }
+
     if (limit) {
       options.limit = parseInt(limit, 10);
     }
@@ -267,9 +288,9 @@ const addMessageToThread = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const activeRole = senderRole || (req.userDetails?.role === 'admin' ? 'admin' : 'operator');
-    const activeName = senderName || req.userDetails?.name || (activeRole === 'admin' ? 'Super Admin' : 'Operator');
-    const activeId = senderId || req.user?.uid || activeRole;
+    const activeRole = isAdmin ? 'admin' : 'operator';
+    const activeName = req.userDetails?.branchName || req.userDetails?.name || req.userDetails?.fullName || (isAdmin ? 'Super Admin' : 'Operator');
+    const activeId = req.user?.uid || (isAdmin ? 'admin' : 'operator');
 
     const newMessageObj = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

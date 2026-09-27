@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Outlet, Link } from 'react-router';
-import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useNotifications } from '../../../context/NotificationContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -9,16 +10,17 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import { updateAppointmentStatus } from '../../../services/appointmentService';
+import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-appointments.css';
 
 export function AppointmentContent() {
-  const { data: appointments, loading } = useOperatorContext();
   const { userToken, user } = useAuthContext();
   const { clearNotificationsForTab } = useNotifications();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     if (clearNotificationsForTab) {
@@ -30,41 +32,69 @@ export function AppointmentContent() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  // Query-level Firestore filters: strictly scoped to this operator
+  const firestoreFilters = useMemo(() => {
+    const list = [];
+    if (user?.uid) {
+      list.push(where('branchUid', '==', user.uid));
+    }
+    if (statusFilter && statusFilter !== 'all') {
+      const capStatus = statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1);
+      list.push(where('status', '==', capStatus));
+    }
+    return list;
+  }, [user?.uid, statusFilter]);
 
-  const filteredAppointments = useMemo(() => {
-    if (!appointments) return [];
-    return appointments.filter((appt) => {
-      // Operator scoping: strictly view appointments assigned to this branch
-      if (user?.uid) {
-        const isAssigned = appt.branchUid === user.uid || appt.operatorId === user.uid;
-        if (!isAssigned) return false;
-      }
+  // Client search predicate for bounded search results
+  const searchFilterFn = useCallback((appt) => {
+    if (!debouncedSearch) return true;
+    const nameStr = (appt.clientName || appt.name || '').toLowerCase();
+    const emailStr = (appt.clientEmail || appt.email || '').toLowerCase();
+    const serviceStr = (appt.serviceType || appt.service || '').toLowerCase();
+    const search = debouncedSearch.toLowerCase();
+    return nameStr.includes(search) || emailStr.includes(search) || serviceStr.includes(search);
+  }, [debouncedSearch]);
 
-      const nameStr = (appt.clientName || appt.name || '').toLowerCase();
-      const emailStr = (appt.clientEmail || appt.email || '').toLowerCase();
-      const serviceStr = (appt.serviceType || appt.service || '').toLowerCase();
-      const search = debouncedSearch.toLowerCase();
+  const {
+    data: appointments,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    setCurrentPage,
+    setPageSize,
+    refetchCount
+  } = useFirestorePagination({
+    collectionName: 'appointments',
+    filters: firestoreFilters,
+    filterKey: `${user?.uid || ''}-${statusFilter}`,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 5,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+    enabled: Boolean(user?.uid)
+  });
 
-      const matchesSearch =
-        nameStr.includes(search) ||
-        emailStr.includes(search) ||
-        serviceStr.includes(search);
+  // Zero-document payload server aggregation for pending badge count
+  const fetchPendingCount = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const pendingQ = query(
+        collection(firestore, 'appointments'),
+        where('branchUid', '==', user.uid),
+        where('status', '==', 'Pending')
+      );
+      const snap = await getCountFromServer(pendingQ);
+      setPendingCount(snap.data().count);
+    } catch (e) {
+      console.warn('[OperatorAppointments] Count aggregation notice:', e.message);
+    }
+  }, [user?.uid]);
 
-      const apptStatus = (appt.status || 'Pending').toLowerCase();
-      const matchesStatus =
-        statusFilter === 'all' || apptStatus === statusFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [appointments, debouncedSearch, statusFilter, user?.uid]);
-
-  const paginatedAppointments = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredAppointments.slice(start, start + pageSize);
-  }, [filteredAppointments, currentPage, pageSize]);
+  useEffect(() => {
+    fetchPendingCount();
+  }, [fetchPendingCount]);
 
   const handleStatusChange = (id, newStatus) => {
     updateAppointmentStatus(
@@ -73,6 +103,8 @@ export function AppointmentContent() {
       newStatus,
       () => {
         addToast(`Appointment status updated to ${newStatus}`, 'success');
+        fetchPendingCount();
+        refetchCount();
       },
       (error) => {
         addToast(toFriendlyMessage(error, 'Could not update appointment status. Please try again.'), 'error');
@@ -80,8 +112,6 @@ export function AppointmentContent() {
       setIsSubmitting
     );
   };
-
-  const pendingCount = (filteredAppointments || []).filter((a) => (a.status || '').toLowerCase() === 'pending').length;
 
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/operator' },
@@ -128,7 +158,7 @@ export function AppointmentContent() {
 
         <FilterChipGroup
           chips={[
-            { value: 'all', label: `All (${(appointments || []).length})` },
+            { value: 'all', label: `All (${totalItems})` },
             { value: 'pending', label: `Pending (${pendingCount})` },
             { value: 'confirmed', label: 'Confirmed' },
             { value: 'cancelled', label: 'Cancelled' },
@@ -165,13 +195,13 @@ export function AppointmentContent() {
               </div>
             </article>
           ))
-        ) : paginatedAppointments.length === 0 ? (
+        ) : appointments.length === 0 ? (
           <div className="empty-state-box">
             <i className="fa-regular fa-calendar-xmark empty-icon"></i>
             <p>No appointment requests match your filters</p>
           </div>
         ) : (
-          paginatedAppointments.map((a) => {
+          appointments.map((a) => {
             const name = a.clientName || a.name || 'Client';
             const email = a.clientEmail || a.email || 'N/A';
             const phone = a.clientPhone || a.phone || 'N/A';
@@ -267,7 +297,7 @@ export function AppointmentContent() {
 
       <Pagination
         currentPage={currentPage}
-        totalItems={filteredAppointments.length}
+        totalItems={totalItems}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
@@ -278,9 +308,5 @@ export function AppointmentContent() {
 }
 
 export default function OperatorAppointments() {
-  return (
-    <OperatorProvider targetCollection="appointments">
-      <Outlet />
-    </OperatorProvider>
-  );
+  return <Outlet />;
 }

@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { firestore } from '../../../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, or, limit } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import './operator-layout.css';
 
@@ -30,56 +30,73 @@ export default function OperatorLayout() {
   const [openTickets, setOpenTickets] = useState(0);
 
   useEffect(() => {
-    // Real-time listener for active services / workflows
-    const unsubServices = onSnapshot(collection(firestore, 'activeServices'), (snapshot) => {
+    if (!user?.uid) {
+      setActiveServices(0);
+      setCompletedServices(0);
+      setPendingActions(0);
+      setOpenTickets(0);
+      return;
+    }
+
+    // Real-time listener for active services / workflows scoped to this operator
+    const qServices = query(
+      collection(firestore, 'activeServices'),
+      or(where('operatorId', '==', user.uid), where('branchUid', '==', user.uid)),
+      limit(100)
+    );
+    const unsubServices = onSnapshot(qServices, (snapshot) => {
       let active = 0;
       let completed = 0;
 
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
-          if (data.operatorId !== user.uid && data.branchUid !== user.uid) {
-            return;
-          }
-        }
         if (data.status === 'Completed' || data.status === 'completed') completed++;
         else if (data.status !== 'Cancelled' && data.status !== 'cancelled') active++;
       });
       setActiveServices(active);
       setCompletedServices(completed);
-    }, () => {
+    }, (err) => {
+      console.warn('OperatorLayout services query notice:', err?.message);
       setActiveServices(0);
       setCompletedServices(0);
     });
 
     // Real-time listener for appointments requiring action (strictly operator-scoped)
-    const unsubAppointments = onSnapshot(collection(firestore, 'appointments'), (snapshot) => {
+    const qAppointments = query(
+      collection(firestore, 'appointments'),
+      or(where('branchUid', '==', user.uid), where('operatorId', '==', user.uid)),
+      limit(50)
+    );
+    const unsubAppointments = onSnapshot(qAppointments, (snapshot) => {
       let pending = 0;
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        const isAssigned = !user?.uid || data.branchUid === user.uid || data.operatorId === user.uid;
-        if (isAssigned && (data.status === 'Pending' || data.status === 'pending')) {
+        if (data.status === 'Pending' || data.status === 'pending') {
           pending++;
         }
       });
       setPendingActions(pending);
     }, (error) => {
-      console.warn('OperatorLayout appointments onSnapshot error:', error?.message);
+      console.warn('OperatorLayout appointments onSnapshot notice:', error?.message);
       setPendingActions(0);
     });
 
-    // Real-time listener for open tickets
-    const unsubTickets = onSnapshot(collection(firestore, 'tickets'), (snapshot) => {
+    // Real-time listener for open tickets strictly scoped to this operator
+    const qTickets = query(
+      collection(firestore, 'tickets'),
+      where('operatorId', '==', user.uid),
+      limit(50)
+    );
+    const unsubTickets = onSnapshot(qTickets, (snapshot) => {
       let open = 0;
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
         const isOpenStatus = data.status === 'Open' || data.status === 'open' || data.status === 'pending' || data.status === 'In Progress';
-        if (isOpenStatus && (!data.operatorId || data.operatorId === user?.uid)) {
-          open++;
-        }
+        if (isOpenStatus) open++;
       });
       setOpenTickets(open);
-    }, () => {
+    }, (err) => {
+      console.warn('OperatorLayout tickets query notice:', err?.message);
       setOpenTickets(0);
     });
 

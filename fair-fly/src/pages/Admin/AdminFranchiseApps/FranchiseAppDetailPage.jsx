@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -15,17 +16,37 @@ const RejectIcon = (props) => <i className="fa-solid fa-circle-xmark" {...props}
 export default function FranchiseAppDetailPage({ isHistoryMode = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: applications, loading } = useAdminContext();
+  const [application, setApplication] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
   const [confirmState, setConfirmState] = useState(null); // 'approve' | 'reject'
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
-  const application = useMemo(() => {
-    if (!applications || !id) return null;
-    return applications.find((app) => app.id === id) || null;
-  }, [applications, id]);
+  // Directly subscribe to the specific franchise application document
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(firestore, 'franchiseApplications', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setApplication({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setApplication(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('[FranchiseAppDetailPage] Document error:', err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [id]);
 
   const handleStatusChange = async (isApproved) => {
     if (!application) return;

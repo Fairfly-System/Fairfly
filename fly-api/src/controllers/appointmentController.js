@@ -102,15 +102,20 @@ const getAppointments = async (req, res) => {
       orderBy: { field: 'createdAt', direction: 'desc' }
     };
 
-    const userRole = req.userDetails?.role;
+    const userRole = req.userDetails?.role || 'client';
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
 
-    // If client user is querying, enforce their clientUid
-    if (userRole === 'client') {
-      options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
-    } else if (userRole === 'operator' || userRole === 'branch_operator') {
+    // Enforce strict multi-tenant data isolation:
+    if (isOperator) {
       options.filters.push({ field: 'branchUid', operator: '==', value: req.user.uid });
-    } else if (clientUid) {
-      options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+    } else if (isAdmin) {
+      if (clientUid) {
+        options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+      }
+    } else {
+      // All clients are strictly restricted to their own appointments
+      options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
     }
 
     if (status && status !== 'all') {

@@ -9,16 +9,24 @@ const {
   closeTicket 
 } = require('../controllers/ticketController');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
+const { allowedFields } = require('../middleware/allowedFields');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
-const { publicRateLimiter, apiRateLimiter } = require('../middleware/rateLimiter');
+const { apiRateLimiter } = require('../middleware/rateLimiter');
 
-// Create a new support ticket (public or auth)
-router.post('/', publicRateLimiter, (req, res, next) => {
-  if (req.headers.authorization) {
-    return verifyFirebaseToken(req, res, next);
-  }
-  next();
-}, createTicket);
+const TICKET_ALLOWED_FIELDS = ['title', 'category', 'priority', 'initialMessage'];
+
+// Create a new support ticket (Operator or Admin only)
+router.post(
+  '/',
+  performanceProfiler(
+    'POST /tickets',
+    verifyFirebaseToken,
+    requireRole(['operator', 'admin']),
+    allowedFields(TICKET_ALLOWED_FIELDS),
+    apiRateLimiter,
+    createTicket
+  )
+);
 
 // List all support tickets (Admin or Operator auth)
 router.get('/', performanceProfiler('GET /tickets', verifyFirebaseToken, apiRateLimiter, getTickets));
@@ -27,10 +35,10 @@ router.get('/', performanceProfiler('GET /tickets', verifyFirebaseToken, apiRate
 router.get('/:id', performanceProfiler('GET /tickets/:id', verifyFirebaseToken, apiRateLimiter, getTicketById));
 
 // Update ticket status (Pending, Ongoing, Closed)
-router.patch('/:id/status', performanceProfiler('PATCH /tickets/:id/status', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, updateTicketStatus));
+router.patch('/:id/status', performanceProfiler('PATCH /tickets/:id/status', verifyFirebaseToken, requireRole('admin'), allowedFields(['status']), apiRateLimiter, updateTicketStatus));
 
 // Add a response message to ticket thread
-router.post('/:id/messages', performanceProfiler('POST /tickets/:id/messages', verifyFirebaseToken, apiRateLimiter, addMessageToThread));
+router.post('/:id/messages', performanceProfiler('POST /tickets/:id/messages', verifyFirebaseToken, allowedFields(['message']), apiRateLimiter, addMessageToThread));
 
 // Close a support ticket thread
 router.post('/:id/close', performanceProfiler('POST /tickets/:id/close', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, closeTicket));

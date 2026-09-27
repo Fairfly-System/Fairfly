@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useOperatorContext } from '../../../context/OperatorContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -15,17 +16,37 @@ const RejectIcon = (props) => <i className="fa-solid fa-circle-xmark" {...props}
 export default function AppointmentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: appointments, loading } = useOperatorContext();
+  const [appointment, setAppointment] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
   const [confirmState, setConfirmState] = useState(null); // 'confirm' | 'cancel'
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
-  const appointment = useMemo(() => {
-    if (!appointments || !id) return null;
-    return appointments.find((a) => a.id === id) || null;
-  }, [appointments, id]);
+  // Directly subscribe to the specific appointment document (1 document read instead of entire collection)
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(firestore, 'appointments', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setAppointment({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setAppointment(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('[AppointmentDetailPage] Document error:', err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [id]);
 
   const handleStatusChange = async (newStatus) => {
     if (!appointment) return;

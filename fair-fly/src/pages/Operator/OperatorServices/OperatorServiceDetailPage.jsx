@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -13,7 +12,7 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { firestore } from '../../../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import '../../Admin/AdminServices/service-detail.css';
 import './operator-service-detail.css';
 
@@ -41,7 +40,8 @@ const UNIT_LABELS = {
 export default function OperatorServiceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: services, loading } = useAdminContext();
+  const [service, setService] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { user, userToken, userDetails } = useAuthContext();
   const { addToast } = useToast();
 
@@ -52,6 +52,30 @@ export default function OperatorServiceDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+
+  // Directly subscribe to the specific service document
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(firestore, 'services', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setService({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setService(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('[OperatorServiceDetailPage] Document error:', err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [id]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -65,11 +89,6 @@ export default function OperatorServiceDetailPage() {
     );
     return () => unsubscribe();
   }, []);
-
-  const service = useMemo(() => {
-    if (!services || !id) return null;
-    return services.find((s) => s.id === id) || null;
-  }, [services, id]);
 
   const attachedWorkflows = useMemo(() => {
     if (!service || !Array.isArray(service.workflowIds) || service.workflowIds.length === 0) return [];

@@ -61,8 +61,12 @@ export default function TicketsContent() {
     setTicketsLoading(true);
     fetchTickets(
       userToken,
-      (data) => {
-        setTickets(data || []);
+      (res) => {
+        if (Array.isArray(res)) {
+          setTickets(res);
+        } else if (res && Array.isArray(res.data)) {
+          setTickets(res.data);
+        }
         setTicketsLoading(false);
       },
       (err) => {

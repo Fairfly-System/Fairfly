@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
@@ -12,13 +13,13 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './admin-qualifications.css';
 
 export default function QualificationsContent() {
   const navigate = useNavigate();
-  const { data: applications, loading } = useAdminContext();
   const { userToken, userDetails, user } = useAuthContext();
   const { addToast } = useToast();
 
@@ -31,52 +32,79 @@ export default function QualificationsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('pending');
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filtered applications
-  const filteredApplications = useMemo(() => {
-    if (!applications) return [];
-    return applications.filter((app) => {
-      const q = debouncedSearch.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        (app.branchName || '').toLowerCase().includes(q) ||
-        (app.operatorName || '').toLowerCase().includes(q) ||
-        (app.email || '').toLowerCase().includes(q) ||
-        (app.reason || '').toLowerCase().includes(q);
+  // Query-level Firestore filter
+  const firestoreFilters = useMemo(() => {
+    if (statusFilter && statusFilter !== 'all') {
+      return [where('status', '==', statusFilter.toLowerCase())];
+    }
+    return [];
+  }, [statusFilter]);
 
-      const appStatus = (app.status || 'pending').toLowerCase();
-      const filter = (statusFilter || 'all').toLowerCase();
-      const matchesStatus = filter === 'all' || appStatus === filter;
+  // Client search predicate for bounded candidate pool
+  const searchFilterFn = useCallback((app) => {
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase().trim();
+    return (
+      (app.branchName || '').toLowerCase().includes(q) ||
+      (app.operatorName || '').toLowerCase().includes(q) ||
+      (app.email || '').toLowerCase().includes(q) ||
+      (app.reason || '').toLowerCase().includes(q)
+    );
+  }, [debouncedSearch]);
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [applications, debouncedSearch, statusFilter]);
+  const {
+    data: applications,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    setCurrentPage,
+    setPageSize,
+    refetchCount
+  } = useFirestorePagination({
+    collectionName: 'qualificationApplications',
+    filters: firestoreFilters,
+    filterKey: statusFilter,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 8,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+  });
 
-  // Paginated slice
-  const paginatedApplications = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredApplications.slice(start, start + pageSize);
-  }, [filteredApplications, currentPage, pageSize]);
+  // KPI stats via zero-document server aggregations
+  const [counts, setCounts] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [loadingCounts, setLoadingCounts] = useState(true);
 
-  // KPI stats
-  const totalApps = Array.isArray(applications) ? applications.length : 0;
-  const pendingCount = useMemo(
-    () => (applications ? applications.filter((a) => (a.status || 'pending').toLowerCase() === 'pending').length : 0),
-    [applications]
-  );
-  const approvedCount = useMemo(
-    () => (applications ? applications.filter((a) => (a.status || '').toLowerCase() === 'approved').length : 0),
-    [applications]
-  );
-  const rejectedCount = useMemo(
-    () => (applications ? applications.filter((a) => (a.status || '').toLowerCase() === 'rejected').length : 0),
-    [applications]
-  );
+  const fetchKpiCounts = useCallback(async () => {
+    try {
+      const col = collection(firestore, 'qualificationApplications');
+      const [totalSnap, pendingSnap, approvedSnap, rejectedSnap] = await Promise.all([
+        getCountFromServer(col),
+        getCountFromServer(query(col, where('status', '==', 'pending'))),
+        getCountFromServer(query(col, where('status', '==', 'approved'))),
+        getCountFromServer(query(col, where('status', '==', 'rejected'))),
+      ]);
+      setCounts({
+        total: totalSnap.data().count,
+        pending: pendingSnap.data().count,
+        approved: approvedSnap.data().count,
+        rejected: rejectedSnap.data().count,
+      });
+    } catch (e) {
+      console.warn('[QualificationsContent] Count notice:', e.message);
+    } finally {
+      setLoadingCounts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchKpiCounts();
+  }, [fetchKpiCounts]);
+
+  const { total: totalApps, pending: pendingCount, approved: approvedCount, rejected: rejectedCount } = counts;
 
   const handleReviewSubmit = async (app, status) => {
     if (!app) return;
@@ -356,7 +384,7 @@ export default function QualificationsContent() {
 
         {/* Table */}
         <DataTable
-          data={paginatedApplications}
+          data={applications}
           columns={columns}
           isLoading={loading}
           emptyState={{
@@ -368,7 +396,7 @@ export default function QualificationsContent() {
         {/* Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredApplications.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}

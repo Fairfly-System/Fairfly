@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { useOperatorContext } from '../../../context/OperatorContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -88,7 +89,8 @@ function parseInquiryData(inquiry) {
 export default function InquiryFormDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: inquiryForms, loading } = useOperatorContext();
+  const [form, setForm] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
@@ -98,10 +100,29 @@ export default function InquiryFormDetailPage() {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [uploadingReqId, setUploadingReqId] = useState(null);
 
-  const form = useMemo(() => {
-    if (!inquiryForms || !id) return null;
-    return inquiryForms.find((f) => f.id === id) || null;
-  }, [inquiryForms, id]);
+  // Directly subscribe to the specific inquiry form document (1 document read instead of entire collection)
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(firestore, 'inquiries', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setForm({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setForm(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('[InquiryFormDetailPage] Document error:', err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [id]);
 
   const parsedData = useMemo(() => {
     return parseInquiryData(form);

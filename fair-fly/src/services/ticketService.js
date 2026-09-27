@@ -1,15 +1,35 @@
 import ApiCaller from '../utils/ApiCaller';
 import { API_BASE_URL } from '../utils/config';
 
-export function fetchTickets(token, successCallback, errorCallback, setIsLoading) {
+export function fetchTickets(token, paramsOrSuccess, successCallback, errorCallback, setIsLoading) {
+  let params = null;
+  let successCb = successCallback;
+  let errorCb = errorCallback;
+  let loadingCb = setIsLoading;
+
+  if (typeof paramsOrSuccess === 'function') {
+    successCb = paramsOrSuccess;
+    errorCb = successCallback;
+    loadingCb = errorCallback;
+  } else if (paramsOrSuccess && typeof paramsOrSuccess === 'object') {
+    params = paramsOrSuccess;
+  }
+
+  const query = params
+    ? '?' +
+      new URLSearchParams(
+        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+      ).toString()
+    : '';
+
   return ApiCaller(
-    `${API_BASE_URL}/api/tickets`,
+    `${API_BASE_URL}/api/tickets${query}`,
     'GET',
     null,
     { Authorization: `Bearer ${token}` },
-    successCallback,
-    errorCallback,
-    setIsLoading
+    successCb,
+    errorCb,
+    loadingCb
   );
 }
 

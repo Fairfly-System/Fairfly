@@ -1,19 +1,18 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, or, getDocs } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
-import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import AddServiceModal from '../../../components/Operator/AddServiceModal/AddServiceModal';
 import QualificationApplicationModal from '../../../components/Operator/QualificationApplicationModal/QualificationApplicationModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
+import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
 import './operator-dashboard.css';
 
 function DashboardContent() {
-  const { data: dbServices, loading } = useOperatorContext();
   const { user, userDetails } = useAuthContext();
   const navigate = useNavigate();
   const [showAddService, setShowAddService] = useState(false);
@@ -25,10 +24,6 @@ function DashboardContent() {
   // Assigned Support Lead state
   const [assignedAdmin, setAssignedAdmin] = useState(null);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -107,35 +102,45 @@ function DashboardContent() {
     }
   };
 
-  const operatorScopedServices = useMemo(() => {
-    if (!dbServices) return [];
-    if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
-      return dbServices.filter(
-        (s) => s.operatorId === user.uid || s.branchUid === user.uid
-      );
+  // Query-level Firestore filter scoped strictly to this operator/branch
+  const firestoreFilters = useMemo(() => {
+    if (!user?.uid) return [];
+    const list = [or(where('operatorId', '==', user.uid), where('branchUid', '==', user.uid))];
+    if (priorityFilter && priorityFilter !== 'all') {
+      list.push(where('priorityType', '==', priorityFilter));
     }
-    return dbServices;
-  }, [dbServices, user, userDetails]);
+    return list;
+  }, [user?.uid, priorityFilter]);
 
-  const filteredServices = useMemo(() => {
-    return operatorScopedServices.filter((s) => {
-      const nameStr = (s.clientName || s.name || '').toLowerCase();
-      const typeStr = (s.serviceType || s.type || '').toLowerCase();
-      const branchStr = (s.branchName || '').toLowerCase();
-      const search = debouncedSearch.toLowerCase();
+  // Client search predicate for bounded candidate pool
+  const searchFilterFn = useCallback((s) => {
+    if (!debouncedSearch) return true;
+    const nameStr = (s.clientName || s.name || '').toLowerCase();
+    const typeStr = (s.serviceType || s.type || '').toLowerCase();
+    const branchStr = (s.branchName || '').toLowerCase();
+    const search = debouncedSearch.toLowerCase();
+    return nameStr.includes(search) || typeStr.includes(search) || branchStr.includes(search);
+  }, [debouncedSearch]);
 
-      const matchesSearch = nameStr.includes(search) || typeStr.includes(search) || branchStr.includes(search);
-      const matchesPriority =
-        priorityFilter === 'all' || (s.priorityType || '').toLowerCase() === priorityFilter.toLowerCase();
-
-      return matchesSearch && matchesPriority;
-    });
-  }, [operatorScopedServices, debouncedSearch, priorityFilter]);
-
-  const paginatedServices = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredServices.slice(start, start + pageSize);
-  }, [filteredServices, currentPage, pageSize]);
+  const {
+    data: services,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    setCurrentPage,
+    setPageSize
+  } = useFirestorePagination({
+    collectionName: 'activeServices',
+    filters: firestoreFilters,
+    filterKey: `${user?.uid || ''}-${priorityFilter}`,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 5,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+    enabled: Boolean(user?.uid)
+  });
 
   return (
     <main className="operator-dashboard page-fade-in">
@@ -273,9 +278,9 @@ function DashboardContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'all', label: `All (${operatorScopedServices.length})` },
-              { value: 'high', label: `High Priority (${operatorScopedServices.filter((s) => s.priorityType === 'high').length})` },
-              { value: 'normal', label: `Normal Priority (${operatorScopedServices.filter((s) => s.priorityType === 'normal').length})` },
+              { value: 'all', label: `All (${totalItems})` },
+              { value: 'high', label: 'High Priority' },
+              { value: 'normal', label: 'Normal Priority' },
             ]}
             activeChip={priorityFilter}
             onChipChange={(val) => {
@@ -311,13 +316,13 @@ function DashboardContent() {
                 </div>
               </article>
             ))
-          ) : paginatedServices.length === 0 ? (
+          ) : services.length === 0 ? (
             <div className="empty-state-box">
               <i className="fa-solid fa-list-check empty-icon"></i>
               <p>No active services match your criteria</p>
             </div>
           ) : (
-            paginatedServices.map((s) => {
+            services.map((s) => {
               const steps = s.steps || [];
               const completedCount = steps.filter((step) => step.status === 'Completed').length;
               const totalSteps = steps.length || s.total || 5;
@@ -371,7 +376,7 @@ function DashboardContent() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredServices.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
@@ -388,9 +393,5 @@ function DashboardContent() {
 }
 
 export default function OperatorDashboard() {
-  return (
-    <OperatorProvider targetCollection="activeServices">
-      <DashboardContent />
-    </OperatorProvider>
-  );
+  return <DashboardContent />;
 }

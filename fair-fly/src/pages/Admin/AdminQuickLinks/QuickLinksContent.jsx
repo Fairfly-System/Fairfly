@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import './admin-quick-links.css';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import QuickLinkModal from '../../../components/Admin/Modals/QuickLinkModal/QuickLinkModal';
@@ -12,14 +12,15 @@ import { useAuthContext } from '../../../context/AuthContext';
 import ApiCaller from '../../../utils/ApiCaller';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import { API_BASE_URL } from '../../../utils/config';
-import { useAdminContext } from '../../../context/AdminContext';
+import { useFirestorePagination } from '../../../hooks/useFirestorePagination';
+import { collection, getCountFromServer } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 
 export default function QuickLinksContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
-  const { data: quickLinks, loading: isQuickLinksLoading } = useAdminContext();
   const [isLoading, setIsLoading] = useState(false);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -32,13 +33,60 @@ export default function QuickLinksContent() {
   // Selection State
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
-
   const [deleteLinkTarget, setDeleteLinkTarget] = useState(null);
   const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [totalSystemCount, setTotalSystemCount] = useState(0);
+
+  const fetchTotal = useCallback(async () => {
+    try {
+      const snap = await getCountFromServer(collection(firestore, 'quickLinks'));
+      setTotalSystemCount(snap.data().count);
+    } catch (e) {
+      console.warn('Quicklinks count notice:', e.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTotal();
+  }, [fetchTotal]);
+
+  const searchFilterFn = useCallback(
+    (link) => {
+      const q = debouncedSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (link.title || '').toLowerCase().includes(q) ||
+        (link.url || '').toLowerCase().includes(q);
+
+      const matchesCategory =
+        categoryFilter === 'all' ||
+        (link.category || '').toLowerCase().replace(/\s+/g, '') ===
+        categoryFilter.toLowerCase().replace(/\s+/g, '');
+
+      return matchesSearch && matchesCategory;
+    },
+    [debouncedSearch, categoryFilter]
+  );
+
+  const {
+    data: quickLinksList,
+    loading: isQuickLinksLoading,
+    currentPage,
+    pageSize,
+    totalItems,
+    goToPage,
+    changePageSize,
+  } = useFirestorePagination({
+    collectionName: 'quickLinks',
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 8,
+    realtime: true,
+    searchTerm: debouncedSearch || (categoryFilter !== 'all' ? categoryFilter : ''),
+    searchFilterFn,
+  });
 
   const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
 
@@ -57,33 +105,6 @@ export default function QuickLinksContent() {
     setIsModalOpen(false);
     setEditingLink(null);
   };
-
-  const quickLinksList = useMemo(() => {
-    return Array.isArray(quickLinks) ? quickLinks : [];
-  }, [quickLinks]);
-
-  // Filtered links
-  const filteredLinks = useMemo(() => {
-    return quickLinksList.filter((link) => {
-      const q = debouncedSearch.toLowerCase();
-      const matchesSearch =
-        (link.title || '').toLowerCase().includes(q) ||
-        (link.url || '').toLowerCase().includes(q);
-
-      const matchesCategory =
-        categoryFilter === 'all' ||
-        (link.category || '').toLowerCase().replace(/\s+/g, '') ===
-        categoryFilter.toLowerCase().replace(/\s+/g, '');
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [quickLinksList, debouncedSearch, categoryFilter]);
-
-  // Paginated slice
-  const paginatedLinks = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredLinks.slice(start, start + pageSize);
-  }, [filteredLinks, currentPage, pageSize]);
 
   // Column definitions for DataTable
   const columns = useMemo(
@@ -250,8 +271,8 @@ export default function QuickLinksContent() {
     { label: 'Quick Links' },
   ];
 
-  const totalLinks = quickLinksList.length;
-  const categoriesCount = new Set(quickLinksList.map((l) => l.category).filter(Boolean)).size;
+  const totalLinks = totalSystemCount || totalItems;
+  const categoriesCount = 5;
 
   return (
     <main className="quicklinks-page page-fade-in">
@@ -294,18 +315,12 @@ export default function QuickLinksContent() {
               type="text"
               placeholder="Search by title or URL..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button
                 className="clear-search-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setSearchTerm('')}
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
@@ -314,7 +329,7 @@ export default function QuickLinksContent() {
 
           <FilterChipGroup
             chips={[
-              { value: 'all', label: `All (${quickLinksList.length})` },
+              { value: 'all', label: `All (${totalLinks})` },
               { value: 'airlines', label: 'Airlines' },
               { value: 'hotels', label: 'Hotels' },
               { value: 'government', label: 'Government' },
@@ -322,21 +337,18 @@ export default function QuickLinksContent() {
               { value: 'other', label: 'Other' },
             ]}
             activeChip={categoryFilter}
-            onChipChange={(val) => {
-              setCategoryFilter(val);
-              setCurrentPage(1);
-            }}
+            onChipChange={(val) => setCategoryFilter(val)}
           />
         </div>
 
         {/* Reusable DataTable */}
         <DataTable
           columns={columns}
-          data={paginatedLinks}
+          data={quickLinksList}
           keyField="id"
           selectable={true}
           selectedIds={selectedIds}
-          isLoading={isLoading}
+          isLoading={isLoading || isQuickLinksLoading}
           disabled={isLoading || isDeleting}
           onSelectionChange={setSelectedIds}
           onBulkDelete={(ids) => setBulkDeleteIds(ids)}
@@ -349,10 +361,10 @@ export default function QuickLinksContent() {
         {/* Pagination Component */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredLinks.length}
+          totalItems={totalItems}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
         />
       </section>
 

@@ -1,46 +1,57 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Outlet, Link } from 'react-router';
-import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
+import { where } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import CreateInquiryFormModal from '../../../components/Operator/CreateInquiryFormModal/CreateInquiryFormModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
 import './operator-inquiry-forms.css';
 
 export function InquiryContent() {
-  const { data: inquiryForms, loading } = useOperatorContext();
   const { user, userDetails } = useAuthContext();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  // Query-level Firestore filter scoped to branch operator
+  const firestoreFilters = useMemo(() => {
+    if (!user?.uid) return [];
+    return [where('branchUid', '==', user.uid)];
+  }, [user?.uid]);
 
-  const operatorForms = useMemo(() => {
-    if (!inquiryForms) return [];
-    if (user?.uid && (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator')) {
-      return inquiryForms.filter((f) => f.branchUid === user.uid || f.operatorId === user.uid);
-    }
-    return inquiryForms;
-  }, [inquiryForms, user, userDetails]);
-
-  const filteredForms = useMemo(() => {
+  // Client search predicate for bounded candidate pool
+  const searchFilterFn = useCallback((f) => {
+    if (!debouncedSearch) return true;
     const q = debouncedSearch.toLowerCase();
-    return operatorForms.filter((f) =>
+    return (
       (f.fullName || f.clientName || f.title || '').toLowerCase().includes(q) ||
       (f.formNo || '').toLowerCase().includes(q) ||
       (f.serviceType || '').toLowerCase().includes(q)
     );
-  }, [operatorForms, debouncedSearch]);
+  }, [debouncedSearch]);
 
-  const paginatedForms = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredForms.slice(start, start + pageSize);
-  }, [filteredForms, currentPage, pageSize]);
+  const {
+    data: inquiryForms,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    setCurrentPage,
+    setPageSize
+  } = useFirestorePagination({
+    collectionName: 'inquiries',
+    filters: firestoreFilters,
+    filterKey: user?.uid || '',
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 5,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+    enabled: Boolean(user?.uid)
+  });
 
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/operator' },
@@ -109,14 +120,14 @@ export function InquiryContent() {
               </div>
             </article>
           ))
-        ) : paginatedForms.length === 0 ? (
+        ) : inquiryForms.length === 0 ? (
           <div className="op-inquiry-empty">
             <i className="fa-regular fa-folder-open"></i>
             <h3>No inquiry forms found</h3>
             <p>Create your first client inquiry intake form</p>
           </div>
         ) : (
-          paginatedForms.map((form) => (
+          inquiryForms.map((form) => (
             <article key={form.id} className="op-inquiry-card">
               <div className="op-inquiry-card-main">
                 <div className="op-inquiry-icon">
@@ -147,7 +158,7 @@ export function InquiryContent() {
       {/* Pagination */}
       <Pagination
         currentPage={currentPage}
-        totalItems={filteredForms.length}
+        totalItems={totalItems}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
@@ -161,9 +172,5 @@ export function InquiryContent() {
 }
 
 export default function OperatorInquiryForms() {
-  return (
-    <OperatorProvider targetCollection="inquiries">
-      <Outlet />
-    </OperatorProvider>
-  );
+  return <Outlet />;
 }

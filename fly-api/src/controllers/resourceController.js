@@ -138,6 +138,23 @@ const getResources = async (req, res) => {
       );
     }
 
+    const pageNum = parseInt(req.query.page, 10);
+    const limitNum = parseInt(req.query.limit, 10);
+
+    if (pageNum || limitNum) {
+      const p = pageNum || 1;
+      const l = limitNum || 10;
+      const total = resources.length;
+      const paginated = resources.slice((p - 1) * l, p * l);
+      return res.status(200).json({
+        data: paginated,
+        total,
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(total / l),
+      });
+    }
+
     return res.status(200).json(resources);
   } catch (error) {
     console.error('Error listing resources:', error);

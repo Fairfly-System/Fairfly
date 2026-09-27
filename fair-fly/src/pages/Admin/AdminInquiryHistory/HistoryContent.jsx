@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import { SkeletonTable } from '../../../components/UI/Skeleton/Skeleton';
@@ -8,13 +7,15 @@ import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import useDebounce from '../../../hooks/useDebounce';
+import { useFirestorePagination } from '../../../hooks/useFirestorePagination';
+import { collection, query, where, getCountFromServer, getDocs, limit } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import InquiryFormBuilderModal from '../../../components/Admin/Modals/InquiryFormBuilderModal/InquiryFormBuilderModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import './admin-inquiry-history.css';
 
 export default function HistoryContent() {
   const navigate = useNavigate();
-  const { data: rawInquiries, loading } = useAdminContext();
 
   // Search, Branch & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,36 +27,86 @@ export default function HistoryContent() {
   const [showBuilderModal, setShowBuilderModal] = useState(false);
   const [pdfModalData, setPdfModalData] = useState(null);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // Branch list state
+  const [discoveredBranches, setDiscoveredBranches] = useState([]);
 
-  const inquiries = useMemo(() => {
-    return Array.isArray(rawInquiries) ? rawInquiries : [];
-  }, [rawInquiries]);
-
-  // Extract unique branches from inquiries
-  const uniqueBranches = useMemo(() => {
-    const branches = new Set();
-    inquiries.forEach((inq) => {
-      const bName = inq.branchName || inq.preferredBranchLocation;
-      if (bName && bName.trim()) {
-        branches.add(bName.trim());
+  // Fetch registered branches from operators collection
+  useEffect(() => {
+    let isMounted = true;
+    const fetchBranches = async () => {
+      try {
+        const opQuery = query(
+          collection(firestore, 'users'),
+          where('role', '==', 'operator'),
+          limit(50)
+        );
+        const snap = await getDocs(opQuery);
+        const bSet = new Set();
+        snap.docs.forEach((doc) => {
+          const d = doc.data();
+          const b = d.branchName || d.name;
+          if (b && b.trim()) bSet.add(b.trim());
+        });
+        if (isMounted) setDiscoveredBranches(Array.from(bSet).sort());
+      } catch (err) {
+        console.warn('Branch list retrieval notice:', err.message);
       }
-    });
-    return Array.from(branches).sort();
-  }, [inquiries]);
+    };
+    fetchBranches();
+    return () => { isMounted = false; };
+  }, []);
 
-  // KPIs
-  const totalCount = inquiries.length;
-  const confirmedCount = inquiries.filter((i) => (i.status || '').toLowerCase() === 'confirmed').length;
-  const pendingCount = inquiries.filter((i) => (i.status || '').toLowerCase() === 'pending').length;
-  const branchCount = uniqueBranches.length;
+  // Server-side KPI Metrics
+  const [kpis, setKpis] = useState({
+    total: 0,
+    confirmed: 0,
+    pending: 0,
+    loading: true,
+  });
 
-  // Filtered inquiries
-  const filteredInquiries = useMemo(() => {
-    return inquiries.filter((inq) => {
-      const q = debouncedSearch.toLowerCase();
+  const loadKpis = useCallback(async () => {
+    try {
+      const colRef = collection(firestore, 'inquiries');
+      const [totalSnap, confSnap, pendSnap] = await Promise.all([
+        getCountFromServer(colRef),
+        getCountFromServer(query(colRef, where('status', 'in', ['confirmed', 'Confirmed', 'accepted', 'completed']))),
+        getCountFromServer(query(colRef, where('status', 'in', ['pending', 'Pending']))),
+      ]);
+      setKpis({
+        total: totalSnap.data().count,
+        confirmed: confSnap.data().count,
+        pending: pendSnap.data().count,
+        loading: false,
+      });
+    } catch (err) {
+      console.warn('Inquiries count aggregation notice:', err.message);
+      setKpis((prev) => ({ ...prev, loading: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    loadKpis();
+  }, [loadKpis]);
+
+  // Construct query-level constraints
+  const queryFilters = useMemo(() => {
+    const list = [];
+    if (statusFilter !== 'all') {
+      list.push(where('status', 'in', [
+        statusFilter,
+        statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
+      ]));
+    }
+    if (selectedBranch !== 'all') {
+      list.push(where('branchName', '==', selectedBranch));
+    }
+    return list;
+  }, [statusFilter, selectedBranch]);
+
+  // Client search filter function for multi-field bounded search
+  const searchFilterFn = useCallback(
+    (inq) => {
+      const q = debouncedSearch.toLowerCase().trim();
       const client = (inq.fullName || inq.clientName || '').toLowerCase();
       const contact = (inq.contactPerson || '').toLowerCase();
       const phone = (inq.phoneNumber || inq.cellphone || '').toLowerCase();
@@ -81,13 +132,47 @@ export default function HistoryContent() {
       const matchesBranch = selectedBranch === 'all' || inqBranch === selectedBranch;
 
       return matchesSearch && matchesStatus && matchesBranch;
-    });
-  }, [inquiries, debouncedSearch, statusFilter, selectedBranch]);
+    },
+    [debouncedSearch, statusFilter, selectedBranch]
+  );
 
-  const paginatedInquiries = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredInquiries.slice(start, start + pageSize);
-  }, [filteredInquiries, currentPage, pageSize]);
+  // Firestore cursor pagination hook
+  const {
+    data: inquiries,
+    loading,
+    currentPage,
+    pageSize,
+    totalItems,
+    goToPage,
+    changePageSize,
+  } = useFirestorePagination({
+    collectionName: 'inquiries',
+    filters: queryFilters,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 10,
+    realtime: true,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+  });
+
+  // Extract unique branches from fetched inquiries merged with discovered branches
+  const uniqueBranches = useMemo(() => {
+    const branches = new Set(discoveredBranches);
+    inquiries.forEach((inq) => {
+      const bName = inq.branchName || inq.preferredBranchLocation;
+      if (bName && bName.trim()) {
+        branches.add(bName.trim());
+      }
+    });
+    return Array.from(branches).sort();
+  }, [discoveredBranches, inquiries]);
+
+  // KPIs
+  const totalCount = kpis.total || totalItems;
+  const confirmedCount = kpis.confirmed;
+  const pendingCount = kpis.pending;
+  const branchCount = uniqueBranches.length;
 
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/admin' },
@@ -156,18 +241,12 @@ export default function HistoryContent() {
               type="text"
               placeholder="Search by client, service, branch, or form no..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button
                 className="clear-search-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setSearchTerm('')}
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
@@ -181,10 +260,7 @@ export default function HistoryContent() {
             <select
               className="inquiry-branch-select"
               value={selectedBranch}
-              onChange={(e) => {
-                setSelectedBranch(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSelectedBranch(e.target.value)}
             >
               <option value="all">All Branches ({totalCount})</option>
               {uniqueBranches.map((b) => (
@@ -202,10 +278,7 @@ export default function HistoryContent() {
               { value: 'pending', label: `Pending (${pendingCount})` },
             ]}
             activeChip={statusFilter}
-            onChipChange={(val) => {
-              setStatusFilter(val);
-              setCurrentPage(1);
-            }}
+            onChipChange={(val) => setStatusFilter(val)}
           />
         </div>
 
@@ -225,7 +298,7 @@ export default function HistoryContent() {
             <tbody>
               {loading ? (
                 <SkeletonTable columns={6} rows={5} />
-              ) : paginatedInquiries.length === 0 ? (
+              ) : inquiries.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
                     <div className="empty-state-box">
@@ -235,7 +308,7 @@ export default function HistoryContent() {
                   </td>
                 </tr>
               ) : (
-                paginatedInquiries.map((inq) => {
+                inquiries.map((inq) => {
                   const statusLower = (inq.status || 'pending').toLowerCase();
                   let statusPillClass = 'status-pill status-pill-pending';
                   if (['confirmed', 'accepted', 'completed', 'active'].includes(statusLower)) {
@@ -320,10 +393,10 @@ export default function HistoryContent() {
         {/* Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredInquiries.length}
+          totalItems={totalItems}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
         />
       </section>
 

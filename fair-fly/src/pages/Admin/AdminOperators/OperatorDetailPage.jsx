@@ -16,7 +16,7 @@ import {
 } from '../../../services/adminService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { auth, firestore } from '../../../firebase';
-import { doc, onSnapshot, collection, query } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, or } from 'firebase/firestore';
 import {
   PERIOD_OPTIONS,
   formatCurrency,
@@ -147,16 +147,17 @@ export default function OperatorDetailPage() {
     return undefined;
   }, [userToken, id, period, customFrom, customTo]);
 
-  // 3. Real-time active services subscription for this branch
+  // 3. Real-time active services subscription scoped to this branch operator
   useEffect(() => {
     if (!id) return;
-    const q = query(collection(firestore, 'activeServices'));
+    const q = query(
+      collection(firestore, 'activeServices'),
+      or(where('operatorId', '==', id), where('branchUid', '==', id))
+    );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((s) => s.operatorId === id || s.branchUid === id);
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         setActiveServices(list);
         setActiveServicesLoading(false);
       },

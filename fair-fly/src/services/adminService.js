@@ -176,15 +176,35 @@ export function bulkDeleteOperators(token, ids, successCallback, errorCallback, 
 }
 
 // ── Client Accounts ───────────────────────────────────────────────────────
-export function fetchClients(token, successCallback, errorCallback, setIsLoading) {
+export function fetchClients(token, paramsOrSuccess, successCallback, errorCallback, setIsLoading) {
+  let params = null;
+  let successCb = successCallback;
+  let errorCb = errorCallback;
+  let loadingCb = setIsLoading;
+
+  if (typeof paramsOrSuccess === 'function') {
+    successCb = paramsOrSuccess;
+    errorCb = successCallback;
+    loadingCb = errorCallback;
+  } else if (paramsOrSuccess && typeof paramsOrSuccess === 'object') {
+    params = paramsOrSuccess;
+  }
+
+  const query = params
+    ? '?' +
+      new URLSearchParams(
+        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+      ).toString()
+    : '';
+
   return ApiCaller(
-    `${API_BASE_URL}/api/clients`,
+    `${API_BASE_URL}/api/clients${query}`,
     'GET',
     null,
     { Authorization: `Bearer ${token}` },
-    successCallback,
-    errorCallback,
-    setIsLoading
+    successCb,
+    errorCb,
+    loadingCb
   );
 }
 

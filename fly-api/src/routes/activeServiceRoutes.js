@@ -10,13 +10,37 @@ const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { publicRateLimiter, apiRateLimiter } = require('../middleware/rateLimiter');
 
-router.post('/', publicRateLimiter, (req, res, next) => {
-  if (req.headers.authorization) return verifyFirebaseToken(req, res, next);
-  next();
-}, createActiveService);
+const { allowedFields } = require('../middleware/allowedFields');
+
+const ACTIVE_SERVICE_ALLOWED_FIELDS = [
+  'clientUid',
+  'clientName',
+  'clientEmail',
+  'clientPhone',
+  'serviceId',
+  'serviceType',
+  'priority',
+  'workflowIds',
+  'branchUid',
+  'operatorId',
+  'branchName',
+  'additionalNotes',
+  'status'
+];
+
+router.post(
+  '/',
+  publicRateLimiter,
+  (req, res, next) => {
+    if (req.headers.authorization) return verifyFirebaseToken(req, res, next);
+    next();
+  },
+  allowedFields(ACTIVE_SERVICE_ALLOWED_FIELDS),
+  createActiveService
+);
 
 router.get('/', performanceProfiler('GET /services/active', verifyFirebaseToken, apiRateLimiter, getActiveServices));
-router.patch('/:id/step', performanceProfiler('PATCH /services/active/:id/step', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, updateStepStatus));
-router.patch('/:id/cancel', performanceProfiler('PATCH /services/active/:id/cancel', verifyFirebaseToken, apiRateLimiter, cancelActiveService));
+router.patch('/:id/step', performanceProfiler('PATCH /services/active/:id/step', verifyFirebaseToken, requireRole(['admin', 'operator']), allowedFields(['stepId', 'status', 'notes', 'attachmentUrl', 'attachmentName']), apiRateLimiter, updateStepStatus));
+router.patch('/:id/cancel', performanceProfiler('PATCH /services/active/:id/cancel', verifyFirebaseToken, allowedFields(['reason']), apiRateLimiter, cancelActiveService));
 
 module.exports = router;

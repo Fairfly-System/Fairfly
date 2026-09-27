@@ -74,8 +74,8 @@ export default function ResourcesContent() {
     setLoading(true);
     fetchResources(
       userToken,
-      (data) => {
-        const list = data || [];
+      (res) => {
+        const list = Array.isArray(res) ? res : (res?.data || []);
         list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         setResources(list);
         setLoading(false);

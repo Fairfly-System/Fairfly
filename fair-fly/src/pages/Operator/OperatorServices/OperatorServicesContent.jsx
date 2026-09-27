@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
@@ -17,6 +16,9 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import useDebounce from '../../../hooks/useDebounce';
+import { useFirestorePagination } from '../../../hooks/useFirestorePagination';
+import { collection, query, where, or, getCountFromServer } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-services.css';
 
@@ -38,7 +40,6 @@ function formatProcessingTime(processingTime) {
 }
 
 export default function OperatorServicesContent() {
-  const { data: allServices, loading: serviceLoading } = useAdminContext();
   const { user, userToken, userDetails } = useAuthContext();
   const { addToast } = useToast();
 
@@ -48,9 +49,6 @@ export default function OperatorServicesContent() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [scopeFilter, setScopeFilter] = useState('all'); // 'all' | 'standard' | 'my_branch'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'disabled'
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -62,22 +60,71 @@ export default function OperatorServicesContent() {
 
   const modalRef = useRef(null);
 
-  // Filter services by scope (All available, Standard catalog, or My branch exclusive)
-  const scopedServices = useMemo(() => {
-    if (!allServices) return [];
-    return allServices.filter((s) => {
-      const isMyBranch = user && (s.createdByOperatorId === user.uid || s.branchUid === user.uid);
-      const isStandard = !s.isBranchExclusive;
+  // Server-side KPI Metrics
+  const [kpiCounts, setKpiCounts] = useState({
+    total: 0,
+    standard: 0,
+    myBranch: 0,
+    active: 0,
+    loading: true,
+  });
 
-      if (scopeFilter === 'standard') return isStandard;
-      if (scopeFilter === 'my_branch') return isMyBranch;
-      // 'all' shows standard services and own branch services (and partner services as read-only)
-      return true;
-    });
-  }, [allServices, scopeFilter, user]);
+  const loadKpis = useCallback(async () => {
+    try {
+      const colRef = collection(firestore, 'services');
+      const queries = [
+        getCountFromServer(colRef),
+        getCountFromServer(query(colRef, where('isBranchExclusive', '==', false))),
+        getCountFromServer(query(colRef, where('status', 'in', ['Active', 'active']))),
+      ];
+      if (user?.uid) {
+        queries.push(
+          getCountFromServer(
+            query(
+              colRef,
+              or(where('createdByOperatorId', '==', user.uid), where('branchUid', '==', user.uid))
+            )
+          )
+        );
+      }
+      const [totalSnap, stdSnap, actSnap, branchSnap] = await Promise.all(queries);
+      setKpiCounts({
+        total: totalSnap.data().count,
+        standard: stdSnap.data().count,
+        active: actSnap.data().count,
+        myBranch: branchSnap ? branchSnap.data().count : 0,
+        loading: false,
+      });
+    } catch (err) {
+      console.warn('Operator services count aggregation notice:', err.message);
+      setKpiCounts((prev) => ({ ...prev, loading: false }));
+    }
+  }, [user]);
 
-  const filteredServices = useMemo(() => {
-    return scopedServices.filter((item) => {
+  useEffect(() => {
+    loadKpis();
+  }, [loadKpis]);
+
+  // Construct query-level constraints
+  const queryFilters = useMemo(() => {
+    const list = [];
+    if (scopeFilter === 'standard') {
+      list.push(where('isBranchExclusive', '==', false));
+    } else if (scopeFilter === 'my_branch' && user?.uid) {
+      list.push(or(where('createdByOperatorId', '==', user.uid), where('branchUid', '==', user.uid)));
+    }
+    if (statusFilter !== 'all') {
+      list.push(where('status', 'in', [
+        statusFilter === 'active' ? 'Active' : 'Disabled',
+        statusFilter
+      ]));
+    }
+    return list;
+  }, [scopeFilter, statusFilter, user]);
+
+  // Client search filter function for multi-field bounded search
+  const searchFilterFn = useCallback(
+    (item) => {
       const term = debouncedSearch.toLowerCase().trim();
       const matchesSearch =
         !term ||
@@ -88,32 +135,45 @@ export default function OperatorServicesContent() {
 
       const matchesStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'active' && item.status === 'Active') ||
-        (statusFilter === 'disabled' && item.status === 'Disabled');
+        (statusFilter === 'active' && (item.status === 'Active' || item.status === 'active')) ||
+        (statusFilter === 'disabled' && (item.status === 'Disabled' || item.status === 'disabled'));
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [scopedServices, debouncedSearch, statusFilter]);
+      const isMyBranch = user && (item.createdByOperatorId === user.uid || item.branchUid === user.uid);
+      const isStandard = !item.isBranchExclusive;
+      let matchesScope = true;
+      if (scopeFilter === 'standard') matchesScope = isStandard;
+      if (scopeFilter === 'my_branch') matchesScope = isMyBranch;
 
-  const paginatedServices = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredServices.slice(start, start + pageSize);
-  }, [filteredServices, currentPage, pageSize]);
+      return matchesSearch && matchesStatus && matchesScope;
+    },
+    [debouncedSearch, statusFilter, scopeFilter, user]
+  );
+
+  // Firestore cursor pagination hook
+  const {
+    data: services,
+    loading: serviceLoading,
+    currentPage,
+    pageSize,
+    totalItems,
+    goToPage,
+    changePageSize,
+  } = useFirestorePagination({
+    collectionName: 'services',
+    filters: queryFilters,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 8,
+    realtime: true,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+  });
 
   // Overall catalog counts for KPIs and chips
-  const totalCount = allServices?.length || 0;
-  const standardCount = useMemo(
-    () => (allServices || []).filter((s) => !s.isBranchExclusive).length,
-    [allServices]
-  );
-  const myBranchCount = useMemo(
-    () => (allServices || []).filter((s) => user && (s.createdByOperatorId === user.uid || s.branchUid === user.uid)).length,
-    [allServices, user]
-  );
-  const activeCount = useMemo(
-    () => (allServices || []).filter((s) => s.status === 'Active').length,
-    [allServices]
-  );
+  const totalCount = kpiCounts.total || totalItems;
+  const standardCount = kpiCounts.standard;
+  const myBranchCount = kpiCounts.myBranch;
+  const activeCount = kpiCounts.active;
 
   const handleOpenAddModal = () => {
     setEditingService(null);
@@ -526,30 +586,21 @@ export default function OperatorServicesContent() {
               <button
                 type="button"
                 className={`op-scope-chip ${scopeFilter === 'all' ? 'active' : ''}`}
-                onClick={() => {
-                  setScopeFilter('all');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setScopeFilter('all')}
               >
                 <i className="fa-solid fa-layer-group"></i> All Services ({totalCount})
               </button>
               <button
                 type="button"
                 className={`op-scope-chip ${scopeFilter === 'standard' ? 'active' : ''}`}
-                onClick={() => {
-                  setScopeFilter('standard');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setScopeFilter('standard')}
               >
                 <i className="fa-solid fa-globe"></i> Standard Catalog ({standardCount})
               </button>
               <button
                 type="button"
                 className={`op-scope-chip ${scopeFilter === 'my_branch' ? 'active' : ''}`}
-                onClick={() => {
-                  setScopeFilter('my_branch');
-                  setCurrentPage(1);
-                }}
+                onClick={() => setScopeFilter('my_branch')}
               >
                 <i className="fa-solid fa-store"></i> My Branch ({myBranchCount})
               </button>
@@ -558,15 +609,12 @@ export default function OperatorServicesContent() {
             {/* Status Filter Chips */}
             <FilterChipGroup
               chips={[
-                { value: 'all', label: `All Status (${scopedServices.length})` },
+                { value: 'all', label: `All Status (${totalItems})` },
                 { value: 'active', label: `Active` },
                 { value: 'disabled', label: `Disabled` },
               ]}
               activeChip={statusFilter}
-              onChipChange={(val) => {
-                setStatusFilter(val);
-                setCurrentPage(1);
-              }}
+              onChipChange={(val) => setStatusFilter(val)}
             />
           </div>
 
@@ -577,18 +625,12 @@ export default function OperatorServicesContent() {
                 type="text"
                 placeholder="Search services by title, category, description, tags..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
                 <button
                   className="clear-search-btn"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setCurrentPage(1);
-                  }}
+                  onClick={() => setSearchTerm('')}
                   aria-label="Clear search"
                 >
                   <i className="fa-solid fa-xmark"></i>
@@ -600,7 +642,7 @@ export default function OperatorServicesContent() {
 
         <DataTable
           columns={columns}
-          data={paginatedServices}
+          data={services}
           isLoading={serviceLoading}
           emptyState={{
             icon: 'fa-solid fa-concierge-bell',
@@ -610,10 +652,10 @@ export default function OperatorServicesContent() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredServices.length}
+          totalItems={totalItems}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
         />
       </section>
 

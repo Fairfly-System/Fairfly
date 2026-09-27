@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useAdminContext } from '../../../context/AdminContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
@@ -87,7 +88,8 @@ function parseInquiryData(inquiry) {
 export default function AdminInquiryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: rawInquiries, loading } = useAdminContext();
+  const [inquiry, setInquiry] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
@@ -95,10 +97,29 @@ export default function AdminInquiryDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
 
-  const inquiry = useMemo(() => {
-    if (!rawInquiries || !id) return null;
-    return rawInquiries.find((i) => i.id === id) || null;
-  }, [rawInquiries, id]);
+  // Directly subscribe to the specific inquiry document
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(firestore, 'inquiries', id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setInquiry({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setInquiry(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('[AdminInquiryDetailPage] Document error:', err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [id]);
 
   const parsedData = useMemo(() => {
     return parseInquiryData(inquiry);

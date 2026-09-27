@@ -1,6 +1,8 @@
 const express = require('express');// Import the Express framework
 const cors = require('cors');// Import the CORS middleware
-require('dotenv').config();// Load environment variables from a .env file
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config(); // Fallback for root CWD
 
 //Require the centralized API routes (the ./routes folder, which contains all the individual route files, since only the folder is required, it will automatically look for an index.js file in that folder)
 const apiRoutes = require('./routes');

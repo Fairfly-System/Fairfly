@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import "./admin-services.css";
+import { collection, query, where, getCountFromServer } from "firebase/firestore";
+import { firestore } from "../../../firebase";
 import FilterChipGroup from "../../../components/UI/FilterChipGroup/FilterChipGroup";
 import ServiceModal from "../../../components/Admin/Modals/ServiceModal/ServiceModal";
 import ConfirmationModal from "../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal";
@@ -14,8 +16,8 @@ import { useAuthContext } from "../../../context/AuthContext";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
 import ApiCaller from "../../../utils/ApiCaller";
 import { API_BASE_URL } from "../../../utils/config";
-import { useAdminContext } from "../../../context/AdminContext";
 import { uploadFileToBackend } from "../../../utils/fileUploadApi";
+import useFirestorePagination from "../../../hooks/useFirestorePagination";
 import useDebounce from "../../../hooks/useDebounce";
 
 export default function ServiceContent() {
@@ -45,7 +47,6 @@ export default function ServiceContent() {
   const { userToken } = useAuthContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const { data: service, loading: serviceLoading } = useAdminContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToast();
 
@@ -56,13 +57,81 @@ export default function ServiceContent() {
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState([]);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
-
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+
+  // Query-level Firestore filter
+  const firestoreFilters = useMemo(() => {
+    if (statusFilter === 'active') {
+      return [where('status', '==', 'Active')];
+    }
+    if (statusFilter === 'disabled') {
+      return [where('status', '==', 'Disabled')];
+    }
+    if (statusFilter === 'branch') {
+      return [where('isBranchExclusive', '==', true)];
+    }
+    return [];
+  }, [statusFilter]);
+
+  // Client search predicate for bounded candidate pool
+  const searchFilterFn = useCallback((item) => {
+    if (!debouncedSearch) return true;
+    const term = debouncedSearch.toLowerCase();
+    return (
+      (item.name || "").toLowerCase().includes(term) ||
+      (item.category || "").toLowerCase().includes(term) ||
+      (item.description || "").toLowerCase().includes(term) ||
+      (Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase().includes(term)))
+    );
+  }, [debouncedSearch]);
+
+  const {
+    data: services,
+    loading: serviceLoading,
+    currentPage,
+    pageSize,
+    totalItems,
+    setCurrentPage,
+    setPageSize,
+    refetchCount
+  } = useFirestorePagination({
+    collectionName: 'services',
+    filters: firestoreFilters,
+    filterKey: statusFilter,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 8,
+    searchTerm: debouncedSearch,
+    searchFilterFn,
+  });
+
+  // KPI server aggregations (costs 0 document downloads)
+  const [counts, setCounts] = useState({ total: 0, active: 0, disabled: 0, branch: 0 });
+
+  const fetchKpiCounts = useCallback(async () => {
+    try {
+      const col = collection(firestore, 'services');
+      const [totalSnap, activeSnap, disabledSnap, branchSnap] = await Promise.all([
+        getCountFromServer(col),
+        getCountFromServer(query(col, where('status', '==', 'Active'))),
+        getCountFromServer(query(col, where('status', '==', 'Disabled'))),
+        getCountFromServer(query(col, where('isBranchExclusive', '==', true))),
+      ]);
+      setCounts({
+        total: totalSnap.data().count,
+        active: activeSnap.data().count,
+        disabled: disabledSnap.data().count,
+        branch: branchSnap.data().count,
+      });
+    } catch (e) {
+      console.warn('[ServiceContent] KPI count notice:', e.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchKpiCounts();
+  }, [fetchKpiCounts]);
 
   const handleOpenAddModal = () => {
     setEditingService(null);
@@ -79,33 +148,6 @@ export default function ServiceContent() {
     setIsModalOpen(false);
     setEditingService(null);
   };
-
-  // Filtered services
-  const filteredServices = useMemo(() => {
-    if (!service) return [];
-    return service.filter((item) => {
-      const term = debouncedSearch.toLowerCase();
-      const matchesSearch =
-        (item.name || "").toLowerCase().includes(term) ||
-        (item.category || "").toLowerCase().includes(term) ||
-        (item.description || "").toLowerCase().includes(term) ||
-        (Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase().includes(term)));
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && item.status === "Active") ||
-        (statusFilter === "disabled" && item.status === "Disabled") ||
-        (statusFilter === "branch" && Boolean(item.isBranchExclusive));
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [service, debouncedSearch, statusFilter]);
-
-  // Paginated slice
-  const paginatedServices = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredServices.slice(start, start + pageSize);
-  }, [filteredServices, currentPage, pageSize]);
 
   // Column definitions for DataTable
   const columns = useMemo(
@@ -568,13 +610,11 @@ export default function ServiceContent() {
     { label: "Services" },
   ];
 
-  const totalServices = Array.isArray(service) ? service.length : 0;
-  const activeCount = Array.isArray(service) ? service.filter((s) => s.status === "Active").length : 0;
-  const inactiveCount = totalServices - activeCount;
-  const branchCount = Array.isArray(service) ? service.filter((s) => Boolean(s.isBranchExclusive)).length : 0;
-  const categoriesCount = Array.isArray(service)
-    ? new Set(service.map((s) => s.category).filter(Boolean)).size
-    : 0;
+  const totalServices = counts.total;
+  const activeCount = counts.active;
+  const inactiveCount = counts.disabled;
+  const branchCount = counts.branch;
+  const categoriesCount = 8;
 
   return (
     <main className="services-page page-fade-in">
@@ -669,7 +709,7 @@ export default function ServiceContent() {
         {/* Standardized Reusable DataTable */}
         <DataTable
           columns={columns}
-          data={paginatedServices}
+          data={services}
           keyField="id"
           selectable={true}
           selectedIds={selectedIds}
@@ -688,7 +728,7 @@ export default function ServiceContent() {
       {/* Pagination */}
       <Pagination
         currentPage={currentPage}
-        totalItems={filteredServices.length}
+        totalItems={totalItems}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}

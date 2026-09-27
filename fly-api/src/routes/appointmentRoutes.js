@@ -1,20 +1,43 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  createAppointment, 
-  getAppointments, 
-  updateAppointmentStatus 
+const {
+  createAppointment,
+  getAppointments,
+  updateAppointmentStatus
 } = require('../controllers/appointmentController');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { verifyFirebaseToken } = require('../middleware/auth');
 const { publicRateLimiter, apiRateLimiter } = require('../middleware/rateLimiter');
 
-router.post('/', publicRateLimiter, (req, res, next) => {
-  if (req.headers.authorization) return verifyFirebaseToken(req, res, next);
-  next();
-}, createAppointment);
+const { allowedFields } = require('../middleware/allowedFields');
+
+const APPOINTMENT_ALLOWED_FIELDS = [
+  'clientUid',
+  'clientName',
+  'clientEmail',
+  'clientPhone',
+  'preferredBranchLocation',
+  'branchUid',
+  'branchName',
+  'preferredDate',
+  'preferredTime',
+  'serviceType',
+  'purpose',
+  'status'
+];
+
+router.post(
+  '/',
+  publicRateLimiter,
+  (req, res, next) => {
+    if (req.headers.authorization) return verifyFirebaseToken(req, res, next);
+    next();
+  },
+  allowedFields(APPOINTMENT_ALLOWED_FIELDS),
+  createAppointment
+);
 
 router.get('/', performanceProfiler('GET /appointments', verifyFirebaseToken, apiRateLimiter, getAppointments));
-router.patch('/:id/status', performanceProfiler('PATCH /appointments/:id/status', verifyFirebaseToken, apiRateLimiter, updateAppointmentStatus));
+router.patch('/:id/status', performanceProfiler('PATCH /appointments/:id/status', verifyFirebaseToken, allowedFields(['status']), apiRateLimiter, updateAppointmentStatus));
 
 module.exports = router;

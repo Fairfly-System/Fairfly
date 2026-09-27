@@ -47,11 +47,18 @@ const QUOTATION_ALLOWED_FIELDS = [
   'updatedAt'
 ];
 
-// Create quotation (Admin or Operator)
-router.post('/', publicRateLimiter, (req, res, next) => {
-  if (req.headers.authorization) return verifyFirebaseToken(req, res, next);
-  next();
-}, createQuotation);
+// Create quotation (Admin or Operator only)
+router.post(
+  '/',
+  performanceProfiler(
+    'POST /quotations',
+    verifyFirebaseToken,
+    requireRole(['admin', 'operator']),
+    allowedFields(QUOTATION_ALLOWED_FIELDS),
+    apiRateLimiter,
+    createQuotation
+  )
+);
 
 // List quotations (Scoped in controller based on role: Client sees own, Operator sees branch, Admin sees all)
 router.get('/', performanceProfiler('GET /quotations', verifyFirebaseToken, apiRateLimiter, getQuotations));

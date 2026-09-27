@@ -101,7 +101,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isViewAllOpen) return;
 
-    const q = query(collection(firestore, 'admin-logs'), orderBy('timestamp', 'desc'));
+    const q = query(
+      collection(firestore, 'admin-logs'),
+      orderBy('timestamp', 'desc'),
+      limit(100)
+    );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
