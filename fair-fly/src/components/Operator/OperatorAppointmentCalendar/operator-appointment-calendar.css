@@ -89,6 +89,10 @@
   gap: 0.5rem;
 }
 
+#cal-status-filter {
+  margin-left: 0.5rem;
+}
+
 /* Status Filter Select */
 .op-cal-filter-select-wrapper {
   position: relative;
@@ -237,7 +241,8 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-auto-rows: minmax(7.5rem, 1fr);
   background: var(--border-color);
-  gap: 1px; /* Crisp grid borders */
+  gap: 1px;
+  /* Crisp grid borders */
 }
 
 .op-cal-day-cell {
