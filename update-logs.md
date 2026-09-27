@@ -1,5 +1,18 @@
 # Update Logs
 
+## [2026-09-27] Bugfix: Client Service Store Request 400 (`Invalid fields in request body`)
+
+### Overview
+Fixed HTTP 400 `Invalid fields in request body` error when submitting service intake requests with requirements from the client-side Service Store modal (`ClientServiceRequestModal.jsx`).
+
+### Root Cause
+In [`activeServiceRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/activeServiceRoutes.js), `ACTIVE_SERVICE_ALLOWED_FIELDS` whitelist omitted `submittedRequirements` (the client's uploaded documents/inputs) and `source` (e.g. `Client Portal` / `Walk-in`). The strict `allowedFields` middleware rejected the client payload upon submission.
+
+### Fix
+- Added `submittedRequirements` and `source` to `ACTIVE_SERVICE_ALLOWED_FIELDS` in [`activeServiceRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/activeServiceRoutes.js).
+- Updated [`activeServiceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/activeServiceController.js) `createActiveService` to persist `submittedRequirements` and `source` in the new active service record.
+- Restarted backend server daemon on port 5001.
+
 ## [2026-09-27] Bugfix: Admin Services ReferenceError (`service is not defined`) in ServiceContent
 
 ### Overview

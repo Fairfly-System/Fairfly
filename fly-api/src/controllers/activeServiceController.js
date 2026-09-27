@@ -219,6 +219,8 @@ const createActiveService = async (req, res) => {
       serviceType: finalServiceTitle,
       price,
       requirements: serviceRequirements,
+      submittedRequirements: Array.isArray(req.body.submittedRequirements) ? req.body.submittedRequirements : [],
+      source: req.body.source || (req.user?.uid ? 'Client Portal' : 'Walk-in'),
       priority: priority || 'Normal Priority',
       priorityType: (priority || '').toLowerCase().includes('high') ? 'high' : 'normal',
       status: status || 'Pending',

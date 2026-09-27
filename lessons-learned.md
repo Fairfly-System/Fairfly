@@ -114,4 +114,9 @@
 - **Problem**: Runtime `Uncaught ReferenceError: service is not defined at ServiceContent (ServiceContent.jsx:387:7)` crashed the Admin Services page.
 - **Root Cause**: When refactoring `ServiceContent.jsx` to `useFirestorePagination`, the returned data array was renamed to `data: services` (plural), but a downstream `alertBarProps` memoization block was referencing `service` (singular).
 - **Prevention**: Whenever renaming or aliasing destructured hook return values, conduct a project/file-wide audit of all references to the previous identifier, and utilize TypeScript/ESLint checks to catch undeclared variables before deployment.
+
+## [2026-09-27] allowedFields Middleware Omission of Client Submitted Requirements & Source
+- **Problem**: Submitting a service request from the client-side Service Store modal (`ClientServiceRequestModal.jsx`) failed with HTTP 400 `Invalid fields in request body`.
+- **Root Cause**: The route `POST /api/services/active` in `activeServiceRoutes.js` guarded the request with `allowedFields(ACTIVE_SERVICE_ALLOWED_FIELDS)`, but omitted `submittedRequirements` and `source` from the allowed array, causing Express middleware to reject the valid client request payload.
+- **Prevention**: When defining route-level `allowedFields` whitelists, cross-reference all frontend components that POST to that route (`ClientServiceRequestModal.jsx`, `AddServiceModal.jsx`) and include all supported schema fields (`submittedRequirements`, `source`, etc.) in the whitelist.
 
