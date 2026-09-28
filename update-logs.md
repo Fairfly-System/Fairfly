@@ -1,5 +1,671 @@
 # Update Logs
 
+## [2026-09-28] Feature: Franchise Application Form Builder, PSGC Address Cascade & Dynamic Custom Fields
+
+### Overview
+Addressed several enhancements and bugfixes for the Franchise Module:
+1. **Operator Edit 400 Bad Request Fix**: Removed `password` from the payload in edit mode within `OperatorForm.jsx`, satisfying backend `allowedFields` whitelisting.
+2. **Franchise Form Builder Integration**: Added "Customize Application Form" button to `admin/franchise-apps` (mirroring `admin/inquiry-history`), backed by `FranchiseApplicationFormBuilderModal` and `/api/franchise/application-schema`.
+3. **Modal Form Builder Section Display**: Defined `DEFAULT_FRANCHISE_SCHEMA` with all standard core sections (Applicant Info, Preferred Location, Business Background) protected with shield/lock badges, and an extensible "Custom Franchise Specifications" section with "+ Add New Field" capability.
+4. **Philippine Geographic Data (PSGC Cloud API)**: Rewrote cascading location selectors (`Province` $\to$ `Municipality` $\to$ `Barangay` $\to$ `Building`) with official PSGC Cloud endpoints, added first-class Metro Manila (NCR) region support, and integrated dynamic custom form fields.
+
+### Key Changes
+- `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx`: Stripped `password` on edit submit.
+- `fly-api/src/controllers/franchiseController.js`: Added `DEFAULT_FRANCHISE_SCHEMA` and updated `getFranchiseApplicationSchema` and `submitApplication` to support dynamic `customFields`.
+- `fly-api/src/routes/franchiseRoutes.js`: Whitelisted `customFields` in `FRANCHISE_ALLOWED_FIELDS` and registered schema endpoints before parameterized routes.
+- `fair-fly/src/components/Admin/Modals/FranchiseApplicationFormBuilderModal/FranchiseApplicationFormBuilderModal.jsx`: Normalized incoming schema with guaranteed default sections, protected core fields, and full custom field creation/deletion.
+- `fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx`: Integrated PSGC Cloud API with NCR support, added dynamic custom fields rendering, and included `customFields` in submission payload.
+
+---
+
+## [2026-09-28] Bugfix: Client Service Tracker Requirements File Resolution & Attachment Previews
+
+### Overview
+Resolved an issue where viewing submitted requirements in the Client-side Service Tracker (`ClientServiceTracker.jsx`) always displayed "Pending Upload" despite files having been successfully uploaded and viewable from the Operator's Service Fulfillment page (`OperatorServiceProcedure.jsx`).
+
+### Root Cause
+1. **File Metadata Property Mismatch**:
+   In FairFly's file upload pipeline, uploaded file information is stored in a structured `file` object (`{ url, fileName, fileSize, storagePath }`), while `req.value` is an empty string `""` and `req.fileUrl` is `undefined`.
+   In `ClientServiceTracker.jsx`, the component evaluated `const val = typeof req === 'object' ? req.value || req.textValue || req.fileUrl : null;`. Because `req.file` was not checked, `val` was falsy, causing the ternary `val ? ... : Pending Upload` to always default to the orange "Pending Upload" badge.
+2. **Catalog Template Fallback Shadowing**:
+   If an active service record contained default catalog requirements (`inputType: 'file'` without `file` attachments), the previous fallback check considered `r.inputType` truthy, preventing the component from fetching actual uploaded files from the originating inquiry or quotation.
+
+### Key Changes
+1. **`fair-fly/src/components/Client/ClientServiceTracker/ClientServiceTracker.jsx`**:
+   - Correctly extracted `fileObj = req.file`, `fileUrl = fileObj?.url || req.fileUrl || req.url || ...`, and `fileName = fileObj?.fileName || req.fileName`.
+   - Rendered active, clickable preview/download links with file names and icons, plus miniature thumbnail previews for images.
+   - Enhanced fallback resolution to check for actual uploaded files across `submittedRequirements` and `requirements`, automatically looking up originating `inquiryId` and `quotationId` when needed.
+2. **`fair-fly/src/components/Client/ClientServiceTracker/service-tracker.css`**:
+   - Added styles for `.tracker-req-file-box`, `.tracker-img-thumb-link`, `.tracker-img-thumb`, and hover states.
+3. **`fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx`**:
+   - Aligned requirement resolution logic to verify actual uploaded files across `submittedRequirements` and `requirements`, supporting fallback across both `inquiryId` and `quotationId`.
+4. **`fair-fly/src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx` & `inquiry-detail-modal.css`**:
+   - Enhanced Specified Requirements section to render clickable file download links and image thumbnail previews when client attachments exist.
+5. **`fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx` & `quotation-detail-modal.css`**:
+   - Rendered submitted requirements with downloadable file links and image previews within the quotation modal.
+
+---
+
+## [2026-09-28] Bugfix: React Hook Order in OperatorServiceProcedure & Ticket Permissions Leak in OperatorTickets
+
+### Overview
+Fixed two runtime frontend exceptions reported in the browser console:
+1. **React Hook Order Violation in `OperatorServiceProcedure.jsx`**:
+   - *Problem*: `Uncaught Error: Rendered more hooks than during the previous render.`
+   - *Root Cause*: `const displayRequirements = useMemo(...)` was placed after the conditional early returns (`if (loading)`, `if (isUnauthorized)`, `if (!serviceRecord)`). During initial loading, React registered 13 hooks before returning early. When data loaded and `loading` became false, execution continued past the return and reached hook 14, violating the React Rules of Hooks.
+   - *Fix*: Relocated `displayRequirements = useMemo(...)` to the top-level declaration block alongside `isUnauthorized`, ensuring all Hooks execute unconditionally in identical order on every render.
+2. **Firestore Insufficient Permissions on Tickets (`OperatorContext.jsx`)**:
+   - *Problem*: `OperatorProvider onSnapshot error on tickets: FirebaseError: Missing or insufficient permissions.`
+   - *Root Cause*: `OperatorTickets.jsx` wrapped its routes with `<OperatorProvider targetCollection="tickets">`, initiating an un-scoped, real-time collection listener on `/tickets`. Firestore Security Rules forbid reading the full tickets collection without scoping to individual operator documents. Furthermore, no child views consumed `useOperatorContext()`; all ticket queries are handled cleanly by `ticketService` via the authenticated Express API.
+   - *Fix*: Removed the redundant `<OperatorProvider targetCollection="tickets">` from `OperatorTickets.jsx`, matching the optimization previously implemented in `AdminTickets.jsx`.
+
+---
+
+## [2026-09-28] Bugfix: Requirements Pipeline from Inquiry to Service Fulfillment & Quotation Post-Payment Immutability
+
+### Overview
+Resolved two critical operational bugs in the FairFly service quotation and fulfillment lifecycle:
+1. **Requirements Preservation in Service Fulfillment (`OperatorServiceProcedure.jsx`)**:
+   - Fixed an issue where client-submitted requirements and uploaded documents were visible on the inquiry intake form, but displayed as `Client Submitted Requirements (0)` on the Service Fulfillment Procedure page after quotation acceptance and payment.
+   - Preserved requirement metadata (`name`, `inputType`, `value`, `file: { url, fileName, fileSize, storagePath }`) through the entire Inquiry $\to$ Quotation $\to$ Service Fulfillment lifecycle.
+   - Updated `QUOTATION_ALLOWED_FIELDS` in `fly-api/src/routes/quotationRoutes.js` to whitelist `submittedRequirements`.
+   - Updated `CreateQuotationModal.jsx` to pass `submittedRequirements` from initial inquiry data.
+   - Updated `inquiryController.js` (`confirmInquiry`) to attach `submittedRequirements` to the auto-generated quotation payload.
+   - Updated `quotationController.js` (`createQuotation` and `buildFulfillmentPayload`) to inherit submitted requirements from inquiry or quotation and persist them directly into `activeServices.submittedRequirements` and `activeServices.requirements`.
+   - Fixed JavaScript array truthiness evaluation in `OperatorServiceProcedure.jsx` (`[] || requirements`), and added automated fallback retrieval for legacy active service records.
+2. **Quotation Post-Payment Immutability & Action Lockout on Operator Portal**:
+   - Fixed an issue where paid quotations in the Quotations tab (`QuotationDetailPage.jsx` and `OperatorQuotations.jsx`) still allowed operators to "Accept on Behalf of Client (On-Site)", "Edit Fields", or "Mark as Sent".
+   - Locked down frontend actions on `QuotationDetailPage.jsx`:
+     - Excluded `Accept on Behalf of Client (On-Site)` and `Edit Fields` when the quotation is finalized (`PAID` or `Accepted`).
+     - Guarded `handleSaveChanges`, `handleDelete`, `handleStatusChange`, and `handleAcceptOnBehalf` with explicit notifications if called on finalized/paid quotations.
+     - Updated procedure button link to point to `/operator/services/${quotation.activeServiceId}/procedure`.
+     - Rendered green `Quotation Paid · Service Fulfillment Active` banner for paid quotations.
+   - In `OperatorQuotations.jsx`, restricted the "Mark as Sent" button to `Draft` quotations only, and applied status pill styles for `PAID` / `Accepted` records.
+   - Hardened backend controllers (`quotationController.js`):
+     - `updateQuotation`, `updateQuotationStatus`, `acceptQuotation`, and `deleteQuotation` now strictly return HTTP 400 Bad Request if attempted on a quotation with status `PAID` or paymentStatus `PAID`.
+   - Added automated test cases in `testPaymentAndResetFlows.js` verifying requirements preservation and post-payment immutability (7/7 tests passing).
+
+---
+
+## [2026-09-28] Feature: Operator Fulfillment & History Workflow with View Modals and Automatic Full Refund on Cancellation
+
+### Overview
+Addressed three critical operational requirements in the FairFly Operator Portal and backend fulfillment lifecycle:
+1. **Active Fulfillment Real-time Exclusion**: Services marked as `Completed` (fulfilled) or `Cancelled` now immediately move out of the Active Services Fulfillment list on the Operator Dashboard (`/operator`) and transition to Operator History.
+2. **Operator History Unified View & View Details Modal**:
+   - `OperatorHistory.jsx` now retrieves both `Completed` and `Cancelled` services (`/api/services/active?status=history`), as well as full appointment records.
+   - Added an **Actions** column with a dedicated **"View"** button for every row in both Service History and Appointment History.
+   - Built the reusable `HistoryDetailModal` component (`src/components/Operator/HistoryDetailModal`) adhering to FairFly design system tokens, displaying:
+     - Prominent **100% Full Refund Callout Card** for cancelled services (displaying PayMongo refund ID, refund amount in PHP, refund status, and cancellation reason).
+     - **Fulfillment Success Banner** for completed services with completion timestamp.
+     - 2-Column layout with Client profile information and Financial/Operations summary (price, payment status, quotation reference, branch name).
+     - Full procedure workflow steps audit breakdown with statuses, completed dates, and third-party links.
+     - Complete appointment details (client info, preferred schedule, branch office, purpose of visit, and status pill).
+3. **100% Full Refund on Cancellation via PayMongo**:
+   - Updated backend controller (`fly-api/src/controllers/activeServiceController.js` $\to$ `cancelActiveService`):
+     - Derives authoritative payment document and amount from `payments` collection.
+     - Dispatches a 100% Full Refund through the PayMongo Refund API (`createPaymongoRefund`).
+     - Atomically marks `activeServices`, `payments`, and linked `quotations` as `status: 'Cancelled'`, `paymentStatus: 'REFUNDED'`, `refundStatus: 'FULL_REFUND'`, with `refundAmount`, `refundId`, and `refundedAt`.
+     - Sends in-app client notification confirming cancellation with exact full refund amount (₱...) and reference ID.
+     - Dispatches admin notification for financial audit compliance.
+   - Enhanced procedure cancellation modal (`OperatorServiceProcedure.jsx`) and status banners to provide complete transparency regarding the 100% full refund guarantee.
+4. **Component Catalog Registration**: Documented `HistoryDetailModal` in `Fairfly/component-list.md`.
+
+---
+
+### Overview
+Enhanced the Client Portal's "My Inquiries & Quotations" tab (`ClientTrackingPage.jsx`):
+1. **Subtab Navigation**: Unified "Official Quotations" (ADF-07-001) and "Submitted Inquiries" (SAF-01-002) into structured subtabs with count badges.
+2. **DataTable Layout for Quotations**: Replaced the static card grid with FairFly's standard `DataTable` component, complete with responsive columns, debounced search (`useDebounce`), status filter chips (`FilterChipGroup`), and pagination (`Pagination`).
+3. **DataTable Layout for Submitted Inquiries**: Replaced the vertical card list with an aligned `DataTable` featuring control numbers, passenger counts, category chips, submission dates, status badges, debounced search, filter chips, and pagination.
+4. **Complete Details View Modals**:
+   - `QuotationDetailModal`: Full breakdown of package pricing, tour schedule dates, rate breakdown, inclusions/exclusions, operator remarks, official PDF viewer button, and one-click accept & pay actions.
+   - `InquiryDetailModal`: Complete intake specifications, passenger counts (adults, children, total pax), requested service categories, specified requirements with attached filenames, operator remarks, and official SAF-01-002 PDF viewer button.
+5. **Resume Payment Action Button Styling**: Added global `.btn-warning` utilities and dedicated styling for the Resume action button in both the Quotation DataTable row (`.client-row-actions .btn-warning.btn-xs`) and `QuotationDetailModal` (`.quote-modal-footer .btn-warning.btn-resume`) with warm amber accents, hover states, and iconography.
+6. **Component Catalog Registration**: Documented `QuotationDetailModal` and `InquiryDetailModal` with full prop interfaces and functionality descriptions in `Fairfly/component-list.md`.
+
+---
+
+## [2026-09-28] Bugfix: Payment Verification Firestore Undefined Field Exception (`quotationId`)
+
+### Overview
+Fixed an HTTP 500 error during `POST /api/payments/:id/verify` caused by Firestore rejecting `undefined` values when building the service fulfillment record (`quotationId`).
+
+### Root Cause
+1. `transaction.get(quotationRef).data()` in Firestore only returns the document's internal stored fields without appending the document ID (`id`). Because `quotation.id` was referenced directly instead of `quotationDoc.id`, it evaluated to `undefined`.
+2. When creating the active service fulfillment document via `transaction.set(activeServiceRef, fulfillmentPayload)`, Firestore threw:
+   `Cannot use "undefined" as a Firestore value (found in field "quotationId")`.
+
+### Fix
+1. **Global Protection (`firebase.js`)**: Enabled `db.settings({ ignoreUndefinedProperties: true })` on the Firestore Admin instance, preventing undefined property crashes across all operations.
+2. **Explicit Document ID Merging (`paymentController.js`)**:
+   Merged `id: quotationDoc.id` into `quotationData` and `id: paymentDoc.id` into `paymentData` inside `finalizeSuccessfulPayment`.
+3. **Resilient Fallbacks (`quotationController.js`)**:
+   Updated `buildFulfillmentPayload` to use `quotation.id || quotation.quotationId || payment?.quotationId || null` for `quotationId`, guaranteeing safe non-undefined values.
+4. **Daemon Restart**: Restarted `fly-api` backend server with nodemon on port 5001.
+
+---
+
+## [2026-09-28] Feature: Operator Password Reset Request Flow & PayMongo Sandbox Payment Gateway Integration
+
+
+### Overview
+Architected and implemented two interconnected enterprise-grade features for the FairFly Travel & Tours System:
+1. **Operator Password Reset Request & Super Admin Review Pipeline**: Allows branch operators to submit password reset requests through an anti-enumeration public intake endpoint. Super Admins inspect verification factors and approve (triggering official Firebase Auth password reset links via email) or reject with audit notes.
+2. **PayMongo Payment Integration & Decoupled Fulfillment Workflow**: Decoupled service fulfillment creation from quotation acceptance. Fulfillment is now strictly deferred until server-verified payment completion. Implemented dual-path payment verification (cryptographic HMAC-SHA256 webhook + client redirect sync) with atomic ACID transactions guaranteeing exactly one fulfillment record per payment.
+
+---
+
+### Key Architectural & Security Implementations
+
+#### 1. Part 1 — Operator Password Reset Request & Super Admin Approval Pipeline
+- **Anti-Enumeration Public Defense (`authController.js`)**:
+  - `POST /api/auth/operator-reset-request` and `POST /api/auth/operator-forgot-password`: Returns a uniform generic HTTP 200 response regardless of whether the email exists, preventing attacker reconnaissance and username harvesting.
+  - Zero-Trust Backend Verification: Cross-references Firestore `users` for active `role === 'operator'` or `'branch_operator'`.
+  - Duplicate Request Throttling: Enforces a strict 24-hour rate limit on duplicate requests for the same operator account.
+  - Automatic Expiration: Sets `expiresAt` to 48 hours in the future. Expired requests are automatically marked as `Expired` during reads.
+  - Super Admin Alerts: Automatically dispatches notifications to system administrators via `notifyAdmins`.
+- **Super Admin Review & Link Generation (`passwordResetController.js`)**:
+  - Guarded strictly by `verifyFirebaseToken`, `requireSuperAdmin`, and `apiRateLimiter`.
+  - Approval: Super Admin clicks Approve $\to$ Backend invokes `admin.auth().generatePasswordResetLink(email)` $\to$ Dispatches official password reset email via transactional mailer (`sendPasswordResetEmail`) $\to$ Updates record to `Approved` with `processedBy`, `processedAt`, and `authResetLinkGenerated: true`.
+  - Rejection: Records reviewer identity, timestamp, and mandatory rejection notes in `rejectionReason`.
+  - No Plaintext Passwords or Credentials: Plaintext passwords are never accepted, stored, or returned.
+- **Frontend Super Admin & Operator Views**:
+  - `ResetPassword.jsx`: Role switcher tab (`Traveler / Client` vs `Franchise Operator`) with branch selection, verification reasons, and zero-trust security notices.
+  - `PasswordResetRequestsTab.jsx`: Super Admin management interface with KPI counters, filter chips (`All`, `Pending`, `Approved`, `Rejected`, `Expired`), search, detailed inspect modal, approve confirmation modal, and reject modal.
+  - Integrated into `OperatorsContent.jsx` with sub-tab switcher (`Franchise Operators` vs `Password Reset Requests`).
+
+---
+
+#### 2. Part 2 — PayMongo Sandbox Payment Gateway & Workflow Decoupling
+- **Decoupled Business Flow**:
+  - Previous Behavior: `acceptQuotation` prematurely spawned `activeServices` records before any financial commitment.
+  - Corrected Architecture:
+    1. Client accepts Quotation $\to$ `acceptQuotation` sets quotation `status: 'Accepted'` and `paymentStatus: 'UNPAID'`. No fulfillment record is created.
+    2. Client opens `PaymentModal` $\to$ Calls `POST /api/payments/checkout-session`.
+    3. Backend derives total price strictly server-side from `quotation.totalAmount` (zero-trust client price derivation) $\to$ Generates PayMongo Checkout Session (GCash, Maya, QR Ph, Credit/Debit cards, BillEase, GrabPay).
+    4. Client completes payment $\to$ PayMongo triggers dual verification:
+       - **Asynchronous Webhook (`POST /api/payments/webhook`)**: Verified via cryptographic HMAC-SHA256 signature against `${timestamp}.${rawBody}` with 5-minute replay attack defense window.
+       - **Synchronous Client Return (`POST /api/payments/:id/verify`)**: Invoked when client lands on return URL (`/client/tracking?payment_status=success&payment_id=...`).
+    5. Atomic Finalization (`finalizeSuccessfulPayment`): Executes inside a Firestore ACID transaction (`db.runTransaction`). Updates payment to `PAID`, marks quotation `paymentStatus: 'PAID'`, and creates the initial `activeServices` fulfillment document with compiled workflow steps.
+- **Strict Idempotency Guarantee**:
+  - Prevents race conditions between concurrent webhooks and user return redirects.
+  - If a payment is already marked `PAID`, returns the existing `fulfillmentId` immediately without executing duplicate inserts.
+  - Guarantees $1\text{ Successful Payment} = \text{Exactly } 1\text{ Active Service Fulfillment}$.
+- **Raw Body Preservation (`server.js`)**:
+  - Configured `express.json({ verify: (req, res, buf) => { req.rawBody = buf; } })` to maintain raw buffer for timing-safe signature comparison (`crypto.timingSafeEqual`).
+- **Database & Security Rules (`firestore.rules`)**:
+  - Locked down `activeServices`, `payments`, and `passwordResetRequests` against client direct mutations (`allow create, update, delete: if false;`).
+  - Added object-level ownership checks for scoped payment reads.
+
+---
+
+### Verification & Testing
+- **Automated Verification Suite (`testPaymentAndResetFlows.js`)**:
+  - `PayMongo Webhook`: Validates authentic HMAC-SHA256 signature (`PASS`).
+  - `PayMongo Webhook`: Rejects forged and tampered signatures (`PASS`).
+  - `PayMongo Webhook`: Rejects expired webhook event timestamps (`PASS`).
+  - `Quotation Acceptance`: Builds fulfillment payload with complete workflow steps (`PASS`).
+  - `ACID Idempotency`: Exactly 1 fulfillment created for 1 successful payment across concurrent calls (`PASS`).
+  - `Password Reset Anti-Enumeration`: Verifies uniform generic client response (`PASS`).
+- **Regression Security Suite (`testSecurityFixes.js`)**:
+  - 26/26 automated security and BOLA/IDOR tests passing.
+- **Frontend Production Build**:
+  - Ran `npm run build` in `fair-fly` with Vite v8.0.16: 2,690 modules transformed, 0 errors.
+
+---
+
+## [2026-09-28] Refactor: Suppress Notification Badges on Operator Services Tab from Client Service Requests
+
+
+### Overview
+Ensured that client-initiated service requests do not place an unwanted notification badge on the **Services** tab (`/operator/services`) in the Operator sidebar, keeping the Services tab strictly dedicated to Service Catalog management (standard and custom catalog items).
+
+### Fixes & Protections Applied
+1. **Direct Procedure Linking & Specific Type Assignment (`activeServiceController.js`)**:
+   - Updated `notifyBranch` payload on client service requests (`createActiveService`):
+     - `type`: Changed from generic `'service'` to `'active_service'`.
+     - `link`: Changed from generic `'/operator/services'` (catalog) to direct procedure execution `'/operator/services/${docId}/procedure'`.
+2. **Tab Notification Suppression & Explicit Zero-Badge Handling (`AppSidebar.jsx`)**:
+   - Updated `getTabNotificationCount` to respect numeric values of `0` in `tabNotifications`, allowing layouts to explicitly turn off badges on specific tabs without falling through to automated matching.
+   - Added explicit boundary guard: in the Operator portal, the `/operator/services` tab (catalog) is barred from receiving automated badges from client intake requests.
+3. **Layout Configuration (`OperatorLayout.jsx`)**:
+   - Explicitly declared `'/operator/services': 0` in `tabNotifications` to enforce zero-badge behavior for the Services catalog tab.
+4. **Notification Bell Visuals (`NotificationBell.jsx`)**:
+   - Added support for category `active_service` to render the clipboard list icon (`fa-solid fa-clipboard-list`).
+5. **Daemon Restart & Build Verification**:
+   - Restarted `fly-api` backend server daemon on port 5001.
+   - Built frontend bundle via `npm run build` (vite v8.0.16) with 0 errors.
+
+## [2026-09-28] Feature: Operator Appointment Calendar View (Month & Week Views)
+
+### Overview
+Implemented a dedicated, interactive **Appointment Calendar View for Operators** in the FairFly system. Each branch operator can view, navigate, and manage scheduled consultations with visual day indicators, exact appointment times, and a comprehensive consultation details modal.
+
+### Architecture & Security Highlights
+1. **Operator-Specific Data Isolation & Zero-Trust Backend**:
+   - Guarded by `verifyFirebaseToken` and role checks.
+   - Strictly enforces multi-tenant boundary: only appointments where `branchUid === req.user.uid` are retrieved.
+2. **Date-Range Filtering with Resilient Index Fallback (`appointmentController.js`)**:
+   - Supported `startDate` and `endDate` parameters on `GET /api/appointments`.
+   - Bounded queries retrieve only appointments within visible calendar windows (`preferredDate >= startDate && preferredDate <= endDate`), eliminating full-collection downloads.
+   - Integrated compound range index fallback: if Firestore throws `FAILED_PRECONDITION` (code 9: missing composite index), automatically executes base branch filter and applies in-memory date range filtering and chronological sorting (`preferredDate ASC, preferredTime ASC`).
+   - Declared composite indexes (`branchUid` ASC + `preferredDate` ASC, `clientUid` ASC + `preferredDate` ASC) in `firestore.indexes.json`.
+3. **Frontend Calendar Component (`OperatorAppointmentCalendar.jsx`)**:
+   - Supports **Month View** (7-column grid Sun–Sat with highlighted today indicator and appointment count badges) and **Week View** (7-day chronological view showing time slots).
+   - Exact consultation times (`10:00 AM`), client names, and status color badges (Confirmed: green, Pending: orange, Cancelled: gray).
+   - In-memory period caching prevents redundant backend requests during back-and-forth calendar navigation.
+   - Built consultation details modal with `BaseModal` displaying date, start time, estimated duration (45 mins), client profile (name, email, phone), branch, status, remarks, quick Confirm/Cancel action buttons, and direct link to the full record (`/operator/appointments/:id`).
+4. **Seamless View Switcher (`OperatorAppointments.jsx`)**:
+   - Added view toggle buttons in the toolbar (`Calendar View` / `List View`), allowing operators to switch effortlessly between the calendar interface and the paginated list view.
+5. **Component Catalog**:
+   - Documented `OperatorAppointmentCalendar` in `component-list.md`.
+
+
+## [2026-09-27] Bugfix: Client Service Store Request 400 (`Invalid fields in request body`)
+
+### Overview
+Fixed HTTP 400 `Invalid fields in request body` error when submitting service intake requests with requirements from the client-side Service Store modal (`ClientServiceRequestModal.jsx`).
+
+### Root Cause
+In [`activeServiceRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/activeServiceRoutes.js), `ACTIVE_SERVICE_ALLOWED_FIELDS` whitelist omitted `submittedRequirements` (the client's uploaded documents/inputs) and `source` (e.g. `Client Portal` / `Walk-in`). The strict `allowedFields` middleware rejected the client payload upon submission.
+
+### Fix
+- Added `submittedRequirements` and `source` to `ACTIVE_SERVICE_ALLOWED_FIELDS` in [`activeServiceRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/activeServiceRoutes.js).
+- Updated [`activeServiceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/activeServiceController.js) `createActiveService` to persist `submittedRequirements` and `source` in the new active service record.
+- Restarted backend server daemon on port 5001.
+
+## [2026-09-27] Bugfix: Admin Services ReferenceError (`service is not defined`) in ServiceContent
+
+### Overview
+Fixed runtime crash `Uncaught ReferenceError: service is not defined at ServiceContent (ServiceContent.jsx:387:7)` on the Admin Services page (`/admin/services`).
+
+### Root Cause
+In [`ServiceContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx), the paginated service array from `useFirestorePagination` was destructured as `data: services` (plural). An existing `alertBarProps` `useMemo` block was referencing the legacy variable name `service` (singular), causing a runtime reference error on render.
+
+### Fix
+- Updated [`ServiceContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx) `alertBarProps` to reference `services` (plural) and integrated server-aggregated `counts` (`counts.total`, `counts.disabled`) for accurate notification badges.
+- Verified compilation with `npm run build` (vite v8.0.16) — 0 errors.
+
+## [2026-09-27] Bugfix: Admin Quick Links Infinite Re-render & Network Query Loop Stabilization
+
+### Overview
+Diagnosed and resolved an issue on the Admin Quick Links page (`/admin/quick-links`) where unmemoized default parameters and closure dependencies in `useFirestorePagination.js` combined with redundant in-component count queries created an infinite re-render loop that flooded Firestore with queries, lagged the browser tab, and crashed the page.
+
+### Root Cause
+1. **Unstable Hook Arguments**: Consuming components omitting optional `filters` received `filters = []`, producing a new array reference in memory on every render.
+2. **Infinite Effect Triggering**: In `useFirestorePagination.js`, `fetchCount` had `[..., filters]` in its `useCallback` dependency array, and the query effect had `[..., searchFilterFn, filters]`. Each render generated new references, continuously re-executing `getCountFromServer` and tearing down/re-subscribing `onSnapshot` listeners in a rapid loop.
+3. **State Mutation Cascade**: Each snapshot and count response triggered `setTotalItems()` and `setData()`, forcing subsequent renders that immediately re-invoked the loop.
+4. **Component-Level Redundancy**: `QuickLinksContent.jsx` maintained a duplicate `fetchTotal` `useEffect` running additional `getCountFromServer` calls on mount and render.
+
+### Fixes & Protections Applied
+1. **Hook Parameter Stabilization (`useFirestorePagination.js`)**:
+   - Defined module-level immutable constant `const EMPTY_FILTERS = []` to prevent fresh reference allocation on default arguments.
+   - Decoupled `filters` and `searchFilterFn` from effect dependency arrays using `useRef` (`filtersRef`, `searchFilterFnRef`).
+   - Reduced `useEffect` dependency arrays strictly to primitive, stable identifiers (`collectionName`, `filterKey`, `orderByField`, `orderDirection`, `currentPage`, `pageSize`, `realtime`, `enabled`, `searchTerm`).
+   - Introduced `unfilteredTotal` state and `unfilteredTotalRef` to preserve total collection count while user searches/filters, cleanly restoring pagination limits when search criteria are cleared.
+2. **Consolidated Quick Links Component (`QuickLinksContent.jsx`)**:
+   - Removed redundant `fetchTotal` / `totalSystemCount` state and effect; directly utilized `unfilteredTotal` and `totalItems` from `useFirestorePagination`.
+   - Wired `refetchCount()` directly into Add, Edit, Delete, and Bulk Delete mutation callbacks for instant counter synchronization.
+   - Removed component-internal `TrashIcon` re-declaration, passing static string `icon="fa-solid fa-trash-can"` to `ConfirmationModal`.
+   - Removed early blocking loader to allow `PageHeader`, `Breadcrumbs`, `KpiCard` skeletons, and `DataTable` skeletons to render seamlessly in-place.
+3. **Verification**:
+   - Built frontend bundle via `npm run build` (vite v8.0.16) with 0 errors.
+   - Verified backend logs: zero recurring request floods or unhandled network exceptions.
+
+## [2026-09-27] Bugfix: Client Appointment Query Index Fallback & Multi-Tenant Data Isolation
+
+### Overview
+Resolved an issue where newly created client appointments were not displaying on the client dashboard, while ensuring strict data isolation prevents cross-client appointment exposure. Remediated missing composite index crashes in the backend query layer, ensured proper environment port loading, and wired optimistic UI synchronization in the client portal.
+
+### Fixes & Protections Applied
+1. **Resilient Index Fallback (`firebaseService.js`)**:
+   - `queryDatabaseAdvanced`: When Firestore throws `FAILED_PRECONDITION` (Error code 9: Missing Composite Index) on queries combining `where()` filters with `orderBy()`, it now automatically falls back to executing the strict equality filter and performing in-memory sorting. This prevents HTTP 500 crashes and allows client and operator queries to return immediately without index-deployment bottlenecks.
+2. **Strict Multi-Tenant Data Isolation (`appointmentController.js`)**:
+   - Hardened `getAppointments`: Non-admin and non-operator users are strictly restricted to `where('clientUid', '==', req.user.uid)`. Client callers cannot supply or spoof arbitrary `clientUid` query parameters to view appointments from other clients.
+3. **Environment & Server Reliability (`server.js`)**:
+   - Configured `dotenv.config({ path: path.resolve(__dirname, '../.env') })` so running the server from either the project root or the `src` folder correctly binds to port `5001`.
+4. **Immediate Client-Side Display & Form Synchronization (`ClientAppointmentsPage.jsx`)**:
+   - Attached `onAppointmentCreated` to `ClientAppointmentForm`: Newly scheduled appointments are immediately added to local state upon successful submission (filtered by `clientUid === user.uid`) followed by `loadAppointments()`.
+   - Added robust array parsing in `loadAppointments` to handle both direct array and nested `{ data }` formats.
+
+## [2026-09-27] Performance: Comprehensive Firestore Bandwidth Optimization, Query-Level Cursor Pagination & Server Aggregations
+
+### Overview
+Executed an end-to-end audit and implementation of bandwidth, memory, and Firestore data-fetching optimizations across Fairfly. Completely eliminated client-side collection downloading and memory slicing (`.slice()`) on unconstrained collections across all Operator and Admin portal tables, navigation badges, and detail views. Replaced with true query-level cursor pagination (`limit()`, `orderBy()`, `startAfter()`), server-side aggregations (`getCountFromServer()`, `.count().get()`), bounded queries, and dedicated single-document listeners (`onSnapshot(doc(firestore, col, id))`). Reduced initial payload sizes by >90% and generated an executive-grade 7-page PDF report (`Fairfly_Firestore_Bandwidth_Optimization_Plan.pdf`).
+
+### Optimizations Implemented
+
+1. **Universal Query-Level Cursor Pagination Hook (`useFirestorePagination.js`)**:
+   - Created `fair-fly/src/hooks/useFirestorePagination.js` implementing true Firestore query-level pagination with `limit(pageSize)`, `orderBy()`, and cursor management (`startAfter()`).
+   - Managed bi-directional page navigation with a stateful cursor stack (`cursorsRef`), ensuring constant `O(pageSize)` memory and network usage regardless of total dataset size.
+   - Integrated resilient compound query fallback: catches index errors (`failed-precondition`) when pairing `or()` filters with `orderBy()`, automatically falling back to a bounded query (`limit(150)`) and sorting in memory while composite indexes build.
+   - Added bounded search safeguards (`limit(50)`) to protect against wildcard query cost spikes.
+
+2. **Critical Memory & Bandwidth Leak Remediations**:
+   - `OperatorServiceProcedure.jsx`: Unwrapped `OperatorProvider targetCollection="activeServices"`; replaced with direct single-doc listener `onSnapshot(doc(firestore, 'activeServices', id))`, preventing whole-collection downloads on procedure inspection.
+   - `OperatorDetailPage.jsx`: Scoped active services query with `or(where('operatorId', '==', id), where('branchUid', '==', id))` instead of unbounded collection downloads.
+   - `OperatorLayout.jsx` & `AdminLayout.jsx`: Replaced unconstrained collections with `getCountFromServer()` server aggregations and `limit(100)` badge queries.
+   - `AdminTickets.jsx`: Eliminated unused background leak where `<AdminProvider targetCollection="tickets">` was streaming the entire tickets collection in real-time even though child views did not consume `useAdminContext()`.
+   - `AdminDashboard.jsx`: Bounded real-time audit log subscription modal with `limit(100)`.
+
+3. **Operator Portal Refactoring (100% Query-Level Paginated)**:
+   - `OperatorAppointments.jsx` & `AppointmentDetailPage.jsx`: Converted to `useFirestorePagination` with `where('branchUid', '==', user.uid)` and single-doc `onSnapshot(doc(firestore, 'appointments', id))`. Unwrapped `OperatorProvider`.
+   - `OperatorQuotations.jsx` & `QuotationDetailPage.jsx`: Converted to `useFirestorePagination` with `where('branchUid', '==', user.uid)` and single-doc `onSnapshot(doc(firestore, 'quotations', id))`. Unwrapped `OperatorProvider`.
+   - `OperatorInquiryForms.jsx` & `InquiryFormDetailPage.jsx`: Converted to `useFirestorePagination` with `where('branchUid', '==', user.uid)` and single-doc `onSnapshot(doc(firestore, 'inquiries', id))`. Unwrapped `OperatorProvider`.
+   - `OperatorDashboard.jsx`: Refactored to `useFirestorePagination` for `activeServices` scoped to `user.uid`. Unwrapped `OperatorProvider`.
+   - `OperatorServices.jsx` & `OperatorServicesContent.jsx`: Unwrapped `AdminProvider targetCollection="services"`. Applied `useFirestorePagination` with scope filtering, `getCountFromServer` for all KPI cards, and connected `DataTable`/`Pagination`.
+
+4. **Admin Portal Refactoring & Real-Time Isolation**:
+   - Detail Pages: Replaced whole-collection `.find(s => s.id === id)` across detail pages with direct, dedicated `doc(firestore, collection, id)` listeners:
+     - `FranchiseAppDetailPage.jsx` -> `onSnapshot(doc(firestore, 'franchiseApplications', id))`
+     - `AdminQualificationDetailPage.jsx` -> removed redundant `useAdminContext()`, kept existing doc listener
+     - `ServiceDetailPage.jsx` -> `onSnapshot(doc(firestore, 'services', id))`
+     - `OperatorServiceDetailPage.jsx` -> `onSnapshot(doc(firestore, 'services', id))`
+     - `AdminInquiryDetailPage.jsx` -> `onSnapshot(doc(firestore, 'inquiries', id))`
+   - Table Views converted to `useFirestorePagination` and `getCountFromServer()`:
+     - `AdminFranchiseApps.jsx` & `FranchiseContent.jsx`
+     - `AdminQualifications.jsx` & `QualificationsContent.jsx`
+     - `AdminServices.jsx` & `ServiceContent.jsx`
+     - `AdminWorkflowTemplates/index.jsx` & `AdminWorkflowTemplates.jsx`
+     - `AdminInquiryHistory.jsx` & `HistoryContent.jsx`
+     - `AdminQuickLinks.jsx` & `QuickLinksContent.jsx`
+
+5. **Backend REST Server-Side Pagination**:
+   - `clientController.js`: Implemented `page` & `limit` query parameters with `.offset()` / `.limit()` and `.count().get()` server aggregation, returning `{ data, total, page, limit, totalPages }`.
+   - `fair-fly/src/services/adminService.js`: Enhanced `fetchClients` to support query params.
+   - `ClientsContent.jsx`: Connected to server-side paginated `fetchClients`.
+   - `resourceController.js`: Supported `page` and `limit` in `getResources`.
+   - `fair-fly/src/services/resourceService.js`: Enhanced `fetchResources` to support query params.
+   - `ResourcesContent.jsx` & `OperatorResources.jsx`: Updated to handle paginated `{ data }` and direct array responses.
+   - `ticketController.js`: Supported `page` parameter in `getTickets`.
+   - `fair-fly/src/services/ticketService.js`: Enhanced `fetchTickets` to support query params.
+   - `TicketsContent.jsx`: Handled paginated or array response objects.
+
+6. **Documentation & Formal Audit Report**:
+   - Generated 7-page executive PDF report `Fairfly_Firestore_Bandwidth_Optimization_Plan.pdf` detailing the full architecture, audit matrix, network data savings (>90% reduction), and implementation plan.
+   - Verified automated security and regression test suite: 26/26 tests passed.
+
+## [2026-09-27] Security: Round 2 Security Audit, Strict Input Whitelisting, Formal PDF Report & Secure Design Guidelines
+
+### Overview
+Executed a comprehensive second-round security audit across all 20 backend modules in `fly-api`. Remediated public quotation generation loophole, support ticket spoofing, missing payload whitelisting across remaining endpoints, and hardened announcement routing. Created a permanent agent rule in `.agents/rules/secure-backend-auth-guidelines.md` and compiled an executive-grade 7-page PDF report (`Fairfly_Backend_Security_Audit_Report.pdf`).
+
+### Defenses Implemented in Round 2
+1. **Quotation Creation Authentication & RBAC (`quotationRoutes.js`)**:
+   - Replaced optional public authentication on `POST /api/quotations` with strict `verifyFirebaseToken`, `requireRole(['admin', 'operator'])`, and `allowedFields(QUOTATION_ALLOWED_FIELDS)`. Clients and unauthenticated callers can no longer inject or forge quotations.
+2. **Support Ticket Anti-Spoofing & Role Enforceability (`ticketRoutes.js`, `ticketController.js`)**:
+   - Restricted `POST /api/tickets` to authenticated operators and admins with strict `allowedFields`.
+   - In `ticketController.createTicket`, blocked client accounts with HTTP 403.
+   - In `ticketController.addMessageToThread`, derived sender role, name, and ID strictly from verified token state (`req.userDetails` / `req.user.uid`), eliminating sender role spoofing.
+3. **Comprehensive Payload Whitelisting (`allowedFields`)**:
+   - `operatorRoutes.js`: Added whitelist to `PATCH /api/operators/:id`.
+   - `franchiseRoutes.js`: Added whitelist to `POST /applications` and `PATCH /applications/:id/status`.
+   - `resourceRoutes.js`: Added whitelist to `POST /resources` and `PATCH /resources/:id`.
+   - `appointmentRoutes.js`: Added whitelist to `POST /appointments` and `PATCH /appointments/:id/status`.
+   - `activeServiceRoutes.js`: Added whitelist to `POST /services/active`, `PATCH /:id/step`, and `PATCH /:id/cancel`.
+   - `workflowRoutes.js`: Added whitelist to template mutations, instance creation, and step transitions.
+   - `chatRoutes.js`: Added whitelist to conversations, messages, and announcements.
+4. **Chat Announcement Route-Level RBAC (`chatRoutes.js`)**:
+   - Added `requireRole('admin')` directly on `POST /announcements`, `PATCH /announcements/:id`, and `DELETE /announcements/:id`.
+5. **New Agent Security Rule (`.agents/rules/secure-backend-auth-guidelines.md`)**:
+   - Established mandatory system-wide standards for Zero-Trust backend operations, RBAC, BOLA/IDOR prevention, 5-tier file upload verification (MIME, magic bytes, stored XSS defense), and network security headers.
+6. **Executive PDF Audit Report (`Fairfly_Backend_Security_Audit_Report.pdf`)**:
+   - Generated detailed 7-page PDF documenting all 20 modules, 65+ endpoints in a full route inventory matrix, penetration test findings, Firestore security rules analysis, and audit certification.
+7. **Automated Verification Test Suite (`testSecurityFixes.js`)**:
+   - Expanded test suite to 26 automated unit and penetration tests covering Round 1 & Round 2 remediations. Result: **26 Passed, 0 Failed**.
+
+## [2026-09-27] Security: Comprehensive Backend Hardening, BOLA/BFLA Remediation & Penetration Testing
+
+### Overview
+Conducted an exhaustive penetration test and security audit across all Express endpoints in `fly-api/src`. Identified and remediated critical privilege escalation flaws, Broken Object Level Authorization (BOLA/IDOR), Broken Function Level Authorization (BFLA), mass assignment vulnerabilities, route shadowing conflicts, and missing HTTP security headers. All 24 security regression and edge-case unit/integration tests passed successfully.
+
+### Vulnerabilities Remediated & Defenses Implemented
+
+1. **Active Services Step Privilege Escalation & Revenue Spoofing (`activeServiceRoutes.js`, `activeServiceController.js`)**:
+   - *Issue*: `PATCH /api/services/active/:id/step` lacked `requireRole` and the controller conditional only checked if caller was an operator, allowing client accounts to bypass checks, advance fulfillment steps to completion, and trigger `userRef.update` revenue increments on operator accounts.
+   - *Fix*: Added `requireRole(['admin', 'operator', 'branch_operator'])` on the route. Enforced strict role and operator branch assignment verification in `updateStepStatus`.
+   - *Cancellation Hardening*: In `cancelActiveService`, non-owner clients are blocked (HTTP 403), and client self-cancellation is restricted strictly to services still in `Pending` state with no steps commenced.
+
+2. **Quotation BOLA / IDOR & Unrestricted Price Alteration (`quotationRoutes.js`, `quotationController.js`)**:
+   - *Issue*: Quotation modification, status transitions, and deletion endpoints only required a generic Firebase token, permitting clients or rogue operators to arbitrarily modify pricing (`rate`, `totalAmount`), transition status, or delete quotations.
+   - *Fix*: Protected `PATCH /api/quotations/:id`, `PUT /api/quotations/:id`, `PATCH /api/quotations/:id/status`, and `DELETE /api/quotations/:id` with `requireRole(['admin', 'operator'])`. Enforced branch ownership checks in `updateQuotation`, `updateQuotationStatus`, and `deleteQuotation`.
+   - *Client Acceptance Validation*: In `POST /api/quotations/:id/accept`, added verification preventing clients from accepting quotations prepared for other clients (`quotation.clientUid !== req.user.uid`).
+   - *Mass Assignment Protection*: Added `allowedFields` whitelist to quotation updates and enabled `PUT` method handling to support frontend service caller conventions.
+
+3. **Inquiry BOLA & Mass Assignment Overwrite (`inquiryRoutes.js`, `inquiryController.js`)**:
+   - *Issue*: `PATCH /api/inquiries/:id` and `DELETE /api/inquiries/:id` lacked role and ownership checks, and `updateInquiry` merged unvalidated `req.body` directly into Firestore documents.
+   - *Fix*: Added `INQUIRY_ALLOWED_FIELDS` whitelist middleware. Added ownership verification in `updateInquiry` (Client owner, Assigned Branch Operator, or Admin only), `deleteInquiry` (Assigned Operator or Admin only), and `getInquiryById` (prevents cross-client data harvesting).
+
+4. **Appointment Status Tampering (`appointmentController.js`)**:
+   - *Issue*: `PATCH /api/appointments/:id/status` lacked role restriction, enabling clients to mark their own or others' bookings as `Confirmed`.
+   - *Fix*: Enforced that clients may only cancel their own appointment (`status: 'Cancelled'`). Operators and admins alone can confirm or reschedule appointments. Automated branch notification when client cancels.
+
+5. **Operator Support Ticket & Thread Protection (`ticketController.js`)**:
+   - *Issue*: `getTickets` and `getTicketById` exposed operational support threads across all operators to any authenticated client or third-party operator.
+   - *Fix*: Blocked client accounts from ticket routes (HTTP 403). Scoped operator queries strictly to their own `operatorId`. Blocked unauthorized users from injecting messages into ticket threads.
+
+6. **Workflow Instance Scoping (`workflowController.js`)**:
+   - *Issue*: `getInstances` and `getInstanceById` allowed clients to enumerate all internal workflow instances across the company.
+   - *Fix*: Automatically scoped client queries to `clientId == req.user.uid` and restricted `getInstanceById` to the instance owner or staff.
+
+7. **Internal Resource Download Protection (`resourceRoutes.js`)**:
+   - *Issue*: Internal operator resources and guidelines were readable by client accounts.
+   - *Fix*: Attached `requireRole(['admin', 'operator', 'branch_operator'])` to `GET /resources`, `GET /resources/:id`, and `POST /resources/:id/download`.
+
+8. **Service Quicklinks Route Shadowing Defect (`serviceRoutes.js`)**:
+   - *Issue*: Express route `GET /services/:id` was declared prior to `/services/quicklinks`, causing Express to treat `quicklinks` as a service ID parameter and returning `404 Not Found`.
+   - *Fix*: Reordered all `/quicklinks` route registrations above dynamic `/:id` parameterized handlers.
+
+9. **Broadcast Notification Deletion Integrity (`notificationController.js`)**:
+   - *Issue*: When notifications lacked `recipientUid` (e.g. system broadcasts), non-admins could delete them.
+   - *Fix*: Enforced that only administrators can modify or delete notifications without a specific `recipientUid`.
+
+10. **HTTP Security Headers & Environment-Scoped CORS (`server.js`)**:
+    - Added `X-Content-Type-Options: nosniff` (MIME confusion defense).
+    - Added `X-Frame-Options: DENY` (Clickjacking defense).
+    - Added `X-XSS-Protection: 1; mode=block`.
+    - Added `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
+    - Added `Referrer-Policy: strict-origin-when-cross-origin`.
+    - Disabled `X-Powered-By: Express` fingerprinting.
+    - Scoped CORS to authorized origins (`FRONTEND_URL`, `http://localhost:5173`, `http://localhost:3000`).
+
+11. **Verification Test Suite (`fly-api/src/scripts/testSecurityFixes.js`)**:
+    - Created automated verification test suite covering 24 test cases across all 9 security groups. Result: **24 Passed, 0 Failed**.
+
+---
+
+## [2026-09-27] Security: Backend File Upload Hardening & Magic-Byte Validation
+
+### Overview
+Conducted a comprehensive security audit on the Express backend (`fly-api`) upload pipeline. Identified and eliminated critical vulnerabilities in file upload handling, transitioning from an easily bypassable 15-extension blacklist to a strict multi-layer whitelist with magic-byte file signature validation, double-extension blocking, script tag sanitization, safe MIME derivation, and upload rate limiting.
+
+### Vulnerabilities Identified During Scan
+1. **Blacklist Bypass (`uploadController.js`)**: Previously checked a hardcoded `PROHIBITED_EXTENSIONS` list (`.exe`, `.bat`, etc.). Crucial web shell/script formats (e.g. `.php`, `.jsp`, `.asp`, `.py`, `.cgi`, `.html`, `.svg`) were completely unblocked, allowing arbitrary scripts to be saved to Firebase Storage.
+2. **Missing Magic Byte Verification (Extension Spoofing)**: Uploads were validated solely by string extension (`req.file.originalname`). An executable (`MZ` header) or PHP script renamed to `.pdf` or `.png` bypassed all checks and was accepted.
+3. **MIME Confusion & Stored XSS**: `req.file.mimetype` was blindly trusted from client request headers and stored directly in Firebase Storage metadata, enabling MIME-type confusion attacks.
+4. **Unfiltered Multer Memory Allocation (`uploadRoutes.js`)**: Multer lacked a `fileFilter`, meaning arbitrary files up to 25MB were fully buffered into server RAM before controller logic fired.
+5. **Missing Rate Limiting**: `apiRateLimiter` was imported in `uploadRoutes.js` but never attached to the `POST /api/upload` route.
+6. **Path Traversal in Target Folder**: `req.body.folder` was accepted without whitelist sanitization.
+
+### Key Changes & Remediations
+1. **Dedicated File Security Engine (`fly-api/src/utils/fileSecurity.js`)**:
+   - **Strict Whitelist**: Permitted extensions strictly mirror the frontend forms: Documents (`.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`), Images (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`), Archives (`.zip`), and Media (`.mp4`, `.webm`, `.mov`).
+   - **Magic Bytes Validation**: Added deep buffer inspection verifying actual binary headers (`%PDF-`, `FF D8 FF` JPEG, `89 50 4E 47` PNG, `RIFF...WEBP`, `PK\x03\x04` Office OpenXML/ZIP, `D0 CF 11 E0` OLE Office, `ftyp` MP4/MOV, `1A 45 DF A3` WebM).
+   - **Payload Anti-Malware / Anti-Script Heuristics**: Rejects files with executable headers (`MZ`, `\x7FELF`, Mach-O), shell shebangs (`#!`), or embedded script/HTML payloads (`<?php`, `<?=`, `<script`, `<html`, `<!doctype html`, `<svg`, `javascript:`).
+   - **Double-Extension Protection**: Identifies and blocks disguise patterns such as `invoice.php.pdf` or `photo.exe.jpg`.
+   - **Canonical MIME Mapping**: Automatically assigns verified canonical Content-Types based on genuine file signatures rather than spoofed client headers.
+   - **Folder Sanitization**: Restricts target folders to an approved list (`uploads`, `client_ids`, `service_requirements`, `workflow_documents`, `resources`, `announcements`, `inquiry_requirements`, `qualification_documents`, `chat_attachments`).
+2. **Multer Early-Rejection Pipeline (`fly-api/src/routes/uploadRoutes.js`)**:
+   - Added `fileFilter` to reject unapproved extensions before buffering files into memory.
+   - Applied `apiRateLimiter` to protect `/api/upload` from flooding and denial-of-service attempts.
+   - Added error-handling wrapper returning structured HTTP 400 responses with descriptive security rejection messages.
+3. **Controller Overhaul (`fly-api/src/controllers/uploadController.js`)**:
+   - Validates metadata and performs magic-byte buffer verification before bucket write.
+   - Generates collision-resistant, sanitized storage destinations using random cryptographic entropy.
+   - Saves files to Firebase Storage with verified canonical MIME types.
+
+---
+
+## [2026-09-27] Feature: Client Details Auto-Prefill Across Client Forms
+
+### Overview
+To streamline the client booking and inquiry experience, client-side modal forms now automatically prefill the client's Full Name, Contact Number, and Email Address from their authenticated profile (`userDetails` in Firestore and `user` in Firebase Auth). Previously, modal forms only checked `userDetails?.name`, which caused fields to remain empty for registered clients whose profile document stores their name under `fullName`, and phone numbers stored under various aliases (`phone`, `phoneNumber`, `contactNumber`, `cellphone`) were not consistently resolved. Furthermore, opening modals repeatedly did not resync fresh auth profile details.
+
+### Key Changes
+1. **Client Appointment Form (`ClientAppointmentForm.jsx`)**:
+   - Initialized `clientName`, `clientEmail`, and `clientPhone` with fallback resolution covering `fullName`, `name`, `displayName`, and all phone fields (`phone`, `phoneNumber`, `contactNumber`, `cellphone`).
+   - Extended `useEffect` to watch `[user, userDetails, isOpen]`, ensuring client details auto-populate whenever the appointment modal is opened.
+2. **Client Inquiry / Quotation Modal (`ClientInquiryModal.jsx`)**:
+   - Initialized form fields with comprehensive user details fallbacks for `clientName`, `contactPerson`, `cellphone`, `email`, `address`, and `telNo`.
+   - Updated `useEffect` dependency array with `[isOpen, user, userDetails]` so re-opening the inquiry modal dynamically updates the inputs with the latest client profile data.
+3. **Client Service Request Modal (`ClientServiceRequestModal.jsx`)**:
+   - Updated `useState` initializers for `clientName`, `clientEmail`, and `clientPhone` with comprehensive field fallbacks.
+   - Refactored `useEffect` to trigger on `[user, userDetails, isOpen]`, resolving `fullName` and all contact phone number variations.
+4. **Franchise Application Form (`FranchiseApplicationForm.jsx`)**:
+   - Connected `useAuthContext()` to access the authenticated client session.
+   - Added `useEffect` listening to `[isOpen, user, userDetails]` to prefill `fullName`, `phoneNumber`, and `email` for logged-in clients when opening the application form, while retaining custom edits if previously entered.
+
+---
+
+## [2026-09-27] Feature: Operator Analytics Integration in Operator Detail Page & Dashboard Redirection
+
+### Overview
+Per user request, the operator-specific analytics suite formerly embedded within the Admin Analytics/Dashboard view has been migrated and integrated into the dedicated Operator Detail page (`/admin/operators/:id`). The Operator performance table remains on the main Admin Dashboard (`/admin`), but clicking an operator row or its "View" action now navigates directly to the comprehensive operator page. The Operator Detail page now displays the complete analytics experience alongside all existing account management functions.
+
+### Key Changes
+1. **Admin Dashboard Redirection (`AdminDashboard.jsx`)**:
+   - Kept the Operator performance table on the main dashboard (`/admin`), presenting completed services count, total branch revenue, and open tickets.
+   - Removed the single-operator scoped state filter that previously restricted the entire dashboard view.
+   - Enhanced the Operator table rows and the "View" action button to navigate directly to `/admin/operators/${operator.id}`.
+2. **Operator Detail Page Analytics Suite (`OperatorDetailPage.jsx`)**:
+   - Replaced static/mock values with real-time analytics data fetched via `fetchAdminAnalytics` with scoped `operatorId: id` parameters.
+   - Integrated time period controls (`Today`, `This week`, `This month`, `This year`, `Custom range` with from/to date pickers).
+   - Added operator-scoped CSV report generation (`handleDownloadReport` via `buildAnalyticsCsv`).
+   - Integrated 4 performance KPI cards: Total Revenue (PESO currency format), Completed Services, Active Services in fulfillment (real-time Firestore listener), and Open Support Tickets.
+   - Added Recharts `LineChart` inside `ResponsiveContainer` to plot historical revenue trajectory for the operator.
+   - Added a 2-column layout containing Report Summary indicators, Most Picked Services ranking, support tickets sorted by priority or recency with pagination, alongside the existing Account Profile, Service Qualification toggles, active orders, and administration action modals.
+   - Fixed unimported `ApiCaller` by replacing it with standard `updateOperator` from `adminService.js`.
+3. **Styling Enhancements (`operator-detail.css`)**:
+   - Added styles for `.operator-analytics-controls-card`, `.operator-kpi-grid` (responsive grid), `.operator-chart-card`, `.operator-analytics-columns`, `.analytics-summary-grid`, `.service-ranking-list`, and `.priority-ticket-list`.
+
+---
+
+## [2026-09-26] Fix: Notification Tab Routing, Delete-on-Read Bandwidth Optimization & Appointment Role Scoping
+
+### Overview
+Addressed several notification routing, access control, and bandwidth efficiency issues:
+1. **Notifications Appearing on Wrong Tabs**: Notifications targeting subroute tabs (such as `/operator/appointments`) were incorrectly inflating the dashboard counter due to overly broad prefix matching (`startsWith('/operator')`), and permissions prevented the operator appointments badge from syncing correctly.
+2. **Notification Broadcast Bleed**: Client appointment bookings were notifying all Admins and falling back to all operators instead of being directed strictly to the selected branch operator.
+3. **Appointment Leak Across Clients**: Client appointments were visible to all clients due to a role-checking bug where `req.user?.role` was evaluated instead of `req.userDetails?.role` in the backend controller.
+4. **Operator Permission in Firestore Rules**: Operators were blocked from reading appointments in Firestore security rules (`isOperator()` was omitted from the read condition).
+5. **Delete on Read & Tab-Click Cleanup**: To minimize database bandwidth and storage usage, notifications are now permanently deleted from Firestore when read (or marked all read) rather than retaining read documents. Navigating to or clicking any tab that has notifications automatically clears and deletes matching notifications.
+
+### Key Changes
+1. **Firestore Security Rules (`firestore.rules`, `deployRules.js`)**:
+   - Added `match /announcements/{announcementId}` (`allow read: if isSignedIn(); allow write: if isAdmin();`), fixing `Missing or insufficient permissions` error when subscribing to head office announcements.
+   - Added camelCase aliases `match /workflowTemplates/{templateId}` and `match /workflowInstances/{instanceId}` alongside snake_case matches.
+   - Added `match /admin-logs/{logId}` (`allow read: if isAdmin(); allow write: if false;`).
+   - Updated `match /appointments/{appointmentId}` to allow read for `isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid)`.
+   - Verified `match /notifications/{notifId}` allows delete permissions for signed-in users.
+   - Built and ran `deployRules.js` (`npm run deploy:rules`) using the service account credentials to release the security ruleset directly to the live Firebase Firestore database.
+2. **Backend Appointment Controller & Notification Dispatching (`appointmentController.js`, `notificationService.js`)**:
+   - `createAppointment`: Removed `notifyAdmins` spam on client appointment bookings. Configured `notifyBranch` with direct destination `/operator/appointments` and operator ID assignment (`operatorId: branchUid`).
+   - `getAppointments`: Fixed role resolution to inspect `req.userDetails.role`. Applied strict query scoping: clients only retrieve appointments where `clientUid == req.user.uid`, operators only retrieve appointments where `branchUid == req.user.uid`.
+   - `notifyBranch`: Removed fallback broadcast that dispatched alerts to all operators when a specific branch operator was not matched.
+3. **Notification Deletion & Tab Clearing (`NotificationContext.jsx`, `NotificationBell.jsx`)**:
+   - `markAsRead`: Calls `deleteDoc(docRef)` to permanently remove read notifications from Firestore.
+   - `markAllAsRead`: Batches `batch.delete(docRef)` across all unread notifications.
+   - `clearNotificationsForTab`: Deletes all unread notifications associated with a tab route or type. Leverages `notificationsRef` for stable callback references.
+   - `NotificationBell.jsx`: Clicking any notification item unconditionally deletes the notification record from Firestore.
+4. **Navigation & Tab Badge Integration (`AppSidebar.jsx`, `AppNavbar.jsx`, `OperatorLayout.jsx`, `OperatorAppointments.jsx`, `ClientAppointmentsPage.jsx`)**:
+   - `AppSidebar.jsx`: Fixed root portal link matching so dashboard (`/operator`) does not swallow subroute notifications. Added `clearNotificationsForTab(link.to)` to the sidebar link `onClick` handler.
+   - `AppNavbar.jsx`: Added `clearNotificationsForTab` calls when client navigation links are clicked.
+   - `OperatorLayout.jsx`: Scoped real-time pending appointment snapshot listener to the logged-in operator's branch.
+   - `OperatorAppointments.jsx`: Scoped appointment filtering by operator branch and triggers tab notification cleanup on mount. Fixed `useEffect` import.
+   - `ClientAppointmentsPage.jsx`: Scoped queries with `{ clientUid: user?.uid }` and triggers tab notification cleanup on mount.
+
+---
+
+## [2026-09-26] Feature: Domain-Specific Entity ID Prefixes & Comprehensive Auth / Firestore Database Migration
+
+### Overview
+Revamped entity ID generation and storage across the Fairfly ecosystem. Previously, random raw 20-character Firestore Auto-IDs were assigned to documents and users without domain context. We introduced a centralized prefixing architecture (`idGenerator.js`) and migrated all existing Firestore documents and Firebase Auth accounts to domain-prefixed UIDs (e.g. `USR-CLT-`, `USR-OPR-`, `USR-ADM-`, `USR-SUA-`, `INQ-`, `QTN-`, `SVC-`, `CAT-`, `WFL-`, `TKT-`, `APT-`, `CNV-`, `MSG-`, `RES-`, `ANN-`, `QAP-`, `FRA-`, `NTF-`, `FAQ-`, `LOG-`). All foreign key relationships and participant arrays across the entire database were systematically updated to maintain complete referential integrity.
+
+### Key Changes
+1. **Centralized ID Generator (`idGenerator.js`)**:
+   - Defined canonical `ID_PREFIXES` covering all domain entities.
+   - Implemented `generatePrefixedId(prefix)`, `parsePrefix(id)`, `getRawId(id)`, and `hasPrefix(id, prefix)` utility functions.
+2. **Database Service (`firebaseService.js`)**:
+   - Enhanced `addToDatabase(collectionName, data, prefix)` to generate prefixed document IDs natively while retaining Firestore Auto-ID entropy.
+3. **Backend Controllers & Services**:
+   - Updated `adminController.js`, `operatorController.js`, and `verificationService.js` to create Firebase Auth users and corresponding Firestore user documents with synchronized, role-specific prefixes (`USR-ADM-`, `USR-OPR-`, `USR-CLT-`).
+   - Integrated prefixes across `inquiryController.js` (`INQ-`), `quotationController.js` (`QTN-`), `activeServiceController.js` (`SVC-`), `serviceController.js` (`CAT-`, `QLK-`), `workflowController.js` (`WFL-`, `WFI-`), `ticketController.js` (`TKT-`), `appointmentController.js` (`APT-`), `chatController.js` (`CNV-`, `MSG-`, `ANN-`), `chatbotController.js` (`FAQ-`), `qualificationController.js` (`QAP-`), `franchiseController.js` (`FRA-`), `notificationService.js` (`NTF-`), and `adminLogger.js` (`LOG-`).
+4. **UI Refinements for Prefixed IDs**:
+   - Updated `CreateTicketModal.jsx`, `TicketTable.jsx`, `AdminDashboard.jsx`, and `AdminLogsModal.jsx` to prevent premature truncation or 8-character slicing of IDs, ensuring prefixed IDs are cleanly rendered with meaningful characters.
+5. **Database Migration Script (`migratePrefixes.js`)**:
+   - Successfully executed migration across the entire live database:
+     - 44 Firebase Auth user accounts migrated to prefixed UIDs with SCRYPT password hashes and user metadata strictly preserved.
+     - 40 Firestore user documents migrated with all role and profile data preserved.
+     - 7 Services, 6 Workflow Templates, 6 Quick Links, 5 Support Tickets, 7 Appointments, 1 Resource, 15 Conversations & Messages subcollections, 2 Announcements, 1 Qualification Application, 2 Franchise Applications, 1 Active Service, 167 Notifications, and 5 Chatbot FAQs migrated.
+     - All cross-references and foreign keys (`clientUid`, `operatorId`, `branchUid`, `userId`, `uploadedByUid`, `authorUid`, `participants`, `unreadCount`, `serviceId`, `workflowIds`, etc.) updated with 100% referential integrity.
+
+---
+
+## [2026-09-26] Bug Fix: Operator Service Fulfillment Scoping, Quotation Acceptance Active Service Preservation, and Data Wipe
+
+### Overview
+Fixed critical issues where:
+1. When an operator or client accepted a quotation, the operator's active procedures list on the dashboard suddenly only displayed that single quotation while all other services vanished.
+2. Active service fulfillment was previously shared across all operators when an operator had 0 assigned services due to an improper fallback check (`if (assigned.length > 0) list = assigned`), allowing unassigned or foreign services to bleed into an operator's dashboard view.
+3. Quotations, inquiries, and service fulfillments were wiped clean across Firestore per request to allow fresh end-to-end testing with strict operator assignments.
+
+### Key Changes
+1. **Operator Dashboard Scoping (`OperatorDashboard.jsx`)**:
+   - Replaced conditional `if (assigned.length > 0) list = assigned` fallback with strict, non-leaking operator scoping: `operatorScopedServices = dbServices.filter(s => s.operatorId === user.uid || s.branchUid === user.uid)`. Operators now strictly and exclusively view service fulfillments assigned to their branch.
+   - Updated priority chip counters (`All`, `High Priority`, `Normal Priority`) to compute against `operatorScopedServices` rather than `dbServices`, preventing discrepancies where chips counted services belonging to other operators.
+2. **Operator Layout Metrics (`OperatorLayout.jsx`)**:
+   - Removed `userHasScoped` check that leaked total global counts to operators who had no assigned services. Active and completed metrics badges in the operator sidebar now strictly reflect records where `operatorId === user.uid || branchUid === user.uid`.
+3. **Operator Service Procedure Access Control (`OperatorServiceProcedure.jsx`)**:
+   - Added an authorization guard (`isUnauthorized`) to prevent operators from viewing or executing procedure steps for services assigned to another operator. Displays a secure "Access Restricted" view.
+4. **Operator Quotations & Inquiries Scoping (`OperatorQuotations.jsx`, `OperatorInquiryForms.jsx`)**:
+   - Scoped quotation lists and inquiry form lists to the authenticated operator's UID (`branchUid === user.uid || operatorId === user.uid`).
+   - Updated filter chip badges to reflect operator-specific counts.
+5. **Backend Quotation & Inquiry Controllers (`quotationController.js`, `inquiryController.js`, `activeServiceController.js`)**:
+   - In `acceptQuotation`: Strictly resolves `assignedOperatorId` and `assignedBranchName` from the quotation, originating inquiry, or accepting operator. Reuses existing `activeServiceId` if present instead of creating an orphaned duplicate service fulfillment.
+   - In `createQuotation`: Ensures `branchUid`, `branchName`, and `operatorId` inherit from linked inquiries or the logged-in operator.
+   - In `createInquiry`: Fixed bug where client's UID was previously assigned to `effectiveBranchUid` and `operatorId`. Intake forms now preserve selected `branchUid` and assign operator ID appropriately.
+   - In `getActiveServices`, `getQuotations`, and `getInquiries`: Added server-side role filters restricting operator queries strictly to `operatorId === req.user.uid` or `branchUid === req.user.uid`.
+   - In `updateStepStatus` and `cancelActiveService`: Enforced server-side operator ownership verification (403 Forbidden if not assigned).
+6. **Firestore Security Rules (`firestore.rules`)**:
+   - Added `match /activeServices/{activeId}` matching `active_services` so security rules explicitly cover the camelCase collection name.
+7. **Database Clean Purge**:
+   - Successfully deleted all documents from `activeServices`, `active_services`, `quotations`, `quotation_requests`, and `inquiries` in Firestore.
+
+---
+
+## [2026-09-25] Enhancement: Defer Government ID Upload until "Create Account" Clicked
+
+### Overview
+Updated the Client Registration and ID Re-upload forms so that attaching government ID files (Front and Back) does not prematurely upload files to the server or database upon file selection. Instead, selecting files creates local object URL previews for instant client-side inspection. Network uploads to `/api/upload` (`client_ids`) are triggered strictly on-demand only when the user clicks the "Create Account" (or "Submit ID for Admin Review") button.
+
+### Key Changes
+1. **ValidIdUpload (`ValidIdUpload.jsx`, `valid-id-upload.css`)**:
+   - Removed immediate backend upload API calls upon file selection in `handleFileSelected`.
+   - Generates client-side preview blob URLs (`URL.createObjectURL(file)`) with instantaneous local thumbnail rendering, size calculations, and high-resolution lightbox inspection.
+   - Cleans up and revokes previous object URLs when removing or replacing files.
+   - Added disabled styles and state handling for submission locking.
+2. **Register Page (`Register.jsx`)**:
+   - Updated form submit guard to recognize local attached file objects.
+   - Enhanced `handleSubmit` to asynchronously upload Front and Back ID files to `/api/upload` only upon clicking "Create Account".
+   - Displays dynamic loading indicator ("Uploading ID & Creating Account...") on the submit button.
+   - Added unmount cleanup effect to revoke allocated blob URLs from browser memory.
+3. **Re-upload ID Page (`ReuploadId.jsx`)**:
+   - Applied identical deferred upload pattern: Front and Back files are validated locally upon selection and only uploaded to the server when "Submit ID for Admin Review" is clicked.
+   - Revokes object URLs on unmount and removal.
+
+---
+
 ## [2026-09-25] Fix: Client Table Filter Chips, Bulk Actions Standard Layout & Service Workflows Real-Time Listing
 
 ### Overview
@@ -985,10 +1651,7 @@ Moved inline styles (`style={{ ... }}`) across Inquiry, Quotation, Qualification
 - Resolved "Endpoint not found" error by restarting the `fly-api` server under `nodemon` and adding endpoint aliases.
 
 ---
-<<<<<<< HEAD
 
-=======
->>>>>>> 9db8a74c359953f71a219e1370975e552cfe86a7
 ## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
 
 ### Files Modified
@@ -2646,3 +3309,92 @@ All messages are computed via `useMemo` from data already available through `use
 
 ### Breaking Changes
 - None. Fully backward-compatible with existing `userCache` and `staticDataCache` callers.
+
+---
+
+## [2026-09-28] Fix Operator Edit 400 Bad Request Error
+
+### Files Modified
+- `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx`
+
+### Summary of Changes
+- Fixed a bug where editing an operator would return `400 Bad Request: Invalid fields in request body`.
+- **Root Cause:** `OperatorForm.jsx` always initialised `password: ''` in form state. In edit mode, the `handleEditOperatorSubmit` caller stripped `email` but left `password` in the payload. The backend `allowedFields(['branchName', 'address', 'contactNumber', 'isQualified', 'status'])` middleware correctly rejected the unexpected `password` field.
+- **Fix:** `handleSubmit` in `OperatorForm` now detects `isEditMode` and destructures out `password` before calling `onSubmit`, ensuring only permitted fields reach the backend.
+
+### Reason
+- Operator edit was completely broken and unusable.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-09-28] Add "Customize Application Form" Button to Admin Franchise Apps
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseContent.jsx`
+- `fair-fly/src/components/Admin/Modals/FranchiseApplicationFormBuilderModal/FranchiseApplicationFormBuilderModal.jsx`
+
+### Summary of Changes
+- Added `FranchiseApplicationFormBuilderModal` import and `showFormBuilder` state to `FranchiseContent`.
+- Added a "Customize Application Form" button in the `PageHeader`, styled identically to the "Customize Inquiry Form" button in `HistoryContent.jsx`.
+- Rendered the modal at the bottom of the page, opened by the button and closed via its `onClose` prop.
+- Updated `STABLE_FIELD_IDS` in `FranchiseApplicationFormBuilderModal` to include new split name and address breakdown fields so they cannot be deleted from the builder.
+
+### Reason
+- Admins needed the ability to customise the franchise application form, mirroring the existing inquiry form builder.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-09-28] Franchise Application Form Redesign + Backend Schema Routes
+
+### Files Modified
+- `fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx`
+- `fair-fly/src/components/Shared/FranchiseApplicationForm/franchise-application-form.css`
+- `fly-api/src/controllers/franchiseController.js`
+- `fly-api/src/routes/franchiseRoutes.js`
+
+### Summary of Changes
+
+**Frontend (`FranchiseApplicationForm.jsx`):**
+- Split `fullName` into three fields: `firstName`, `middleInitial` (optional, narrow column), `lastName` in a 3-column row.
+- Moved `email` and `phoneNumber` into a 2-column row.
+- Added a **Preferred Branch Location** address section with cascading dropdowns:
+  - Province → City/Municipality → Barangay powered by the **PSGC Cloud REST API** (`psgc.cloud/api/v1/`).
+  - Provinces fetched on modal open; municipalities fetched on province select; barangays fetched on municipality select.
+  - Each list is sorted alphabetically.
+  - An optional `building` text field sits beside Barangay.
+- **Investment Capacity** options updated to 5 tiers: Less than ₱50k / ₱50k–₱100k / ₱100k–₱200k / ₱200k–₱500k / ₱500k+.
+- `businessExperience` options order preserved (top-down cheapest/lowest-first).
+- Preferred Meeting Date and Time are side-by-side in a row.
+- On submit, derives `fullName` and `preferredBranchLocation` from the breakdown fields for backward compatibility.
+- Replaces `uuid` import (no longer needed).
+- Fully responsive: single-column layout below 540 px.
+
+**CSS (`franchise-application-form.css`):**
+- Added `.formRow--name` (3-column grid: `1fr 0.38fr 1fr`) for the name row.
+- Added `.formSection` / `.formSectionLabel` for the address card.
+- Added custom SVG chevron on `<select>` elements.
+- Improved disabled state styling for location dropdowns while data loads.
+
+**Backend (`franchiseController.js`):**
+- Added `getFranchiseApplicationSchema` and `saveFranchiseApplicationSchema` controllers (GET/PUT to `formSchemas/franchiseApplication`).
+- Updated `submitApplication` to support split name fields: derives `fullName` from `firstName + middleInitial + lastName` when `fullName` is not provided directly. Always writes canonical `fullName` to Firestore for display compatibility.
+- Updated required field validation to be flexible with the new name breakdown.
+
+**Backend (`franchiseRoutes.js`):**
+- Added new fields to `FRANCHISE_ALLOWED_FIELDS`: `firstName`, `middleInitial`, `lastName`, `province`, `municipality`, `barangay`, `building`.
+- Added `GET /franchise/application-schema` (public) and `PUT /franchise/application-schema` (admin-only) routes before parameterised routes to prevent shadowing.
+
+### Reason
+- Improve franchise application form UX with a cleaner layout, proper Philippine address selection, and updated investment range options.
+- Wire the previously orphaned `FranchiseApplicationFormBuilderModal` to a working backend schema endpoint.
+
+### Breaking Changes
+- Existing franchise application records remain compatible: `fullName` and `preferredBranchLocation` are still stored.
+- New applications will additionally store `firstName`, `lastName`, `middleInitial`, `province`, `municipality`, `barangay`, `building`.
+

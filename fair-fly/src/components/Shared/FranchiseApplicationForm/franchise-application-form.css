@@ -14,153 +14,174 @@
 .modal {
   background: white;
   width: 90%;
-  max-width: 540px;
+  max-width: 580px;
   border-radius: 16px;
-  padding: 24px;
+  padding: 28px 28px 24px;
   position: relative;
-  max-height: 90vh;
+  max-height: 92vh;
   overflow-y: auto;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
   box-sizing: border-box;
 }
 
-/* Optional clean scrollbar styling */
-.modal::-webkit-scrollbar {
-  width: 8px;
-}
-
-.modal::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 0 16px 16px 0;
-}
-
-.modal::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.modal::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
+/* Clean scrollbar */
+.modal::-webkit-scrollbar { width: 6px; }
+.modal::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 0 16px 16px 0; }
+.modal::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.modal::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
 .closeBtn {
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: 16px;
+  right: 16px;
   border: none;
   background: none;
   font-size: 20px;
   cursor: pointer;
-  transition: 0.3s;
+  color: #8e8e93;
+  transition: color 0.2s;
   z-index: 10;
 }
+.closeBtn:hover { color: #1a1a1a; }
 
-.closeBtn:hover {
-  transition: 0.3s;
-  color: rgb(74, 74, 74);
-}
-
-/* --- Header Section --- */
+/* --- Header --- */
 .modalHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 6px;
 }
-
 .modalHeader h2 {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: #111111;
   margin: 0;
 }
-
 .modalDescription {
-  font-size: 14px;
+  font-size: 13.5px;
   color: #666666;
-  line-height: 1.5;
-  margin-top: 0;
-  margin-bottom: 24px;
+  line-height: 1.55;
+  margin: 0 0 20px;
 }
 
-/* --- Form & Grid Setup --- */
+/* --- Form layout --- */
 .franchiseApplicationForm {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* Row wrapper for fields that sit side-by-side */
+/* Generic two-column row */
 .formRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* Individual field wrapper containing the label and input */
+/* Name row: First Name (flex 1) | M.I. (narrow) | Last Name (flex 1) */
+.formRow--name {
+  grid-template-columns: 1fr 0.38fr 1fr;
+}
+
+/* Individual field */
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
-
 .formGroup label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #1a1a1a;
 }
+.optional {
+  font-weight: 400;
+  color: #8e8e93;
+  font-size: 12px;
+}
 
-/* --- Form Controls --- */
+/* --- Address section --- */
+.formSection {
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  padding: 14px 14px 10px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.formSectionLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a3a3c;
+  margin: 0;
+}
+
+/* --- Controls --- */
 .franchiseApplicationForm input,
 .franchiseApplicationForm select,
 .franchiseApplicationForm textarea {
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background-color: #f5f5f7;
   border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13.5px;
   color: #1a1a1a;
   outline: none;
   box-sizing: border-box;
-  transition: all 0.2s ease;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  font-family: inherit;
 }
-
-/* Placeholder styling */
+.franchiseApplicationForm select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238e8e93' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+.franchiseApplicationForm select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .franchiseApplicationForm input::placeholder,
 .franchiseApplicationForm textarea::placeholder {
   color: #8e8e93;
 }
-
-/* Focus states */
 .franchiseApplicationForm input:focus,
 .franchiseApplicationForm select:focus,
 .franchiseApplicationForm textarea:focus {
-  background-color: #f5f5f7;
   border-color: #858efe;
-  box-shadow: 0 0 0 3px rgba(133, 142, 254, 0.25);
+  box-shadow: 0 0 0 3px rgba(133, 142, 254, 0.2);
+  background-color: #ffffff;
 }
-
 .franchiseApplicationForm textarea {
   resize: vertical;
-  min-height: 80px;
-  font-family: inherit;
+  min-height: 76px;
 }
 
-/* --- Action Buttons Footer --- */
+/* --- Inline field errors --- */
+.error {
+  font-size: 11.5px;
+  color: #d13030;
+  margin: 0;
+}
+
+/* --- Actions footer --- */
 .formActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 4px;
 }
-
 .submitBtn {
-  background: #ff843d; 
+  background: #ff843d;
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -170,23 +191,33 @@
   gap: 8px;
   transition: background-color 0.2s;
 }
-
-.submitBtn:hover {
-  background: #e66f2a;
-}
+.submitBtn:hover:not(:disabled) { background: #e66f2a; }
+.submitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .cancelBtn {
   background: white;
   color: #1a1a1a;
   border: 1px solid #d1d1d6;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
 }
+.cancelBtn:hover { background: #f5f5f7; }
 
-.cancelBtn:hover {
-  background: #f5f5f7;
+/* --- Responsive --- */
+@media (max-width: 540px) {
+  .modal {
+    padding: 20px 16px 18px;
+    border-radius: 12px;
+  }
+  .formRow,
+  .formRow--name {
+    grid-template-columns: 1fr;
+  }
+  .formActions {
+    grid-template-columns: 1fr;
+  }
 }
