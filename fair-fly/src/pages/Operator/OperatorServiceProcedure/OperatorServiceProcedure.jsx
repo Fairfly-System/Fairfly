@@ -98,6 +98,19 @@ export default function OperatorServiceProcedure() {
     return false;
   }, [serviceRecord, user, userDetails]);
 
+  const displayRequirements = useMemo(() => {
+    if (Array.isArray(serviceRecord?.submittedRequirements) && serviceRecord.submittedRequirements.length > 0) {
+      return serviceRecord.submittedRequirements;
+    }
+    if (inquiryRequirements.length > 0) {
+      return inquiryRequirements;
+    }
+    if (Array.isArray(serviceRecord?.requirements) && serviceRecord.requirements.length > 0) {
+      return serviceRecord.requirements;
+    }
+    return [];
+  }, [serviceRecord, inquiryRequirements]);
+
   if (loading) {
     return (
       <main className="op-procedure-page page-fade-in" aria-busy="true">
@@ -167,19 +180,6 @@ export default function OperatorServiceProcedure() {
   const completedStepsCount = steps.filter((s) => s.status === 'Completed').length;
   const progressPct = steps.length > 0 ? Math.round((completedStepsCount / steps.length) * 100) : 0;
   const isTerminal = serviceRecord.status === 'Completed' || serviceRecord.status === 'Cancelled';
-
-  const displayRequirements = useMemo(() => {
-    if (Array.isArray(serviceRecord?.submittedRequirements) && serviceRecord.submittedRequirements.length > 0) {
-      return serviceRecord.submittedRequirements;
-    }
-    if (inquiryRequirements.length > 0) {
-      return inquiryRequirements;
-    }
-    if (Array.isArray(serviceRecord?.requirements) && serviceRecord.requirements.length > 0) {
-      return serviceRecord.requirements;
-    }
-    return [];
-  }, [serviceRecord, inquiryRequirements]);
 
   const handleCancelService = () => {
     if (!serviceRecord) return;

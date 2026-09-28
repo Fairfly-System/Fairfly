@@ -1,5 +1,20 @@
 # Update Logs
 
+## [2026-09-28] Bugfix: React Hook Order in OperatorServiceProcedure & Ticket Permissions Leak in OperatorTickets
+
+### Overview
+Fixed two runtime frontend exceptions reported in the browser console:
+1. **React Hook Order Violation in `OperatorServiceProcedure.jsx`**:
+   - *Problem*: `Uncaught Error: Rendered more hooks than during the previous render.`
+   - *Root Cause*: `const displayRequirements = useMemo(...)` was placed after the conditional early returns (`if (loading)`, `if (isUnauthorized)`, `if (!serviceRecord)`). During initial loading, React registered 13 hooks before returning early. When data loaded and `loading` became false, execution continued past the return and reached hook 14, violating the React Rules of Hooks.
+   - *Fix*: Relocated `displayRequirements = useMemo(...)` to the top-level declaration block alongside `isUnauthorized`, ensuring all Hooks execute unconditionally in identical order on every render.
+2. **Firestore Insufficient Permissions on Tickets (`OperatorContext.jsx`)**:
+   - *Problem*: `OperatorProvider onSnapshot error on tickets: FirebaseError: Missing or insufficient permissions.`
+   - *Root Cause*: `OperatorTickets.jsx` wrapped its routes with `<OperatorProvider targetCollection="tickets">`, initiating an un-scoped, real-time collection listener on `/tickets`. Firestore Security Rules forbid reading the full tickets collection without scoping to individual operator documents. Furthermore, no child views consumed `useOperatorContext()`; all ticket queries are handled cleanly by `ticketService` via the authenticated Express API.
+   - *Fix*: Removed the redundant `<OperatorProvider targetCollection="tickets">` from `OperatorTickets.jsx`, matching the optimization previously implemented in `AdminTickets.jsx`.
+
+---
+
 ## [2026-09-28] Bugfix: Requirements Pipeline from Inquiry to Service Fulfillment & Quotation Post-Payment Immutability
 
 ### Overview
