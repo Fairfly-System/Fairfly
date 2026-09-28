@@ -1,0 +1,8 @@
+.form-response-list { border-top: 1px solid var(--border-color, #dbe4e1); margin-top: 1rem; padding-top: .85rem; }
+.form-response-list h3 { color: var(--text-primary, #172b2b); font-size: .9rem; margin: 0 0 .55rem; }
+.form-response-list dl { display: grid; gap: .4rem; margin: 0; }
+.form-response-item { display: grid; gap: .3rem 1rem; grid-template-columns: minmax(120px, .38fr) minmax(0, 1fr); }
+.form-response-item dt { color: var(--text-secondary, #536563); font-size: .78rem; font-weight: 650; }
+.form-response-item dd { color: var(--text-primary, #172b2b); font-size: .8rem; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.form-response-item a { color: var(--link-color, #176b55); }
+@media (max-width: 560px) { .form-response-item { grid-template-columns: 1fr; gap: .12rem; } }

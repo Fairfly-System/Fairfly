@@ -514,7 +514,7 @@ export default function ServiceItemPage() {
         onClose={() => setShowRequestModal(false)}
         onRequestSuccess={() => {
           setShowRequestModal(false);
-          addToast('Service request submitted successfully! You can track it in your dashboard.', 'success');
+          addToast('Service inquiry submitted successfully! You can track it in your dashboard.', 'success');
           navigate('/client/tracking');
         }}
         initialServiceId={service.id}

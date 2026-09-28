@@ -20,7 +20,11 @@ const FRANCHISE_ALLOWED_FIELDS = [
   'message',
   'address',
   'businessExperience',
-  'investmentBudget'
+  'investmentCapacity',
+  'investmentBudget',
+  'preferredMeetingDate',
+  'preferredMeetingTime',
+  'additionalMessage'
 ];
 
 // Public route to submit an application (with optional token identification)

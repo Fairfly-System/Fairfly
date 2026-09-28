@@ -42,7 +42,7 @@ router.post(
 );
 
 router.get('/', performanceProfiler('GET /services/active', verifyFirebaseToken, apiRateLimiter, getActiveServices));
-router.patch('/:id/step', performanceProfiler('PATCH /services/active/:id/step', verifyFirebaseToken, requireRole(['admin', 'operator']), allowedFields(['stepId', 'status', 'notes', 'attachmentUrl', 'attachmentName']), apiRateLimiter, updateStepStatus));
+router.patch('/:id/step', performanceProfiler('PATCH /services/active/:id/step', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), allowedFields(['stepIndex', 'newStatus']), apiRateLimiter, updateStepStatus));
 router.patch('/:id/cancel', performanceProfiler('PATCH /services/active/:id/cancel', verifyFirebaseToken, allowedFields(['reason']), apiRateLimiter, cancelActiveService));
 
 module.exports = router;

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
+  and,
   collection,
   query,
   orderBy,
+  documentId,
   limit,
   startAfter,
   getCountFromServer,
@@ -12,6 +14,12 @@ import {
 import { firestore } from '../firebase';
 
 const EMPTY_FILTERS = [];
+
+function combineFilters(filters) {
+  if (!filters || filters.length === 0) return [];
+  if (filters.length === 1) return [...filters];
+  return [and(...filters)];
+}
 
 /**
  * Custom React Hook for True Firestore Query-Level Cursor Pagination.
@@ -82,7 +90,7 @@ export function useFirestorePagination({
       let countQ = collection(firestore, collectionName);
       const activeFilters = filtersRef.current || [];
       if (activeFilters.length > 0) {
-        countQ = query(countQ, ...activeFilters);
+        countQ = query(countQ, ...combineFilters(activeFilters));
       }
       const countSnap = await getCountFromServer(countQ);
       const count = countSnap.data().count;
@@ -110,7 +118,7 @@ export function useFirestorePagination({
 
     const isSearching = Boolean(searchTerm && searchTerm.trim());
     const baseCol = collection(firestore, collectionName);
-    const activeFilters = filtersRef.current || [];
+    const activeFilters = combineFilters(filtersRef.current || []);
     let q;
 
     if (isSearching) {
@@ -167,13 +175,23 @@ export function useFirestorePagination({
       console.warn(`[useFirestorePagination] Notice on ${collectionName}:`, err.message);
       // Fallback query without orderBy if index is required/building
       try {
-        const fallbackConstraints = [...(filtersRef.current || [])];
+        const fallbackConstraints = combineFilters(filtersRef.current || []);
+        if (!isSearching) {
+          fallbackConstraints.push(orderBy(documentId()));
+          const cursor = cursorsRef.current[currentPage];
+          if (cursor) {
+            fallbackConstraints.push(startAfter(cursor));
+          }
+        }
         fallbackConstraints.push(limit(isSearching ? 50 : pageSize));
         const fallbackQ = query(baseCol, ...fallbackConstraints);
 
         if (realtime) {
           activeUnsubscribe = onSnapshot(fallbackQ, (snapshot) => {
             const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            if (!isSearching && snapshot.docs.length > 0) {
+              cursorsRef.current[currentPage + 1] = snapshot.docs[snapshot.docs.length - 1];
+            }
             if (orderByField) {
               docs.sort((a, b) => {
                 const valA = a[orderByField] || '';

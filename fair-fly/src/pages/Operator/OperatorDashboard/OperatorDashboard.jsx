@@ -134,7 +134,7 @@ function DashboardContent() {
     collectionName: 'activeServices',
     filters: firestoreFilters,
     filterKey: `${user?.uid || ''}-${priorityFilter}`,
-    orderByField: 'createdAt',
+    orderByField: 'startedAt',
     orderDirection: 'desc',
     initialPageSize: 5,
     searchTerm: debouncedSearch,

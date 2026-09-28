@@ -71,7 +71,7 @@ router.patch('/:id', performanceProfiler('PATCH /inquiries/:id', verifyFirebaseT
 router.put('/:id', performanceProfiler('PUT /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
 router.delete('/:id', performanceProfiler('DELETE /inquiries/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, deleteInquiry));
 
-// Confirm Inquiry -> creates Quotation and initializes Active Service
-router.post('/:id/confirm', performanceProfiler('POST /inquiries/:id/confirm', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, confirmInquiry));
+// Confirm Inquiry -> creates a quotation; fulfillment begins when the quotation is accepted
+router.post('/:id/confirm', performanceProfiler('POST /inquiries/:id/confirm', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, confirmInquiry));
 
 module.exports = router;

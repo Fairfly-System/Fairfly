@@ -5,6 +5,7 @@ import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { createInquiry } from '../../../services/inquiryService';
 import './client-service-request-modal.css';
 
 export default function ClientServiceRequestModal({
@@ -256,6 +257,10 @@ export default function ClientServiceRequestModal({
       addToast('Please enter your full name', 'warning');
       return;
     }
+    if (!clientPhone.trim() && !clientEmail.trim()) {
+      addToast('Please provide a phone number or email address', 'warning');
+      return;
+    }
 
     // Validate required service fields
     for (let i = 0; i < serviceRequirements.length; i++) {
@@ -335,26 +340,27 @@ export default function ClientServiceRequestModal({
 
       const payload = {
         serviceId: selectedServiceId,
-        serviceType: selectedService ? selectedService.name : 'Requested Service',
-        operatorId: selectedBranchUid,
+        serviceType: selectedService?.name || 'Requested Service',
+        servicesOffered: [selectedService?.name || 'Requested Service'],
         branchUid: selectedBranchUid,
         branchName: matchedBranch ? matchedBranch.branchName : 'Branch Operator',
         clientUid: user?.uid || null,
         clientName: clientName.trim(),
-        clientEmail: clientEmail.trim(),
+        email: clientEmail.trim(),
         clientPhone: clientPhone.trim(),
-        additionalNotes: additionalNotes.trim(),
-        submittedRequirements,
-        status: 'Pending'
+        cellphone: clientPhone.trim(),
+        specifiedRequirements: additionalNotes.trim(),
+        notes: additionalNotes.trim(),
+        servicePrice: selectedService?.price || '',
+        requirements: submittedRequirements,
+        status: 'submitted'
       };
 
-      ApiCaller(
-        `${API_BASE_URL}/api/services/active`,
-        'POST',
+      createInquiry(
+        userToken,
         payload,
-        userToken ? { Authorization: `Bearer ${userToken}` } : {},
         (res) => {
-          addToast(`Service request for "${payload.serviceType}" submitted to ${payload.branchName}!`, 'success');
+          addToast(`Inquiry for "${payload.serviceType}" submitted to ${payload.branchName}. The branch will prepare a quotation for your review.`, 'success');
           if (onRequestSuccess) onRequestSuccess(res);
           setIsSubmitting(false);
           onClose();
@@ -376,8 +382,8 @@ export default function ClientServiceRequestModal({
       isOpen={isOpen}
       onClose={onClose}
       maxWidth="56rem"
-      title="Request a Travel & Processing Service"
-      subtitle="Select your service, upload requirements, and assign it to your preferred branch"
+      title="Submit a Service Inquiry"
+      subtitle="Send your service details to the selected branch. Fulfillment begins after you accept its quotation."
       isLoading={isSubmitting}
     >
       {loadingOptions ? (

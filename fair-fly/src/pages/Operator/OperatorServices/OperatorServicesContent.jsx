@@ -169,6 +169,34 @@ export default function OperatorServicesContent() {
     searchFilterFn,
   });
 
+  const operatorUid = user?.uid;
+  const fulfillmentFilters = useMemo(() => {
+    if (!operatorUid) return [];
+    return [
+      or(where('operatorId', '==', operatorUid), where('branchUid', '==', operatorUid)),
+      where('status', 'in', ['Pending', 'Processing', 'Ongoing']),
+    ];
+  }, [operatorUid]);
+
+  const {
+    data: ongoingServices,
+    loading: ongoingServicesLoading,
+    currentPage: ongoingServicesPage,
+    pageSize: ongoingServicesPageSize,
+    totalItems: ongoingServicesTotal,
+    goToPage: goToOngoingServicesPage,
+    changePageSize: changeOngoingServicesPageSize,
+  } = useFirestorePagination({
+    collectionName: 'activeServices',
+    filters: fulfillmentFilters,
+    filterKey: `fulfillment-${operatorUid || ''}`,
+    orderByField: 'startedAt',
+    orderDirection: 'desc',
+    initialPageSize: 8,
+    realtime: true,
+    enabled: Boolean(user?.uid),
+  });
+
   // Overall catalog counts for KPIs and chips
   const totalCount = kpiCounts.total || totalItems;
   const standardCount = kpiCounts.standard;
@@ -493,6 +521,59 @@ export default function OperatorServicesContent() {
     [isQualified, user]
   );
 
+  const fulfillmentColumns = useMemo(
+    () => [
+      {
+        key: 'clientName',
+        header: 'Client',
+        render: (item) => item.clientName || item.name || 'N/A',
+      },
+      {
+        key: 'serviceType',
+        header: 'Service',
+        render: (item) => item.serviceType || item.type || 'General Service',
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: (item) => (
+          <span className="status-pill status-pill-active">
+            {item.status || 'Pending'}
+          </span>
+        ),
+      },
+      {
+        key: 'progress',
+        header: 'Progress',
+        render: (item) => {
+          const steps = Array.isArray(item.steps) ? item.steps : [];
+          const completed = steps.filter((step) => step.status === 'Completed').length;
+          return `${completed} of ${steps.length || item.totalSteps || 0} steps`;
+        },
+      },
+      {
+        key: 'startedAt',
+        header: 'Started',
+        render: (item) => item.startedAt ? new Date(item.startedAt).toLocaleDateString() : 'N/A',
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        className: 'actions-col',
+        render: (item) => (
+          <Link
+            to={`/operator/services/${item.id}/procedure`}
+            className="op-service-view-link"
+            title="Open fulfillment procedure"
+          >
+            <i className="fa-solid fa-list-check"></i>
+          </Link>
+        ),
+      },
+    ],
+    []
+  );
+
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/operator' },
     { label: 'Services' },
@@ -656,6 +737,26 @@ export default function OperatorServicesContent() {
           pageSize={pageSize}
           onPageChange={goToPage}
           onPageSizeChange={changePageSize}
+        />
+      </section>
+
+      <section className="card operator-services-table-card">
+        <h2>Ongoing Service Fulfillment ({ongoingServicesTotal})</h2>
+        <DataTable
+          columns={fulfillmentColumns}
+          data={ongoingServices}
+          isLoading={ongoingServicesLoading}
+          emptyState={{
+            icon: 'fa-solid fa-list-check',
+            message: 'No ongoing service fulfillment is assigned to your branch.',
+          }}
+        />
+        <Pagination
+          currentPage={ongoingServicesPage}
+          totalItems={ongoingServicesTotal}
+          pageSize={ongoingServicesPageSize}
+          onPageChange={goToOngoingServicesPage}
+          onPageSizeChange={changeOngoingServicesPageSize}
         />
       </section>
 

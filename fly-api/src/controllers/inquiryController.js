@@ -5,7 +5,6 @@ const {
   updateToDatabase, 
   deleteFromDatabase 
 } = require('../services/firebaseService');
-const { compileWorkflowStepsForService } = require('./activeServiceController');
 const {
   createNotification,
   notifyBranch,
@@ -16,7 +15,6 @@ const { ID_PREFIXES } = require('../utils/idGenerator');
 const COLLECTIONS = {
   INQUIRIES: 'inquiries',
   QUOTATIONS: 'quotations',
-  ACTIVE_SERVICES: 'activeServices',
   SERVICES: 'services',
   FORM_SCHEMAS: 'formSchemas'
 };
@@ -95,10 +93,11 @@ const createInquiry = async (req, res) => {
     } = req.body;
 
     const resolvedName = fullName || clientName;
-    const resolvedPhone = phoneNumber || cellphone;
+    const resolvedPhone = (phoneNumber || cellphone || '').trim();
+    const resolvedEmail = (email || '').trim();
 
-    if (!resolvedName || !resolvedPhone) {
-      return res.status(400).json({ error: 'Client full name and phone/cellphone number are required' });
+    if (!resolvedName || (!resolvedPhone && !resolvedEmail)) {
+      return res.status(400).json({ error: 'Client name and at least one contact method are required' });
     }
 
     const now = new Date().toISOString();
@@ -137,9 +136,9 @@ const createInquiry = async (req, res) => {
       fullName: resolvedName.trim(),
       clientName: resolvedName.trim(),
       contactPerson: (contactPerson || '').trim(),
-      email: email ? email.trim() : '',
-      phoneNumber: resolvedPhone.trim(),
-      cellphone: resolvedPhone.trim(),
+      email: resolvedEmail,
+      phoneNumber: resolvedPhone,
+      cellphone: resolvedPhone,
       telNo: telNo || '',
       address: address || '',
       population: population || '',
@@ -359,9 +358,9 @@ const confirmInquiry = async (req, res) => {
     const inquiry = await getFromDatabase(dbPath);
     if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
 
-    if (inquiry.status === 'confirmed') {
+    if (inquiry.confirmedQuotationId || inquiry.status === 'confirmed') {
       return res.status(200).json({ 
-        message: 'Inquiry is already confirmed',
+        message: 'A quotation has already been created for this inquiry',
         quotationId: inquiry.confirmedQuotationId,
         activeServiceId: inquiry.confirmedActiveServiceId
       });
@@ -407,6 +406,7 @@ const confirmInquiry = async (req, res) => {
     // 4. Auto-create Quotation in quotations collection
     const quoteNo = `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const quotationPayload = {
+      clientUid: inquiry.clientUid || null,
       clientName: inquiry.clientName || inquiry.fullName,
       contactPerson: inquiry.contactPerson || inquiry.clientName || inquiry.fullName,
       clientEmail: inquiry.email || '',
@@ -439,42 +439,11 @@ const confirmInquiry = async (req, res) => {
 
     const quotationDocId = await addToDatabase(COLLECTIONS.QUOTATIONS, quotationPayload, ID_PREFIXES.QUOTATION);
 
-    // 5. Auto-initialize Ongoing Active Service with workflow steps in activeServices collection
-    const compiledSteps = await compileWorkflowStepsForService(inquiry.serviceId, serviceTitle, adminService?.workflowIds);
-    const activeServicePayload = {
-      clientUid: null,
-      clientName: inquiry.clientName || inquiry.fullName,
-      clientEmail: inquiry.email || '',
-      clientPhone: inquiry.phoneNumber || inquiry.cellphone || '',
-      serviceId: inquiry.serviceId || null,
-      serviceUID: inquiry.serviceId || null,
-      serviceType: serviceTitle,
-      price: inquiry.servicePrice || adminService?.price || (serviceFeeNum > 0 ? `₱${serviceFeeNum.toLocaleString()}` : 'Standard Fee'),
-      requirements: requirements,
-      submittedRequirements: requirements,
-      priority: 'Normal Priority',
-      priorityType: 'normal',
-      status: 'Pending',
-      currentStepIndex: 0,
-      totalSteps: compiledSteps.length,
-      startedAt: now,
-      completedAt: null,
-      steps: compiledSteps,
-      operatorId: branchUid,
-      branchUid: branchUid,
-      branchName: branchName,
-      additionalNotes: `Initialized from Confirmed Inquiry Form: ${inquiry.formNo || id}`,
-      inquiryId: id,
-      quotationId: quotationDocId
-    };
-
-    const activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload, ID_PREFIXES.ACTIVE_SERVICE);
-
     await updateToDatabase(dbPath, {
-      status: 'confirmed',
+      status: 'quotation_created',
       confirmedAt: now,
       confirmedQuotationId: quotationDocId,
-      confirmedActiveServiceId: activeServiceDocId,
+      confirmedActiveServiceId: null,
       updatedAt: now
     });
 
@@ -483,27 +452,26 @@ const confirmInquiry = async (req, res) => {
       createNotification({
         recipientUid: inquiry.clientUid,
         recipientRole: 'client',
-        title: 'Inquiry Confirmed & Quotation Ready',
+        title: 'Inquiry Reviewed & Quotation Ready',
         message: `Your inquiry (${inquiry.formNo || inquiry.controlNo}) has been confirmed by ${branchName}. Quotation ${quoteNo} is ready for your review.`,
         type: 'quotation',
         link: '/client/tracking',
-        metadata: { inquiryId: id, quotationId: quotationDocId, activeServiceId: activeServiceDocId }
+        metadata: { inquiryId: id, quotationId: quotationDocId }
       }).catch(err => console.warn('Client inquiry confirmation notification warning:', err.message));
     }
 
     // Notify Admins of confirmation
     notifyAdmins({
       title: 'Inquiry Confirmed by Branch',
-      message: `${branchName} confirmed inquiry for ${inquiry.clientName || inquiry.fullName} and generated Quotation ${quoteNo}.`,
+      message: `${branchName} reviewed the inquiry for ${inquiry.clientName || inquiry.fullName} and generated Quotation ${quoteNo}.`,
       type: 'inquiry',
       link: '/admin/inquiry-history',
       metadata: { inquiryId: id, quotationId: quotationDocId, branchName }
     }).catch(err => console.warn('Admin inquiry confirm notification warning:', err.message));
 
     return res.status(200).json({
-      message: 'Inquiry confirmed successfully. Quotation created and Active Service initialized.',
-      quotationId: quotationDocId,
-      activeServiceId: activeServiceDocId
+      message: 'Inquiry confirmed successfully. Quotation created and ready for client approval.',
+      quotationId: quotationDocId
     });
   } catch (error) {
     console.error('Error confirming inquiry:', error);

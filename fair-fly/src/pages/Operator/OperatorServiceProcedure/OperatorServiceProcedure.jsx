@@ -152,7 +152,7 @@ export default function OperatorServiceProcedure() {
     ApiCaller(
       `${API_BASE_URL}/api/services/active/${serviceRecord.id}/cancel`,
       'PATCH',
-      { cancellationReason: cancelReason.trim() },
+      { reason: cancelReason.trim() },
       { Authorization: `Bearer ${userToken}` },
       () => {
         addToast('Service fulfillment has been cancelled.', 'info');

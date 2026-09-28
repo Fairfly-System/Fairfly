@@ -1,27 +1,83 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './operator-history.css';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import DataTable from '../../../components/UI/DataTable/DataTable';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import { useAuthContext } from '../../../context/AuthContext';
+import { fetchAppointments } from '../../../services/appointmentService';
+import ApiCaller from '../../../utils/ApiCaller';
+import { API_BASE_URL } from '../../../utils/config';
 
-const MOCK_APPT_HISTORY = [
-  { id: 1, name: 'Juan Dela Cruz', service: 'Passport Processing', date: 'March 20, 2026', status: 'Completed' },
-  { id: 2, name: 'Maria Santos', service: 'VISA Assistance', date: 'March 18, 2026', status: 'Completed' },
-  { id: 3, name: 'Ana Reyes', service: 'Package Tour', date: 'March 15, 2026', status: 'Cancelled' },
-];
-
-const MOCK_SERVICE_HISTORY = [
-  { id: 101, client: 'Mark Bonifacio', service: 'PSA Birth Certificate', date: 'March 22, 2026', status: 'Completed' },
-  { id: 102, client: 'Liza Soberano', service: 'US Visa Renewal', date: 'March 19, 2026', status: 'Completed' },
-];
+function formatHistoryDate(value) {
+  if (!value) return 'N/A';
+  const date = typeof value?.toDate === 'function' ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+}
 
 export default function OperatorHistory() {
+  const { userToken } = useAuthContext();
   const [tab, setTab] = useState('appointments');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [appointmentHistory, setAppointmentHistory] = useState([]);
+  const [serviceHistory, setServiceHistory] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState('');
+  const [servicesError, setServicesError] = useState('');
 
-  const activeData = tab === 'appointments' ? MOCK_APPT_HISTORY : MOCK_SERVICE_HISTORY;
+  useEffect(() => {
+    if (!userToken) return;
+
+    fetchAppointments(
+      userToken,
+      {},
+      (appointments) => {
+        const rows = Array.isArray(appointments) ? appointments : [];
+        setAppointmentHistory(rows.map((appointment) => ({
+          id: appointment.id,
+          name: appointment.clientName || '',
+          service: appointment.serviceType || '',
+          date: formatHistoryDate(appointment.preferredDate || appointment.createdAt),
+          status: appointment.status || 'N/A',
+        })));
+        setAppointmentsError('');
+      },
+      (error) => {
+        setAppointmentHistory([]);
+        setAppointmentsError(error?.message || 'Unable to load appointment history.');
+      },
+      setAppointmentsLoading
+    );
+
+    ApiCaller(
+      `${API_BASE_URL}/api/services/active?status=Completed`,
+      'GET',
+      null,
+      { Authorization: `Bearer ${userToken}` },
+      (services) => {
+        const rows = Array.isArray(services) ? services : [];
+        setServiceHistory(rows.map((service) => ({
+          id: service.id,
+          name: service.clientName || '',
+          service: service.serviceType || '',
+          date: formatHistoryDate(service.completedAt || service.updatedAt || service.startedAt || service.createdAt),
+          status: service.status || 'Completed',
+        })));
+        setServicesError('');
+      },
+      (error) => {
+        setServiceHistory([]);
+        setServicesError(error?.message || 'Unable to load completed service history.');
+      },
+      setServicesLoading
+    );
+  }, [userToken]);
+
+  const activeData = tab === 'appointments' ? appointmentHistory : serviceHistory;
+  const activeLoading = tab === 'appointments' ? appointmentsLoading : servicesLoading;
+  const activeError = tab === 'appointments' ? appointmentsError : servicesError;
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -88,7 +144,7 @@ export default function OperatorHistory() {
             setCurrentPage(1);
           }}
         >
-          Appointment History ({MOCK_APPT_HISTORY.length})
+          Appointment History ({appointmentHistory.length})
         </button>
         <button
           className={`op-tab ${tab === 'services' ? 'active' : ''}`}
@@ -97,7 +153,7 @@ export default function OperatorHistory() {
             setCurrentPage(1);
           }}
         >
-          Service History ({MOCK_SERVICE_HISTORY.length})
+          Service History ({serviceHistory.length})
         </button>
       </div>
 
@@ -107,9 +163,10 @@ export default function OperatorHistory() {
         data={paginatedData}
         keyField="id"
         selectable={false}
+        isLoading={activeLoading}
         emptyState={{
           icon: 'fa-regular fa-clock',
-          message: 'No history records found',
+          message: activeError || 'No history records found',
         }}
       />
 

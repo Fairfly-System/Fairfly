@@ -11,6 +11,33 @@ import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentV
 import { acceptQuotation } from '../../../services/quotationService';
 import './client-tracking.css';
 
+function formatRequirementsText(specifiedRequirements, requirements) {
+  for (const value of [specifiedRequirements, requirements]) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+
+  if (!Array.isArray(requirements)) return '';
+
+  return requirements
+    .map((requirement) => {
+      if (typeof requirement === 'string') return requirement.trim();
+      if (!requirement || typeof requirement !== 'object') return '';
+
+      const label = [requirement.name, requirement.title]
+        .find((value) => typeof value === 'string' && value.trim())?.trim() || '';
+      const value = typeof requirement.value === 'string' ? requirement.value.trim() : '';
+      const fileName = typeof requirement.file?.fileName === 'string'
+        ? requirement.file.fileName.trim()
+        : '';
+      const details = [value, fileName ? `File: ${fileName}` : ''].filter(Boolean).join(' | ');
+
+      if (label && details) return `${label}: ${details}`;
+      return label || details;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
 export default function ClientTrackingPage() {
   const { user, userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -695,7 +722,7 @@ export default function ClientTrackingPage() {
                       {/* Specified Requirements Excerpt */}
                       <div className="inq-requirements-box">
                         <strong>Specified Requirements:</strong>
-                        <p>{inq.specifiedRequirements || inq.requirements || 'No specific requirements entered.'}</p>
+                        <p>{formatRequirementsText(inq.specifiedRequirements, inq.requirements) || 'No specific requirements entered.'}</p>
                       </div>
 
                       {inq.remarks && (

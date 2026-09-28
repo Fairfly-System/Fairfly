@@ -229,6 +229,8 @@ const createActiveService = async (req, res) => {
       startedAt: now,
       completedAt: null,
       steps: compiledSteps,
+      createdAt: now,
+      updatedAt: now,
       operatorId: targetBranchUid,
       branchUid: targetBranchUid,
       branchName: resolvedBranchName || 'Branch Operator',

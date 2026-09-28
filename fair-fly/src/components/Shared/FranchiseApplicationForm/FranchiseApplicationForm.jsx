@@ -18,7 +18,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
     investmentCapacity: '',
     preferredMeetingDate: '',
     preferredMeetingTime: '',
-    additionalInformation: '',
+    additionalMessage: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -67,7 +67,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
           investmentCapacity: '',
           preferredMeetingDate: '',
           preferredMeetingTime: '',
-          additionalInformation: '',
+          additionalMessage: '',
         });
         addToast('Application submitted successfully!', 'success');
       },
@@ -345,9 +345,9 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
               rows="3"
               placeholder="Tell us about your business goals..."
               onChange={(e) =>
-                handleInputChange(e.target.value, 'additionalInformation')
+                handleInputChange(e.target.value, 'additionalMessage')
               }
-              value={formData.additionalInformation}
+              value={formData.additionalMessage}
             />
           </div>
 

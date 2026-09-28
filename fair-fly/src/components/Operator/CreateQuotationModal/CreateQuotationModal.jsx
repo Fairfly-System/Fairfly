@@ -7,6 +7,67 @@ import { fetchServices } from '../../../services/serviceService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './create-quotation-modal.css';
 
+function getRequirementsText(inquiry) {
+  if (typeof inquiry.specifiedRequirements === 'string' && inquiry.specifiedRequirements.trim()) {
+    return inquiry.specifiedRequirements;
+  }
+
+  if (typeof inquiry.requirements === 'string') {
+    return inquiry.requirements;
+  }
+
+  if (!Array.isArray(inquiry.requirements)) return '';
+
+  return inquiry.requirements
+    .map((requirement) => {
+      if (typeof requirement === 'string') return requirement.trim();
+      if (!requirement || typeof requirement !== 'object') return '';
+
+      const name = [requirement.name, requirement.title, requirement.label]
+        .find((value) => typeof value === 'string' && value.trim()) || '';
+      const value = typeof requirement.value === 'string' ? requirement.value.trim() : '';
+      const fileName = typeof requirement.file?.fileName === 'string'
+        ? requirement.file.fileName.trim()
+        : '';
+      const details = [value, fileName ? `File: ${fileName}` : ''].filter(Boolean).join(' | ');
+
+      if (name && details) return `${name}: ${details}`;
+      return name || details;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function extractServiceRate(service) {
+  if (!service) return 0;
+  if (typeof service.price === 'number') return service.price;
+  if (typeof service.baseFee === 'number') return service.baseFee;
+  const rawStr = String(service.price || service.baseFee || '0');
+  const sanitized = rawStr.replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(sanitized);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function getServicePricing(service, taxAmount = 0) {
+  const baseRate = extractServiceRate(service);
+  const tax = Number(taxAmount) || 0;
+  const total = baseRate + tax;
+  let rateBreakdown = '';
+
+  if (baseRate > 0) {
+    const formattedRate = `Php ${baseRate.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    rateBreakdown = tax > 0
+      ? `${formattedRate} + Php ${tax.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Tax/Surcharge)`
+      : formattedRate;
+  }
+
+  return {
+    rate: baseRate > 0 ? String(baseRate) : '',
+    totalAmount: total > 0 ? String(total) : '',
+    rateBreakdown,
+  };
+}
+
 export default function CreateQuotationModal({ isOpen, onClose, initialData, onQuotationCreated }) {
   const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
@@ -41,7 +102,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        const reqsText = initialData.specifiedRequirements || initialData.requirements || '';
+        const reqsText = getRequirementsText(initialData);
         const serviceName = initialData.serviceType || 
           (Array.isArray(initialData.servicesOffered) ? initialData.servicesOffered.join(', ') : 'Custom Package');
 
@@ -72,6 +133,14 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
       (services) => {
         const activeOnly = Array.isArray(services) ? services.filter(s => s.status === 'Active') : [];
         setActiveServices(activeOnly);
+        setFormData((prev) => {
+          const selectedService = Array.isArray(services)
+            ? services.find((service) => service.id === prev.serviceId)
+            : null;
+          return selectedService
+            ? { ...prev, ...getServicePricing(selectedService, prev.taxAmount) }
+            : prev;
+        });
         setLoadingServices(false);
       },
       (err) => {
@@ -80,16 +149,6 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
       }
     );
   }, [isOpen, user?.uid, userDetails?.role]);
-
-  const extractServiceRate = (service) => {
-    if (!service) return 0;
-    if (typeof service.price === 'number') return service.price;
-    if (typeof service.baseFee === 'number') return service.baseFee;
-    const rawStr = String(service.price || service.baseFee || '0');
-    const sanitized = rawStr.replace(/[^0-9.]/g, '');
-    const parsed = parseFloat(sanitized);
-    return isNaN(parsed) ? 0 : parsed;
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -122,26 +181,11 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
 
     const matched = activeServices.find(s => s.id === selectedId);
     if (matched) {
-      const baseRateNum = extractServiceRate(matched);
-      const taxNum = Number(formData.taxAmount) || 0;
-      const totalNum = baseRateNum + taxNum;
-
-      let breakdownStr = '';
-      if (baseRateNum > 0) {
-        if (taxNum > 0) {
-          breakdownStr = `Php ${baseRateNum.toLocaleString('en-US', { minimumFractionDigits: 2 })} + Php ${taxNum.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Tax/Surcharge)`;
-        } else {
-          breakdownStr = `Php ${baseRateNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-        }
-      }
-
       setFormData(prev => ({
         ...prev,
         serviceId: matched.id,
         serviceTitle: matched.name,
-        rate: baseRateNum > 0 ? String(baseRateNum) : (prev.rate || ''),
-        totalAmount: totalNum > 0 ? String(totalNum) : (prev.totalAmount || ''),
-        rateBreakdown: breakdownStr || prev.rateBreakdown
+        ...getServicePricing(matched, prev.taxAmount),
       }));
     }
   };
