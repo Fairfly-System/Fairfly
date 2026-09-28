@@ -14,7 +14,7 @@
 .modal {
   background: white;
   width: 90%;
-  max-width: 540px;
+  max-width: 580px;
   border-radius: 16px;
   padding: 24px;
   position: relative;
@@ -24,7 +24,7 @@
   box-sizing: border-box;
 }
 
-/* Optional clean scrollbar styling */
+/* Scrollbar */
 .modal::-webkit-scrollbar {
   width: 8px;
 }
@@ -53,101 +53,166 @@
   cursor: pointer;
   transition: 0.3s;
   z-index: 10;
+  color: #666;
 }
 
 .closeBtn:hover {
-  transition: 0.3s;
-  color: rgb(74, 74, 74);
+  color: #111;
 }
 
-/* --- Header Section --- */
+/* Header */
 .modalHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 8px;
 }
 
 .modalHeader h2 {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: #111111;
   margin: 0;
 }
 
 .modalDescription {
-  font-size: 14px;
+  font-size: 13.5px;
   color: #666666;
   line-height: 1.5;
   margin-top: 0;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-/* --- Form & Grid Setup --- */
+/* Form Setup */
 .franchiseApplicationForm {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* Row wrapper for fields that sit side-by-side */
+/* 2-Column Row */
 .formRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* Individual field wrapper containing the label and input */
-.formGroup {
+/* 3-Column Name Row: First Name (1fr) - Middle Initial (0.38fr) - Last Name (1fr) */
+.formRow--name {
+  grid-template-columns: 1fr 0.38fr 1fr;
+  gap: 10px;
+}
+
+.formGroup--mi input {
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Address Card Section */
+.formSection {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background-color: #fafbfc;
+}
+
+.formSectionLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.formGroup label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a1a;
+/* Field Wrapper */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-/* --- Form Controls --- */
+.formGroup label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.formGroup label .optional {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* Form Controls */
 .franchiseApplicationForm input,
 .franchiseApplicationForm select,
 .franchiseApplicationForm textarea {
   width: 100%;
-  padding: 12px 14px;
-  background-color: #f5f5f7;
-  border: 1px solid transparent;
+  padding: 10px 12px;
+  background-color: #f8fafc;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
-  font-size: 14px;
-  color: #1a1a1a;
+  font-size: 13.5px;
+  color: #1e293b;
   outline: none;
   box-sizing: border-box;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Placeholder styling */
+/* Custom select chevron */
+.franchiseApplicationForm select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.franchiseApplicationForm select:disabled,
+.franchiseApplicationForm input:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Placeholders */
 .franchiseApplicationForm input::placeholder,
 .franchiseApplicationForm textarea::placeholder {
-  color: #8e8e93;
+  color: #9ca3af;
 }
 
-/* Focus states */
+/* Focus */
 .franchiseApplicationForm input:focus,
 .franchiseApplicationForm select:focus,
 .franchiseApplicationForm textarea:focus {
-  background-color: #f5f5f7;
-  border-color: #858efe;
-  box-shadow: 0 0 0 3px rgba(133, 142, 254, 0.25);
+  background-color: #ffffff;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
 .franchiseApplicationForm textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 72px;
   font-family: inherit;
 }
 
-/* --- Action Buttons Footer --- */
+/* Errors */
+.error {
+  color: #dc2626;
+  font-size: 11.5px;
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+
+/* Actions Footer */
 .formActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -156,11 +221,11 @@
 }
 
 .submitBtn {
-  background: #ff843d; 
+  background: #ff843d;
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -168,25 +233,42 @@
   justify-content: center;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s ease;
 }
 
-.submitBtn:hover {
+.submitBtn:hover:not(:disabled) {
   background: #e66f2a;
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .cancelBtn {
   background: white;
-  color: #1a1a1a;
-  border: 1px solid #d1d1d6;
+  color: #374151;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s ease;
 }
 
 .cancelBtn:hover {
-  background: #f5f5f7;
+  background: #f8fafc;
+}
+
+/* Responsive */
+@media (max-width: 540px) {
+  .formRow,
+  .formRow--name {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    padding: 18px 14px;
+  }
 }

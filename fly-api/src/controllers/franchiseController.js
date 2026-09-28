@@ -8,7 +8,53 @@ const { createNotification, notifyAdmins } = require('../services/notificationSe
 const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
-  FRANCHISE_APPLICATIONS: 'franchiseApplications'
+  FRANCHISE_APPLICATIONS: 'franchiseApplications',
+  FORM_SCHEMAS: 'formSchemas'
+};
+
+const DEFAULT_FRANCHISE_SCHEMA = {
+  id: 'franchise_application_default_v1',
+  version: 1,
+  title: 'FairFly Franchise Application Form',
+  sections: [
+    {
+      id: 'applicant_info',
+      title: 'Applicant Information',
+      fields: [
+        { id: 'firstName', label: 'First Name', type: 'text', required: true, placeholder: 'Enter first name' },
+        { id: 'middleInitial', label: 'Middle Initial', type: 'text', required: false, placeholder: 'M.I.' },
+        { id: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Enter last name' },
+        { id: 'email', label: 'Email Address', type: 'email', required: true, placeholder: 'email@example.com' },
+        { id: 'phoneNumber', label: 'Phone Number', type: 'tel', required: true, placeholder: '+63 912 345 6789' }
+      ]
+    },
+    {
+      id: 'preferred_location',
+      title: 'Preferred Branch Location',
+      fields: [
+        { id: 'province', label: 'Province', type: 'text', required: true, placeholder: 'Select province' },
+        { id: 'municipality', label: 'Municipality / City', type: 'text', required: true, placeholder: 'Select municipality' },
+        { id: 'barangay', label: 'Barangay', type: 'text', required: true, placeholder: 'Select barangay' },
+        { id: 'building', label: 'Building / Street', type: 'text', required: false, placeholder: 'Building / House No. / Street' }
+      ]
+    },
+    {
+      id: 'business_background',
+      title: 'Business Background & Meeting Preference',
+      fields: [
+        { id: 'businessExperience', label: 'Business Experience', type: 'text', required: true, placeholder: 'Select experience level' },
+        { id: 'investmentCapacity', label: 'Investment Capacity', type: 'text', required: true, placeholder: 'Select investment range' },
+        { id: 'preferredMeetingDate', label: 'Preferred Meeting Date', type: 'date', required: true },
+        { id: 'preferredMeetingTime', label: 'Preferred Meeting Time', type: 'text', required: true },
+        { id: 'additionalMessage', label: 'Additional Information', type: 'textarea', required: false, placeholder: 'Tell us more about your background...' }
+      ]
+    },
+    {
+      id: 'custom_fields',
+      title: 'Custom Franchise Specifications',
+      fields: []
+    }
+  ]
 };
 
 /**
@@ -21,15 +67,27 @@ const submitApplication = async (req, res) => {
       return res.status(400).json({ error: 'Application data is required' });
     }
 
-    const requiredFields = ['fullName', 'phoneNumber', 'email', 'preferredBranchLocation'];
-    for (const field of requiredFields) {
-      if (!applicationData[field]) {
-        return res.status(400).json({ error: `Missing required field: ${field}` });
-      }
+    // Support both legacy fullName and new split firstName/lastName fields
+    const derivedFullName = applicationData.fullName ||
+      [applicationData.firstName, applicationData.middleInitial, applicationData.lastName]
+        .filter(Boolean).join(' ').trim();
+
+    if (!derivedFullName) {
+      return res.status(400).json({ error: 'Missing required field: name (fullName or firstName/lastName)' });
+    }
+    if (!applicationData.phoneNumber) {
+      return res.status(400).json({ error: 'Missing required field: phoneNumber' });
+    }
+    if (!applicationData.email) {
+      return res.status(400).json({ error: 'Missing required field: email' });
+    }
+    if (!applicationData.preferredBranchLocation) {
+      return res.status(400).json({ error: 'Missing required field: preferredBranchLocation' });
     }
 
     const sanitizedData = {
       ...applicationData,
+      fullName: derivedFullName, // always store canonical fullName for backward compatibility
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'pending',
@@ -60,36 +118,51 @@ const submitApplication = async (req, res) => {
  */
 const getApplications = async (req, res) => {
   try {
-    const { status, limit, startDate, endDate } = req.query;
+    const { status, limit, offset, search } = req.query;
 
-    const options = {
-      filters: [],
-      orderBy: { field: 'createdAt', direction: 'desc' }
-    };
-
-    if (status) {
-      options.filters.push({ field: 'status', operator: '==', value: status });
-    }
-    if (startDate) {
-      options.filters.push({ field: 'createdAt', operator: '>=', value: startDate });
-    }
-    if (endDate) {
-      options.filters.push({ field: 'createdAt', operator: '<=', value: endDate });
-    }
-    if (limit) {
-      options.limit = parseInt(limit, 10);
+    const filters = [];
+    if (status && status !== 'all') {
+      filters.push({ field: 'status', operator: '==', value: status.toLowerCase() });
     }
 
-    const results = await queryDatabaseAdvanced(COLLECTIONS.FRANCHISE_APPLICATIONS, options);
-    return res.status(200).json(results);
+    let applications = await queryDatabaseAdvanced(
+      COLLECTIONS.FRANCHISE_APPLICATIONS,
+      filters,
+      { field: 'createdAt', direction: 'desc' }
+    );
+
+    // In-memory text search if requested
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      applications = applications.filter(app => 
+        (app.fullName && app.fullName.toLowerCase().includes(q)) ||
+        (app.email && app.email.toLowerCase().includes(q)) ||
+        (app.preferredBranchLocation && app.preferredBranchLocation.toLowerCase().includes(q)) ||
+        (app.phoneNumber && app.phoneNumber.includes(q))
+      );
+    }
+
+    const total = applications.length;
+
+    // Optional pagination
+    const parsedOffset = parseInt(offset, 10) || 0;
+    const parsedLimit = parseInt(limit, 10);
+    const paginated = !isNaN(parsedLimit) && parsedLimit > 0
+      ? applications.slice(parsedOffset, parsedOffset + parsedLimit)
+      : applications;
+
+    return res.status(200).json({
+      total,
+      applications: paginated
+    });
   } catch (error) {
-    console.error('Error getting franchise applications:', error);
+    console.error('Error fetching franchise applications:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 /**
- * Retrieve a specific franchise application by ID
+ * Retrieve a single franchise application by ID
  */
 const getApplicationById = async (req, res) => {
   try {
@@ -98,44 +171,35 @@ const getApplicationById = async (req, res) => {
       return res.status(400).json({ error: 'Application ID is required' });
     }
 
-    const data = await getFromDatabase(`${COLLECTIONS.FRANCHISE_APPLICATIONS}/${id}`);
-    if (!data) {
+    const application = await getFromDatabase(`${COLLECTIONS.FRANCHISE_APPLICATIONS}/${id}`);
+    if (!application) {
       return res.status(404).json({ error: 'Application not found' });
     }
 
-    // Authorization check: Only Admin, Operator or the Creator user themselves can view
-    const userRole = req.userDetails?.role;
-    const isCreator = req.user && data.userId === req.user.uid;
-    const isAuthorized = userRole === 'admin' || userRole === 'operator' || isCreator;
-
-    if (!isAuthorized) {
-      return res.status(403).json({ error: 'Forbidden: You do not have permission to view this application' });
+    // Role check: Only the applicant themselves or an admin may view it
+    const isOwner = req.user?.uid && application.userId === req.user.uid;
+    const isAdmin = req.user?.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
-    return res.status(200).json({ id, ...data });
+    return res.status(200).json(application);
   } catch (error) {
-    console.error('Error getting franchise application by ID:', error);
+    console.error('Error fetching application by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 /**
- * Update application status (Admin only)
+ * Update the status of a franchise application (Admin only)
  */
 const updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ error: 'Application ID is required' });
-    }
-    if (!status) {
-      return res.status(400).json({ error: 'Status is required' });
-    }
-
-    const validStatuses = ['pending', 'approved', 'rejected', 'in-review'];
-    if (!validStatuses.includes(status)) {
+    const validStatuses = ['pending', 'approved', 'rejected'];
+    if (!status || !validStatuses.includes(status.toLowerCase())) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
@@ -170,9 +234,64 @@ const updateApplicationStatus = async (req, res) => {
   }
 };
 
+/**
+ * Get franchise application form schema (Admin read)
+ */
+const getFranchiseApplicationSchema = async (req, res) => {
+  try {
+    const schema = await getFromDatabase(`${COLLECTIONS.FORM_SCHEMAS}/franchiseApplication`);
+    if (!schema || !Array.isArray(schema.sections) || schema.sections.length === 0) {
+      return res.status(200).json(DEFAULT_FRANCHISE_SCHEMA);
+    }
+
+    // Ensure custom_fields section is always present
+    const sections = [...schema.sections];
+    if (!sections.some((s) => s.id === 'custom_fields')) {
+      sections.push({
+        id: 'custom_fields',
+        title: 'Custom Franchise Specifications',
+        fields: []
+      });
+    }
+
+    return res.status(200).json({ ...schema, sections });
+  } catch (error) {
+    console.error('Error getting franchise application schema:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Save franchise application form schema (Admin only)
+ */
+const saveFranchiseApplicationSchema = async (req, res) => {
+  try {
+    const { sections, title } = req.body;
+    if (!Array.isArray(sections)) {
+      return res.status(400).json({ error: 'sections array is required' });
+    }
+
+    const updatedSchema = {
+      id: 'franchise_application_schema',
+      title: title || 'FairFly Franchise Application Form',
+      sections,
+      updatedAt: new Date().toISOString(),
+      updatedBy: req.user?.uid || 'admin'
+    };
+
+    await updateToDatabase(`${COLLECTIONS.FORM_SCHEMAS}/franchiseApplication`, updatedSchema);
+    return res.status(200).json({ message: 'Franchise application form schema saved successfully', schema: updatedSchema });
+  } catch (error) {
+    console.error('Error saving franchise application schema:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   submitApplication,
   getApplications,
   getApplicationById,
-  updateApplicationStatus
+  updateApplicationStatus,
+  getFranchiseApplicationSchema,
+  saveFranchiseApplicationSchema
 };

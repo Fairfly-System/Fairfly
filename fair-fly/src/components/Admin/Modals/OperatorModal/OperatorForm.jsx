@@ -23,7 +23,14 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!isFormValid) return;
-    onSubmit(formData);
+    if (isEditMode) {
+      // Backend allowedFields for edit rejects unexpected 'password' field
+      // eslint-disable-next-line no-unused-vars
+      const { password, ...editPayload } = formData;
+      onSubmit(editPayload);
+    } else {
+      onSubmit(formData);
+    }
   };
 
   return (

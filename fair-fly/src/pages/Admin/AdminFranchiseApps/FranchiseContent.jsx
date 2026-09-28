@@ -12,6 +12,7 @@ import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
+import FranchiseApplicationFormBuilderModal from '../../../components/Admin/Modals/FranchiseApplicationFormBuilderModal/FranchiseApplicationFormBuilderModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -23,6 +24,7 @@ import toFriendlyMessage from '../../../utils/friendlyErrors';
 export default function FranchiseContent() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [showFormBuilder, setShowFormBuilder] = useState(false);
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,7 +156,17 @@ export default function FranchiseContent() {
         title="Franchise Applications"
         subtitle="Review, approve, and manage submitted franchise partner applications"
         illustrationSrc="/pageImages/admin/franchise-apps.png"
-      />
+      >
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setShowFormBuilder(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', borderColor: 'var(--purple, #7c3aed)', color: 'var(--purple, #7c3aed)' }}
+        >
+          <i className="fa-solid fa-sliders" aria-hidden="true"></i>
+          <span>Customize Application Form</span>
+        </button>
+      </PageHeader>
 
       <section className="services-summary-grid">
         <KpiCard
@@ -280,6 +292,11 @@ export default function FranchiseContent() {
         isLoading={isLoading}
         handleApprove={handleApplicationStatusChange}
         handleReject={handleApplicationStatusChange}
+      />
+
+      <FranchiseApplicationFormBuilderModal
+        isOpen={showFormBuilder}
+        onClose={() => setShowFormBuilder(false)}
       />
     </main>
   );

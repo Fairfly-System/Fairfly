@@ -1,5 +1,23 @@
 # Update Logs
 
+## [2026-09-28] Feature: Franchise Application Form Builder, PSGC Address Cascade & Dynamic Custom Fields
+
+### Overview
+Addressed several enhancements and bugfixes for the Franchise Module:
+1. **Operator Edit 400 Bad Request Fix**: Removed `password` from the payload in edit mode within `OperatorForm.jsx`, satisfying backend `allowedFields` whitelisting.
+2. **Franchise Form Builder Integration**: Added "Customize Application Form" button to `admin/franchise-apps` (mirroring `admin/inquiry-history`), backed by `FranchiseApplicationFormBuilderModal` and `/api/franchise/application-schema`.
+3. **Modal Form Builder Section Display**: Defined `DEFAULT_FRANCHISE_SCHEMA` with all standard core sections (Applicant Info, Preferred Location, Business Background) protected with shield/lock badges, and an extensible "Custom Franchise Specifications" section with "+ Add New Field" capability.
+4. **Philippine Geographic Data (PSGC Cloud API)**: Rewrote cascading location selectors (`Province` $\to$ `Municipality` $\to$ `Barangay` $\to$ `Building`) with official PSGC Cloud endpoints, added first-class Metro Manila (NCR) region support, and integrated dynamic custom form fields.
+
+### Key Changes
+- `fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx`: Stripped `password` on edit submit.
+- `fly-api/src/controllers/franchiseController.js`: Added `DEFAULT_FRANCHISE_SCHEMA` and updated `getFranchiseApplicationSchema` and `submitApplication` to support dynamic `customFields`.
+- `fly-api/src/routes/franchiseRoutes.js`: Whitelisted `customFields` in `FRANCHISE_ALLOWED_FIELDS` and registered schema endpoints before parameterized routes.
+- `fair-fly/src/components/Admin/Modals/FranchiseApplicationFormBuilderModal/FranchiseApplicationFormBuilderModal.jsx`: Normalized incoming schema with guaranteed default sections, protected core fields, and full custom field creation/deletion.
+- `fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx`: Integrated PSGC Cloud API with NCR support, added dynamic custom fields rendering, and included `customFields` in submission payload.
+
+---
+
 ## [2026-09-28] Bugfix: Client Service Tracker Requirements File Resolution & Attachment Previews
 
 ### Overview
