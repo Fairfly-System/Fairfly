@@ -16,7 +16,13 @@ import './operator-quotations.css';
 
 import CreateQuotationModal from '../../../components/Operator/CreateQuotationModal/CreateQuotationModal';
 
-import { fetchServices } from '../../../services/serviceService';
+function getQuotationStatusClass(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'paid' || s === 'accepted' || s === 'confirmed') return 'status-pill-completed';
+  if (s === 'sent') return 'status-pill-active';
+  if (s === 'rejected' || s === 'cancelled') return 'status-pill-disabled';
+  return 'status-pill-pending';
+}
 
 export function QuotationsContent() {
   const { userToken, user, userDetails } = useAuthContext();
@@ -185,8 +191,8 @@ export function QuotationsContent() {
                     >
                       <i className="fa-solid fa-eye"></i> View
                     </Link>
-                    <span className="status-pill status-pill-active">{q.status || 'Draft'}</span>
-                    {q.status !== 'Sent' && (
+                    <span className={`status-pill ${getQuotationStatusClass(q.status)}`}>{q.status || 'Draft'}</span>
+                    {q.status === 'Draft' && (
                       <button
                         className="ticket-action-btn view-thread-btn"
                         style={{ padding: '0.3rem 0.65rem', fontSize: '0.775rem' }}

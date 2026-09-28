@@ -11,15 +11,41 @@ const assert = require('assert');
 const crypto = require('crypto');
 const { verifyWebhookSignature } = require('../services/paymongoService');
 const { finalizeSuccessfulPayment } = require('../controllers/paymentController');
-const { buildFulfillmentPayload } = require('../controllers/quotationController');
+const { 
+  buildFulfillmentPayload,
+  updateQuotation,
+  updateQuotationStatus,
+  acceptQuotation,
+  deleteQuotation
+} = require('../controllers/quotationController');
 const { db } = require('../config/firebase');
 
 // Mock Document Store for in-memory ACID simulation
 const mockStore = {};
 
-// Intercept Firestore collection and transaction for test isolation
+// Intercept Firestore collection, doc, and transaction for test isolation
 const originalCollection = db.collection.bind(db);
 const originalRunTransaction = db.runTransaction ? db.runTransaction.bind(db) : null;
+
+db.doc = (path) => {
+  return {
+    path,
+    get: async () => ({
+      exists: !!mockStore[path],
+      data: () => (mockStore[path] ? { ...mockStore[path] } : undefined),
+    }),
+    set: async (data) => {
+      mockStore[path] = { ...data };
+    },
+    update: async (data) => {
+      if (!mockStore[path]) throw new Error(`Document ${path} does not exist`);
+      Object.assign(mockStore[path], data);
+    },
+    delete: async () => {
+      delete mockStore[path];
+    }
+  };
+};
 
 db.collection = (name) => {
   const coll = originalCollection(name);
@@ -173,7 +199,20 @@ async function runTests() {
       serviceTitle: 'Bohol Countryside Tour',
       tourDates: '2026-10-15 to 2026-10-18',
       totalAmount: 18500,
-      currency: 'PHP'
+      currency: 'PHP',
+      submittedRequirements: [
+        {
+          name: 'Passport Bio Page',
+          inputType: 'image',
+          required: true,
+          value: '',
+          file: {
+            url: 'https://storage.googleapis.com/fairfly/passports/client_pass.jpg',
+            fileName: 'client_pass.jpg',
+            fileSize: 204850
+          }
+        }
+      ]
     };
 
     const fulfillment = await buildFulfillmentPayload(
@@ -191,6 +230,9 @@ async function runTests() {
     assert.strictEqual(fulfillment.status, 'Pending');
     assert.ok(Array.isArray(fulfillment.steps), 'Workflow steps must be an array');
     assert.ok(fulfillment.steps.length > 0, 'Workflow steps must be populated');
+    assert.strictEqual(fulfillment.submittedRequirements.length, 1, 'Must preserve submitted requirements');
+    assert.strictEqual(fulfillment.submittedRequirements[0].file.fileName, 'client_pass.jpg', 'Must preserve file metadata');
+    assert.strictEqual(fulfillment.requirements.length, 1, 'Must mirror submitted requirements to procedure requirements');
   });
 
   // -------------------------------------------------------------
@@ -271,6 +313,59 @@ async function runTests() {
 
     assert.strictEqual(typeof genericResponse.message, 'string');
     assert.ok(genericResponse.message.includes('awaiting Super Admin verification'));
+  });
+
+  // -------------------------------------------------------------
+  // TEST 5: Guard Quotations Against Modifications Post-Payment
+  // -------------------------------------------------------------
+  await reportAsync('Quotation Immutability: Paid quotations reject edits, re-acceptance, and deletions', async () => {
+    const paidQuoteId = 'QTE-PAID-001';
+    mockStore[`quotations/${paidQuoteId}`] = {
+      id: paidQuoteId,
+      status: 'PAID',
+      paymentStatus: 'PAID',
+      totalAmount: 5000,
+      branchUid: 'user_operator_456',
+      activeServiceId: 'ACT-SVC-PAID-001'
+    };
+
+    const reqMock = {
+      params: { id: paidQuoteId },
+      body: { rate: 9999, status: 'Sent' },
+      user: { uid: 'user_operator_456' },
+      userDetails: { role: 'operator', branchUid: 'user_operator_456' }
+    };
+
+    let statusCode = null;
+    let responseData = null;
+    const resMock = {
+      status: (code) => {
+        statusCode = code;
+        return {
+          json: (data) => { responseData = data; return data; }
+        };
+      }
+    };
+
+    // Test updateQuotation blocks edit
+    await updateQuotation(reqMock, resMock);
+    assert.strictEqual(statusCode, 400, 'updateQuotation must reject editing paid quotation with 400');
+    assert.ok(responseData.error.includes('already been paid'));
+
+    // Test updateQuotationStatus blocks status change
+    statusCode = null; responseData = null;
+    await updateQuotationStatus(reqMock, resMock);
+    assert.strictEqual(statusCode, 400, 'updateQuotationStatus must reject status change on paid quotation with 400');
+
+    // Test acceptQuotation blocks re-acceptance
+    statusCode = null; responseData = null;
+    await acceptQuotation(reqMock, resMock);
+    assert.strictEqual(statusCode, 400, 'acceptQuotation must reject re-accepting paid quotation with 400');
+
+    // Test deleteQuotation blocks deletion
+    statusCode = null; responseData = null;
+    await deleteQuotation(reqMock, resMock);
+    assert.strictEqual(statusCode, 400, 'deleteQuotation must reject deleting paid quotation with 400');
   });
 
   // -------------------------------------------------------------

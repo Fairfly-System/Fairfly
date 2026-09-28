@@ -209,6 +209,9 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
 
     const payload = {
       ...formData,
+      submittedRequirements: Array.isArray(initialData?.requirements) && initialData.requirements.length > 0
+        ? initialData.requirements
+        : (Array.isArray(initialData?.submittedRequirements) ? initialData.submittedRequirements : []),
       rate: Number(formData.rate) || 0,
       taxAmount: Number(formData.taxAmount) || 0,
       totalAmount: Number(formData.totalAmount || formData.rate) || 0,

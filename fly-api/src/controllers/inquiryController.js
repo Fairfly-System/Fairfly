@@ -414,6 +414,7 @@ const confirmInquiry = async (req, res) => {
       serviceId: inquiry.serviceId || null,
       serviceTitle: serviceTitle,
       requirements: formattedReqsList,
+      submittedRequirements: Array.isArray(requirements) ? requirements : [],
       tourDates: inquiry.dateInquired || now.split('T')[0],
       inclusions: adminService?.description ? `- Standard ${serviceTitle} inclusions` : '- Standard package inclusions',
       exclusions: '- Toll fees, personal expenses, and incidental items',

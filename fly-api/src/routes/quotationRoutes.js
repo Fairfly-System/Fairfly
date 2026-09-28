@@ -22,6 +22,7 @@ const QUOTATION_ALLOWED_FIELDS = [
   'serviceId',
   'serviceTitle',
   'requirements',
+  'submittedRequirements',
   'tourDates',
   'inclusions',
   'exclusions',

@@ -1,5 +1,31 @@
 # Update Logs
 
+## [2026-09-28] Bugfix: Requirements Pipeline from Inquiry to Service Fulfillment & Quotation Post-Payment Immutability
+
+### Overview
+Resolved two critical operational bugs in the FairFly service quotation and fulfillment lifecycle:
+1. **Requirements Preservation in Service Fulfillment (`OperatorServiceProcedure.jsx`)**:
+   - Fixed an issue where client-submitted requirements and uploaded documents were visible on the inquiry intake form, but displayed as `Client Submitted Requirements (0)` on the Service Fulfillment Procedure page after quotation acceptance and payment.
+   - Preserved requirement metadata (`name`, `inputType`, `value`, `file: { url, fileName, fileSize, storagePath }`) through the entire Inquiry $\to$ Quotation $\to$ Service Fulfillment lifecycle.
+   - Updated `QUOTATION_ALLOWED_FIELDS` in `fly-api/src/routes/quotationRoutes.js` to whitelist `submittedRequirements`.
+   - Updated `CreateQuotationModal.jsx` to pass `submittedRequirements` from initial inquiry data.
+   - Updated `inquiryController.js` (`confirmInquiry`) to attach `submittedRequirements` to the auto-generated quotation payload.
+   - Updated `quotationController.js` (`createQuotation` and `buildFulfillmentPayload`) to inherit submitted requirements from inquiry or quotation and persist them directly into `activeServices.submittedRequirements` and `activeServices.requirements`.
+   - Fixed JavaScript array truthiness evaluation in `OperatorServiceProcedure.jsx` (`[] || requirements`), and added automated fallback retrieval for legacy active service records.
+2. **Quotation Post-Payment Immutability & Action Lockout on Operator Portal**:
+   - Fixed an issue where paid quotations in the Quotations tab (`QuotationDetailPage.jsx` and `OperatorQuotations.jsx`) still allowed operators to "Accept on Behalf of Client (On-Site)", "Edit Fields", or "Mark as Sent".
+   - Locked down frontend actions on `QuotationDetailPage.jsx`:
+     - Excluded `Accept on Behalf of Client (On-Site)` and `Edit Fields` when the quotation is finalized (`PAID` or `Accepted`).
+     - Guarded `handleSaveChanges`, `handleDelete`, `handleStatusChange`, and `handleAcceptOnBehalf` with explicit notifications if called on finalized/paid quotations.
+     - Updated procedure button link to point to `/operator/services/${quotation.activeServiceId}/procedure`.
+     - Rendered green `Quotation Paid · Service Fulfillment Active` banner for paid quotations.
+   - In `OperatorQuotations.jsx`, restricted the "Mark as Sent" button to `Draft` quotations only, and applied status pill styles for `PAID` / `Accepted` records.
+   - Hardened backend controllers (`quotationController.js`):
+     - `updateQuotation`, `updateQuotationStatus`, `acceptQuotation`, and `deleteQuotation` now strictly return HTTP 400 Bad Request if attempted on a quotation with status `PAID` or paymentStatus `PAID`.
+   - Added automated test cases in `testPaymentAndResetFlows.js` verifying requirements preservation and post-payment immutability (7/7 tests passing).
+
+---
+
 ## [2026-09-28] Feature: Operator Fulfillment & History Workflow with View Modals and Automatic Full Refund on Cancellation
 
 ### Overview

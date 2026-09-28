@@ -122,9 +122,20 @@ export default function QuotationDetailPage() {
     });
   };
 
+  const isPaid = (quotation?.status || '').toUpperCase() === 'PAID' || (quotation?.paymentStatus || '').toUpperCase() === 'PAID';
+  const isAccepted = quotation?.status === 'Accepted' || isPaid;
+  const isCancelled = (quotation?.status || '').toLowerCase() === 'cancelled';
+  const isFinalized = isPaid || isAccepted || isCancelled;
+
   const handleSaveChanges = async () => {
     if (!formData.clientName || !formData.serviceTitle || formData.rate === '') {
       addToast('Client name, service title, and rate are required fields', 'error');
+      return;
+    }
+
+    if (isFinalized) {
+      addToast('Cannot modify a quotation that has already been accepted or paid.', 'error');
+      setIsEditing(false);
       return;
     }
 
@@ -153,6 +164,12 @@ export default function QuotationDetailPage() {
 
   const handleDelete = async () => {
     if (!quotation) return;
+    if (isPaid) {
+      addToast('Cannot delete a quotation that has already been paid and activated.', 'error');
+      setShowDeleteConfirm(false);
+      return;
+    }
+
     ApiCaller(
       `${API_BASE_URL}/api/quotations/${quotation.id}`,
       'DELETE',
@@ -172,6 +189,11 @@ export default function QuotationDetailPage() {
 
   const handleStatusChange = async (newStatus) => {
     if (!quotation) return;
+    if (isFinalized) {
+      addToast('Cannot change status of a finalized or paid quotation.', 'error');
+      return;
+    }
+
     ApiCaller(
       `${API_BASE_URL}/api/quotations/${quotation.id}/status`,
       'PATCH',
@@ -188,7 +210,12 @@ export default function QuotationDetailPage() {
 
   const handleAcceptOnBehalf = () => {
     if (!quotation?.id) return;
-    if (!window.confirm(`Accept this quotation on behalf of ${quotation.clientName}? This will immediately initialize the Custom Service in activeServices.`)) {
+    if (isFinalized) {
+      addToast('This quotation has already been accepted or paid.', 'warning');
+      return;
+    }
+
+    if (!window.confirm(`Accept this quotation on behalf of ${quotation.clientName}? This will register client acceptance.`)) {
       return;
     }
 
@@ -198,7 +225,7 @@ export default function QuotationDetailPage() {
       quotation.id,
       () => {
         setIsAccepting(false);
-        addToast('Quotation accepted on behalf of client! Custom Service has been created.', 'success');
+        addToast('Quotation accepted on behalf of client!', 'success');
       },
       (err) => {
         setIsAccepting(false);
@@ -213,8 +240,6 @@ export default function QuotationDetailPage() {
     { label: 'Quotations', to: '/operator/quotations' },
     { label: quotation ? (quotation.quoteNo || 'Quotation Details') : 'Loading...' },
   ];
-
-  const isAccepted = quotation?.status === 'Accepted';
 
   const actions = useMemo(() => {
     if (!quotation) return [];
@@ -245,13 +270,15 @@ export default function QuotationDetailPage() {
         className: 'btn-secondary',
         disabled: isSaving || isDeleting || isAccepting,
       },
-      {
-        label: 'Edit Fields',
-        icon: 'fa-solid fa-pen-to-square',
-        onClick: () => setIsEditing(true),
-        className: 'btn-secondary',
-        disabled: isSaving || isDeleting || isAccepting || isAccepted,
-      },
+      ...(!isFinalized ? [
+        {
+          label: 'Edit Fields',
+          icon: 'fa-solid fa-pen-to-square',
+          onClick: () => setIsEditing(true),
+          className: 'btn-secondary',
+          disabled: isSaving || isDeleting || isAccepting,
+        },
+      ] : []),
       ...(quotation.status === 'Draft' ? [
         {
           label: 'Send to Client',
@@ -261,7 +288,7 @@ export default function QuotationDetailPage() {
           disabled: isSaving || isDeleting || isAccepting,
         }
       ] : []),
-      ...(!isAccepted ? [
+      ...(!isFinalized ? [
         {
           label: isAccepting ? 'Accepting...' : 'Accept on Behalf of Client (On-Site)',
           icon: isAccepting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-handshake',
@@ -271,25 +298,27 @@ export default function QuotationDetailPage() {
           style: { background: 'var(--green, #16a34a)' }
         }
       ] : []),
-      {
-        label: 'Delete Quotation',
-        icon: 'fa-solid fa-trash',
-        onClick: () => setShowDeleteConfirm(true),
-        className: 'btn-danger',
-        disabled: isSaving || isDeleting || isAccepting,
-      },
+      ...(!isPaid ? [
+        {
+          label: 'Delete Quotation',
+          icon: 'fa-solid fa-trash',
+          onClick: () => setShowDeleteConfirm(true),
+          className: 'btn-danger',
+          disabled: isSaving || isDeleting || isAccepting,
+        }
+      ] : []),
     ];
-  }, [quotation, isEditing, isSaving, isDeleting, isAccepting, isAccepted, formData]);
+  }, [quotation, isEditing, isSaving, isDeleting, isAccepting, isFinalized, isPaid, formData]);
 
   const getStatusType = () => {
     if (!quotation) return 'neutral';
     const status = (quotation.status || '').toLowerCase();
+    if (status === 'paid') return 'success';
     if (status === 'accepted' || status === 'confirmed') return 'success';
     if (status === 'sent') return 'warning';
     if (status === 'cancelled' || status === 'rejected') return 'danger';
     return 'neutral';
   };
-
 
   return (
     <RecordDetailLayout
@@ -308,16 +337,20 @@ export default function QuotationDetailPage() {
       {quotation && (
         <div className="quotation-detail-wrapper">
           {/* Active Custom Service / Accepted Banner */}
-          {isAccepted && (
-            <div className="inquiry-confirmed-banner quote-accepted-banner">
+          {isFinalized && !isCancelled && (
+            <div className={`inquiry-confirmed-banner quote-accepted-banner ${isPaid ? 'paid-banner' : ''}`}>
               <div className="quote-accepted-info">
                 <div className="quote-accepted-icon">
-                  <i className="fa-solid fa-circle-check"></i>
+                  <i className={isPaid ? "fa-solid fa-badge-check" : "fa-solid fa-circle-check"}></i>
                 </div>
                 <div>
-                  <h4 className="quote-accepted-title">Quotation Accepted · Custom Service Active</h4>
+                  <h4 className="quote-accepted-title">
+                    {isPaid ? 'Quotation Paid · Service Fulfillment Active' : 'Quotation Accepted · Awaiting Payment'}
+                  </h4>
                   <p className="quote-accepted-sub">
-                    This quotation has been officially accepted and converted into an active tracking service with sequential milestones.
+                    {isPaid
+                      ? 'Payment has been authoritatively verified. The custom service has been initialized in active fulfillment.'
+                      : 'This quotation has been officially accepted. Service fulfillment will activate upon payment confirmation.'}
                   </p>
                 </div>
               </div>
@@ -325,7 +358,7 @@ export default function QuotationDetailPage() {
               <div className="quote-accepted-actions">
                 {quotation.activeServiceId && (
                   <Link
-                    to={`/operator/ongoing-services/${quotation.activeServiceId}`}
+                    to={`/operator/services/${quotation.activeServiceId}/procedure`}
                     className="btn btn-primary btn-sm quote-link-btn ongoing"
                   >
                     <i className="fa-solid fa-gears"></i>
@@ -345,8 +378,8 @@ export default function QuotationDetailPage() {
             </div>
           )}
 
-          {/* Originating Inquiry Reference (if not yet accepted) */}
-          {!isAccepted && quotation.inquiryId && (
+          {/* Originating Inquiry Reference (if not yet accepted/paid) */}
+          {!isFinalized && quotation.inquiryId && (
             <div className="quote-inquiry-bar">
               <span className="quote-inquiry-bar-label">
                 <i className="fa-solid fa-link quote-inquiry-bar-icon"></i>

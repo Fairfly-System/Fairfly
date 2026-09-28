@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -41,6 +41,7 @@ export default function OperatorServiceProcedure() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [inquiryRequirements, setInquiryRequirements] = useState([]);
 
   // Directly subscribe to the specific active service document
   useEffect(() => {
@@ -67,6 +68,27 @@ export default function OperatorServiceProcedure() {
     );
     return () => unsubscribe();
   }, [id]);
+
+  // Fallback: If legacy activeService document has empty submittedRequirements, fetch originating inquiry requirements
+  useEffect(() => {
+    if (!serviceRecord) return;
+    const hasDirectReqs = Array.isArray(serviceRecord.submittedRequirements) && serviceRecord.submittedRequirements.length > 0;
+    const hasStructuredReqs = Array.isArray(serviceRecord.requirements) && serviceRecord.requirements.some(r => r && typeof r === 'object' && (r.file || r.inputType));
+
+    if (!hasDirectReqs && !hasStructuredReqs && serviceRecord.inquiryId) {
+      const inqRef = doc(firestore, 'inquiries', serviceRecord.inquiryId);
+      getDoc(inqRef).then((snap) => {
+        if (snap.exists()) {
+          const inqData = snap.data();
+          if (Array.isArray(inqData?.requirements) && inqData.requirements.length > 0) {
+            setInquiryRequirements(inqData.requirements);
+          }
+        }
+      }).catch((err) => {
+        console.warn('Could not fetch fallback inquiry requirements:', err);
+      });
+    }
+  }, [serviceRecord]);
 
   const isUnauthorized = useMemo(() => {
     if (!serviceRecord || !user?.uid) return false;
@@ -145,6 +167,19 @@ export default function OperatorServiceProcedure() {
   const completedStepsCount = steps.filter((s) => s.status === 'Completed').length;
   const progressPct = steps.length > 0 ? Math.round((completedStepsCount / steps.length) * 100) : 0;
   const isTerminal = serviceRecord.status === 'Completed' || serviceRecord.status === 'Cancelled';
+
+  const displayRequirements = useMemo(() => {
+    if (Array.isArray(serviceRecord?.submittedRequirements) && serviceRecord.submittedRequirements.length > 0) {
+      return serviceRecord.submittedRequirements;
+    }
+    if (inquiryRequirements.length > 0) {
+      return inquiryRequirements;
+    }
+    if (Array.isArray(serviceRecord?.requirements) && serviceRecord.requirements.length > 0) {
+      return serviceRecord.requirements;
+    }
+    return [];
+  }, [serviceRecord, inquiryRequirements]);
 
   const handleCancelService = () => {
     if (!serviceRecord) return;
@@ -340,15 +375,15 @@ export default function OperatorServiceProcedure() {
           </div>
 
           {/* Client Submitted Requirements & Documents Verification Panel */}
-          {((serviceRecord.submittedRequirements && serviceRecord.submittedRequirements.length > 0) || requirements.length > 0) && (
+          {displayRequirements.length > 0 && (
             <div className="op-procedure-panel-card">
               <h3>
                 <i className="fa-solid fa-file-circle-check" style={{ color: '#6366f1' }}></i>
-                Client Submitted Requirements ({((serviceRecord.submittedRequirements || requirements).length)})
+                Client Submitted Requirements ({displayRequirements.length})
               </h3>
 
               <div className="op-procedure-req-list">
-                {(serviceRecord.submittedRequirements || requirements).map((req, rIdx) => {
+                {displayRequirements.map((req, rIdx) => {
                   const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
                   const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
                   const fileMeta = typeof req === 'object' ? req.file : null;

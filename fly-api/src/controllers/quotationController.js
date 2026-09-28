@@ -33,6 +33,7 @@ const createQuotation = async (req, res) => {
       serviceId,
       serviceTitle, 
       requirements,
+      submittedRequirements,
       tourDates, 
       inclusions, 
       exclusions, 
@@ -90,6 +91,12 @@ const createQuotation = async (req, res) => {
       effectiveBranchName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
     }
 
+    const effectiveSubmittedReqs = Array.isArray(submittedRequirements) && submittedRequirements.length > 0
+      ? submittedRequirements
+      : (Array.isArray(linkedInquiry?.requirements) && linkedInquiry.requirements.length > 0
+        ? linkedInquiry.requirements
+        : (Array.isArray(linkedInquiry?.submittedRequirements) ? linkedInquiry.submittedRequirements : []));
+
     const newQuotation = {
       clientUid: effectiveClientUid,
       clientName: clientName.trim(),
@@ -99,6 +106,7 @@ const createQuotation = async (req, res) => {
       serviceId: serviceId || null,
       serviceTitle: (serviceTitle || 'General Service').trim(),
       requirements: requirements || '',
+      submittedRequirements: effectiveSubmittedReqs,
       tourDates: tourDates || '',
       inclusions: inclusions || '',
       exclusions: exclusions || '',
@@ -214,6 +222,10 @@ const updateQuotationStatus = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
 
+    if (existing.status === 'PAID' || existing.paymentStatus === 'PAID') {
+      return res.status(400).json({ error: 'Cannot change status of a quotation that has already been paid and activated.' });
+    }
+
     const userRole = req.userDetails?.role;
     if (userRole === 'operator' || userRole === 'branch_operator') {
       const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
@@ -296,12 +308,13 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
 
   let assignedOperatorId = quotation.branchUid || quotation.operatorId || null;
   let assignedBranchName = quotation.branchName || null;
+  let originatingInquiry = null;
 
-  if (!assignedOperatorId && quotation.inquiryId) {
+  if (quotation.inquiryId) {
     try {
-      const originatingInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`);
+      originatingInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`);
       if (originatingInquiry) {
-        assignedOperatorId = originatingInquiry.branchUid || originatingInquiry.operatorId || null;
+        if (!assignedOperatorId) assignedOperatorId = originatingInquiry.branchUid || originatingInquiry.operatorId || null;
         if (!assignedBranchName) assignedBranchName = originatingInquiry.branchName || null;
       }
     } catch (err) {
@@ -311,6 +324,20 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
 
   assignedOperatorId = assignedOperatorId || 'OP-ACCOUNT';
   assignedBranchName = assignedBranchName || 'Branch Office';
+
+  // Inherit submitted requirements with attached file metadata from quotation or originating inquiry
+  let resolvedSubmittedReqs = [];
+  if (Array.isArray(quotation.submittedRequirements) && quotation.submittedRequirements.length > 0) {
+    resolvedSubmittedReqs = quotation.submittedRequirements;
+  } else if (originatingInquiry && Array.isArray(originatingInquiry.requirements) && originatingInquiry.requirements.length > 0) {
+    resolvedSubmittedReqs = originatingInquiry.requirements;
+  } else if (originatingInquiry && Array.isArray(originatingInquiry.submittedRequirements) && originatingInquiry.submittedRequirements.length > 0) {
+    resolvedSubmittedReqs = originatingInquiry.submittedRequirements;
+  }
+
+  const resolvedRequirements = resolvedSubmittedReqs.length > 0
+    ? resolvedSubmittedReqs
+    : (quotation.requirements ? [{ name: 'Client Specifications', value: quotation.requirements, required: false }] : []);
 
   return {
     id: activeServiceDocId,
@@ -322,8 +349,8 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
     serviceUID: quotation.serviceId || null,
     serviceType: serviceTitle,
     price: servicePrice,
-    requirements: quotation.requirements ? [{ name: 'Client Specifications', value: quotation.requirements, required: false }] : [],
-    submittedRequirements: [],
+    requirements: resolvedRequirements,
+    submittedRequirements: resolvedSubmittedReqs,
     priority: 'Normal Priority',
     priorityType: 'normal',
     status: 'Pending',
@@ -380,11 +407,10 @@ const acceptQuotation = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Insufficient privileges to accept this quotation.' });
     }
 
-    if (quotation.status === 'Accepted' && quotation.paymentStatus === 'PAID' && quotation.activeServiceId) {
-      return res.status(200).json({ 
-        message: 'Quotation is already accepted and paid.',
+    if (quotation.status === 'PAID' || quotation.paymentStatus === 'PAID') {
+      return res.status(400).json({ 
+        error: 'Quotation has already been paid and converted to an active service.',
         quotationId: id,
-        paymentStatus: 'PAID',
         activeServiceId: quotation.activeServiceId 
       });
     }
@@ -461,9 +487,16 @@ const acceptQuotation = async (req, res) => {
  */
 const deleteQuotation = async (req, res) => {
   try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+
     const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
+
+    if (existing.status === 'PAID' || existing.paymentStatus === 'PAID') {
+      return res.status(400).json({ error: 'Cannot delete a quotation that has already been paid and processed.' });
+    }
 
     const userRole = req.userDetails?.role;
     if (userRole === 'operator' || userRole === 'branch_operator') {
@@ -494,6 +527,13 @@ const updateQuotation = async (req, res) => {
     const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
+
+    if (existing.status === 'PAID' || existing.paymentStatus === 'PAID') {
+      return res.status(400).json({ error: 'Cannot modify a quotation that has already been paid and activated.' });
+    }
+    if (existing.status === 'Accepted') {
+      return res.status(400).json({ error: 'Cannot modify a quotation that has already been accepted.' });
+    }
 
     const userRole = req.userDetails?.role;
     if (userRole === 'operator' || userRole === 'branch_operator') {
