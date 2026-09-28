@@ -1,8 +1,8 @@
-const { performance } = require('perf_hooks');  
+const { performance } = require('perf_hooks');
 
 function timer(name, fn) {
 
-    return async function(req, res, next) {
+    return async function (req, res, next) {
 
         //Start the timer
         const start = performance.now();
@@ -16,7 +16,6 @@ function timer(name, fn) {
         } finally {
             // Calculate the duration and log it
             const end = performance.now();
-            const duration = end - start;
             console.log(`  ↳ ${name}: ${(end - start).toFixed(2)}ms from: ${req.ip || req.user?.uid || 'unknown source'}`);
         }
 
@@ -24,4 +23,4 @@ function timer(name, fn) {
 
 }
 
-module.exports = {timer};
+module.exports = { timer };

@@ -34,6 +34,10 @@ const ID_PREFIXES = {
   QUALIFICATION: 'QAP',
   FRANCHISE: 'FRA',
 
+  // Financial & Security operations
+  PAYMENT: 'PAY',
+  PASSWORD_RESET: 'PRR',
+
   // System & logs
   FAQ: 'FAQ',
   ADMIN_LOG: 'LOG'

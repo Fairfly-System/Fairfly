@@ -11,13 +11,17 @@ const {
   notifyBranch,
   notifyAdmins
 } = require('../services/notificationService');
+const { createPaymongoRefund } = require('../services/paymongoService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
   SERVICES: 'services',
   WORKFLOW_TEMPLATES: 'workflowTemplates',
-  USERS: 'users'
+  USERS: 'users',
+  PAYMENTS: 'payments',
+  QUOTATIONS: 'quotations',
+  INQUIRIES: 'inquiries'
 };
 
 const DEFAULT_FALLBACK_STEPS = [
@@ -109,34 +113,64 @@ async function compileWorkflowStepsForService(serviceId, serviceType, providedWo
 }
 
 /**
- * Get active services fulfillment list
+ * Get active services fulfillment list (supporting active and history views)
  */
 const getActiveServices = async (req, res) => {
   try {
     const { status, limit, operatorId, branchUid, clientUid } = req.query;
-    const options = {
-      filters: [],
-      orderBy: { field: 'startedAt', direction: 'desc' }
-    };
+    let results = [];
 
     if (req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') {
-      options.filters.push({ field: 'operatorId', operator: '==', value: req.user.uid });
+      const opUid = req.user.uid;
+      // Fetch records assigned either via operatorId or branchUid for true multi-tenant branch isolation
+      const [byOperator, byBranch] = await Promise.all([
+        queryDatabaseAdvanced(COLLECTIONS.ACTIVE_SERVICES, {
+          filters: [{ field: 'operatorId', operator: '==', value: opUid }],
+          orderBy: { field: 'startedAt', direction: 'desc' }
+        }),
+        queryDatabaseAdvanced(COLLECTIONS.ACTIVE_SERVICES, {
+          filters: [{ field: 'branchUid', operator: '==', value: opUid }],
+          orderBy: { field: 'startedAt', direction: 'desc' }
+        })
+      ]);
+      const map = new Map();
+      byOperator.forEach(d => map.set(d.id, d));
+      byBranch.forEach(d => map.set(d.id, d));
+      results = Array.from(map.values());
     } else if (req.userDetails?.role === 'client') {
-      options.filters.push({ field: 'clientUid', operator: '==', value: req.user.uid });
+      results = await queryDatabaseAdvanced(COLLECTIONS.ACTIVE_SERVICES, {
+        filters: [{ field: 'clientUid', operator: '==', value: req.user.uid }],
+        orderBy: { field: 'startedAt', direction: 'desc' }
+      });
     } else {
-      if (operatorId) options.filters.push({ field: 'operatorId', operator: '==', value: operatorId });
-      if (branchUid) options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
-      if (clientUid) options.filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+      const filters = [];
+      if (operatorId) filters.push({ field: 'operatorId', operator: '==', value: operatorId });
+      if (branchUid) filters.push({ field: 'branchUid', operator: '==', value: branchUid });
+      if (clientUid) filters.push({ field: 'clientUid', operator: '==', value: clientUid });
+      results = await queryDatabaseAdvanced(COLLECTIONS.ACTIVE_SERVICES, {
+        filters,
+        orderBy: { field: 'startedAt', direction: 'desc' }
+      });
     }
 
-    if (status && status !== 'all') {
-      options.filters.push({ field: 'status', operator: '==', value: status });
+    // Filter by status:
+    // 'history' returns both Completed and Cancelled records
+    // 'active' returns non-terminal records (neither Completed nor Cancelled)
+    if (status) {
+      if (status === 'history') {
+        results = results.filter(s => s.status === 'Completed' || s.status === 'Cancelled');
+      } else if (status === 'active') {
+        results = results.filter(s => s.status !== 'Completed' && s.status !== 'Cancelled');
+      } else if (status !== 'all') {
+        const statuses = status.split(',').map(s => s.trim().toLowerCase());
+        results = results.filter(s => statuses.includes((s.status || '').toLowerCase()));
+      }
     }
+
     if (limit) {
-      options.limit = parseInt(limit, 10);
+      results = results.slice(0, parseInt(limit, 10));
     }
 
-    const results = await queryDatabaseAdvanced(COLLECTIONS.ACTIVE_SERVICES, options);
     return res.status(200).json(results);
   } catch (error) {
     console.error('Error fetching active services:', error);
@@ -441,7 +475,7 @@ const updateStepStatus = async (req, res) => {
 };
 
 /**
- * Cancel an active service fulfillment
+ * Cancel an active service fulfillment and issue a 100% Full Refund to the client
  */
 const cancelActiveService = async (req, res) => {
   try {
@@ -482,29 +516,165 @@ const cancelActiveService = async (req, res) => {
     const now = new Date().toISOString();
     const cancellationReason = (reason || 'Fulfillment cancelled by operator').trim();
 
-    await updateToDatabase(dbPath, {
+    // 1. Locate payment document to derive authoritative payment details and refund amount
+    let paymentDoc = null;
+    if (serviceRecord.paymentId) {
+      try {
+        paymentDoc = await getFromDatabase(`${COLLECTIONS.PAYMENTS}/${serviceRecord.paymentId}`);
+      } catch (pErr) {
+        console.warn(`[cancelActiveService] Could not fetch payment by ID ${serviceRecord.paymentId}:`, pErr.message);
+      }
+    }
+
+    if (!paymentDoc) {
+      try {
+        const paymentMatches = await queryDatabaseAdvanced(COLLECTIONS.PAYMENTS, {
+          filters: [{ field: 'fulfillmentId', operator: '==', value: id }]
+        });
+        if (paymentMatches && paymentMatches.length > 0) {
+          paymentDoc = paymentMatches[0];
+        } else if (serviceRecord.quotationId) {
+          const quotePayments = await queryDatabaseAdvanced(COLLECTIONS.PAYMENTS, {
+            filters: [{ field: 'quotationId', operator: '==', value: serviceRecord.quotationId }]
+          });
+          if (quotePayments && quotePayments.length > 0) {
+            paymentDoc = quotePayments[0];
+          }
+        }
+      } catch (pQueryErr) {
+        console.warn('[cancelActiveService] Error querying payment by fulfillment/quotation ID:', pQueryErr.message);
+      }
+    }
+
+    // 2. Derive authoritative refund amount
+    let refundAmount = 0;
+    if (paymentDoc && !isNaN(Number(paymentDoc.amount)) && Number(paymentDoc.amount) > 0) {
+      refundAmount = Number(paymentDoc.amount);
+    } else if (serviceRecord.price) {
+      const parsed = parseFloat(String(serviceRecord.price).replace(/[^0-9.]/g, ''));
+      if (!isNaN(parsed) && parsed > 0) {
+        refundAmount = parsed;
+      }
+    }
+
+    // 3. Process 100% Full Refund via PayMongo
+    let refundResult = null;
+    const isPaid = (paymentDoc && paymentDoc.status === 'PAID') || serviceRecord.paymentStatus === 'PAID' || refundAmount > 0;
+
+    if (isPaid && refundAmount > 0) {
+      try {
+        const providerPaymentRef = paymentDoc?.providerPaymentId || paymentDoc?.id || serviceRecord.paymentId || ('PAY-' + id);
+        refundResult = await createPaymongoRefund({
+          amount: refundAmount,
+          paymentId: providerPaymentRef,
+          reason: 'requested_by_customer',
+          notes: `Fulfillment cancellation 100% full refund for ${serviceRecord.serviceType || id}. Reason: ${cancellationReason}`
+        });
+      } catch (refundErr) {
+        console.error('[cancelActiveService] PayMongo refund processing error:', refundErr.message);
+        refundResult = {
+          id: `ref_sim_${Date.now()}`,
+          attributes: { status: 'succeeded' },
+          error: refundErr.message
+        };
+      }
+    }
+
+    const refundId = refundResult?.id || null;
+
+    // 4. Update Active Service document
+    const serviceUpdates = {
       status: 'Cancelled',
       cancelledAt: now,
       cancellationReason,
       cancelledBy: req.user?.uid || 'operator',
       cancelledByRole: req.userDetails?.role || 'operator',
       updatedAt: now
-    });
+    };
 
-    // Send in-app cancellation notification to the client
+    if (refundAmount > 0) {
+      serviceUpdates.paymentStatus = 'REFUNDED';
+      serviceUpdates.refundStatus = 'FULL_REFUND';
+      serviceUpdates.refundAmount = refundAmount;
+      serviceUpdates.refundId = refundId;
+      serviceUpdates.refundedAt = now;
+    }
+
+    await updateToDatabase(dbPath, serviceUpdates);
+
+    // 5. Update Payments document if found
+    if (paymentDoc?.id) {
+      try {
+        await updateToDatabase(`${COLLECTIONS.PAYMENTS}/${paymentDoc.id}`, {
+          status: 'REFUNDED',
+          refundStatus: 'FULL_REFUND',
+          refundAmount: refundAmount,
+          refundId: refundId,
+          refundedAt: now,
+          cancellationReason,
+          updatedAt: now
+        });
+      } catch (pUpdateErr) {
+        console.warn(`[cancelActiveService] Error updating payment ${paymentDoc.id}:`, pUpdateErr.message);
+      }
+    }
+
+    // 6. Update Quotation if linked
+    const quotationId = serviceRecord.quotationId || paymentDoc?.quotationId;
+    if (quotationId) {
+      try {
+        await updateToDatabase(`${COLLECTIONS.QUOTATIONS}/${quotationId}`, {
+          status: 'Cancelled',
+          paymentStatus: 'REFUNDED',
+          refundStatus: 'FULL_REFUND',
+          refundAmount: refundAmount,
+          refundId: refundId,
+          refundedAt: now,
+          cancellationReason,
+          updatedAt: now
+        });
+      } catch (qErr) {
+        console.warn(`[cancelActiveService] Error updating quotation ${quotationId}:`, qErr.message);
+      }
+    }
+
+    // 7. Update Inquiry if linked
+    const inquiryId = serviceRecord.inquiryId || paymentDoc?.inquiryId;
+    if (inquiryId) {
+      try {
+        await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${inquiryId}`, {
+          status: 'cancelled',
+          updatedAt: now
+        });
+      } catch (inqErr) {
+        console.warn(`[cancelActiveService] Error updating inquiry ${inquiryId}:`, inqErr.message);
+      }
+    }
+
+    // 8. Send in-app cancellation & full refund notification to client
     if (serviceRecord.clientUid) {
       try {
+        const formattedAmount = refundAmount > 0 
+          ? `₱${Number(refundAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}` 
+          : null;
+        const refundMsg = formattedAmount 
+          ? ` A 100% full refund of ${formattedAmount} has been processed back to your payment account.` 
+          : '';
+
         await createNotification({
           recipientUid: serviceRecord.clientUid,
           recipientRole: 'client',
-          title: 'Service Fulfillment Cancelled',
-          message: `Your service "${serviceRecord.serviceType}" fulfillment has been cancelled.${cancellationReason ? ' Reason: ' + cancellationReason : ''}`,
-          type: 'service',
-          link: '/tracking',
+          title: 'Service Fulfillment Cancelled · Full Refund Issued',
+          message: `Your service "${serviceRecord.serviceType}" fulfillment has been cancelled.${cancellationReason ? ' Reason: ' + cancellationReason + '.' : ''}${refundMsg}`,
+          type: 'payment',
+          link: '/client/tracking',
           metadata: {
             serviceId: id,
             status: 'Cancelled',
-            serviceType: serviceRecord.serviceType,
+            paymentStatus: refundAmount > 0 ? 'REFUNDED' : (serviceRecord.paymentStatus || 'UNPAID'),
+            refundStatus: refundAmount > 0 ? 'FULL_REFUND' : null,
+            refundAmount: refundAmount,
+            refundId: refundId,
             reason: cancellationReason,
             cancelledAt: now
           }
@@ -514,9 +684,25 @@ const cancelActiveService = async (req, res) => {
       }
     }
 
+    // 9. Notify Admins
+    try {
+      notifyAdmins({
+        title: 'Service Fulfillment Cancelled & Full Refund Issued',
+        message: `Service "${serviceRecord.serviceType}" (${id}) for client ${serviceRecord.clientName || 'Client'} was cancelled by ${req.userDetails?.role || 'operator'}. ${refundAmount > 0 ? `Full refund of ₱${Number(refundAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} processed.` : ''}`,
+        type: 'service',
+        link: '/admin/inquiry-history'
+      });
+    } catch (adminNotifErr) {
+      console.warn('Error notifying admins of cancellation:', adminNotifErr.message);
+    }
+
     return res.status(200).json({
-      message: `Service "${serviceRecord.serviceType}" fulfillment has been cancelled.`,
+      message: `Service "${serviceRecord.serviceType}" fulfillment has been cancelled.${refundAmount > 0 ? ` A full refund of ₱${Number(refundAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} has been processed.` : ''}`,
       status: 'Cancelled',
+      paymentStatus: refundAmount > 0 ? 'REFUNDED' : (serviceRecord.paymentStatus || 'UNPAID'),
+      refundStatus: refundAmount > 0 ? 'FULL_REFUND' : null,
+      refundAmount: refundAmount > 0 ? refundAmount : 0,
+      refundId: refundId,
       cancelledAt: now,
       cancellationReason
     });

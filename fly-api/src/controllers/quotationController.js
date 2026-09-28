@@ -281,8 +281,76 @@ const updateQuotationStatus = async (req, res) => {
 };
 
 /**
+ * Helper to construct an Active Service Fulfillment document payload from server-side quotation and payment data
+ */
+const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) => {
+  const now = new Date().toISOString();
+  const serviceTitle = quotation.serviceTitle || 'Custom Service';
+  const totalAmountNum = Number(quotation.totalAmount || quotation.rate || 0);
+  const servicePrice = totalAmountNum > 0 
+    ? `₱${totalAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}` 
+    : 'Custom Quoted Price';
+
+  // Compile workflow steps for this custom service
+  const compiledSteps = await compileWorkflowStepsForService(quotation.serviceId, serviceTitle);
+
+  let assignedOperatorId = quotation.branchUid || quotation.operatorId || null;
+  let assignedBranchName = quotation.branchName || null;
+
+  if (!assignedOperatorId && quotation.inquiryId) {
+    try {
+      const originatingInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`);
+      if (originatingInquiry) {
+        assignedOperatorId = originatingInquiry.branchUid || originatingInquiry.operatorId || null;
+        if (!assignedBranchName) assignedBranchName = originatingInquiry.branchName || null;
+      }
+    } catch (err) {
+      console.warn('[Quotation] Could not inspect originating inquiry for branch:', err.message);
+    }
+  }
+
+  assignedOperatorId = assignedOperatorId || 'OP-ACCOUNT';
+  assignedBranchName = assignedBranchName || 'Branch Office';
+
+  return {
+    id: activeServiceDocId,
+    clientUid: quotation.clientUid || (payment ? payment.clientUid : null),
+    clientName: quotation.clientName || 'Valued Client',
+    clientEmail: quotation.clientEmail || '',
+    clientPhone: quotation.clientPhone || '',
+    serviceId: quotation.serviceId || null,
+    serviceUID: quotation.serviceId || null,
+    serviceType: serviceTitle,
+    price: servicePrice,
+    requirements: quotation.requirements ? [{ name: 'Client Specifications', value: quotation.requirements, required: false }] : [],
+    submittedRequirements: [],
+    priority: 'Normal Priority',
+    priorityType: 'normal',
+    status: 'Pending',
+    currentStepIndex: 0,
+    totalSteps: compiledSteps.length,
+    startedAt: now,
+    completedAt: null,
+    steps: compiledSteps,
+    operatorId: assignedOperatorId,
+    branchUid: assignedOperatorId,
+    branchName: assignedBranchName,
+    additionalNotes: `Custom Service created from Quotation ${quotation.quoteNo || quotation.id || ''}.\nTour Date: ${quotation.tourDates || 'N/A'}\nInclusions: ${quotation.inclusions || 'N/A'}\nExclusions: ${quotation.exclusions || 'N/A'}\nRemarks: ${quotation.remarks || 'N/A'}`,
+    inquiryId: quotation.inquiryId || null,
+    quotationId: quotation.id || quotation.quotationId || payment?.quotationId || null,
+    paymentId: payment?.id || quotation.paymentId || null,
+    paymentStatus: 'PAID',
+    isCustomService: true,
+    createdAt: now,
+    updatedAt: now
+  };
+};
+
+
+/**
  * Accept a quotation (called by Client online or Operator on-site)
- * Transitions status to Accepted and creates the linked Custom Service in activeServices.
+ * Transitions status to Accepted and paymentStatus to UNPAID.
+ * Service fulfillment is deferred until authoritative payment confirmation.
  */
 const acceptQuotation = async (req, res) => {
   try {
@@ -312,109 +380,31 @@ const acceptQuotation = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Insufficient privileges to accept this quotation.' });
     }
 
-    if (quotation.status === 'Accepted' && quotation.activeServiceId) {
+    if (quotation.status === 'Accepted' && quotation.paymentStatus === 'PAID' && quotation.activeServiceId) {
       return res.status(200).json({ 
-        message: 'Quotation is already accepted',
+        message: 'Quotation is already accepted and paid.',
+        quotationId: id,
+        paymentStatus: 'PAID',
         activeServiceId: quotation.activeServiceId 
       });
     }
 
+    if (quotation.status === 'Accepted') {
+      return res.status(200).json({ 
+        message: 'Quotation has already been accepted. Please proceed to payment to activate service.',
+        quotationId: id,
+        quoteNo: quotation.quoteNo,
+        totalAmount: Number(quotation.totalAmount || quotation.rate || 0),
+        paymentStatus: quotation.paymentStatus || 'UNPAID'
+      });
+    }
+
     const now = new Date().toISOString();
-    const serviceTitle = quotation.serviceTitle || 'Custom Service';
-    const totalAmountNum = Number(quotation.totalAmount || quotation.rate || 0);
-    const servicePrice = totalAmountNum > 0 
-      ? `₱${totalAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}` 
-      : 'Custom Quoted Price';
 
-    // Compile workflow steps for this custom service
-    const compiledSteps = await compileWorkflowStepsForService(quotation.serviceId, serviceTitle);
-
-    // Strictly resolve the specified operator for this service fulfillment
-    let assignedOperatorId = quotation.branchUid || quotation.operatorId || null;
-    let assignedBranchName = quotation.branchName || null;
-
-    if (!assignedOperatorId && quotation.inquiryId) {
-      try {
-        const originatingInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`);
-        if (originatingInquiry) {
-          assignedOperatorId = originatingInquiry.branchUid || originatingInquiry.operatorId || null;
-          if (!assignedBranchName) assignedBranchName = originatingInquiry.branchName || null;
-        }
-      } catch (err) {
-        console.warn('Could not inspect originating inquiry for branch:', err.message);
-      }
-    }
-
-    if (!assignedOperatorId && isOperator) {
-      assignedOperatorId = req.user?.uid;
-      assignedBranchName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
-    }
-
-    if (assignedOperatorId && !assignedBranchName && assignedOperatorId !== 'OP-ACCOUNT') {
-      try {
-        const opUser = await getFromDatabase(`users/${assignedOperatorId}`);
-        if (opUser) {
-          assignedBranchName = opUser.branchName || opUser.name || 'Branch Office';
-        }
-      } catch (err) {}
-    }
-
-    assignedOperatorId = assignedOperatorId || 'OP-ACCOUNT';
-    assignedBranchName = assignedBranchName || 'Branch Office';
-
-    // Build Custom Service record in activeServices
-    const activeServicePayload = {
-      clientUid: quotation.clientUid || (req.userDetails?.role === 'client' ? req.user?.uid : null),
-      clientName: quotation.clientName || 'Valued Client',
-      clientEmail: quotation.clientEmail || '',
-      clientPhone: quotation.clientPhone || '',
-      serviceId: quotation.serviceId || null,
-      serviceUID: quotation.serviceId || null,
-      serviceType: serviceTitle,
-      price: servicePrice,
-      requirements: quotation.requirements ? [{ name: 'Client Specifications', value: quotation.requirements, required: false }] : [],
-      submittedRequirements: [],
-      priority: 'Normal Priority',
-      priorityType: 'normal',
-      status: 'Pending',
-      currentStepIndex: 0,
-      totalSteps: compiledSteps.length,
-      startedAt: now,
-      completedAt: null,
-      steps: compiledSteps,
-      operatorId: assignedOperatorId,
-      branchUid: assignedOperatorId,
-      branchName: assignedBranchName,
-      additionalNotes: `Custom Service created from Quotation ${quotation.quoteNo || id}.\nTour Date: ${quotation.tourDates || 'N/A'}\nInclusions: ${quotation.inclusions || 'N/A'}\nExclusions: ${quotation.exclusions || 'N/A'}\nRemarks: ${quotation.remarks || 'N/A'}`,
-      inquiryId: quotation.inquiryId || null,
-      quotationId: id,
-      isCustomService: true,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    let activeServiceDocId = quotation.activeServiceId || null;
-    if (activeServiceDocId) {
-      const existingService = await getFromDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${activeServiceDocId}`);
-      if (existingService) {
-        await updateToDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${activeServiceDocId}`, {
-          ...activeServicePayload,
-          updatedAt: now
-        });
-      } else {
-        activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload, ID_PREFIXES.ACTIVE_SERVICE);
-      }
-    } else {
-      activeServiceDocId = await addToDatabase(COLLECTIONS.ACTIVE_SERVICES, activeServicePayload, ID_PREFIXES.ACTIVE_SERVICE);
-    }
-
-    // Update Quotation record
+    // Update Quotation record to Accepted and UNPAID (fulfillment is created only upon confirmed payment)
     await updateToDatabase(quotationPath, {
       status: 'Accepted',
-      activeServiceId: activeServiceDocId,
-      branchUid: assignedOperatorId,
-      operatorId: assignedOperatorId,
-      branchName: assignedBranchName,
+      paymentStatus: 'UNPAID',
       acceptedAt: now,
       acceptedBy: req.user?.uid || 'client',
       updatedAt: now
@@ -425,7 +415,6 @@ const acceptQuotation = async (req, res) => {
       try {
         await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`, {
           status: 'accepted',
-          confirmedActiveServiceId: activeServiceDocId,
           confirmedQuotationId: id,
           updatedAt: now
         });
@@ -439,38 +428,27 @@ const acceptQuotation = async (req, res) => {
       branchUid: quotation.branchUid || quotation.operatorId,
       branchName: quotation.branchName,
       title: 'Quotation Accepted by Client',
-      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} for "${serviceTitle}". Active service initialized!`,
+      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} for "${quotation.serviceTitle || 'Service'}". Awaiting client payment.`,
       type: 'quotation',
       link: '/operator/quotations',
-      metadata: { quotationId: id, activeServiceId: activeServiceDocId }
+      metadata: { quotationId: id, quoteNo: quotation.quoteNo, status: 'Accepted' }
     }).catch(err => console.warn('Operator quotation accepted notification warning:', err.message));
 
     // 2. Notify Admins
     notifyAdmins({
       title: 'Quotation Accepted',
-      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} at ${quotation.branchName || 'Branch'}.`,
+      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} at ${quotation.branchName || 'Branch'}. Awaiting payment.`,
       type: 'quotation',
       link: '/admin/inquiry-history',
-      metadata: { quotationId: id, activeServiceId: activeServiceDocId }
+      metadata: { quotationId: id, branchName: quotation.branchName }
     }).catch(err => console.warn('Admin quotation accepted notification warning:', err.message));
 
-    // 3. Notify Client
-    if (quotation.clientUid || req.user?.uid) {
-      createNotification({
-        recipientUid: quotation.clientUid || req.user?.uid,
-        recipientRole: 'client',
-        title: 'Service Order Confirmed',
-        message: `You accepted Quotation ${quotation.quoteNo}. ${quotation.branchName || 'FairFly'} has started processing your request.`,
-        type: 'service',
-        link: '/client/tracking',
-        metadata: { quotationId: id, activeServiceId: activeServiceDocId }
-      }).catch(err => console.warn('Client quotation accepted notification warning:', err.message));
-    }
-
     return res.status(200).json({
-      message: 'Quotation accepted successfully. Custom service created and active.',
+      message: 'Quotation accepted successfully. Please complete payment to activate your service fulfillment.',
       quotationId: id,
-      activeServiceId: activeServiceDocId
+      quoteNo: quotation.quoteNo,
+      totalAmount: Number(quotation.totalAmount || quotation.rate || 0),
+      paymentStatus: 'UNPAID'
     });
   } catch (error) {
     console.error('Error accepting quotation:', error);
@@ -549,6 +527,7 @@ module.exports = {
   updateQuotationStatus,
   acceptQuotation,
   deleteQuotation,
-  updateQuotation
+  updateQuotation,
+  buildFulfillmentPayload
 };
 

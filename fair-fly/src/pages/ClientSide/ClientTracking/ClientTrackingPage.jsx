@@ -8,7 +8,15 @@ import ClientServiceTracker from '../../../components/Client/ClientServiceTracke
 import ClientServiceRequestModal from '../../../components/Client/ClientServiceRequestModal/ClientServiceRequestModal';
 import ClientInquiryModal from '../../../components/Client/ClientInquiryModal/ClientInquiryModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import PaymentModal from '../../../components/Client/PaymentModal/PaymentModal';
+import DataTable from '../../../components/UI/DataTable/DataTable';
+import Pagination from '../../../components/UI/Pagination/Pagination';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
+import useDebounce from '../../../hooks/useDebounce';
+import QuotationDetailModal from '../../../components/Client/QuotationDetailModal/QuotationDetailModal';
+import InquiryDetailModal from '../../../components/Client/InquiryDetailModal/InquiryDetailModal';
 import { acceptQuotation } from '../../../services/quotationService';
+import { verifyPayment } from '../../../services/paymentService';
 import './client-tracking.css';
 
 function formatRequirementsText(specifiedRequirements, requirements) {
@@ -58,6 +66,10 @@ export default function ClientTrackingPage() {
   const [loadingQuotations, setLoadingQuotations] = useState(true);
   const [acceptingQuoteId, setAcceptingQuoteId] = useState(null);
 
+  // Payment Modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedQuotationForPayment, setSelectedQuotationForPayment] = useState(null);
+
   // Modals
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
@@ -66,6 +78,28 @@ export default function ClientTrackingPage() {
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfModalType, setPdfModalType] = useState('quotation'); // 'quotation' | 'inquiry'
   const [pdfModalData, setPdfModalData] = useState(null);
+
+  // Subtab for Inquiries & Quotations ('quotations' | 'inquiries')
+  const [inquirySubTab, setInquirySubTab] = useState('quotations');
+
+  // Quotation table filtering & pagination
+  const [quoteSearch, setQuoteSearch] = useState('');
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState('all');
+  const [quotePage, setQuotePage] = useState(1);
+  const [quotePageSize, setQuotePageSize] = useState(8);
+  const debouncedQuoteSearch = useDebounce(quoteSearch, 300);
+
+  // Inquiry table filtering & pagination
+  const [inquirySearch, setInquirySearch] = useState('');
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState('all');
+  const [inquiryPage, setInquiryPage] = useState(1);
+  const [inquiryPageSize, setInquiryPageSize] = useState(8);
+  const debouncedInquirySearch = useDebounce(inquirySearch, 300);
+
+  // Detail view modals state
+  const [viewingQuotation, setViewingQuotation] = useState(null);
+  const [viewingInquiry, setViewingInquiry] = useState(null);
+
 
   // 1. Subscribe to real-time active services for logged-in client
   useEffect(() => {
@@ -196,11 +230,54 @@ export default function ClientTrackingPage() {
     };
   }, [user]);
 
+  // Handle PayMongo return redirect verification
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const paymentStatus = searchParams.get('payment_status');
+    const paymentId = searchParams.get('payment_id');
+
+    if (paymentStatus && paymentId) {
+      // Clear query params from browser URL without triggering reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      if (paymentStatus === 'success') {
+        if (userToken) {
+          verifyPayment(
+            userToken,
+            paymentId,
+            (res) => {
+              addToast(
+                'Payment verified successfully! Your custom service fulfillment has started.',
+                'success'
+              );
+              setMainTab('ongoing');
+            },
+            (err) => {
+              console.warn('Payment verification sync:', err);
+              addToast(
+                'Payment captured! Your service fulfillment record will appear momentarily.',
+                'info'
+              );
+              setMainTab('ongoing');
+            }
+          );
+        } else {
+          addToast('Payment captured! Please log in to view active service progress.', 'success');
+          setMainTab('ongoing');
+        }
+      } else if (paymentStatus === 'cancelled') {
+        addToast('Payment checkout was cancelled. You may complete your payment anytime.', 'info');
+        setMainTab('inquiries_quotations');
+      }
+    }
+  }, [userToken, addToast]);
+
   // Accept Quotation handler
   const handleAcceptQuotation = (quotation) => {
     if (!quotation?.id) return;
 
-    if (!window.confirm(`Are you sure you want to accept Quotation ${quotation.quoteNo || ''} for ₱${Number(quotation.totalAmount || quotation.rate || 0).toLocaleString()}? This will create your active Custom Service.`)) {
+    const formattedAmount = Number(quotation.totalAmount || quotation.rate || 0).toLocaleString();
+    if (!window.confirm(`Accept Quotation ${quotation.quoteNo || ''} for ₱${formattedAmount}? You will be directed to secure PayMongo checkout to finalize your booking.`)) {
       return;
     }
 
@@ -211,10 +288,16 @@ export default function ClientTrackingPage() {
       (res) => {
         setAcceptingQuoteId(null);
         addToast(
-          'Quotation accepted! Your custom service has been initiated and is now in Ongoing Services.',
+          'Quotation accepted! Please proceed with payment to begin service fulfillment.',
           'success'
         );
-        setMainTab('ongoing');
+        // Immediately present the payment modal with server quotation details
+        setSelectedQuotationForPayment({
+          ...quotation,
+          status: 'Accepted',
+          paymentStatus: 'UNPAID',
+        });
+        setPaymentModalOpen(true);
       },
       (err) => {
         setAcceptingQuoteId(null);
@@ -224,12 +307,18 @@ export default function ClientTrackingPage() {
     );
   };
 
+  const handleOpenPayment = (quotation) => {
+    setSelectedQuotationForPayment(quotation);
+    setPaymentModalOpen(true);
+  };
+
   // Open PDF Preview Modal
   const handleOpenPdf = (type, data) => {
     setPdfModalType(type);
     setPdfModalData(data);
     setPdfModalOpen(true);
   };
+
 
   // KPI Metrics
   const totalCount = activeServices.length;
@@ -258,6 +347,335 @@ export default function ClientTrackingPage() {
 
     return result;
   }, [activeServices, servicesSubTab, searchQuery]);
+
+  // Reset quotation page on search or filter change
+  useEffect(() => {
+    setQuotePage(1);
+  }, [debouncedQuoteSearch, quoteStatusFilter]);
+
+  // Reset inquiry page on search or filter change
+  useEffect(() => {
+    setInquiryPage(1);
+  }, [debouncedInquirySearch, inquiryStatusFilter]);
+
+  // Quotation Filter Chips
+  const quoteFilterChips = useMemo(() => [
+    { value: 'all', label: 'All Quotations', count: quotationsList.length },
+    { value: 'sent', label: 'Pending Acceptance', count: quotationsList.filter((q) => q.status === 'Sent').length },
+    { value: 'accepted', label: 'Accepted', count: quotationsList.filter((q) => q.status === 'Accepted').length },
+    { value: 'draft', label: 'In Preparation', count: quotationsList.filter((q) => q.status === 'Draft').length },
+  ], [quotationsList]);
+
+  // Filtered Quotations
+  const filteredQuotations = useMemo(() => {
+    let result = [...quotationsList];
+
+    if (quoteStatusFilter === 'sent') {
+      result = result.filter((q) => q.status === 'Sent');
+    } else if (quoteStatusFilter === 'accepted') {
+      result = result.filter((q) => q.status === 'Accepted');
+    } else if (quoteStatusFilter === 'draft') {
+      result = result.filter((q) => q.status === 'Draft');
+    }
+
+    if (debouncedQuoteSearch.trim()) {
+      const q = debouncedQuoteSearch.toLowerCase().trim();
+      result = result.filter((item) => {
+        const quoteNo = (item.quoteNo || '').toLowerCase();
+        const serviceTitle = (item.serviceTitle || '').toLowerCase();
+        const branchName = (item.branchName || '').toLowerCase();
+        const tourDates = (item.tourDates || '').toLowerCase();
+        const remarks = (item.remarks || '').toLowerCase();
+        const status = (item.status || '').toLowerCase();
+        return quoteNo.includes(q) || serviceTitle.includes(q) || branchName.includes(q) || tourDates.includes(q) || remarks.includes(q) || status.includes(q);
+      });
+    }
+
+    return result;
+  }, [quotationsList, quoteStatusFilter, debouncedQuoteSearch]);
+
+  // Paginated Quotations
+  const paginatedQuotations = useMemo(() => {
+    const startIndex = (quotePage - 1) * quotePageSize;
+    return filteredQuotations.slice(startIndex, startIndex + quotePageSize);
+  }, [filteredQuotations, quotePage, quotePageSize]);
+
+  // Inquiry Filter Chips
+  const inquiryFilterChips = useMemo(() => [
+    { value: 'all', label: 'All Inquiries', count: inquiriesList.length },
+    { value: 'submitted', label: 'Submitted', count: inquiriesList.filter((i) => (i.status || '').toLowerCase() === 'submitted').length },
+    { value: 'in_review', label: 'Under Review', count: inquiriesList.filter((i) => ['in_review', 'under_review', 'processing'].includes((i.status || '').toLowerCase())).length },
+    { value: 'quoted', label: 'Quoted', count: inquiriesList.filter((i) => ['quotation_created', 'quotation_sent', 'quoted', 'accepted'].includes((i.status || '').toLowerCase())).length },
+  ], [inquiriesList]);
+
+  // Filtered Inquiries
+  const filteredInquiries = useMemo(() => {
+    let result = [...inquiriesList];
+
+    if (inquiryStatusFilter === 'submitted') {
+      result = result.filter((i) => (i.status || '').toLowerCase() === 'submitted');
+    } else if (inquiryStatusFilter === 'in_review') {
+      result = result.filter((i) => ['in_review', 'under_review', 'processing'].includes((i.status || '').toLowerCase()));
+    } else if (inquiryStatusFilter === 'quoted') {
+      result = result.filter((i) => ['quotation_created', 'quotation_sent', 'quoted', 'accepted'].includes((i.status || '').toLowerCase()));
+    }
+
+    if (debouncedInquirySearch.trim()) {
+      const q = debouncedInquirySearch.toLowerCase().trim();
+      result = result.filter((item) => {
+        const controlNo = (item.controlNo || item.id || '').toLowerCase();
+        const formNo = (item.formNo || '').toLowerCase();
+        const clientName = (item.clientName || '').toLowerCase();
+        const serviceType = (item.serviceType || '').toLowerCase();
+        const services = Array.isArray(item.servicesOffered) ? item.servicesOffered.join(' ').toLowerCase() : '';
+        const reqs = (item.specifiedRequirements || '').toLowerCase();
+        const remarks = (item.remarks || '').toLowerCase();
+        const status = (item.status || '').toLowerCase();
+        return controlNo.includes(q) || formNo.includes(q) || clientName.includes(q) || serviceType.includes(q) || services.includes(q) || reqs.includes(q) || remarks.includes(q) || status.includes(q);
+      });
+    }
+
+    return result;
+  }, [inquiriesList, inquiryStatusFilter, debouncedInquirySearch]);
+
+  // Paginated Inquiries
+  const paginatedInquiries = useMemo(() => {
+    const startIndex = (inquiryPage - 1) * inquiryPageSize;
+    return filteredInquiries.slice(startIndex, startIndex + inquiryPageSize);
+  }, [filteredInquiries, inquiryPage, inquiryPageSize]);
+
+  // Quotation Columns for DataTable
+  const quotationColumns = useMemo(() => [
+    {
+      key: 'quoteNo',
+      header: 'Quotation / Service',
+      render: (quote) => (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+            <span className="quote-number-tag">{quote.quoteNo || 'Quotation'}</span>
+          </div>
+          <div style={{ fontWeight: 600, color: 'var(--text-dark, #0f172a)' }}>
+            {quote.serviceTitle || 'Custom Service Package'}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-light, #64748b)', marginTop: '0.15rem' }}>
+            <i className="fa-solid fa-building" style={{ marginRight: '0.25rem' }}></i>
+            {quote.branchName || 'FairFly Travel & Tours'}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'tourDates',
+      header: 'Tour Schedule',
+      render: (quote) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--text-mid, #475569)' }}>
+          {quote.tourDates || 'As agreed with client'}
+        </span>
+      )
+    },
+    {
+      key: 'totalAmount',
+      header: 'Total Amount',
+      render: (quote) => {
+        const total = Number(quote.totalAmount || quote.rate || 0);
+        return (
+          <div>
+            <span style={{ fontWeight: 700, color: 'var(--purple-dark, #5b21b6)', fontSize: '0.9375rem' }}>
+              ₱{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (quote) => {
+        const isAccepted = quote.status === 'Accepted';
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
+            <span className={`quote-status-pill status-${(quote.status || 'draft').toLowerCase()}`}>
+              {quote.status}
+            </span>
+            {isAccepted && (
+              <span className={`quote-payment-badge ${(quote.paymentStatus || 'unpaid').toLowerCase()}`}>
+                <i className={`fa-solid ${quote.paymentStatus === 'PAID' ? 'fa-check' : quote.paymentStatus === 'PAYMENT_PENDING' ? 'fa-clock' : 'fa-circle-exclamation'}`}></i>
+                {quote.paymentStatus === 'PAID' ? 'PAID' : quote.paymentStatus === 'PAYMENT_PENDING' ? 'PAYMENT PENDING' : 'UNPAID'}
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (quote) => {
+        const isSent = quote.status === 'Sent';
+        const isAccepted = quote.status === 'Accepted';
+        const isPaid = quote.paymentStatus === 'PAID';
+        const isPaymentPending = quote.paymentStatus === 'PAYMENT_PENDING';
+        const totalAmt = Number(quote.totalAmount || quote.rate || 0);
+
+        return (
+          <div className="client-row-actions">
+            {/* View Details Button */}
+            <button
+              type="button"
+              className="icon-btn view-action"
+              title="View Complete Quotation Details"
+              aria-label="View Complete Quotation Details"
+              onClick={() => setViewingQuotation(quote)}
+            >
+              <i className="fa-solid fa-eye"></i>
+            </button>
+
+            {/* View PDF Button */}
+            <button
+              type="button"
+              className="icon-btn pdf-action"
+              title="View Official ADF-07-001 PDF"
+              aria-label="View Official ADF-07-001 PDF"
+              onClick={() => handleOpenPdf('quotation', quote)}
+            >
+              <i className="fa-solid fa-file-pdf"></i>
+            </button>
+
+            {/* Accept & Pay Action */}
+            {isSent && (
+              <button
+                type="button"
+                className="btn btn-primary btn-xs"
+                onClick={() => handleAcceptQuotation(quote)}
+                disabled={acceptingQuoteId === quote.id}
+                title="Accept Quotation & Proceed to Pay"
+              >
+                {acceptingQuoteId === quote.id ? (
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-circle-check"></i>
+                    <span>Accept</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {isAccepted && isPaymentPending && (
+              <button
+                type="button"
+                className="btn btn-warning btn-xs btn-resume"
+                onClick={() => handleOpenPayment(quote)}
+                title="Resume Pending Payment"
+                aria-label="Resume Pending Payment"
+              >
+                <i className="fa-solid fa-clock-rotate-left"></i>
+                <span>Resume</span>
+              </button>
+            )}
+
+            {isAccepted && !isPaid && !isPaymentPending && (
+              <button
+                type="button"
+                className="btn btn-primary btn-xs"
+                onClick={() => handleOpenPayment(quote)}
+                title={`Pay ₱${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+              >
+                <i className="fa-solid fa-credit-card"></i>
+                <span>Pay</span>
+              </button>
+            )}
+          </div>
+        );
+      }
+    }
+  ], [acceptingQuoteId]);
+
+  // Inquiry Columns for DataTable
+  const inquiryColumns = useMemo(() => [
+    {
+      key: 'controlNo',
+      header: 'Control No & Client',
+      render: (inq) => (
+        <div>
+          <span className="inq-ctrl-pill" style={{ display: 'inline-block', marginBottom: '0.2rem' }}>
+            {inq.formNo || 'SAF-01-002'} · {inq.controlNo || inq.id.substring(0, 8)}
+          </span>
+          <div style={{ fontWeight: 600, color: 'var(--text-dark, #0f172a)' }}>
+            {inq.clientName || 'Valued Client'}
+            {inq.population && <span className="inq-pax-tag" style={{ marginLeft: '0.35rem' }}>({inq.population})</span>}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'servicesOffered',
+      header: 'Services Requested',
+      render: (inq) => {
+        const servicesList = Array.isArray(inq.servicesOffered)
+          ? inq.servicesOffered
+          : (inq.serviceType ? [inq.serviceType] : []);
+        return (
+          <div className="inq-table-services">
+            {servicesList.length > 0 ? (
+              servicesList.map((s, idx) => (
+                <span key={idx} className="inq-table-service-chip">{s}</span>
+              ))
+            ) : (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-light, #94a3b8)' }}>Custom Service</span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'dateInquired',
+      header: 'Date Submitted',
+      render: (inq) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--text-mid, #475569)' }}>
+          {inq.dateInquired || (inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : 'Recent')}
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (inq) => (
+        <span className={`inquiry-status-pill status-${(inq.status || 'submitted').toLowerCase()}`}>
+          {(inq.status || 'Submitted').replace('_', ' ')}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (inq) => (
+        <div className="client-row-actions">
+          {/* View Details Button */}
+          <button
+            type="button"
+            className="icon-btn view-action"
+            title="View Complete Inquiry Details"
+            aria-label="View Complete Inquiry Details"
+            onClick={() => setViewingInquiry(inq)}
+          >
+            <i className="fa-solid fa-eye"></i>
+          </button>
+
+          {/* View PDF Button */}
+          <button
+            type="button"
+            className="icon-btn pdf-action"
+            title="View Official SAF-01-002 PDF"
+            aria-label="View Official SAF-01-002 PDF"
+            onClick={() => handleOpenPdf('inquiry', inq)}
+          >
+            <i className="fa-solid fa-file-pdf"></i>
+          </button>
+        </div>
+      )
+    }
+  ], []);
 
   return (
     <div className="client-tracking-page">
@@ -462,280 +880,174 @@ export default function ClientTrackingPage() {
       {/* ============================================================ */}
       {mainTab === 'inquiries_quotations' && (
         <div className="client-inquiries-quotations-view">
-          {/* Section 2A: Quotations Received */}
-          <div className="portal-sub-section">
-            <div className="portal-sub-header">
-              <div>
-                <h3 className="portal-sub-title">
-                  <i className="fa-solid fa-file-invoice-dollar tracking-title-icon-purple"></i>
-                  Official Quotations Received (ADF-07-001)
-                </h3>
-                <p className="portal-sub-desc">
-                  Review pricing, tour schedules, and inclusions prepared by FairFly operators. Accept a quotation to start service fulfillment.
-                </p>
-              </div>
-            </div>
+          {/* Subtabs Navigation */}
+          <div className="client-portal-subtabs">
+            <button
+              type="button"
+              className={`client-portal-subtab-btn ${inquirySubTab === 'quotations' ? 'active' : ''}`}
+              onClick={() => setInquirySubTab('quotations')}
+            >
+              <i className="fa-solid fa-file-invoice-dollar"></i>
+              <span>Official Quotations</span>
+              <span className="badge-pill">{quotationsList.length}</span>
+            </button>
 
-            {loadingQuotations ? (
-              <div className="quotation-cards-grid">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <article key={`skel-q-${i}`} className="client-quote-card" aria-busy="true" style={{ opacity: 0.85 }}>
-                    <div className="quote-card-header">
-                      <div>
-                        <div className="skeleton skeleton-badge" style={{ width: '5rem', height: '1.25rem', marginBottom: '0.4rem' }} />
-                        <div className="skeleton skeleton-title" style={{ width: '12rem', height: '1.25rem', margin: 0 }} />
-                      </div>
-                      <div className="skeleton skeleton-badge" style={{ width: '4.5rem', height: '1.5rem' }} />
-                    </div>
-                    <div className="quote-details-list" style={{ margin: '1rem 0' }}>
-                      <div className="skeleton skeleton-text" style={{ width: '90%', height: '0.85rem', margin: '0.35rem 0' }} />
-                      <div className="skeleton skeleton-text" style={{ width: '70%', height: '0.85rem', margin: '0.35rem 0' }} />
-                    </div>
-                    <div className="quote-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem' }}>
-                      <div className="skeleton skeleton-text" style={{ width: '6rem', height: '1.25rem', margin: 0 }} />
-                      <div className="skeleton skeleton-btn" style={{ width: '5.5rem', height: '2rem' }} />
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : quotationsList.length === 0 ? (
-              <div className="empty-sub-card">
-                <i className="fa-solid fa-file-circle-question"></i>
-                <div>
-                  <strong>No quotations received yet.</strong>
-                  <p>When our operators review your inquiry and prepare a quotation, it will appear here for your review and one-click acceptance.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="quotation-cards-grid">
-                {quotationsList.map((quote) => {
-                  const isAccepted = quote.status === 'Accepted';
-                  const isSent = quote.status === 'Sent';
-                  const isDraft = quote.status === 'Draft';
-                  const totalAmt = Number(quote.totalAmount || quote.rate || 0);
-
-                  return (
-                    <article key={quote.id} className={`client-quote-card ${isAccepted ? 'is-accepted' : ''}`}>
-                      <div className="quote-card-header">
-                        <div>
-                          <div className="quote-number-tag">{quote.quoteNo || 'Quotation'}</div>
-                          <h4 className="quote-service-title">{quote.serviceTitle || 'Custom Service Package'}</h4>
-                          <span className="quote-branch-label">
-                            <i className="fa-solid fa-building"></i> {quote.branchName || 'FairFly Travel & Tours'}
-                          </span>
-                        </div>
-
-                        <div className="quote-status-badge-wrap">
-                          <span className={`quote-status-pill status-${(quote.status || 'draft').toLowerCase()}`}>
-                            {quote.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="quote-card-body">
-                        <div className="quote-details-row">
-                          <span className="q-label">Tour / Schedule Dates:</span>
-                          <span className="q-val">{quote.tourDates || 'As agreed with client'}</span>
-                        </div>
-
-                        {quote.inclusions && (
-                          <div className="quote-details-row">
-                            <span className="q-label">Inclusions:</span>
-                            <span className="q-val multiline">{quote.inclusions}</span>
-                          </div>
-                        )}
-
-                        {quote.exclusions && (
-                          <div className="quote-details-row">
-                            <span className="q-label">Exclusions:</span>
-                            <span className="q-val multiline">{quote.exclusions}</span>
-                          </div>
-                        )}
-
-                        {quote.rateBreakdown && (
-                          <div className="quote-details-row">
-                            <span className="q-label">Rate Breakdown:</span>
-                            <span className="q-val">{quote.rateBreakdown}</span>
-                          </div>
-                        )}
-
-                        <div className="quote-total-price-box">
-                          <span className="q-price-label">Total Amount:</span>
-                          <span className="q-price-val">₱{totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                        </div>
-
-                        {quote.remarks && (
-                          <div className="quote-remarks-callout">
-                            <i className="fa-solid fa-info-circle"></i>
-                            <span>{quote.remarks}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="quote-card-footer">
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleOpenPdf('quotation', quote)}
-                        >
-                          <i className="fa-solid fa-file-pdf"></i>
-                          <span>View Official PDF</span>
-                        </button>
-
-                        {isSent && (
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm btn-accept"
-                            onClick={() => handleAcceptQuotation(quote)}
-                            disabled={acceptingQuoteId === quote.id}
-                          >
-                            {acceptingQuoteId === quote.id ? (
-                              <>
-                                <i className="fa-solid fa-spinner fa-spin"></i>
-                                <span>Accepting...</span>
-                              </>
-                            ) : (
-                              <>
-                                <i className="fa-solid fa-circle-check"></i>
-                                <span>Accept Quotation</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-
-                        {isAccepted && (
-                          <span className="quote-accepted-notice">
-                            <i className="fa-solid fa-check-double"></i> Accepted · Custom Service Active
-                          </span>
-                        )}
-
-                        {isDraft && (
-                          <span className="quote-draft-notice">
-                            <i className="fa-solid fa-pencil"></i> Operator is finalizing this quote
-                          </span>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
+            <button
+              type="button"
+              className={`client-portal-subtab-btn ${inquirySubTab === 'inquiries' ? 'active' : ''}`}
+              onClick={() => setInquirySubTab('inquiries')}
+            >
+              <i className="fa-solid fa-file-signature"></i>
+              <span>Submitted Inquiries</span>
+              <span className="badge-pill">{inquiriesList.length}</span>
+            </button>
           </div>
 
-          {/* Section 2B: My Inquiries Intake Forms */}
-          <div className="portal-sub-section portal-sub-section-spaced">
-            <div className="portal-sub-header">
-              <div>
-                <h3 className="portal-sub-title">
-                  <i className="fa-solid fa-file-signature tracking-title-icon-purple"></i>
-                  My Submitted Inquiries (SAF-01-002)
-                </h3>
-                <p className="portal-sub-desc">
-                  Your submitted specifications for custom service packages and travel assistance.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setIsInquiryModalOpen(true)}
-              >
-                <i className="fa-solid fa-plus"></i> Submit Another Inquiry
-              </button>
-            </div>
-
-            {loadingInquiries ? (
-              <div className="inquiry-cards-list">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={`skel-inq-${i}`} className="client-inquiry-card" aria-busy="true" style={{ opacity: 0.85 }}>
-                    <div className="inq-card-top">
-                      <div style={{ width: '70%' }}>
-                        <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.1rem', marginBottom: '0.35rem' }} />
-                        <div className="skeleton skeleton-title" style={{ width: '10rem', height: '1.2rem', marginBottom: '0.35rem' }} />
-                        <div className="skeleton skeleton-text" style={{ width: '14rem', height: '0.75rem', margin: 0 }} />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', margin: '0.75rem 0' }}>
-                      <div className="skeleton skeleton-badge" style={{ width: '5rem', height: '1.3rem' }} />
-                      <div className="skeleton skeleton-badge" style={{ width: '6rem', height: '1.3rem' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : inquiriesList.length === 0 ? (
-              <div className="empty-sub-card">
-                <i className="fa-solid fa-file-lines"></i>
+          {/* Subtab 1: Quotations DataTable View */}
+          {inquirySubTab === 'quotations' && (
+            <div className="client-table-card">
+              <div className="portal-sub-header">
                 <div>
-                  <strong>No inquiries submitted yet.</strong>
-                  <p>Click "Submit New Inquiry" above to request custom travel, transport, or document services.</p>
+                  <h3 className="portal-sub-title">
+                    <i className="fa-solid fa-file-invoice-dollar tracking-title-icon-purple"></i>
+                    Official Quotations Received (ADF-07-001)
+                  </h3>
+                  <p className="portal-sub-desc">
+                    Review pricing, tour schedules, and inclusions prepared by FairFly operators. Accept a quotation to start service fulfillment.
+                  </p>
                 </div>
               </div>
-            ) : (
-              <div className="inquiry-cards-list">
-                {inquiriesList.map((inq) => {
-                  const servicesList = Array.isArray(inq.servicesOffered)
-                    ? inq.servicesOffered
-                    : (inq.serviceType ? [inq.serviceType] : []);
 
-                  return (
-                    <div key={inq.id} className="client-inquiry-card">
-                      <div className="inq-card-top">
-                        <div>
-                          <span className="inq-ctrl-pill">
-                            {inq.formNo || 'SAF-01-002'} · {inq.controlNo || inq.id.substring(0, 8)}
-                          </span>
-                          <h4 className="inq-client-name">
-                            {inq.clientName || 'Valued Client'}
-                            {inq.population && <span className="inq-pax-tag">({inq.population})</span>}
-                          </h4>
-                          <span className="inq-date">
-                            Submitted on {inq.dateInquired || (inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : 'Recent')}
-                          </span>
-                        </div>
+              {/* Toolbar: Search + Filter Chips */}
+              <div className="client-table-toolbar">
+                <div className="search-box">
+                  <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search quotations by number, service, or branch..."
+                    value={quoteSearch}
+                    onChange={(e) => setQuoteSearch(e.target.value)}
+                  />
+                  {quoteSearch && (
+                    <button
+                      type="button"
+                      className="search-clear-btn"
+                      onClick={() => setQuoteSearch('')}
+                      aria-label="Clear search"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </div>
 
-                        <div className="inq-actions-col">
-                          <span className={`inquiry-status-pill status-${(inq.status || 'submitted').toLowerCase()}`}>
-                            {(inq.status || 'Submitted').replace('_', ' ')}
-                          </span>
-
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-xs"
-                            onClick={() => handleOpenPdf('inquiry', inq)}
-                          >
-                            <i className="fa-solid fa-file-pdf"></i>
-                            <span>View SAF-01-002</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Services Offered Tags */}
-                      {servicesList.length > 0 && (
-                        <div className="inq-services-chips">
-                          <span className="chip-label">Services:</span>
-                          {servicesList.map((s, idx) => (
-                            <span key={idx} className="inq-service-badge">{s}</span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Specified Requirements Excerpt */}
-                      <div className="inq-requirements-box">
-                        <strong>Specified Requirements:</strong>
-                        <p>{formatRequirementsText(inq.specifiedRequirements, inq.requirements) || 'No specific requirements entered.'}</p>
-                      </div>
-
-                      {inq.remarks && (
-                        <div className="inq-remarks-box">
-                          <strong>Remarks:</strong> {inq.remarks}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                <FilterChipGroup
+                  chips={quoteFilterChips}
+                  activeChip={quoteStatusFilter}
+                  onChipChange={setQuoteStatusFilter}
+                />
               </div>
-            )}
-          </div>
+
+              {/* Quotations DataTable */}
+              <DataTable
+                columns={quotationColumns}
+                data={paginatedQuotations}
+                isLoading={loadingQuotations}
+                emptyState={{
+                  icon: 'fa-solid fa-file-circle-question',
+                  message: quoteSearch || quoteStatusFilter !== 'all'
+                    ? 'No quotations match the active search or filter criteria.'
+                    : 'No quotations received yet. When operators prepare a quotation for your inquiry, it will appear here.'
+                }}
+              />
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={quotePage}
+                totalItems={filteredQuotations.length}
+                pageSize={quotePageSize}
+                onPageChange={setQuotePage}
+                onPageSizeChange={setQuotePageSize}
+              />
+            </div>
+          )}
+
+          {/* Subtab 2: Submitted Inquiries DataTable View */}
+          {inquirySubTab === 'inquiries' && (
+            <div className="client-table-card">
+              <div className="portal-sub-header">
+                <div>
+                  <h3 className="portal-sub-title">
+                    <i className="fa-solid fa-file-signature tracking-title-icon-purple"></i>
+                    My Submitted Inquiries (SAF-01-002)
+                  </h3>
+                  <p className="portal-sub-desc">
+                    Your submitted intake requests and specifications for custom service packages and travel assistance.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setIsInquiryModalOpen(true)}
+                >
+                  <i className="fa-solid fa-plus"></i> Submit Another Inquiry
+                </button>
+              </div>
+
+              {/* Toolbar: Search + Filter Chips */}
+              <div className="client-table-toolbar">
+                <div className="search-box">
+                  <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search inquiries by control no, services, or details..."
+                    value={inquirySearch}
+                    onChange={(e) => setInquirySearch(e.target.value)}
+                  />
+                  {inquirySearch && (
+                    <button
+                      type="button"
+                      className="search-clear-btn"
+                      onClick={() => setInquirySearch('')}
+                      aria-label="Clear search"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </div>
+
+                <FilterChipGroup
+                  chips={inquiryFilterChips}
+                  activeChip={inquiryStatusFilter}
+                  onChipChange={setInquiryStatusFilter}
+                />
+              </div>
+
+              {/* Inquiries DataTable */}
+              <DataTable
+                columns={inquiryColumns}
+                data={paginatedInquiries}
+                isLoading={loadingInquiries}
+                emptyState={{
+                  icon: 'fa-solid fa-file-lines',
+                  message: inquirySearch || inquiryStatusFilter !== 'all'
+                    ? 'No inquiries match the active search or filter criteria.'
+                    : 'No inquiries submitted yet. Submit a new inquiry to request custom travel services.'
+                }}
+              />
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={inquiryPage}
+                totalItems={filteredInquiries.length}
+                pageSize={inquiryPageSize}
+                onPageChange={setInquiryPage}
+                onPageSizeChange={setInquiryPageSize}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -745,6 +1057,7 @@ export default function ClientTrackingPage() {
         onClose={() => setIsInquiryModalOpen(false)}
         onInquirySubmitted={() => {
           setMainTab('inquiries_quotations');
+          setInquirySubTab('inquiries');
         }}
       />
 
@@ -763,7 +1076,43 @@ export default function ClientTrackingPage() {
         type={pdfModalType}
         data={pdfModalData}
       />
+
+      {/* PayMongo Payment Checkout Modal */}
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => {
+          setPaymentModalOpen(false);
+          setSelectedQuotationForPayment(null);
+        }}
+        quotation={selectedQuotationForPayment}
+      />
+
+      {/* Quotation Complete Detail View Modal */}
+      <QuotationDetailModal
+        isOpen={!!viewingQuotation}
+        onClose={() => setViewingQuotation(null)}
+        quotation={viewingQuotation}
+        onAcceptQuotation={(q) => {
+          setViewingQuotation(null);
+          handleAcceptQuotation(q);
+        }}
+        onOpenPayment={(q) => {
+          setViewingQuotation(null);
+          handleOpenPayment(q);
+        }}
+        onOpenPdf={(type, data) => handleOpenPdf(type, data)}
+        isAccepting={acceptingQuoteId === viewingQuotation?.id}
+      />
+
+      {/* Inquiry Complete Detail View Modal */}
+      <InquiryDetailModal
+        isOpen={!!viewingInquiry}
+        onClose={() => setViewingInquiry(null)}
+        inquiry={viewingInquiry}
+        onOpenPdf={(type, data) => handleOpenPdf(type, data)}
+      />
     </div>
   );
 }
+
 

@@ -269,6 +269,24 @@ export default function OperatorServiceProcedure() {
                   {serviceRecord.cancellationReason ? `Reason: ${serviceRecord.cancellationReason}` : 'This service fulfillment has been cancelled.'}
                   {serviceRecord.cancelledAt && ` (${new Date(serviceRecord.cancelledAt).toLocaleString()})`}
                 </p>
+                {serviceRecord.refundStatus && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                    <span className="status-pill status-pill-active" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+                      <i className="fa-solid fa-rotate-left" style={{ marginRight: '0.25rem' }}></i>
+                      100% Full Refund Issued
+                    </span>
+                    {serviceRecord.refundAmount && (
+                      <span style={{ fontWeight: 600, color: '#166534' }}>
+                        ₱{Number(serviceRecord.refundAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    )}
+                    {serviceRecord.refundId && (
+                      <span style={{ color: '#64748b' }}>
+                        (Ref: {serviceRecord.refundId})
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -541,7 +559,7 @@ export default function OperatorServiceProcedure() {
             </div>
             <div className="op-cancel-modal-body">
               <p>
-                Are you sure you want to cancel the fulfillment of this service? The client will be automatically notified that the service fulfillment has been cancelled.
+                Are you sure you want to cancel the fulfillment of this service? A <strong>100% Full Refund</strong> will be automatically processed back to the client via PayMongo, and this service will be moved to History.
               </p>
               <label htmlFor="op-cancel-reason-textarea" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
                 Cancellation Reason (Optional)

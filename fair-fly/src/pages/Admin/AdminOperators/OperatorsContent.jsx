@@ -17,6 +17,7 @@ import useDebounce from "../../../hooks/useDebounce";
 import toFriendlyMessage from "../../../utils/friendlyErrors";
 import { auth, firestore } from "../../../firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
+import PasswordResetRequestsTab from "./PasswordResetRequestsTab";
 
 const TrashIcon = (props) => (
   <i className="fa-solid fa-trash-can" {...props}></i>
@@ -29,6 +30,7 @@ export default function OperatorsContent() {
   const [operators, setOperators] = useState([]);
   const [operatorLoading, setOperatorLoading] = useState(true);
 
+  const [activeSubTab, setActiveSubTab] = useState("operators"); // 'operators' | 'reset-requests'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
   const isSuperAdmin = userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
@@ -38,6 +40,7 @@ export default function OperatorsContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Search & Filter state
+
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -489,21 +492,26 @@ export default function OperatorsContent() {
     }
   };
 
-  const breadcrumbItems = [
+  const breadcrumbItems = useMemo(() => [
     { label: "Dashboard", to: "/admin" },
-    { label: "Operators" },
-  ];
+    { label: "Operators", to: "/admin/operators", onClick: () => setActiveSubTab("operators") },
+    ...(activeSubTab === "reset-requests" ? [{ label: "Password Reset Requests" }] : []),
+  ], [activeSubTab]);
 
   return (
     <main className="operators-page page-fade-in">
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader
-        title="Branch Operators & Franchises"
-        subtitle="Manage branch locations, operator credentials, and operational status"
+        title={activeSubTab === "operators" ? "Branch Operators & Franchises" : "Operator Password Reset Requests"}
+        subtitle={
+          activeSubTab === "operators"
+            ? "Manage branch locations, operator credentials, and operational status"
+            : "Review, verify, and approve secure password reset requests submitted by branch operators"
+        }
         illustrationSrc="/pageImages/admin/operators.png"
         primaryAction={
-          isSuperAdmin
+          isSuperAdmin && activeSubTab === "operators"
             ? {
                 label: "Add Operator",
                 icon: "fa-solid fa-plus",
@@ -513,13 +521,41 @@ export default function OperatorsContent() {
         }
       />
 
-      {/* KPI Cards Row */}
-      <section className="services-summary-grid">
-        <KpiCard
-          title="Total Operators"
-          value={totalOperators}
-          icon="fa-solid fa-building-user"
-          iconColor="var(--purple)"
+      {/* Sub-Tabs for Super Admin */}
+      {isSuperAdmin && (
+        <div className="operators-subtabs">
+          <button
+            type="button"
+            className={`operators-subtab-btn ${activeSubTab === "operators" ? "active" : ""}`}
+            onClick={() => setActiveSubTab("operators")}
+          >
+            <i className="fa-solid fa-building-user"></i>
+            Franchise Operators
+            <span className="badge-pill">{totalOperators}</span>
+          </button>
+          <button
+            type="button"
+            className={`operators-subtab-btn ${activeSubTab === "reset-requests" ? "active" : ""}`}
+            onClick={() => setActiveSubTab("reset-requests")}
+          >
+            <i className="fa-solid fa-key"></i>
+            Password Reset Requests
+          </button>
+        </div>
+      )}
+
+      {activeSubTab === "reset-requests" ? (
+        <PasswordResetRequestsTab />
+      ) : (
+        <>
+          {/* KPI Cards Row */}
+          <section className="services-summary-grid">
+            <KpiCard
+              title="Total Operators"
+              value={totalOperators}
+              icon="fa-solid fa-building-user"
+              iconColor="var(--purple)"
+
           isLoading={operatorLoading}
         />
         <KpiCard
@@ -718,6 +754,9 @@ export default function OperatorsContent() {
         isLoading={isConfirmLoading}
         OnConfirm={handleConfirm}
       />
+        </>
+      )}
     </main>
   );
 }
+

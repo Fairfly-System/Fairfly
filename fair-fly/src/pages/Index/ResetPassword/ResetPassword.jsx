@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Mail, ArrowLeft, RotateCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, RotateCw, AlertCircle, CheckCircle2, Building, ShieldCheck, HelpCircle } from "lucide-react";
 import "./reset-password.css";
 import logo from "/FairflyLogo.png";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
-import { requestClientPasswordReset } from "../../../services/authService";
+import { requestClientPasswordReset, requestOperatorPasswordReset } from "../../../services/authService";
 import toFriendlyMessage from "../../../utils/friendlyErrors";
 
 export default function ResetPassword() {
   const { addToast } = useToast();
 
+  const [accountType, setAccountType] = useState("client"); // 'client' | 'operator'
   const [email, setEmail] = useState("");
+  const [branchName, setBranchName] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -52,26 +55,49 @@ export default function ResetPassword() {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Secure Backend API call:
-    // Only sends reset email if account is a client.
-    // Privileged accounts (admin/operator) are silently suppressed.
-    requestClientPasswordReset(
-      trimmedEmail,
-      (res) => {
-        setIsSuccess(true);
-        setCountdown(60);
-        addToast(
-          res?.message || "Password reset instructions have been sent to your email.",
-          "success"
-        );
-      },
-      (err) => {
-        const errorMsg = err?.message || "Could not process password reset request.";
-        setError(errorMsg);
-        addToast(toFriendlyMessage(err, errorMsg), "error");
-      },
-      setIsLoading
-    );
+    if (accountType === "operator") {
+      // Operator Password Reset Request -> Super Admin Review Queue
+      requestOperatorPasswordReset(
+        {
+          email: trimmedEmail,
+          branchName: branchName.trim(),
+          reason: reason.trim()
+        },
+        (res) => {
+          setIsSuccess(true);
+          setCountdown(60);
+          addToast(
+            res?.message || "Password reset request submitted for Super Admin review.",
+            "success"
+          );
+        },
+        (err) => {
+          const errorMsg = err?.message || "Could not process operator reset request.";
+          setError(errorMsg);
+          addToast(toFriendlyMessage(err, errorMsg), "error");
+        },
+        setIsLoading
+      );
+    } else {
+      // Client Password Reset (Direct Firebase Email Link)
+      requestClientPasswordReset(
+        trimmedEmail,
+        (res) => {
+          setIsSuccess(true);
+          setCountdown(60);
+          addToast(
+            res?.message || "Password reset instructions have been sent to your email.",
+            "success"
+          );
+        },
+        (err) => {
+          const errorMsg = err?.message || "Could not process password reset request.";
+          setError(errorMsg);
+          addToast(toFriendlyMessage(err, errorMsg), "error");
+        },
+        setIsLoading
+      );
+    }
   };
 
   const handleResend = () => {
@@ -102,22 +128,32 @@ export default function ResetPassword() {
 
           <div className="auth-showcase-main">
             <div className="auth-showcase-badge">
-              <i className="fa-solid fa-shield-halved"></i>
-              <span>Client Account Recovery</span>
+              <ShieldCheck size={14} />
+              <span>{accountType === "operator" ? "Franchise Security Protocol" : "Client Account Recovery"}</span>
             </div>
 
             <h2 className="auth-showcase-title">
-              Securely Recover Your <span className="auth-showcase-title-highlight">Client Portal</span>.
+              {accountType === "operator" ? (
+                <>
+                  Operator <span className="auth-showcase-title-highlight">Identity Verification</span>
+                </>
+              ) : (
+                <>
+                  Securely Recover Your <span className="auth-showcase-title-highlight">Client Portal</span>.
+                </>
+              )}
             </h2>
 
             <p className="auth-showcase-desc">
-              Regain immediate access to your flight itineraries, visa applications, and traveler records. Verified client accounts receive a time-limited reset link directly to their registered email.
+              {accountType === "operator"
+                ? "Franchise operator credential updates require Super Admin verification. Once approved by Head Office, a secure single-use reset link is issued directly to your verified email."
+                : "Regain immediate access to your flight itineraries, visa applications, and traveler records. Verified client accounts receive a time-limited reset link directly to their registered email."}
             </p>
 
             <div className="auth-showcase-benefits">
               <div className="auth-benefit-item">
                 <i className="fa-solid fa-circle-check"></i>
-                <span>Encrypted 60-minute single-use reset links</span>
+                <span>Zero-trust backend verification</span>
               </div>
               <div className="auth-benefit-item">
                 <i className="fa-solid fa-circle-check"></i>
@@ -125,7 +161,7 @@ export default function ResetPassword() {
               </div>
               <div className="auth-benefit-item">
                 <i className="fa-solid fa-circle-check"></i>
-                <span>Instant automated recovery for verified travelers</span>
+                <span>Official Firebase Auth password encryption</span>
               </div>
             </div>
           </div>
@@ -169,8 +205,12 @@ export default function ResetPassword() {
               </div>
 
               <div className="auth-form-header">
-                <h1>Check Your Email</h1>
-                <p>We have dispatched password reset instructions to:</p>
+                <h1>{accountType === "operator" ? "Request Submitted" : "Check Your Email"}</h1>
+                <p>
+                  {accountType === "operator"
+                    ? "Your Operator Password Reset Request has been queued for Super Admin review:"
+                    : "We have dispatched password reset instructions to:"}
+                </p>
               </div>
 
               <div className="reset-target-email-pill">
@@ -180,26 +220,30 @@ export default function ResetPassword() {
 
               <div className="reset-info-box">
                 <p>
-                  Click the link in the email to choose a new password. If you don't see it within a minute, please check your spam or junk folder.
+                  {accountType === "operator"
+                    ? "For franchise security, an authorized Super Admin will verify your operator account and branch assignment. Once approved, an official Firebase reset link will be sent directly to this email."
+                    : "Click the link in the email to choose a new password. If you don't see it within a minute, please check your spam or junk folder."}
                 </p>
               </div>
 
               <div className="reset-actions-group">
-                <button
-                  type="button"
-                  className="reset-resend-btn"
-                  onClick={handleResend}
-                  disabled={countdown > 0 || isLoading}
-                >
-                  <RotateCw size={14} className={isLoading ? "spinning" : ""} />
-                  <span>
-                    {countdown > 0
-                      ? `Resend link in ${countdown}s`
-                      : isLoading
-                      ? "Sending..."
-                      : "Resend Reset Link"}
-                  </span>
-                </button>
+                {accountType === "client" && (
+                  <button
+                    type="button"
+                    className="reset-resend-btn"
+                    onClick={handleResend}
+                    disabled={countdown > 0 || isLoading}
+                  >
+                    <RotateCw size={14} className={isLoading ? "spinning" : ""} />
+                    <span>
+                      {countdown > 0
+                        ? `Resend link in ${countdown}s`
+                        : isLoading
+                        ? "Sending..."
+                        : "Resend Reset Link"}
+                    </span>
+                  </button>
+                )}
 
                 <Link to="/login" className="auth-submit-btn reset-return-btn">
                   <i className="fa-solid fa-right-to-bracket"></i>
@@ -210,18 +254,52 @@ export default function ResetPassword() {
           ) : (
             /* Request Form */
             <div className="reset-form-container">
+              {/* Account Type Selector Tabs */}
+              <div className="reset-role-selector" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={accountType === "client"}
+                  className={`reset-role-tab ${accountType === "client" ? "active" : ""}`}
+                  onClick={() => {
+                    setAccountType("client");
+                    setError("");
+                  }}
+                >
+                  <i className="fa-solid fa-user"></i>
+                  <span>Traveler / Client</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={accountType === "operator"}
+                  className={`reset-role-tab ${accountType === "operator" ? "active" : ""}`}
+                  onClick={() => {
+                    setAccountType("operator");
+                    setError("");
+                  }}
+                >
+                  <i className="fa-solid fa-store"></i>
+                  <span>Franchise Operator</span>
+                </button>
+              </div>
+
               <div className="auth-form-header">
                 <div className="reset-header-icon-badge">
-                  <Mail size={22} />
+                  {accountType === "operator" ? <Building size={22} /> : <Mail size={22} />}
                 </div>
-                <h1>Reset Password</h1>
-                <p>Enter your registered client email to receive a password reset link.</p>
+                <h1>{accountType === "operator" ? "Operator Password Reset" : "Reset Password"}</h1>
+                <p>
+                  {accountType === "operator"
+                    ? "Submit your verified operator email for Head Office Super Admin review."
+                    : "Enter your registered client email to receive a password reset link."}
+                </p>
               </div>
 
               <form onSubmit={handleSubmit} className="auth-form" noValidate>
                 <div className="auth-input-group">
                   <label className="auth-input-label" htmlFor="reset-email">
-                    Registered Client Email
+                    {accountType === "operator" ? "Registered Operator Email" : "Registered Client Email"}
                   </label>
                   <div className={`auth-input-wrapper ${error ? "has-error" : ""}`}>
                     <Mail className="auth-input-icon" size={18} />
@@ -229,7 +307,7 @@ export default function ResetPassword() {
                       id="reset-email"
                       type="email"
                       className="auth-input"
-                      placeholder="client.name@example.com"
+                      placeholder={accountType === "operator" ? "operator.branch@fairfly.com" : "client.name@example.com"}
                       value={email}
                       onChange={handleEmailChange}
                       autoComplete="email"
@@ -244,10 +322,56 @@ export default function ResetPassword() {
                   )}
                 </div>
 
+                {accountType === "operator" && (
+                  <>
+                    <div className="auth-input-group">
+                      <label className="auth-input-label" htmlFor="reset-branch">
+                        Assigned Branch Name (Optional)
+                      </label>
+                      <div className="auth-input-wrapper">
+                        <Building className="auth-input-icon" size={18} />
+                        <input
+                          id="reset-branch"
+                          type="text"
+                          className="auth-input"
+                          placeholder="e.g. FairFly Cebu Branch"
+                          value={branchName}
+                          onChange={(e) => setBranchName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="auth-input-group">
+                      <label className="auth-input-label" htmlFor="reset-reason">
+                        Reason for Reset Request
+                      </label>
+                      <div className="auth-input-wrapper">
+                        <HelpCircle className="auth-input-icon" size={18} />
+                        <input
+                          id="reset-reason"
+                          type="text"
+                          className="auth-input"
+                          placeholder="e.g. Forgotten password, locked out"
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <div className="reset-notice-card">
-                  <i className="fa-solid fa-circle-info"></i>
+                  <i className="fa-solid fa-shield-halved"></i>
                   <div>
-                    <strong>Client Portal Notice:</strong> This password reset service is strictly designated for <em>FairFly Client</em> accounts. Franchise Operators and Administrators must contact Head Office Support directly for credential updates.
+                    {accountType === "operator" ? (
+                      <>
+                        <strong>Super Admin Review Policy:</strong> For operational integrity, Operator password resets are not instantaneous. An authorized Super Admin will verify your branch account before issuing an official Firebase reset link.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Client Portal Notice:</strong> This reset service delivers an instant, encrypted 60-minute password reset link directly to your registered client inbox.
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -259,12 +383,12 @@ export default function ResetPassword() {
                   {isLoading ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin"></i>
-                      <span>Verifying & Sending...</span>
+                      <span>{accountType === "operator" ? "Submitting Request..." : "Verifying & Sending..."}</span>
                     </>
                   ) : (
                     <>
-                      <i className="fa-solid fa-paper-plane"></i>
-                      <span>Send Reset Link</span>
+                      <i className={accountType === "operator" ? "fa-solid fa-paper-plane" : "fa-solid fa-paper-plane"}></i>
+                      <span>{accountType === "operator" ? "Submit Reset Request" : "Send Reset Link"}</span>
                     </>
                   )}
                 </button>

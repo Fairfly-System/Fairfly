@@ -694,3 +694,70 @@
   | `userUid` | `string` | `undefined` | Yes | UID of the current operator for multi-tenant isolation |
   | `onStatusUpdated` | `Function` | `undefined` | No | Callback invoked when an appointment status is confirmed or cancelled |
 
+---
+
+### `QuotationDetailModal`
+- **Location:** [`src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx)
+- **Style File:** [`src/components/Client/QuotationDetailModal/quotation-detail-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/quotation-detail-modal.css)
+- **Functionality:** Client-facing modal that displays comprehensive details of an official service quotation (ADF-07-001). Built using `BaseModal` and styled according to the FairFly purple design system tokens. Displays:
+  - Quotation reference number, service package title, branch name, status pill, and payment status badge.
+  - Total payable price highlight card (with tax inclusions/notes) and tour schedule / rate breakdown blocks.
+  - Package inclusions and exclusions side-by-side or stacked grid.
+  - Operator remarks, preparer/signatory details, and validity notice.
+  - Modal action footer with "Close", "View Official PDF (ADF-07-001)", "Accept & Proceed to Pay", and "Pay Now (₱...)".
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `isOpen` | `boolean` | `false` | Yes | Controls modal open/closed visibility |
+  | `onClose` | `Function` | `undefined` | Yes | Callback invoked when closing modal |
+  | `quotation` | `Object` | `null` | Yes | Full quotation data object from Firestore |
+  | `onAcceptQuotation` | `Function` | `undefined` | No | Callback invoked to accept the quotation |
+  | `onOpenPayment` | `Function` | `undefined` | No | Callback invoked to open PayMongo payment modal |
+  | `onOpenPdf` | `Function` | `undefined` | No | Callback invoked to launch official PDF preview modal |
+  | `isAccepting` | `boolean` | `false` | No | Loading indicator state when quotation acceptance is processing |
+
+---
+
+### `InquiryDetailModal`
+- **Location:** [`src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx)
+- **Style File:** [`src/components/Client/InquiryDetailModal/inquiry-detail-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/InquiryDetailModal/inquiry-detail-modal.css)
+- **Functionality:** Client-facing modal that displays complete details of a submitted service intake inquiry (SAF-01-002). Built using `BaseModal` and styled according to the FairFly purple design system tokens. Displays:
+  - Form number, control number, client name, submission date, and inquiry status pill.
+  - Category / requested service badges.
+  - Contact information and passenger count (Adults, Children, Total Pax).
+  - Full specified requirements text (including file attachment names).
+  - Operator remarks and status notes.
+  - Modal action footer with "Close" and "View Official PDF (SAF-01-002)".
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `isOpen` | `boolean` | `false` | Yes | Controls modal open/closed visibility |
+  | `onClose` | `Function` | `undefined` | Yes | Callback invoked when closing modal |
+  | `inquiry` | `Object` | `null` | Yes | Full inquiry data object from Firestore |
+  | `onOpenPdf` | `Function` | `undefined` | No | Callback invoked to launch official PDF preview modal |
+
+---
+
+### `HistoryDetailModal`
+- **Location:** [`src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx)
+- **Style File:** [`src/components/Operator/HistoryDetailModal/history-detail-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/HistoryDetailModal/history-detail-modal.css)
+- **Functionality:** Operator-facing modal that displays comprehensive historical details for past appointments and service fulfillments (both Completed and Cancelled). Built using `BaseModal` and styled according to the FairFly design system tokens. Displays:
+  - **Service History Mode:**
+    - Service package title, record ID, priority, and status pill (`Completed`, `Cancelled`).
+    - **100% Full Refund Callout Card (when cancelled):** Displays refund status (`FULL_REFUND`), PayMongo refund ID, 100% refund amount (e.g. `₱5,000.00`), and cancellation reason.
+    - **Fulfillment Success Banner (when completed):** Displays completion date and delivery confirmation.
+    - **Client Information:** Name, email, phone, client UID.
+    - **Financial & Operations:** Service price, payment status, branch office, quotation ID.
+    - **Procedure Workflow Steps Audit:** Step-by-step breakdown of all template steps with step status, completion date, third-party official links, and attachments.
+    - **Additional Notes & Specifications:** Tour dates, inclusions, exclusions, and remarks.
+  - **Appointment History Mode:**
+    - Client contact details, preferred consultation date & time, branch office location, consultation purpose, and status.
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `isOpen` | `boolean` | `false` | Yes | Controls modal open/closed visibility |
+  | `onClose` | `Function` | `undefined` | Yes | Callback invoked when closing modal |
+  | `data` | `Object` | `null` | Yes | Service or appointment record object |
+  | `type` | `'service' \| 'appointment'` | `'service'` | No | Explicit type indicator for modal view mode |
+
+

@@ -4,6 +4,7 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import DataTable from '../../../components/UI/DataTable/DataTable';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
+import HistoryDetailModal from '../../../components/Operator/HistoryDetailModal/HistoryDetailModal';
 import { useAuthContext } from '../../../context/AuthContext';
 import { fetchAppointments } from '../../../services/appointmentService';
 import ApiCaller from '../../../utils/ApiCaller';
@@ -27,6 +28,20 @@ export default function OperatorHistory() {
   const [appointmentsError, setAppointmentsError] = useState('');
   const [servicesError, setServicesError] = useState('');
 
+  // Selected item and modal control
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenDetailModal = (record) => {
+    setSelectedRecord(record);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsModalOpen(false);
+    setSelectedRecord(null);
+  };
+
   useEffect(() => {
     if (!userToken) return;
 
@@ -36,6 +51,7 @@ export default function OperatorHistory() {
       (appointments) => {
         const rows = Array.isArray(appointments) ? appointments : [];
         setAppointmentHistory(rows.map((appointment) => ({
+          ...appointment,
           id: appointment.id,
           name: appointment.clientName || '',
           service: appointment.serviceType || '',
@@ -51,25 +67,27 @@ export default function OperatorHistory() {
       setAppointmentsLoading
     );
 
+    // Fetch all history services (both Completed and Cancelled)
     ApiCaller(
-      `${API_BASE_URL}/api/services/active?status=Completed`,
+      `${API_BASE_URL}/api/services/active?status=history`,
       'GET',
       null,
       { Authorization: `Bearer ${userToken}` },
       (services) => {
         const rows = Array.isArray(services) ? services : [];
         setServiceHistory(rows.map((service) => ({
+          ...service,
           id: service.id,
           name: service.clientName || '',
           service: service.serviceType || '',
-          date: formatHistoryDate(service.completedAt || service.updatedAt || service.startedAt || service.createdAt),
+          date: formatHistoryDate(service.completedAt || service.cancelledAt || service.updatedAt || service.startedAt || service.createdAt),
           status: service.status || 'Completed',
         })));
         setServicesError('');
       },
       (error) => {
         setServiceHistory([]);
-        setServicesError(error?.message || 'Unable to load completed service history.');
+        setServicesError(error?.message || 'Unable to load service history records.');
       },
       setServicesLoading
     );
@@ -90,33 +108,67 @@ export default function OperatorHistory() {
       {
         key: 'name',
         header: 'Name / Client',
-        render: (item) => <strong>{item.name || item.client}</strong>,
+        render: (item) => <strong>{item.name || item.clientName || item.client}</strong>,
       },
       {
         key: 'service',
         header: 'Service Type',
+        render: (item) => item.service || item.serviceType || 'General Consultation',
       },
       {
         key: 'date',
-        header: 'Date Completed',
+        header: tab === 'appointments' ? 'Preferred Date' : 'Date Finished / Updated',
       },
       {
         key: 'status',
         header: 'Status',
+        render: (item) => {
+          const s = (item.status || '').toLowerCase();
+          const isComp = s === 'completed';
+          const isCanc = s === 'cancelled';
+          const isConf = s === 'confirmed';
+          return (
+            <span
+              className={`status-pill ${
+                isComp
+                  ? 'status-pill-completed'
+                  : isCanc
+                  ? 'status-pill-disabled'
+                  : isConf
+                  ? 'status-pill-active'
+                  : 'status-pill-pending'
+              }`}
+              style={isCanc ? { background: '#fee2e2', color: '#b91c1c', borderColor: '#f87171' } : undefined}
+            >
+              {item.status}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'actions',
+        header: 'Action',
         render: (item) => (
-          <span
-            className={`status-pill ${
-              item.status === 'Completed'
-                ? 'status-pill-completed'
-                : 'status-pill-disabled'
-            }`}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.8125rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              cursor: 'pointer'
+            }}
+            onClick={() => handleOpenDetailModal(item)}
           >
-            {item.status}
-          </span>
+            <i className="fa-regular fa-eye"></i>
+            <span>View</span>
+          </button>
         ),
       },
     ],
-    []
+    [tab]
   );
 
   const breadcrumbItems = [
@@ -130,55 +182,62 @@ export default function OperatorHistory() {
 
       <PageHeader
         title="History Records"
-        subtitle="View past appointments and completed service fulfillments"
+        subtitle="View past appointments, completed services, and cancelled fulfillments with full refund audit"
         illustrationSrc="/pageImages/operator/history.png"
       />
 
       <section className="card op-history">
+        <div className="op-tab-strip">
+          <button
+            className={`op-tab ${tab === 'appointments' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('appointments');
+              setCurrentPage(1);
+            }}
+          >
+            Appointment History ({appointmentHistory.length})
+          </button>
+          <button
+            className={`op-tab ${tab === 'services' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('services');
+              setCurrentPage(1);
+            }}
+          >
+            Service History ({serviceHistory.length})
+          </button>
+        </div>
 
-      <div className="op-tab-strip">
-        <button
-          className={`op-tab ${tab === 'appointments' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('appointments');
-            setCurrentPage(1);
+        {/* Reusable DataTable */}
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          keyField="id"
+          selectable={false}
+          isLoading={activeLoading}
+          emptyState={{
+            icon: 'fa-regular fa-clock',
+            message: activeError || 'No history records found',
           }}
-        >
-          Appointment History ({appointmentHistory.length})
-        </button>
-        <button
-          className={`op-tab ${tab === 'services' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('services');
-            setCurrentPage(1);
-          }}
-        >
-          Service History ({serviceHistory.length})
-        </button>
-      </div>
+        />
 
-      {/* Reusable DataTable */}
-      <DataTable
-        columns={columns}
-        data={paginatedData}
-        keyField="id"
-        selectable={false}
-        isLoading={activeLoading}
-        emptyState={{
-          icon: 'fa-regular fa-clock',
-          message: activeError || 'No history records found',
-        }}
-      />
-
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalItems={activeData.length}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={activeData.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
       </section>
+
+      {/* Detail Modal for View Action */}
+      <HistoryDetailModal
+        isOpen={isModalOpen}
+        onClose={handleCloseDetailModal}
+        data={selectedRecord}
+        type={tab === 'appointments' ? 'appointment' : 'service'}
+      />
     </main>
   );
 }

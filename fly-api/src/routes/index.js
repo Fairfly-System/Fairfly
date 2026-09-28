@@ -19,14 +19,18 @@ const qualificationRoutes = require('./qualificationRoutes');
 const clientRoutes = require('./clientRoutes');
 const chatbotRoutes = require('./chatbotRoutes');
 const adminAnalyticsRoutes = require('./adminAnalyticsRoutes');
+const passwordResetRoutes = require('./passwordResetRoutes');
+const paymentRoutes = require('./paymentRoutes');
 
 router.use('/auth', authRoutes);
+router.use('/payments', paymentRoutes);
 router.use('/qualifications', qualificationRoutes);
 router.use('/clients', clientRoutes);
 router.use('/franchise', franchiseRoutes);
 router.use('/services', serviceRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/admin/analytics', adminAnalyticsRoutes);
+router.use('/admin/password-resets', passwordResetRoutes);
 router.use('/operators', operatorRoutes);
 router.use('/workflows', workflowRoutes);
 router.use('/workflow', workflowRoutes); // Support both /workflow and /workflows

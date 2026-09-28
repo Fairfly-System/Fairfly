@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   requestClientPasswordReset, 
+  requestOperatorPasswordReset,
   registerClient,
   initiateRegistration,
   verifyRegistrationCode,
@@ -91,6 +92,16 @@ router.post(
 router.post(
   '/reset-password',
   performanceProfiler('POST /auth/reset-password', publicRateLimiter, allowedFields(['email']), requestClientPasswordReset)
+);
+
+// Public route for requesting Operator password reset (rate-limited, protected fields, Super Admin review queue)
+router.post(
+  '/operator-forgot-password',
+  performanceProfiler('POST /auth/operator-forgot-password', publicRateLimiter, allowedFields(['email', 'branchName', 'reason']), requestOperatorPasswordReset)
+);
+router.post(
+  '/operator-reset-request',
+  performanceProfiler('POST /auth/operator-reset-request', publicRateLimiter, allowedFields(['email', 'branchName', 'reason']), requestOperatorPasswordReset)
 );
 
 module.exports = router;

@@ -102,6 +102,170 @@ const requestClientPasswordReset = async (req, res) => {
   }
 };
 
+const GENERIC_OPERATOR_RESET_MESSAGE = 'If an active Operator account matching these details exists, your password reset request has been securely submitted for Super Admin review.';
+
+/**
+ * Request password reset for Operator accounts
+ * Payload: { email, branchName, reason }
+ * 
+ * Security & Verification Requirements:
+ * 1. Checks account existence in Firestore `users` collection where role is 'operator' or 'branch_operator'
+ * 2. Verifies account status is 'Active' (not disabled or deleted)
+ * 3. Verifies account exists in Firebase Auth
+ * 4. Anti-enumeration: Returns generic success message on all invalid / non-operator inputs
+ * 5. Throttling / Duplicate Guard: If an active PENDING or APPROVED request was created within the last 24h, suppresses duplicate creation
+ * 6. Creates record in `passwordResetRequests` with status 'PENDING' and 48-hour expiration
+ * 7. Dispatches security notification to Super Admins
+ */
+const requestOperatorPasswordReset = async (req, res) => {
+  try {
+    const { email, branchName, reason } = req.body;
+
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Please provide a valid email address.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address format.' });
+    }
+
+    // 1. Query Firestore users collection for operator account
+    let userSnapshot = await db.collection(COLLECTIONS.USERS)
+      .where('email', '==', normalizedEmail)
+      .limit(1)
+      .get();
+
+    if (userSnapshot.empty && normalizedEmail !== email.trim()) {
+      userSnapshot = await db.collection(COLLECTIONS.USERS)
+        .where('email', '==', email.trim())
+        .limit(1)
+        .get();
+    }
+
+    // If no record found, return generic success (prevents account enumeration)
+    if (userSnapshot.empty) {
+      console.log(`[Auth] Operator password reset requested for non-existent email: ${normalizedEmail}. Request suppressed.`);
+      return res.status(200).json({
+        success: true,
+        message: GENERIC_OPERATOR_RESET_MESSAGE
+      });
+    }
+
+    const userDoc = userSnapshot.docs[0];
+    const userData = userDoc.data();
+    const userRole = (userData.role || '').toLowerCase();
+
+    // 2. Strict Role Check: Must be operator or branch_operator
+    if (userRole !== 'operator' && userRole !== 'branch_operator') {
+      console.log(`[Auth] Operator password reset requested for non-operator role (${userRole}): ${normalizedEmail}. Suppressed.`);
+      return res.status(200).json({
+        success: true,
+        message: GENERIC_OPERATOR_RESET_MESSAGE
+      });
+    }
+
+    // 3. Status Check: Must be Active
+    if (userData.status && userData.status.toLowerCase() !== 'active') {
+      console.log(`[Auth] Operator password reset requested for inactive account (${userData.status}): ${normalizedEmail}. Suppressed.`);
+      return res.status(200).json({
+        success: true,
+        message: GENERIC_OPERATOR_RESET_MESSAGE
+      });
+    }
+
+    // 4. Firebase Auth Account Existence Check
+    try {
+      await admin.auth().getUserByEmail(normalizedEmail);
+    } catch (authErr) {
+      if (authErr.code === 'auth/user-not-found') {
+        console.warn(`[Auth] Operator Firestore record exists for ${normalizedEmail}, but no corresponding Firebase Auth user found.`);
+        return res.status(200).json({
+          success: true,
+          message: GENERIC_OPERATOR_RESET_MESSAGE
+        });
+      }
+      console.error('[Auth] Firebase Auth lookup error:', authErr);
+      throw authErr;
+    }
+
+    // 5. Throttling / Duplicate Guard: Check for existing PENDING or APPROVED request within last 24h
+    const existingRequestsSnapshot = await db.collection('passwordResetRequests')
+      .where('operatorEmail', '==', normalizedEmail)
+      .get();
+
+    const nowMs = Date.now();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    const hasActiveRecentRequest = existingRequestsSnapshot.docs.some(doc => {
+      const data = doc.data();
+      if (data.status === 'PENDING' || data.status === 'APPROVED') {
+        const createdMs = new Date(data.createdAt || 0).getTime();
+        return (nowMs - createdMs) < twentyFourHoursMs;
+      }
+      return false;
+    });
+
+    if (hasActiveRecentRequest) {
+      console.log(`[Auth] Duplicate active operator reset request throttled for: ${normalizedEmail}`);
+      return res.status(200).json({
+        success: true,
+        message: GENERIC_OPERATOR_RESET_MESSAGE
+      });
+    }
+
+    // 6. Generate and save Password Reset Request in Firestore
+    const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
+    const { notifyAdmins } = require('../services/notificationService');
+    const requestId = generatePrefixedId(ID_PREFIXES.PASSWORD_RESET);
+    const nowIso = new Date().toISOString();
+    const expiresAtIso = new Date(nowMs + 48 * 60 * 60 * 1000).toISOString(); // 48-hour validity
+
+    const newRequestDoc = {
+      id: requestId,
+      operatorUid: userDoc.id,
+      operatorEmail: normalizedEmail,
+      operatorName: userData.fullName || userData.name || userData.branchName || 'Operator',
+      branchUid: userData.branchUid || userDoc.id,
+      branchName: userData.branchName || branchName || 'Branch Office',
+      reason: (reason && typeof reason === 'string' ? reason.trim().slice(0, 500) : 'Operator account password reset request'),
+      status: 'PENDING',
+      resetLinkSent: false,
+      reviewedBy: null,
+      reviewedByName: null,
+      reviewedAt: null,
+      reviewNotes: null,
+      completedAt: null,
+      expiresAt: expiresAtIso,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+
+    await db.collection('passwordResetRequests').doc(requestId).set(newRequestDoc);
+
+    // 7. Notify Admins/Super Admins
+    notifyAdmins({
+      title: 'Operator Password Reset Request',
+      message: `Operator ${newRequestDoc.operatorName} (${newRequestDoc.branchName}) requested a password reset. Review required.`,
+      type: 'security',
+      link: '/admin/operators',
+      metadata: { requestId, operatorEmail: normalizedEmail, branchName: newRequestDoc.branchName }
+    }).catch(err => console.warn('[Auth] Notification to admins failed:', err.message));
+
+    console.log(`[Auth] Operator password reset request created: ${requestId} for ${normalizedEmail}`);
+
+    return res.status(200).json({
+      success: true,
+      message: GENERIC_OPERATOR_RESET_MESSAGE
+    });
+  } catch (error) {
+    console.error('Error in requestOperatorPasswordReset:', error);
+    return res.status(500).json({
+      error: 'Failed to process operator password reset request: ' + error.message
+    });
+  }
+};
+
 const { addToDocumentWithId } = require('../services/firebaseService');
 const {
   createPendingRegistration,
@@ -257,6 +421,7 @@ const registerClient = initiateRegistration;
 
 module.exports = {
   requestClientPasswordReset,
+  requestOperatorPasswordReset,
   registerClient,
   initiateRegistration,
   verifyRegistrationCode: verifyRegistrationCodeController,

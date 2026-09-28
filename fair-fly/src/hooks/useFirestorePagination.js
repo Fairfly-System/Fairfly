@@ -44,6 +44,7 @@ export function useFirestorePagination({
   enabled = true,
   searchTerm = '',
   searchFilterFn = null,
+  customFilterFn = null,
 }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +64,9 @@ export function useFirestorePagination({
 
   const searchFilterFnRef = useRef(searchFilterFn);
   searchFilterFnRef.current = searchFilterFn;
+
+  const customFilterFnRef = useRef(customFilterFn);
+  customFilterFnRef.current = customFilterFn;
 
   const unfilteredTotalRef = useRef(0);
 
@@ -96,7 +100,9 @@ export function useFirestorePagination({
       const count = countSnap.data().count;
       unfilteredTotalRef.current = count;
       setUnfilteredTotal(count);
-      setTotalItems(count);
+      if (!customFilterFnRef.current) {
+        setTotalItems(count);
+      }
     } catch (err) {
       console.warn(`[useFirestorePagination] Count aggregation notice on ${collectionName}:`, err.message);
     }
@@ -117,17 +123,18 @@ export function useFirestorePagination({
     setError(null);
 
     const isSearching = Boolean(searchTerm && searchTerm.trim());
+    const hasClientFilter = isSearching || Boolean(customFilterFnRef.current);
     const baseCol = collection(firestore, collectionName);
     const activeFilters = combineFilters(filtersRef.current || []);
     let q;
 
-    if (isSearching) {
-      // Bounded search query: fetch at most 50 recent matching documents for client search filter
+    if (hasClientFilter) {
+      // Bounded search/predicate query: fetch up to 100 recent matching documents for client filtering
       const searchConstraints = [...activeFilters];
       if (orderByField) {
         searchConstraints.push(orderBy(orderByField, orderDirection));
       }
-      searchConstraints.push(limit(50));
+      searchConstraints.push(limit(100));
       q = query(baseCol, ...searchConstraints);
     } else {
       // True query-level cursor pagination: requests exactly pageSize documents
@@ -152,8 +159,16 @@ export function useFirestorePagination({
       }));
 
       const activeSearchFn = searchFilterFnRef.current;
-      if (isSearching && activeSearchFn) {
-        const filtered = docs.filter(activeSearchFn);
+      const activeCustomFn = customFilterFnRef.current;
+
+      if (hasClientFilter) {
+        let filtered = docs;
+        if (activeCustomFn) {
+          filtered = filtered.filter(activeCustomFn);
+        }
+        if (isSearching && activeSearchFn) {
+          filtered = filtered.filter(activeSearchFn);
+        }
         setTotalItems(filtered.length);
         const start = (currentPage - 1) * pageSize;
         setData(filtered.slice(start, start + pageSize));

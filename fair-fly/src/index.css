@@ -512,6 +512,26 @@ tbody tr.selected:hover td {
   color: #721C24;
 }
 
+.btn-warning {
+  background-color: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FCD34D;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+.btn-warning:hover:not(:disabled) {
+  background-color: #FDE68A;
+  color: #78350F;
+  border-color: #F59E0B;
+}
+
 .btn-ghost {
   background-color: transparent;
   color: var(--text-mid);

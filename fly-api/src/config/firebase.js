@@ -81,9 +81,11 @@ try {
   }
 
   db = admin.firestore();
+  db.settings({ ignoreUndefinedProperties: true });
   auth = admin.auth();
   bucket = admin.storage().bucket();
   console.log(`Firebase Admin SDK successfully initialized with storage bucket: ${defaultBucket}`);
+
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);
   throw error;

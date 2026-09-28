@@ -112,8 +112,14 @@ function DashboardContent() {
     return list;
   }, [user?.uid, priorityFilter]);
 
+  // Only display actively progressing services on fulfillment page; fulfilled/cancelled move to History
+  const activeFulfillmentFilterFn = useCallback((s) => {
+    return s.status !== 'Completed' && s.status !== 'Cancelled';
+  }, []);
+
   // Client search predicate for bounded candidate pool
   const searchFilterFn = useCallback((s) => {
+    if (s.status === 'Completed' || s.status === 'Cancelled') return false;
     if (!debouncedSearch) return true;
     const nameStr = (s.clientName || s.name || '').toLowerCase();
     const typeStr = (s.serviceType || s.type || '').toLowerCase();
@@ -139,6 +145,7 @@ function DashboardContent() {
     initialPageSize: 5,
     searchTerm: debouncedSearch,
     searchFilterFn,
+    customFilterFn: activeFulfillmentFilterFn,
     enabled: Boolean(user?.uid)
   });
 

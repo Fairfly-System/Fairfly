@@ -1,0 +1,201 @@
+/* QuotationDetailModal CSS */
+.quotation-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+}
+
+.quote-modal-header-card {
+  background: var(--bg-surface, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.quote-modal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--purple, #7c3aed);
+  background: var(--purple-light-2, #ede9fe);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm, 6px);
+  letter-spacing: 0.05em;
+}
+
+.quote-modal-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-dark, #0f172a);
+  margin: 0.4rem 0 0.2rem 0;
+}
+
+.quote-modal-branch {
+  font-size: 0.8125rem;
+  color: var(--text-light, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.quote-modal-status-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+/* Financial Highlight Box */
+.quote-modal-financial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.quote-modal-price-box {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.06) 0%, rgba(99, 102, 241, 0.06) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.quote-price-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-light, #64748b);
+}
+
+.quote-price-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--purple, #7c3aed);
+  margin: 0.2rem 0;
+}
+
+.quote-price-sub {
+  font-size: 0.75rem;
+  color: var(--text-mid, #475569);
+}
+
+/* Detail Section Cards */
+.quote-modal-section {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 1rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quote-section-heading {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-dark, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.quote-section-heading i {
+  color: var(--purple, #7c3aed);
+}
+
+.quote-modal-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.quote-meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.quote-meta-label {
+  font-size: 0.75rem;
+  color: var(--text-light, #64748b);
+  font-weight: 500;
+}
+
+.quote-meta-val {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-dark, #0f172a);
+  margin-top: 0.15rem;
+}
+
+.quote-text-block {
+  font-size: 0.8125rem;
+  color: var(--text-mid, #334155);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+/* Modal Footer */
+.quote-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  flex-wrap: wrap;
+}
+
+.quote-modal-footer-left {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quote-modal-footer-right {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quote-modal-footer .btn-warning {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quote-modal-footer .btn-warning:hover:not(:disabled) {
+  background-color: #fde68a;
+  color: #78350f;
+  border-color: #f59e0b;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.2);
+}
+
+.quote-modal-footer .btn-warning i {
+  color: #d97706;
+}

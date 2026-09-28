@@ -21,6 +21,25 @@ export function requestClientPasswordReset(email, successCallback, errorCallback
 }
 
 /**
+ * Request password reset for operator accounts (Super Admin review flow)
+ * @param {object} payload - { email, branchName, reason }
+ * @param {function} successCallback - Success callback handler
+ * @param {function} errorCallback - Error callback handler
+ * @param {function} setIsLoading - Loading state setter
+ */
+export function requestOperatorPasswordReset(payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/operator-reset-request`,
+    'POST',
+    payload,
+    {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+/**
  * Initiate Client registration (generates and emails a 6-character code)
  * @param {object} userData - { fullName, email, phone, password, confirmPassword }
  * @param {function} successCallback - Success callback handler

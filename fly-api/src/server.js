@@ -46,7 +46,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());//Use express.json() to parse incoming JSON requests (POST/PUT/PATCH)
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+})); // Parse incoming JSON requests and preserve raw body buffer for webhook signature validation
 
 // Admin action audit logger — fires post-response via res.on('finish')
 const { adminLogger } = require('./middleware/adminLogger');

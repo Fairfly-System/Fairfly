@@ -1,6 +1,135 @@
 # Update Logs
 
+## [2026-09-28] Feature: Operator Fulfillment & History Workflow with View Modals and Automatic Full Refund on Cancellation
+
+### Overview
+Addressed three critical operational requirements in the FairFly Operator Portal and backend fulfillment lifecycle:
+1. **Active Fulfillment Real-time Exclusion**: Services marked as `Completed` (fulfilled) or `Cancelled` now immediately move out of the Active Services Fulfillment list on the Operator Dashboard (`/operator`) and transition to Operator History.
+2. **Operator History Unified View & View Details Modal**:
+   - `OperatorHistory.jsx` now retrieves both `Completed` and `Cancelled` services (`/api/services/active?status=history`), as well as full appointment records.
+   - Added an **Actions** column with a dedicated **"View"** button for every row in both Service History and Appointment History.
+   - Built the reusable `HistoryDetailModal` component (`src/components/Operator/HistoryDetailModal`) adhering to FairFly design system tokens, displaying:
+     - Prominent **100% Full Refund Callout Card** for cancelled services (displaying PayMongo refund ID, refund amount in PHP, refund status, and cancellation reason).
+     - **Fulfillment Success Banner** for completed services with completion timestamp.
+     - 2-Column layout with Client profile information and Financial/Operations summary (price, payment status, quotation reference, branch name).
+     - Full procedure workflow steps audit breakdown with statuses, completed dates, and third-party links.
+     - Complete appointment details (client info, preferred schedule, branch office, purpose of visit, and status pill).
+3. **100% Full Refund on Cancellation via PayMongo**:
+   - Updated backend controller (`fly-api/src/controllers/activeServiceController.js` $\to$ `cancelActiveService`):
+     - Derives authoritative payment document and amount from `payments` collection.
+     - Dispatches a 100% Full Refund through the PayMongo Refund API (`createPaymongoRefund`).
+     - Atomically marks `activeServices`, `payments`, and linked `quotations` as `status: 'Cancelled'`, `paymentStatus: 'REFUNDED'`, `refundStatus: 'FULL_REFUND'`, with `refundAmount`, `refundId`, and `refundedAt`.
+     - Sends in-app client notification confirming cancellation with exact full refund amount (₱...) and reference ID.
+     - Dispatches admin notification for financial audit compliance.
+   - Enhanced procedure cancellation modal (`OperatorServiceProcedure.jsx`) and status banners to provide complete transparency regarding the 100% full refund guarantee.
+4. **Component Catalog Registration**: Documented `HistoryDetailModal` in `Fairfly/component-list.md`.
+
+---
+
+### Overview
+Enhanced the Client Portal's "My Inquiries & Quotations" tab (`ClientTrackingPage.jsx`):
+1. **Subtab Navigation**: Unified "Official Quotations" (ADF-07-001) and "Submitted Inquiries" (SAF-01-002) into structured subtabs with count badges.
+2. **DataTable Layout for Quotations**: Replaced the static card grid with FairFly's standard `DataTable` component, complete with responsive columns, debounced search (`useDebounce`), status filter chips (`FilterChipGroup`), and pagination (`Pagination`).
+3. **DataTable Layout for Submitted Inquiries**: Replaced the vertical card list with an aligned `DataTable` featuring control numbers, passenger counts, category chips, submission dates, status badges, debounced search, filter chips, and pagination.
+4. **Complete Details View Modals**:
+   - `QuotationDetailModal`: Full breakdown of package pricing, tour schedule dates, rate breakdown, inclusions/exclusions, operator remarks, official PDF viewer button, and one-click accept & pay actions.
+   - `InquiryDetailModal`: Complete intake specifications, passenger counts (adults, children, total pax), requested service categories, specified requirements with attached filenames, operator remarks, and official SAF-01-002 PDF viewer button.
+5. **Resume Payment Action Button Styling**: Added global `.btn-warning` utilities and dedicated styling for the Resume action button in both the Quotation DataTable row (`.client-row-actions .btn-warning.btn-xs`) and `QuotationDetailModal` (`.quote-modal-footer .btn-warning.btn-resume`) with warm amber accents, hover states, and iconography.
+6. **Component Catalog Registration**: Documented `QuotationDetailModal` and `InquiryDetailModal` with full prop interfaces and functionality descriptions in `Fairfly/component-list.md`.
+
+---
+
+## [2026-09-28] Bugfix: Payment Verification Firestore Undefined Field Exception (`quotationId`)
+
+### Overview
+Fixed an HTTP 500 error during `POST /api/payments/:id/verify` caused by Firestore rejecting `undefined` values when building the service fulfillment record (`quotationId`).
+
+### Root Cause
+1. `transaction.get(quotationRef).data()` in Firestore only returns the document's internal stored fields without appending the document ID (`id`). Because `quotation.id` was referenced directly instead of `quotationDoc.id`, it evaluated to `undefined`.
+2. When creating the active service fulfillment document via `transaction.set(activeServiceRef, fulfillmentPayload)`, Firestore threw:
+   `Cannot use "undefined" as a Firestore value (found in field "quotationId")`.
+
+### Fix
+1. **Global Protection (`firebase.js`)**: Enabled `db.settings({ ignoreUndefinedProperties: true })` on the Firestore Admin instance, preventing undefined property crashes across all operations.
+2. **Explicit Document ID Merging (`paymentController.js`)**:
+   Merged `id: quotationDoc.id` into `quotationData` and `id: paymentDoc.id` into `paymentData` inside `finalizeSuccessfulPayment`.
+3. **Resilient Fallbacks (`quotationController.js`)**:
+   Updated `buildFulfillmentPayload` to use `quotation.id || quotation.quotationId || payment?.quotationId || null` for `quotationId`, guaranteeing safe non-undefined values.
+4. **Daemon Restart**: Restarted `fly-api` backend server with nodemon on port 5001.
+
+---
+
+## [2026-09-28] Feature: Operator Password Reset Request Flow & PayMongo Sandbox Payment Gateway Integration
+
+
+### Overview
+Architected and implemented two interconnected enterprise-grade features for the FairFly Travel & Tours System:
+1. **Operator Password Reset Request & Super Admin Review Pipeline**: Allows branch operators to submit password reset requests through an anti-enumeration public intake endpoint. Super Admins inspect verification factors and approve (triggering official Firebase Auth password reset links via email) or reject with audit notes.
+2. **PayMongo Payment Integration & Decoupled Fulfillment Workflow**: Decoupled service fulfillment creation from quotation acceptance. Fulfillment is now strictly deferred until server-verified payment completion. Implemented dual-path payment verification (cryptographic HMAC-SHA256 webhook + client redirect sync) with atomic ACID transactions guaranteeing exactly one fulfillment record per payment.
+
+---
+
+### Key Architectural & Security Implementations
+
+#### 1. Part 1 — Operator Password Reset Request & Super Admin Approval Pipeline
+- **Anti-Enumeration Public Defense (`authController.js`)**:
+  - `POST /api/auth/operator-reset-request` and `POST /api/auth/operator-forgot-password`: Returns a uniform generic HTTP 200 response regardless of whether the email exists, preventing attacker reconnaissance and username harvesting.
+  - Zero-Trust Backend Verification: Cross-references Firestore `users` for active `role === 'operator'` or `'branch_operator'`.
+  - Duplicate Request Throttling: Enforces a strict 24-hour rate limit on duplicate requests for the same operator account.
+  - Automatic Expiration: Sets `expiresAt` to 48 hours in the future. Expired requests are automatically marked as `Expired` during reads.
+  - Super Admin Alerts: Automatically dispatches notifications to system administrators via `notifyAdmins`.
+- **Super Admin Review & Link Generation (`passwordResetController.js`)**:
+  - Guarded strictly by `verifyFirebaseToken`, `requireSuperAdmin`, and `apiRateLimiter`.
+  - Approval: Super Admin clicks Approve $\to$ Backend invokes `admin.auth().generatePasswordResetLink(email)` $\to$ Dispatches official password reset email via transactional mailer (`sendPasswordResetEmail`) $\to$ Updates record to `Approved` with `processedBy`, `processedAt`, and `authResetLinkGenerated: true`.
+  - Rejection: Records reviewer identity, timestamp, and mandatory rejection notes in `rejectionReason`.
+  - No Plaintext Passwords or Credentials: Plaintext passwords are never accepted, stored, or returned.
+- **Frontend Super Admin & Operator Views**:
+  - `ResetPassword.jsx`: Role switcher tab (`Traveler / Client` vs `Franchise Operator`) with branch selection, verification reasons, and zero-trust security notices.
+  - `PasswordResetRequestsTab.jsx`: Super Admin management interface with KPI counters, filter chips (`All`, `Pending`, `Approved`, `Rejected`, `Expired`), search, detailed inspect modal, approve confirmation modal, and reject modal.
+  - Integrated into `OperatorsContent.jsx` with sub-tab switcher (`Franchise Operators` vs `Password Reset Requests`).
+
+---
+
+#### 2. Part 2 — PayMongo Sandbox Payment Gateway & Workflow Decoupling
+- **Decoupled Business Flow**:
+  - Previous Behavior: `acceptQuotation` prematurely spawned `activeServices` records before any financial commitment.
+  - Corrected Architecture:
+    1. Client accepts Quotation $\to$ `acceptQuotation` sets quotation `status: 'Accepted'` and `paymentStatus: 'UNPAID'`. No fulfillment record is created.
+    2. Client opens `PaymentModal` $\to$ Calls `POST /api/payments/checkout-session`.
+    3. Backend derives total price strictly server-side from `quotation.totalAmount` (zero-trust client price derivation) $\to$ Generates PayMongo Checkout Session (GCash, Maya, QR Ph, Credit/Debit cards, BillEase, GrabPay).
+    4. Client completes payment $\to$ PayMongo triggers dual verification:
+       - **Asynchronous Webhook (`POST /api/payments/webhook`)**: Verified via cryptographic HMAC-SHA256 signature against `${timestamp}.${rawBody}` with 5-minute replay attack defense window.
+       - **Synchronous Client Return (`POST /api/payments/:id/verify`)**: Invoked when client lands on return URL (`/client/tracking?payment_status=success&payment_id=...`).
+    5. Atomic Finalization (`finalizeSuccessfulPayment`): Executes inside a Firestore ACID transaction (`db.runTransaction`). Updates payment to `PAID`, marks quotation `paymentStatus: 'PAID'`, and creates the initial `activeServices` fulfillment document with compiled workflow steps.
+- **Strict Idempotency Guarantee**:
+  - Prevents race conditions between concurrent webhooks and user return redirects.
+  - If a payment is already marked `PAID`, returns the existing `fulfillmentId` immediately without executing duplicate inserts.
+  - Guarantees $1\text{ Successful Payment} = \text{Exactly } 1\text{ Active Service Fulfillment}$.
+- **Raw Body Preservation (`server.js`)**:
+  - Configured `express.json({ verify: (req, res, buf) => { req.rawBody = buf; } })` to maintain raw buffer for timing-safe signature comparison (`crypto.timingSafeEqual`).
+- **Database & Security Rules (`firestore.rules`)**:
+  - Locked down `activeServices`, `payments`, and `passwordResetRequests` against client direct mutations (`allow create, update, delete: if false;`).
+  - Added object-level ownership checks for scoped payment reads.
+
+---
+
+### Verification & Testing
+- **Automated Verification Suite (`testPaymentAndResetFlows.js`)**:
+  - `PayMongo Webhook`: Validates authentic HMAC-SHA256 signature (`PASS`).
+  - `PayMongo Webhook`: Rejects forged and tampered signatures (`PASS`).
+  - `PayMongo Webhook`: Rejects expired webhook event timestamps (`PASS`).
+  - `Quotation Acceptance`: Builds fulfillment payload with complete workflow steps (`PASS`).
+  - `ACID Idempotency`: Exactly 1 fulfillment created for 1 successful payment across concurrent calls (`PASS`).
+  - `Password Reset Anti-Enumeration`: Verifies uniform generic client response (`PASS`).
+- **Regression Security Suite (`testSecurityFixes.js`)**:
+  - 26/26 automated security and BOLA/IDOR tests passing.
+- **Frontend Production Build**:
+  - Ran `npm run build` in `fair-fly` with Vite v8.0.16: 2,690 modules transformed, 0 errors.
+
+---
+
 ## [2026-09-28] Refactor: Suppress Notification Badges on Operator Services Tab from Client Service Requests
+
 
 ### Overview
 Ensured that client-initiated service requests do not place an unwanted notification badge on the **Services** tab (`/operator/services`) in the Operator sidebar, keeping the Services tab strictly dedicated to Service Catalog management (standard and custom catalog items).
