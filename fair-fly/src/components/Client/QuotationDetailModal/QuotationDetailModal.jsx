@@ -105,6 +105,50 @@ export default function QuotationDetailModal({
           </div>
         </div>
 
+        {/* Submitted Requirements / Files */}
+        {((Array.isArray(quotation.submittedRequirements) && quotation.submittedRequirements.length > 0) ||
+          (Array.isArray(quotation.requirements) && quotation.requirements.length > 0)) && (
+          <div className="quote-modal-section">
+            <div className="quote-section-heading">
+              <i className="fa-solid fa-clipboard-check"></i>
+              Submitted Client Requirements & Documents
+            </div>
+            <div className="quote-reqs-grid">
+              {(quotation.submittedRequirements || quotation.requirements).map((req, rIdx) => {
+                const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
+                const fileObj = typeof req === 'object' ? req.file : null;
+                const fileUrl = typeof req === 'object' ? (fileObj?.url || (typeof fileObj === 'string' ? fileObj : null) || req.fileUrl || req.url) : null;
+                const fileName = typeof req === 'object' ? (fileObj?.fileName || req.fileName || '') : '';
+                const isImage = typeof req === 'object' && (req.inputType === 'image' || (fileUrl && /\.(png|jpg|jpeg|webp|gif)/i.test(fileName || fileUrl)));
+                const textVal = typeof req === 'object' ? (req.value || req.textValue || '') : '';
+
+                return (
+                  <div key={rIdx} className="quote-req-item">
+                    <span className="quote-req-name">{reqName}</span>
+                    {fileUrl ? (
+                      <div className="quote-req-file-row">
+                        {isImage && (
+                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="quote-img-thumb-link" title={`View full image: ${fileName || reqName}`}>
+                            <img src={fileUrl} alt={fileName || reqName} className="quote-img-thumb" />
+                          </a>
+                        )}
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="quote-file-link" title={fileName ? `Open ${fileName}` : 'View Attached File'}>
+                          <i className={isImage ? "fa-regular fa-image" : "fa-solid fa-file-arrow-down"}></i>
+                          <span>{fileName || (isImage ? 'View Attached Image' : 'View Attached Document')}</span>
+                        </a>
+                      </div>
+                    ) : textVal ? (
+                      <span className="quote-req-val">{textVal}</span>
+                    ) : (
+                      <span className="quote-req-val" style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Provided / Acknowledged</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Client & Operator Metadata */}
         <div className="quote-modal-section">
           <div className="quote-section-heading">

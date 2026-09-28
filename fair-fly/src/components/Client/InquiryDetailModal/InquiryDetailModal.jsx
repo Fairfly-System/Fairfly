@@ -139,9 +139,45 @@ export default function InquiryDetailModal({
             <i className="fa-solid fa-list-check"></i>
             Specified Requirements & Details
           </div>
-          <div className="inq-text-block">
-            {requirementsText || 'No custom requirements specified in the submission.'}
-          </div>
+          {Array.isArray(inquiry.requirements) && inquiry.requirements.length > 0 && typeof inquiry.requirements[0] === 'object' ? (
+            <div className="inq-reqs-grid">
+              {inquiry.requirements.map((req, rIdx) => {
+                const reqName = req.name || req.title || `Requirement ${rIdx + 1}`;
+                const fileObj = req.file;
+                const fileUrl = fileObj?.url || (typeof fileObj === 'string' ? fileObj : null) || req.fileUrl || req.url;
+                const fileName = fileObj?.fileName || req.fileName || '';
+                const isImage = req.inputType === 'image' || (fileUrl && /\.(png|jpg|jpeg|webp|gif)/i.test(fileName || fileUrl));
+                const textVal = req.value || req.textValue || '';
+
+                return (
+                  <div key={rIdx} className="inq-req-item">
+                    <span className="inq-req-name">{reqName}</span>
+                    {fileUrl ? (
+                      <div className="inq-req-file-row">
+                        {isImage && (
+                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inq-img-thumb-link" title={`View full image: ${fileName || reqName}`}>
+                            <img src={fileUrl} alt={fileName || reqName} className="inq-img-thumb" />
+                          </a>
+                        )}
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inq-file-link" title={fileName ? `Open ${fileName}` : 'View Attached File'}>
+                          <i className={isImage ? "fa-regular fa-image" : "fa-solid fa-file-arrow-down"}></i>
+                          <span>{fileName || (isImage ? 'View Attached Image' : 'View Attached Document')}</span>
+                        </a>
+                      </div>
+                    ) : textVal ? (
+                      <span className="inq-req-val">{textVal}</span>
+                    ) : (
+                      <span className="inq-req-val" style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Provided / Acknowledged</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="inq-text-block">
+              {requirementsText || 'No custom requirements specified in the submission.'}
+            </div>
+          )}
         </div>
 
         {/* Operator Remarks */}

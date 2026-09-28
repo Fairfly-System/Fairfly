@@ -265,6 +265,37 @@
   color: var(--text-mid);
 }
 
+.tracker-req-file-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tracker-img-thumb-link {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.tracker-img-thumb-link:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-sm);
+}
+
+.tracker-img-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .tracker-file-link {
   font-size: 0.75rem;
   color: var(--purple);

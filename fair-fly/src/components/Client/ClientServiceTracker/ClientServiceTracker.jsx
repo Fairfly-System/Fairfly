@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import Steps from './Steps/Steps';
 import './service-tracker.css';
 
@@ -20,6 +22,105 @@ const CATEGORY_ICON_MAP = {
 export default function ClientServiceTracker({ service }) {
   const [showSteps, setShowSteps] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
+  const [inquiryRequirements, setInquiryRequirements] = useState([]);
+
+  // Fallback: If service record has no actual uploaded files, fetch from originating inquiry or quotation
+  useEffect(() => {
+    if (!service) return;
+
+    const hasUploadedFiles = (list) => {
+      if (!Array.isArray(list) || list.length === 0) return false;
+      return list.some((r) => {
+        if (!r || typeof r !== 'object') return false;
+        const f = r.file;
+        return !!(f?.url || (typeof f === 'string' && f.length > 0) || r.fileUrl || r.url || (typeof r.value === 'string' && r.value.startsWith('http')));
+      });
+    };
+
+    const alreadyHasFiles = hasUploadedFiles(service.submittedRequirements) || hasUploadedFiles(service.requirements);
+    if (alreadyHasFiles) return;
+
+    const extractReqs = (data) => {
+      if (Array.isArray(data?.requirements) && data.requirements.length > 0) return data.requirements;
+      if (Array.isArray(data?.submittedRequirements) && data.submittedRequirements.length > 0) return data.submittedRequirements;
+      return null;
+    };
+
+    let isMounted = true;
+
+    const resolveFallbackReqs = async () => {
+      try {
+        if (service.inquiryId) {
+          const inqSnap = await getDoc(doc(firestore, 'inquiries', service.inquiryId));
+          if (inqSnap.exists()) {
+            const reqs = extractReqs(inqSnap.data());
+            if (reqs && reqs.length > 0) {
+              if (isMounted) setInquiryRequirements(reqs);
+              return;
+            }
+          }
+        }
+
+        if (service.quotationId) {
+          const quoteSnap = await getDoc(doc(firestore, 'quotations', service.quotationId));
+          if (quoteSnap.exists()) {
+            const quoteData = quoteSnap.data();
+            const quoteReqs = extractReqs(quoteData);
+            if (quoteReqs && quoteReqs.length > 0) {
+              if (isMounted) setInquiryRequirements(quoteReqs);
+              return;
+            }
+            if (quoteData.inquiryId) {
+              const inqSnap = await getDoc(doc(firestore, 'inquiries', quoteData.inquiryId));
+              if (inqSnap.exists()) {
+                const reqs = extractReqs(inqSnap.data());
+                if (reqs && reqs.length > 0) {
+                  if (isMounted) setInquiryRequirements(reqs);
+                  return;
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[ClientServiceTracker] Could not fetch fallback inquiry requirements:', err);
+      }
+    };
+
+    resolveFallbackReqs();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [service]);
+
+  const requirementsList = useMemo(() => {
+    const hasUploadedFiles = (list) => {
+      if (!Array.isArray(list) || list.length === 0) return false;
+      return list.some((r) => {
+        if (!r || typeof r !== 'object') return false;
+        const f = r.file;
+        return !!(f?.url || (typeof f === 'string' && f.length > 0) || r.fileUrl || r.url || (typeof r.value === 'string' && r.value.startsWith('http')));
+      });
+    };
+
+    if (hasUploadedFiles(service?.submittedRequirements)) {
+      return service.submittedRequirements;
+    }
+    if (hasUploadedFiles(service?.requirements)) {
+      return service.requirements;
+    }
+    if (inquiryRequirements.length > 0) {
+      return inquiryRequirements;
+    }
+    if (Array.isArray(service?.submittedRequirements) && service.submittedRequirements.length > 0) {
+      return service.submittedRequirements;
+    }
+    if (Array.isArray(service?.requirements) && service.requirements.length > 0) {
+      return service.requirements;
+    }
+    return [];
+  }, [service, inquiryRequirements]);
 
   if (!service) return null;
 
@@ -70,8 +171,6 @@ export default function ClientServiceTracker({ service }) {
         : 'todo',
     description: s.title || s.description || `Step ${idx + 1}`
   }));
-
-  const requirementsList = Array.isArray(service.requirements) ? service.requirements : [];
 
   return (
     <article className="service-tracker">
@@ -197,23 +296,52 @@ export default function ClientServiceTracker({ service }) {
           </h5>
           <div className="tracker-reqs-grid">
             {requirementsList.map((req, rIdx) => {
-              const name = typeof req === 'string' ? req : req.name || req.title;
-              const val = typeof req === 'object' ? req.value || req.textValue || req.fileUrl : null;
-              const isFile = typeof req === 'object' && (req.inputType === 'file' || req.inputType === 'image' || req.fileUrl);
+              const name = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
+              const fileObj = typeof req === 'object' ? req.file : null;
+              const fileUrl = typeof req === 'object'
+                ? (fileObj?.url || (typeof fileObj === 'string' ? fileObj : null) || req.fileUrl || req.url || (typeof req.value === 'string' && req.value.startsWith('http') ? req.value : null))
+                : null;
+              const fileName = typeof req === 'object'
+                ? (fileObj?.fileName || req.fileName || '')
+                : '';
+              const inputType = typeof req === 'object' ? req.inputType : null;
+              const isFile = typeof req === 'object' && (inputType === 'file' || inputType === 'image' || fileObj || req.fileUrl || req.url);
+              const textVal = typeof req === 'object' ? (req.value || req.textValue || '') : '';
+              const isImage = inputType === 'image' || (fileUrl && /\.(png|jpg|jpeg|webp|gif)/i.test(fileName || fileUrl));
 
               return (
                 <div key={rIdx} className="tracker-req-item">
                   <span className="tracker-req-name">{name}</span>
-                  {isFile ? (
-                    val ? (
-                      <a href={val} target="_blank" rel="noreferrer" className="tracker-file-link">
-                        <i className="fa-solid fa-file-arrow-down"></i> View Attached File
+                  {fileUrl ? (
+                    <div className="tracker-req-file-box">
+                      {isImage && (
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="tracker-img-thumb-link"
+                          title={`View full image: ${fileName || name}`}
+                        >
+                          <img src={fileUrl} alt={fileName || name} className="tracker-img-thumb" />
+                        </a>
+                      )}
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tracker-file-link"
+                        title={fileName ? `Open ${fileName}` : 'View Attached File'}
+                      >
+                        <i className={isImage ? "fa-regular fa-image" : "fa-solid fa-file-arrow-down"} style={{ marginRight: '0.35rem' }}></i>
+                        <span>{fileName || (isImage ? 'View Attached Image' : 'View Attached Document')}</span>
                       </a>
-                    ) : (
-                      <span className="tracker-req-pending">Pending Upload</span>
-                    )
+                    </div>
+                  ) : isFile ? (
+                    <span className="tracker-req-pending">
+                      <i className="fa-regular fa-clock" style={{ marginRight: '0.25rem' }}></i> Pending Upload
+                    </span>
                   ) : (
-                    <span className="tracker-req-val">{val || 'Provided'}</span>
+                    <span className="tracker-req-val">{textVal || 'Provided'}</span>
                   )}
                 </div>
               );

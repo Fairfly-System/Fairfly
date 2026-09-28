@@ -69,25 +69,74 @@ export default function OperatorServiceProcedure() {
     return () => unsubscribe();
   }, [id]);
 
-  // Fallback: If legacy activeService document has empty submittedRequirements, fetch originating inquiry requirements
+  // Fallback: If legacy activeService document has empty submittedRequirements or no attached files, fetch originating inquiry or quotation requirements
   useEffect(() => {
     if (!serviceRecord) return;
-    const hasDirectReqs = Array.isArray(serviceRecord.submittedRequirements) && serviceRecord.submittedRequirements.length > 0;
-    const hasStructuredReqs = Array.isArray(serviceRecord.requirements) && serviceRecord.requirements.some(r => r && typeof r === 'object' && (r.file || r.inputType));
 
-    if (!hasDirectReqs && !hasStructuredReqs && serviceRecord.inquiryId) {
-      const inqRef = doc(firestore, 'inquiries', serviceRecord.inquiryId);
-      getDoc(inqRef).then((snap) => {
-        if (snap.exists()) {
-          const inqData = snap.data();
-          if (Array.isArray(inqData?.requirements) && inqData.requirements.length > 0) {
-            setInquiryRequirements(inqData.requirements);
+    const hasUploadedFiles = (list) => {
+      if (!Array.isArray(list) || list.length === 0) return false;
+      return list.some((r) => {
+        if (!r || typeof r !== 'object') return false;
+        const f = r.file;
+        return !!(f?.url || (typeof f === 'string' && f.length > 0) || r.fileUrl || r.url || (typeof r.value === 'string' && r.value.startsWith('http')));
+      });
+    };
+
+    const alreadyHasFiles = hasUploadedFiles(serviceRecord.submittedRequirements) || hasUploadedFiles(serviceRecord.requirements);
+    if (alreadyHasFiles) return;
+
+    const extractReqs = (data) => {
+      if (Array.isArray(data?.requirements) && data.requirements.length > 0) return data.requirements;
+      if (Array.isArray(data?.submittedRequirements) && data.submittedRequirements.length > 0) return data.submittedRequirements;
+      return null;
+    };
+
+    let isMounted = true;
+
+    const resolveFallbackReqs = async () => {
+      try {
+        if (serviceRecord.inquiryId) {
+          const inqSnap = await getDoc(doc(firestore, 'inquiries', serviceRecord.inquiryId));
+          if (inqSnap.exists()) {
+            const reqs = extractReqs(inqSnap.data());
+            if (reqs && reqs.length > 0) {
+              if (isMounted) setInquiryRequirements(reqs);
+              return;
+            }
           }
         }
-      }).catch((err) => {
+
+        if (serviceRecord.quotationId) {
+          const quoteSnap = await getDoc(doc(firestore, 'quotations', serviceRecord.quotationId));
+          if (quoteSnap.exists()) {
+            const quoteData = quoteSnap.data();
+            const quoteReqs = extractReqs(quoteData);
+            if (quoteReqs && quoteReqs.length > 0) {
+              if (isMounted) setInquiryRequirements(quoteReqs);
+              return;
+            }
+            if (quoteData.inquiryId) {
+              const inqSnap = await getDoc(doc(firestore, 'inquiries', quoteData.inquiryId));
+              if (inqSnap.exists()) {
+                const reqs = extractReqs(inqSnap.data());
+                if (reqs && reqs.length > 0) {
+                  if (isMounted) setInquiryRequirements(reqs);
+                  return;
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
         console.warn('Could not fetch fallback inquiry requirements:', err);
-      });
-    }
+      }
+    };
+
+    resolveFallbackReqs();
+
+    return () => {
+      isMounted = false;
+    };
   }, [serviceRecord]);
 
   const isUnauthorized = useMemo(() => {
@@ -99,11 +148,26 @@ export default function OperatorServiceProcedure() {
   }, [serviceRecord, user, userDetails]);
 
   const displayRequirements = useMemo(() => {
-    if (Array.isArray(serviceRecord?.submittedRequirements) && serviceRecord.submittedRequirements.length > 0) {
+    const hasUploadedFiles = (list) => {
+      if (!Array.isArray(list) || list.length === 0) return false;
+      return list.some((r) => {
+        if (!r || typeof r !== 'object') return false;
+        const f = r.file;
+        return !!(f?.url || (typeof f === 'string' && f.length > 0) || r.fileUrl || r.url || (typeof r.value === 'string' && r.value.startsWith('http')));
+      });
+    };
+
+    if (hasUploadedFiles(serviceRecord?.submittedRequirements)) {
       return serviceRecord.submittedRequirements;
+    }
+    if (hasUploadedFiles(serviceRecord?.requirements)) {
+      return serviceRecord.requirements;
     }
     if (inquiryRequirements.length > 0) {
       return inquiryRequirements;
+    }
+    if (Array.isArray(serviceRecord?.submittedRequirements) && serviceRecord.submittedRequirements.length > 0) {
+      return serviceRecord.submittedRequirements;
     }
     if (Array.isArray(serviceRecord?.requirements) && serviceRecord.requirements.length > 0) {
       return serviceRecord.requirements;

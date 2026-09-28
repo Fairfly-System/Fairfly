@@ -1,5 +1,33 @@
 # Update Logs
 
+## [2026-09-28] Bugfix: Client Service Tracker Requirements File Resolution & Attachment Previews
+
+### Overview
+Resolved an issue where viewing submitted requirements in the Client-side Service Tracker (`ClientServiceTracker.jsx`) always displayed "Pending Upload" despite files having been successfully uploaded and viewable from the Operator's Service Fulfillment page (`OperatorServiceProcedure.jsx`).
+
+### Root Cause
+1. **File Metadata Property Mismatch**:
+   In FairFly's file upload pipeline, uploaded file information is stored in a structured `file` object (`{ url, fileName, fileSize, storagePath }`), while `req.value` is an empty string `""` and `req.fileUrl` is `undefined`.
+   In `ClientServiceTracker.jsx`, the component evaluated `const val = typeof req === 'object' ? req.value || req.textValue || req.fileUrl : null;`. Because `req.file` was not checked, `val` was falsy, causing the ternary `val ? ... : Pending Upload` to always default to the orange "Pending Upload" badge.
+2. **Catalog Template Fallback Shadowing**:
+   If an active service record contained default catalog requirements (`inputType: 'file'` without `file` attachments), the previous fallback check considered `r.inputType` truthy, preventing the component from fetching actual uploaded files from the originating inquiry or quotation.
+
+### Key Changes
+1. **`fair-fly/src/components/Client/ClientServiceTracker/ClientServiceTracker.jsx`**:
+   - Correctly extracted `fileObj = req.file`, `fileUrl = fileObj?.url || req.fileUrl || req.url || ...`, and `fileName = fileObj?.fileName || req.fileName`.
+   - Rendered active, clickable preview/download links with file names and icons, plus miniature thumbnail previews for images.
+   - Enhanced fallback resolution to check for actual uploaded files across `submittedRequirements` and `requirements`, automatically looking up originating `inquiryId` and `quotationId` when needed.
+2. **`fair-fly/src/components/Client/ClientServiceTracker/service-tracker.css`**:
+   - Added styles for `.tracker-req-file-box`, `.tracker-img-thumb-link`, `.tracker-img-thumb`, and hover states.
+3. **`fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx`**:
+   - Aligned requirement resolution logic to verify actual uploaded files across `submittedRequirements` and `requirements`, supporting fallback across both `inquiryId` and `quotationId`.
+4. **`fair-fly/src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx` & `inquiry-detail-modal.css`**:
+   - Enhanced Specified Requirements section to render clickable file download links and image thumbnail previews when client attachments exist.
+5. **`fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx` & `quotation-detail-modal.css`**:
+   - Rendered submitted requirements with downloadable file links and image previews within the quotation modal.
+
+---
+
 ## [2026-09-28] Bugfix: React Hook Order in OperatorServiceProcedure & Ticket Permissions Leak in OperatorTickets
 
 ### Overview
