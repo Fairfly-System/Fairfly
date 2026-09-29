@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
+import { useLightbox, isImageUrl } from '../../UI/ImageLightbox/ImageLightbox';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import ApiCaller from '../../../utils/ApiCaller';
@@ -32,6 +33,7 @@ export default function ServiceWorkflowModal({ serviceRecord, onClose }) {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { openLightbox } = useLightbox();
 
   if (!serviceRecord) return null;
 
@@ -213,19 +215,33 @@ export default function ServiceWorkflowModal({ serviceRecord, onClose }) {
                     </a>
                   )}
 
-                  {stepFile && (
-                    <a
-                      href={stepFile.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="swm-btn-file-attach"
-                      title={`Open Attached File: ${stepFile.name}`}
-                    >
-                      <i className="fa-solid fa-paperclip"></i>
-                      <span>{stepFile.name}</span>
-                      <i className="fa-solid fa-download download-icon"></i>
-                    </a>
-                  )}
+                  {stepFile && (() => {
+                    const isImg = isImageUrl(stepFile.url, stepFile.name);
+                    return isImg ? (
+                      <button
+                        type="button"
+                        onClick={() => openLightbox({ url: stepFile.url, title: stepFile.name })}
+                        className="swm-btn-file-attach swm-btn-file-attach-btn"
+                        title={`View Attached Image: ${stepFile.name}`}
+                      >
+                        <i className="fa-solid fa-file-image"></i>
+                        <span>{stepFile.name}</span>
+                        <i className="fa-solid fa-expand download-icon"></i>
+                      </button>
+                    ) : (
+                      <a
+                        href={stepFile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="swm-btn-file-attach"
+                        title={`Open Attached File: ${stepFile.name}`}
+                      >
+                        <i className="fa-solid fa-paperclip"></i>
+                        <span>{stepFile.name}</span>
+                        <i className="fa-solid fa-download download-icon"></i>
+                      </a>
+                    );
+                  })()}
                 </div>
               </div>
             );

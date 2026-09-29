@@ -1,5 +1,6 @@
 import React from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
+import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
 import './inquiry-detail-modal.css';
 
 function formatRequirementsText(specifiedRequirements, requirements) {
@@ -35,6 +36,7 @@ export default function InquiryDetailModal({
   inquiry,
   onOpenPdf
 }) {
+  const { openLightbox } = useLightbox();
   if (!inquiry) return null;
 
   const servicesList = Array.isArray(inquiry.servicesOffered)
@@ -155,14 +157,49 @@ export default function InquiryDetailModal({
                     {fileUrl ? (
                       <div className="inq-req-file-row">
                         {isImage && (
-                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inq-img-thumb-link" title={`View full image: ${fileName || reqName}`}>
+                          <button
+                            type="button"
+                            className="inq-img-thumb-link"
+                            title={`View in Lightbox: ${fileName || reqName}`}
+                            onClick={() =>
+                              openLightbox({
+                                imageUrl: fileUrl,
+                                title: fileName || reqName,
+                                subtitle: `Inquiry Requirement · ${inquiry.serviceType || 'Inquiry'}`
+                              })
+                            }
+                          >
                             <img src={fileUrl} alt={fileName || reqName} className="inq-img-thumb" />
+                          </button>
+                        )}
+                        {isImage ? (
+                          <button
+                            type="button"
+                            className="inq-file-link"
+                            title={`View in Lightbox: ${fileName || reqName}`}
+                            onClick={() =>
+                              openLightbox({
+                                imageUrl: fileUrl,
+                                title: fileName || reqName,
+                                subtitle: `Inquiry Requirement · ${inquiry.serviceType || 'Inquiry'}`
+                              })
+                            }
+                          >
+                            <i className="fa-regular fa-image"></i>
+                            <span>{fileName || 'View Attached Image'}</span>
+                          </button>
+                        ) : (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inq-file-link"
+                            title={fileName ? `Open ${fileName}` : 'View Attached File'}
+                          >
+                            <i className="fa-solid fa-file-arrow-down"></i>
+                            <span>{fileName || 'View Attached Document'}</span>
                           </a>
                         )}
-                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inq-file-link" title={fileName ? `Open ${fileName}` : 'View Attached File'}>
-                          <i className={isImage ? "fa-regular fa-image" : "fa-solid fa-file-arrow-down"}></i>
-                          <span>{fileName || (isImage ? 'View Attached Image' : 'View Attached Document')}</span>
-                        </a>
                       </div>
                     ) : textVal ? (
                       <span className="inq-req-val">{textVal}</span>

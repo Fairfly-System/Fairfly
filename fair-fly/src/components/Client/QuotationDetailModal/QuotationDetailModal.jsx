@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
+import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
 import './quotation-detail-modal.css';
 
 export default function QuotationDetailModal({
@@ -11,6 +12,7 @@ export default function QuotationDetailModal({
   onOpenPdf,
   isAccepting = false,
 }) {
+  const { openLightbox } = useLightbox();
   if (!quotation) return null;
 
   const totalAmt = Number(quotation.totalAmount || quotation.rate || 0);
@@ -128,14 +130,49 @@ export default function QuotationDetailModal({
                     {fileUrl ? (
                       <div className="quote-req-file-row">
                         {isImage && (
-                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="quote-img-thumb-link" title={`View full image: ${fileName || reqName}`}>
+                          <button
+                            type="button"
+                            className="quote-img-thumb-link"
+                            title={`View in Lightbox: ${fileName || reqName}`}
+                            onClick={() =>
+                              openLightbox({
+                                imageUrl: fileUrl,
+                                title: fileName || reqName,
+                                subtitle: `Quotation Requirement · ${quotation.serviceTitle || quotation.quoteNo || 'Quotation'}`
+                              })
+                            }
+                          >
                             <img src={fileUrl} alt={fileName || reqName} className="quote-img-thumb" />
+                          </button>
+                        )}
+                        {isImage ? (
+                          <button
+                            type="button"
+                            className="quote-file-link"
+                            title={`View in Lightbox: ${fileName || reqName}`}
+                            onClick={() =>
+                              openLightbox({
+                                imageUrl: fileUrl,
+                                title: fileName || reqName,
+                                subtitle: `Quotation Requirement · ${quotation.serviceTitle || quotation.quoteNo || 'Quotation'}`
+                              })
+                            }
+                          >
+                            <i className="fa-regular fa-image"></i>
+                            <span>{fileName || 'View Attached Image'}</span>
+                          </button>
+                        ) : (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="quote-file-link"
+                            title={fileName ? `Open ${fileName}` : 'View Attached File'}
+                          >
+                            <i className="fa-solid fa-file-arrow-down"></i>
+                            <span>{fileName || 'View Attached Document'}</span>
                           </a>
                         )}
-                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="quote-file-link" title={fileName ? `Open ${fileName}` : 'View Attached File'}>
-                          <i className={isImage ? "fa-regular fa-image" : "fa-solid fa-file-arrow-down"}></i>
-                          <span>{fileName || (isImage ? 'View Attached Image' : 'View Attached Document')}</span>
-                        </a>
                       </div>
                     ) : textVal ? (
                       <span className="quote-req-val">{textVal}</span>

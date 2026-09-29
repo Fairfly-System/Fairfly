@@ -7,6 +7,7 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { deleteInquiry } from '../../../services/inquiryService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './admin-inquiry-history.css';
@@ -96,6 +97,7 @@ export default function AdminInquiryDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const { openLightbox } = useLightbox();
 
   // Directly subscribe to the specific inquiry document
   useEffect(() => {
@@ -336,15 +338,34 @@ export default function AdminInquiryDetailPage() {
 
                         <div>
                           {hasFile ? (
-                            <a
-                              href={req.file.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inquiry-doc-badge valid inquiry-action-link"
-                            >
-                              <i className="fa-solid fa-file-check"></i>
-                              <span>{req.file.fileName || 'View Client Document'}</span>
-                            </a>
+                            isImageUrl(req.file.url, req.file.fileName) ? (
+                              <button
+                                type="button"
+                                className="inquiry-doc-badge valid inquiry-action-link"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                                title="View Image in Lightbox"
+                                onClick={() =>
+                                  openLightbox({
+                                    url: req.file.url,
+                                    title: req.file.fileName || req.name || 'Client Document',
+                                    subtitle: `Inquiry Attachment · ${inquiry.clientName || 'Client'}`
+                                  })
+                                }
+                              >
+                                <i className="fa-regular fa-image"></i>
+                                <span>{req.file.fileName || 'View Client Image'}</span>
+                              </button>
+                            ) : (
+                              <a
+                                href={req.file.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inquiry-doc-badge valid inquiry-action-link"
+                              >
+                                <i className="fa-solid fa-file-check"></i>
+                                <span>{req.file.fileName || 'View Client Document'}</span>
+                              </a>
+                            )
                           ) : (
                             <span className="inquiry-doc-badge missing">
                               <i className="fa-solid fa-triangle-exclamation"></i> Missing Document

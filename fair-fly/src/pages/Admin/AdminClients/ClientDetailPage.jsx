@@ -8,7 +8,7 @@ import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import ClientEditModal from '../../../components/Admin/Modals/ClientEditModal/ClientEditModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import RejectClientModal from '../../../components/Admin/Modals/RejectClientModal/RejectClientModal';
-import IdPreviewModal from '../../../components/Admin/Modals/IdPreviewModal/IdPreviewModal';
+import { useLightbox } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import {
   fetchClientById,
   updateClient,
@@ -35,14 +35,7 @@ export default function ClientDetailPage() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isRejectLoading, setIsRejectLoading] = useState(false);
 
-  // Fullscreen ID preview lightbox
-  const [previewModal, setPreviewModal] = useState({
-    isOpen: false,
-    imageUrl: '',
-    title: '',
-    side: '',
-    idType: ''
-  });
+  const { openLightbox } = useLightbox();
 
   // Generic Confirmation modal
   const [confirmState, setConfirmState] = useState(null);
@@ -636,12 +629,10 @@ export default function ClientDetailPage() {
                     <div
                       className="id-preview-frame"
                       onClick={() =>
-                        setPreviewModal({
-                          isOpen: true,
-                          imageUrl: client.idFrontUrl,
-                          title: displayName,
-                          side: 'Front Side',
-                          idType: client.idType || 'Government ID'
+                        openLightbox({
+                          url: client.idFrontUrl,
+                          title: `${displayName} — Front Side`,
+                          subtitle: `${client.idType || 'Government ID'} · High-Resolution Verification`
                         })
                       }
                       title="Click to inspect high-resolution"
@@ -677,29 +668,16 @@ export default function ClientDetailPage() {
                           className="btn-secondary"
                           style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                           onClick={() =>
-                            setPreviewModal({
-                              isOpen: true,
-                              imageUrl: client.idFrontUrl,
-                              title: displayName,
-                              side: 'Front Side',
-                              idType: client.idType || 'Government ID'
+                            openLightbox({
+                              url: client.idFrontUrl,
+                              title: `${displayName} — Front Side`,
+                              subtitle: `${client.idType || 'Government ID'} · High-Resolution Verification`
                             })
                           }
                           disabled={!client.idFrontUrl}
                         >
-                          <i className="fa-solid fa-expand"></i> Inspect
+                          <i className="fa-solid fa-expand"></i> Inspect Lightbox
                         </button>
-                        {client.idFrontUrl && (
-                          <a
-                            href={client.idFrontUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-secondary"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                          >
-                            <i className="fa-solid fa-arrow-up-right-from-square"></i> Open
-                          </a>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -720,12 +698,10 @@ export default function ClientDetailPage() {
                       <div
                         className="id-preview-frame"
                         onClick={() =>
-                          setPreviewModal({
-                            isOpen: true,
-                            imageUrl: client.idBackUrl,
-                            title: displayName,
-                            side: 'Back Side',
-                            idType: client.idType || 'Government ID'
+                          openLightbox({
+                            url: client.idBackUrl,
+                            title: `${displayName} — Back Side`,
+                            subtitle: `${client.idType || 'Government ID'} · High-Resolution Verification`
                           })
                         }
                         title="Click to inspect high-resolution"
@@ -760,26 +736,15 @@ export default function ClientDetailPage() {
                             className="btn-secondary"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                             onClick={() =>
-                              setPreviewModal({
-                                isOpen: true,
-                                imageUrl: client.idBackUrl,
-                                title: displayName,
-                                side: 'Back Side',
-                                idType: client.idType || 'Government ID'
+                              openLightbox({
+                                url: client.idBackUrl,
+                                title: `${displayName} — Back Side`,
+                                subtitle: `${client.idType || 'Government ID'} · High-Resolution Verification`
                               })
                             }
                           >
-                            <i className="fa-solid fa-expand"></i> Inspect
+                            <i className="fa-solid fa-expand"></i> Inspect Lightbox
                           </button>
-                          <a
-                            href={client.idBackUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-secondary"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                          >
-                            <i className="fa-solid fa-arrow-up-right-from-square"></i> Open
-                          </a>
                         </div>
                       )}
                     </div>
@@ -887,16 +852,6 @@ export default function ClientDetailPage() {
           )}
         </div>
       )}
-
-      {/* Lightbox / High-resolution ID Modal */}
-      <IdPreviewModal
-        isOpen={previewModal.isOpen}
-        onClose={() => setPreviewModal((prev) => ({ ...prev, isOpen: false }))}
-        imageUrl={previewModal.imageUrl}
-        title={previewModal.title}
-        side={previewModal.side}
-        idType={previewModal.idType}
-      />
 
       {/* Reject Reason Modal */}
       <RejectClientModal

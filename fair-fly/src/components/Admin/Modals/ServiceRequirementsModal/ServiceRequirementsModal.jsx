@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
+import { useLightbox, isImageUrl } from '../../../UI/ImageLightbox/ImageLightbox';
 
 const PROHIBITED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.hta', '.cpl', '.msc'];
 
@@ -22,6 +23,7 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
   const [attachmentTitle, setAttachmentTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState('');
+  const { openLightbox } = useLightbox();
 
   useEffect(() => {
     setRequirements(initialRequirements);
@@ -178,14 +180,24 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
                       )}
                     </div>
                     {req.attachment.url ? (
-                      <a
-                        href={req.attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--purple)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                      >
-                        View File <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.6875rem' }}></i>
-                      </a>
+                      isImageUrl(req.attachment.url, req.attachment.fileName || req.attachment.title) ? (
+                        <button
+                          type="button"
+                          onClick={() => openLightbox({ url: req.attachment.url, title: req.attachment.title || req.attachment.fileName || 'Requirement Attachment' })}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--purple)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem', padding: 0, font: 'inherit' }}
+                        >
+                          View Image <i className="fa-solid fa-expand" style={{ fontSize: '0.6875rem' }}></i>
+                        </button>
+                      ) : (
+                        <a
+                          href={req.attachment.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--purple)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          View File <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.6875rem' }}></i>
+                        </a>
+                      )
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>
                         {(req.attachment.fileSize / 1024 / 1024).toFixed(2)} MB

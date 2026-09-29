@@ -15,7 +15,7 @@ import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGr
 import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import AnnouncementPhotoGrid from './AnnouncementPhotoGrid';
-import AnnouncementLightbox from './AnnouncementLightbox';
+import { useLightbox } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { SkeletonAnnouncement } from '../../../components/UI/Skeleton/Skeleton';
 import './announcements-page.css';
 
@@ -41,11 +41,7 @@ export default function AnnouncementsPage() {
 
   // Modal Full Reader State
   const [readerPost, setReaderPost] = useState(null);
-
-  // Lightbox State
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxPhotos, setLightboxPhotos] = useState([]);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const { openLightbox: triggerRootLightbox } = useLightbox();
 
   // Admin Composer & Edit State
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
@@ -175,13 +171,19 @@ export default function AnnouncementsPage() {
   // Lightbox handlers
   const openLightbox = (photos, initialIndex = 0) => {
     if (!photos || photos.length === 0) return;
-    setLightboxPhotos(photos);
-    setLightboxIndex(initialIndex);
-    setLightboxOpen(true);
-  };
-
-  const closeLightbox = () => {
-    setLightboxOpen(false);
+    const images = photos.map((p, idx) => {
+      if (typeof p === 'string') {
+        return { url: p, title: `Announcement Photo ${idx + 1}` };
+      }
+      return {
+        url: p.url,
+        title: p.name || p.title || `Announcement Photo ${idx + 1}`
+      };
+    });
+    triggerRootLightbox({
+      images,
+      activeIndex: initialIndex
+    });
   };
 
   // 4. Composer File Selection & Validation
@@ -691,15 +693,6 @@ export default function AnnouncementsPage() {
             })
           )}
         </div>
-
-      {/* Lightbox Viewer */}
-      <AnnouncementLightbox
-        isOpen={lightboxOpen}
-        photos={lightboxPhotos}
-        activeIndex={lightboxIndex}
-        onClose={closeLightbox}
-        onNavigate={setLightboxIndex}
-      />
 
       {/* Full Expanded Reader Modal */}
       {readerPost && (

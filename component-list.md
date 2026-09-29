@@ -26,6 +26,7 @@
    - [NotificationBell](#notificationbell)
    - [AppLayout, AppNavbar, AppSidebar](#applayout-appnavbar-appsidebar)
    - [FooterCard & ScrollToTop](#footercard--scrolltotop)
+   - [ImageLightbox](#imagelightbox)
    - [Loading](#loading)
 2. [Shared Modals & Feature Dialogs (`src/components/Shared`)](#2-shared-modals--feature-dialogs-srccomponentsshared)
    - [PdfDocumentView](#pdfdocumentview)
@@ -379,6 +380,41 @@
 - **Functionality:**
   - `FooterCard`: Call-to-action banner ("Ready to Start Your Journey with Fairfly?") with link to `/register`.
   - `ScrollToTop`: Route-change watcher resetting browser window scroll position to `(0, 0)`.
+
+---
+
+### `ImageLightbox` & `useLightbox`
+- **Location:** [`src/components/UI/ImageLightbox/ImageLightbox.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/ImageLightbox/ImageLightbox.jsx), [`image-lightbox.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/ImageLightbox/image-lightbox.css)
+- **Architecture:** Rendered exclusively at the application root (`<LightboxProvider>` in `main.jsx`) and mounted into `document.body` via `createPortal`. Subcomponents do NOT render `<ImageLightbox />` in their JSX trees; instead, they trigger it via `const { openLightbox } = useLightbox()`.
+- **Functionality:** High-performance, accessible image viewer modal for all User Generated Content (UGC), government ID verifications, service requirement attachments, chat photos, and announcement media. Prevents raw Firebase Storage navigation by rendering high-resolution images in-app with zoom controls, multi-image gallery support, direct file download, and full keyboard accessibility (`ESC`, arrows, `+`, `-`, `0`).
+- **Appropriate Use:** Any place where a client, operator, or admin clicks an uploaded image (ID card, passport scan, receipt, proof of payment, service requirement, chat attachment, etc.).
+- **Hook API (`useLightbox`):**
+  - `openLightbox({ imageUrl, title, subtitle, images, activeIndex, downloadable, zoomable })`
+  - `openLightbox(imageUrl, title, subtitle)`
+  - `openLightbox(imagesArray, initialIndex, title)`
+  - `closeLightbox()`
+  - `isOpen: boolean`
+- **Example Usage in Components:**
+  ```jsx
+  import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+
+  export default function MyComponent() {
+    const { openLightbox } = useLightbox();
+
+    return (
+      <button
+        type="button"
+        onClick={() => openLightbox({
+          imageUrl: fileUrl,
+          title: fileName,
+          subtitle: 'Requirement Attachment'
+        })}
+      >
+        <img src={fileUrl} alt={fileName} />
+      </button>
+    );
+  }
+  ```
 
 ---
 

@@ -252,3 +252,9 @@
   font-size: 0.725rem;
   opacity: 0.75;
 }
+
+button.swm-btn-file-attach {
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}

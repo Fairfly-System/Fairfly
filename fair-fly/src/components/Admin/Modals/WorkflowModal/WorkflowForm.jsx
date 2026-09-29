@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
+import { useLightbox, isImageUrl } from '../../../UI/ImageLightbox/ImageLightbox';
 
 const EXECUTABLE_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.application', '.gadget', '.msp', '.hta', '.cpl', '.msc'];
 
@@ -23,6 +24,7 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
   const [existingFileUrl, setExistingFileUrl] = useState('');
   const [stepFileName, setStepFileName] = useState('');
   const [fileError, setFileError] = useState('');
+  const { openLightbox } = useLightbox();
 
   // Drag & Drop State
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -305,6 +307,15 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
                             <span style={{ fontSize: '0.6875rem', background: '#fdba74', color: '#7c2d12', padding: '0 0.25rem', borderRadius: '0.2rem' }}>
                               Ready to Upload
                             </span>
+                          ) : isImageUrl(step.file.url, step.file.name) ? (
+                            <button
+                              type="button"
+                              onClick={() => openLightbox({ url: step.file.url, title: step.file.name || 'Workflow Step File' })}
+                              style={{ background: 'none', border: 'none', color: 'inherit', display: 'inline-flex', cursor: 'pointer', padding: 0 }}
+                              title="View Attached Image"
+                            >
+                              <i className="fa-solid fa-expand" style={{ fontSize: '0.625rem' }}></i>
+                            </button>
                           ) : (
                             <a href={step.file.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', display: 'inline-flex' }}>
                               <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.625rem' }}></i>

@@ -9,7 +9,7 @@ const PAYMONGO_BASE_URL = process.env.PAYMONGO_BASE_URL || 'https://api.paymongo
 const getAuthHeader = () => {
   const secretKey = process.env.PAYMONGO_SECRET_KEY?.trim() || '';
   if (!secretKey) {
-    console.warn('[PayMongo] PAYMONGO_SECRET_KEY is not defined in environment variables.');
+    throw new Error('PAYMONGO_SECRET_KEY is not configured in environment variables.');
   }
   return `Basic ${Buffer.from(secretKey + ':').toString('base64')}`;
 };
@@ -36,7 +36,6 @@ const createPaymongoCheckoutSession = async ({
   cancelUrl,
   metadata = {}
 }) => {
-  const secretKey = process.env.PAYMONGO_SECRET_KEY?.trim();
   const amountInCentavos = Math.round(Number(amount) * 100);
 
   if (isNaN(amountInCentavos) || amountInCentavos <= 0) {
@@ -82,60 +81,31 @@ const createPaymongoCheckoutSession = async ({
     }
   };
 
-  // If secret key is not set, provide simulated sandbox response for development/testing
-  if (!secretKey || secretKey.startsWith('mock_') || secretKey === 'sk_test_placeholder') {
-    console.warn('[PayMongo: DEV SANDBOX SIMULATION MODE] No live PAYMONGO_SECRET_KEY configured.');
-    const mockSessionId = `cs_test_${crypto.randomBytes(12).toString('hex')}`;
-    const mockCheckoutUrl = `${successUrl.split('?')[0]}?payment_status=success&payment_id=${metadata.paymentId || referenceNumber}&mock=true`;
-    return {
-      id: mockSessionId,
-      type: 'checkout_session',
-      checkout_url: mockCheckoutUrl,
-      attributes: {
-        checkout_url: mockCheckoutUrl,
-        status: 'active',
-        payment_intent: {
-          id: `pi_test_${crypto.randomBytes(8).toString('hex')}`,
-          attributes: { amount: amountInCentavos, currency: 'PHP', status: 'awaiting_payment_method' }
-        },
-        payments: [],
-        metadata: payload.data.attributes.metadata
-      },
-      isSimulated: true
-    };
+  const response = await fetch(`${PAYMONGO_BASE_URL}/checkout_sessions`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': getAuthHeader()
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = responseBody.errors?.map(e => e.detail).join('; ') || 'Failed to create PayMongo checkout session';
+    console.error('[PayMongo] API Error creating checkout session:', responseBody);
+    throw new Error(`PayMongo Gateway Error: ${errorMsg}`);
   }
 
-  try {
-    const response = await fetch(`${PAYMONGO_BASE_URL}/checkout_sessions`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': getAuthHeader()
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const responseBody = await response.json();
-
-    if (!response.ok) {
-      const errorMsg = responseBody.errors?.map(e => e.detail).join('; ') || 'Failed to create PayMongo checkout session';
-      console.error('[PayMongo] API Error creating checkout session:', responseBody);
-      throw new Error(`PayMongo Gateway Error: ${errorMsg}`);
-    }
-
-    const sessionData = responseBody.data;
-    return {
-      id: sessionData.id,
-      type: sessionData.type,
-      checkout_url: sessionData.attributes.checkout_url,
-      attributes: sessionData.attributes,
-      isSimulated: false
-    };
-  } catch (error) {
-    console.error('[PayMongo] Exception in createPaymongoCheckoutSession:', error);
-    throw error;
-  }
+  const sessionData = responseBody.data;
+  return {
+    id: sessionData.id,
+    type: sessionData.type,
+    checkout_url: sessionData.attributes.checkout_url,
+    attributes: sessionData.attributes
+  };
 };
 
 /**
@@ -145,54 +115,27 @@ const createPaymongoCheckoutSession = async ({
  * @returns {Promise<Object>}
  */
 const getPaymongoCheckoutSession = async (sessionId) => {
-  const secretKey = process.env.PAYMONGO_SECRET_KEY?.trim();
-
-  if (!secretKey || secretKey.startsWith('mock_') || secretKey === 'sk_test_placeholder' || sessionId.startsWith('cs_test_')) {
-    // Return simulated success state for simulated sessions
-    return {
-      id: sessionId,
-      type: 'checkout_session',
-      attributes: {
-        status: 'paid',
-        payments: [
-          {
-            id: `pay_test_${crypto.randomBytes(8).toString('hex')}`,
-            attributes: {
-              status: 'paid',
-              source: { type: 'gcash' },
-              amount: 500000,
-              fee: 0,
-              net_amount: 500000,
-              paid_at: Math.floor(Date.now() / 1000)
-            }
-          }
-        ]
-      },
-      isSimulated: true
-    };
+  if (!sessionId) {
+    throw new Error('PayMongo sessionId is required.');
   }
 
-  try {
-    const response = await fetch(`${PAYMONGO_BASE_URL}/checkout_sessions/${sessionId}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': getAuthHeader()
-      }
-    });
-
-    const responseBody = await response.json();
-
-    if (!response.ok) {
-      const errorMsg = responseBody.errors?.map(e => e.detail).join('; ') || 'Failed to retrieve PayMongo checkout session';
-      throw new Error(`PayMongo Gateway Error: ${errorMsg}`);
+  const response = await fetch(`${PAYMONGO_BASE_URL}/checkout_sessions/${sessionId}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': getAuthHeader()
     }
+  });
 
-    return responseBody.data;
-  } catch (error) {
-    console.error(`[PayMongo] Exception retrieving checkout session ${sessionId}:`, error);
-    throw error;
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = responseBody.errors?.map(e => e.detail).join('; ') || 'Failed to retrieve PayMongo checkout session';
+    console.error(`[PayMongo] API Error retrieving checkout session ${sessionId}:`, responseBody);
+    throw new Error(`PayMongo Gateway Error: ${errorMsg}`);
   }
+
+  return responseBody.data;
 };
 
 /**
@@ -279,107 +222,57 @@ const verifyWebhookSignature = (signatureHeader, rawBody, webhookSecret) => {
  * 
  * @param {Object} params
  * @param {number} params.amount - Refund amount in Philippine Pesos (e.g. 5000.00)
- * @param {string} params.paymentId - PayMongo payment ID (pay_...) or internal reference
+ * @param {string} params.paymentId - PayMongo payment ID (pay_...)
  * @param {string} [params.reason='others'] - Reason ('requested_by_customer', 'duplicate', 'fraudulent', 'others')
  * @param {string} [params.notes] - Additional context/notes for refund
  * @returns {Promise<Object>}
  */
 const createPaymongoRefund = async ({ amount, paymentId, reason = 'others', notes = '' }) => {
-  const secretKey = process.env.PAYMONGO_SECRET_KEY?.trim();
   const amountInCentavos = Math.round(Number(amount) * 100);
 
   if (isNaN(amountInCentavos) || amountInCentavos <= 0) {
     throw new Error('Invalid refund amount. Amount must be greater than zero.');
   }
 
-  // Simulation mode for testing or mock credentials
-  if (!secretKey || secretKey.startsWith('mock_') || secretKey === 'sk_test_placeholder' || !paymentId || paymentId.startsWith('pay_test_') || paymentId.startsWith('PAY-')) {
-    console.log(`[PayMongo Refund: DEV SIMULATION] Refunding ₱${amount} for payment ${paymentId}`);
-    return {
-      id: `ref_test_${crypto.randomBytes(8).toString('hex')}`,
-      type: 'refund',
+  if (!paymentId) {
+    throw new Error('PayMongo paymentId is required to issue a refund.');
+  }
+
+  const payload = {
+    data: {
       attributes: {
         amount: amountInCentavos,
-        currency: 'PHP',
-        status: 'succeeded',
         payment_id: paymentId,
         reason: reason || 'others',
-        notes: notes || 'Service fulfillment cancellation full refund',
-        created_at: Math.floor(Date.now() / 1000)
-      },
-      isSimulated: true
-    };
-  }
-
-  try {
-    const payload = {
-      data: {
-        attributes: {
-          amount: amountInCentavos,
-          payment_id: paymentId,
-          reason: reason || 'others',
-          notes: notes || 'Service fulfillment cancellation full refund'
-        }
+        notes: notes || 'Service fulfillment cancellation refund'
       }
-    };
-
-    const response = await fetch(`${PAYMONGO_BASE_URL}/refunds`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': getAuthHeader()
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const responseBody = await response.json();
-
-    if (!response.ok) {
-      const errorMsg = responseBody.errors?.map(e => e.detail).join('; ') || 'Failed to process PayMongo refund';
-      console.error('[PayMongo] API Error creating refund:', responseBody);
-      // Graceful fallback to prevent halting cancellation flow
-      return {
-        id: `ref_fallback_${crypto.randomBytes(8).toString('hex')}`,
-        type: 'refund',
-        attributes: {
-          amount: amountInCentavos,
-          currency: 'PHP',
-          status: 'succeeded',
-          payment_id: paymentId,
-          reason,
-          notes: `${notes} (Gateway note: ${errorMsg})`,
-          created_at: Math.floor(Date.now() / 1000)
-        },
-        gatewayNotice: errorMsg,
-        isSimulated: true
-      };
     }
+  };
 
-    const refundData = responseBody.data;
-    return {
-      id: refundData.id,
-      type: refundData.type,
-      attributes: refundData.attributes,
-      isSimulated: false
-    };
-  } catch (error) {
-    console.error('[PayMongo] Exception in createPaymongoRefund:', error);
-    return {
-      id: `ref_err_${crypto.randomBytes(8).toString('hex')}`,
-      type: 'refund',
-      attributes: {
-        amount: amountInCentavos,
-        currency: 'PHP',
-        status: 'succeeded',
-        payment_id: paymentId,
-        reason,
-        notes: `${notes} (Exception handled: ${error.message})`,
-        created_at: Math.floor(Date.now() / 1000)
-      },
-      isSimulated: true
-    };
+  const response = await fetch(`${PAYMONGO_BASE_URL}/refunds`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': getAuthHeader()
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = responseBody.errors?.map(e => e.detail).join('; ') || 'Failed to process PayMongo refund';
+    console.error('[PayMongo] API Error creating refund:', responseBody);
+    throw new Error(`PayMongo Gateway Error: ${errorMsg}`);
   }
+
+  const refundData = responseBody.data;
+  return {
+    id: refundData.id,
+    type: refundData.type,
+    attributes: refundData.attributes
+  };
 };
 
 module.exports = {

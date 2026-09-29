@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useLightbox } from '../ImageLightbox/ImageLightbox';
 import './service-carousel-gallery.css';
 
 const CATEGORY_ICON_MAP = {
@@ -18,7 +19,7 @@ const CATEGORY_ICON_MAP = {
 
 export default function ServiceCarouselGallery({ service }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const { openLightbox } = useLightbox();
 
   // Aggregate cover image and carousel images into a clean, deduplicated array
   const galleryImages = useMemo(() => {
@@ -58,24 +59,6 @@ export default function ServiceCarouselGallery({ service }) {
     setActiveImageIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0));
   }, [galleryImages.length]);
 
-  // Keyboard navigation for Lightbox
-  useEffect(() => {
-    if (!isLightboxOpen) return;
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setIsLightboxOpen(false);
-      } else if (e.key === 'ArrowLeft') {
-        handlePrev();
-      } else if (e.key === 'ArrowRight') {
-        handleNext();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLightboxOpen, handlePrev, handleNext]);
-
   const categoryKey = (service?.category || '').toLowerCase();
   const categoryIcon = CATEGORY_ICON_MAP[categoryKey] || 'fa-solid fa-concierge-bell';
   const hasImages = galleryImages.length > 0;
@@ -86,7 +69,17 @@ export default function ServiceCarouselGallery({ service }) {
       {/* Main Display Stage */}
       <div
         className="service-gallery-stage"
-        onClick={() => hasImages && setIsLightboxOpen(true)}
+        onClick={() => {
+          if (hasImages) {
+            openLightbox({
+              images: galleryImages.map((url, i) => ({
+                url,
+                title: `${service?.name || 'Service'} (${i === 0 ? 'Cover Photo' : `Photo ${i + 1}`})`
+              })),
+              activeIndex: activeImageIndex
+            });
+          }
+        }}
         title={hasImages ? 'Click to view full-resolution image' : undefined}
       >
         {hasImages ? (
@@ -187,64 +180,6 @@ export default function ServiceCarouselGallery({ service }) {
                 {idx === 0 && <span className="service-gallery-thumb-tag">Cover</span>}
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Fullscreen Lightbox Modal */}
-      {isLightboxOpen && hasImages && (
-        <div
-          className="service-lightbox-backdrop"
-          onClick={() => setIsLightboxOpen(false)}
-        >
-          <div
-            className="service-lightbox-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="service-lightbox-close-btn"
-              onClick={() => setIsLightboxOpen(false)}
-              aria-label="Close full view"
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-
-            <div className="service-lightbox-content">
-              <img
-                src={currentImageUrl}
-                alt={`${service?.name || 'Service'} - High Resolution Photo ${activeImageIndex + 1}`}
-                className="service-lightbox-img"
-              />
-            </div>
-
-            {galleryImages.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  className="service-lightbox-nav-btn service-lightbox-nav-prev"
-                  onClick={handlePrev}
-                  aria-label="Previous image"
-                >
-                  <i className="fa-solid fa-chevron-left"></i>
-                </button>
-                <button
-                  type="button"
-                  className="service-lightbox-nav-btn service-lightbox-nav-next"
-                  onClick={handleNext}
-                  aria-label="Next image"
-                >
-                  <i className="fa-solid fa-chevron-right"></i>
-                </button>
-              </>
-            )}
-
-            <div className="service-lightbox-footer">
-              <span className="service-lightbox-title">{service?.name}</span>
-              <span className="service-lightbox-counter">
-                Photo {activeImageIndex + 1} of {galleryImages.length}
-              </span>
-            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,76 @@
 # Update Logs
 
+## [2026-09-29] Architecture: Root-Level Lightbox Rendering via Global LightboxProvider & React Portals
+
+### Overview
+Refactored the `ImageLightbox` architecture so that the lightbox is rendered exclusively at the application root rather than being instantiated as a child inside individual components, dialogs, or page trees. This eliminates z-index stacking issues, CSS transform/overflow clipping, and redundant component state across the entire frontend.
+
+### Key Changes
+1. **Application Root Mount (`main.jsx`)**:
+   - Wrapped the application in `<LightboxProvider>` at the root level within `main.jsx`.
+   - The provider manages the active lightbox configuration and index state globally, rendering a single `<ImageLightbox />` instance mounted directly into `document.body` via `ReactDOM.createPortal`.
+2. **Global Consumer Hook (`useLightbox`)**:
+   - Exposed `const { openLightbox, closeLightbox, isOpen } = useLightbox()`.
+   - Enhanced `openLightbox` to accept flexible arguments:
+     - Object signature: `{ imageUrl, title, subtitle, images, activeIndex, downloadable, zoomable }`
+     - Direct string URL signature: `openLightbox(imageUrl, title, subtitle)`
+     - Multi-image array signature: `openLightbox([url1, url2], initialIndex, title)`
+3. **Elimination of Child Lightbox Elements Across All Components**:
+   - Removed all local `<ImageLightbox />` child tags and corresponding `[lightboxImage, setLightboxImage]` states across all consumers:
+     - `ClientServiceTracker.jsx`
+     - `QuotationDetailModal.jsx`
+     - `InquiryDetailModal.jsx`
+     - `MessagesPage.jsx`
+     - `FormResponseList.jsx`
+     - `AdminQualificationDetailPage.jsx`
+     - `OperatorServiceDetailPage.jsx`
+     - `ServiceDetailPage.jsx`
+     - `OperatorServiceProcedure.jsx`
+     - `InquiryFormDetailPage.jsx`
+     - `AdminInquiryDetailPage.jsx`
+     - `ServiceRequirementsModal.jsx`
+     - `WorkflowModal/WorkflowForm.jsx`
+     - `ServiceWorkflowModal.jsx`
+     - `ServiceItemPage.jsx`
+     - `ServiceCarouselGallery.jsx`
+     - `ValidIdUpload.jsx`
+     - `ClientDetailPage.jsx` & `IdPreviewModal.jsx`
+     - `AnnouncementsPage.jsx` & `AnnouncementLightbox.jsx`
+4. **Verification**:
+   - Verified that exactly zero child `<ImageLightbox` tags exist in the JSX tree of any subcomponent (`fair-fly/src`), with only one global instance mounted in `LightboxProvider`.
+   - Full production build (`npm run build`) passing with 0 errors.
+
+---
+
+## [2026-09-29] Feature: Unified In-App ImageLightbox for All User-Generated Content (UGC) Images & Elimination of External Storage Links
+
+### Overview
+Scanned the entire frontend system for all occurrences of User-Generated Content (UGC) images originating from Firebase Storage (government IDs, inquiry attachments, quotation requirement uploads, service tracker files, direct messaging chat attachments, service carousel photos, qualification documents, and workflow step files). Eliminated all instances where clicking UGC images opened raw `firebasestorage` URLs in a separate browser tab (`target="_blank"`), routing all image inspections through a newly created, accessible, high-performance in-app `ImageLightbox` design system primitive.
+
+### Key Changes
+1. **Core Reusable Component (`ImageLightbox`)**:
+   - Created `fair-fly/src/components/UI/ImageLightbox/ImageLightbox.jsx` & `image-lightbox.css`.
+   - Supports both single-image preview and multi-image gallery carousels with smooth backdrop blur.
+   - Built-in interactive zoom controls (`Zoom In`, `Zoom Out`, `Reset`), drag/pan indicators, and direct in-app fetch/blob download (preventing external tab navigation).
+   - Full keyboard accessibility (`Escape` to close, `ArrowLeft`/`ArrowRight` to cycle images, `+`/`-`/`0` to zoom).
+   - Exported `isImageUrl(url, fileName)` utility to reliably distinguish image MIME/extensions from documents across Firebase Storage URLs.
+   - Cataloged in `Fairfly/component-list.md`.
+2. **Client Registration & Verification (`ValidIdUpload.jsx`, `IdPreviewModal.jsx`, `ClientDetailPage.jsx`)**:
+   - Replaced external raw Firebase Storage links with `ImageLightbox` triggers for front and back government ID photos across registration, re-upload, operator review, and admin client management.
+3. **Client Service Tracking & Modals (`ClientServiceTracker.jsx`, `QuotationDetailModal.jsx`, `InquiryDetailModal.jsx`)**:
+   - Uploaded requirement thumbnails and "View Attached Image" links now launch `ImageLightbox` directly in-app.
+4. **Operator Workflow & Inquiry Processing (`OperatorServiceProcedure.jsx`, `InquiryFormDetailPage.jsx`, `AdminInquiryDetailPage.jsx`, `ServiceWorkflowModal.jsx`)**:
+   - Attachment badges and requirement document previews now launch `ImageLightbox` when the file is an image, retaining document download for PDFs.
+5. **Direct Messaging (`MessagesPage.jsx`)**:
+   - In-chat file cards for image attachments now launch `ImageLightbox` with zoom and download rather than opening a new tab.
+6. **Marketplace & Service Catalogs (`ServiceItemPage.jsx`, `ServiceCarouselGallery.jsx`, `OperatorServiceDetailPage.jsx`, `ServiceDetailPage.jsx`, `ServiceRequirementsModal.jsx`, `WorkflowForm.jsx`)**:
+   - Migrated custom and redundant lightbox implementations to `ImageLightbox`.
+   - Service hero carousel photos and requirement template sample images now open inside `ImageLightbox`.
+7. **Announcements (`AnnouncementLightbox.jsx`)**:
+   - Refactored `AnnouncementLightbox` to delegate directly to `ImageLightbox`, standardizing UI/UX.
+
+---
+
 ## [2026-09-28] Feature: Franchise Application Form Builder, PSGC Address Cascade & Dynamic Custom Fields
 
 ### Overview

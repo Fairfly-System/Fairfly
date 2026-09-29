@@ -13,6 +13,7 @@ import {
 import NewChatModal from '../../../components/Shared/Messaging/NewChatModal/NewChatModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import useDebounce from '../../../hooks/useDebounce';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import './messages-page.css';
 
 function formatFileSize(bytes) {
@@ -109,6 +110,7 @@ export default function MessagesPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const { openLightbox } = useLightbox();
 
   // Handle direct navigation to a specific contact
   useEffect(() => {
@@ -543,21 +545,38 @@ export default function MessagesPage() {
                       >
                         <div className="message-bubble">
                           {/* File Attachment if present */}
-                          {msg.fileMetadata && (
-                            <a
-                              href={msg.fileMetadata.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="message-attachment-card"
-                            >
-                              <i className={`fa-solid ${msg.messageType === 'image' ? 'fa-file-image' : 'fa-file-arrow-down'} message-attachment-icon`}></i>
-                              <div className="message-attachment-meta">
-                                <span className="message-attachment-name">{msg.fileMetadata.fileName}</span>
-                                <span className="message-attachment-size">{formatFileSize(msg.fileMetadata.fileSize)}</span>
-                              </div>
-                              <i className="fa-solid fa-download" style={{ fontSize: '0.875rem' }}></i>
-                            </a>
-                          )}
+                          {msg.fileMetadata && (() => {
+                            const isImg = msg.messageType === 'image' || isImageUrl(msg.fileMetadata?.fileUrl, msg.fileMetadata?.fileName);
+                            return isImg ? (
+                              <button
+                                type="button"
+                                onClick={() => openLightbox({ url: msg.fileMetadata.fileUrl, title: msg.fileMetadata.fileName || 'Attached Image' })}
+                                className="message-attachment-card message-attachment-card-btn"
+                                title="Click to view image"
+                              >
+                                <i className="fa-solid fa-file-image message-attachment-icon"></i>
+                                <div className="message-attachment-meta">
+                                  <span className="message-attachment-name">{msg.fileMetadata.fileName}</span>
+                                  <span className="message-attachment-size">{formatFileSize(msg.fileMetadata.fileSize)}</span>
+                                </div>
+                                <i className="fa-solid fa-expand" style={{ fontSize: '0.875rem' }}></i>
+                              </button>
+                            ) : (
+                              <a
+                                href={msg.fileMetadata.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="message-attachment-card"
+                              >
+                                <i className="fa-solid fa-file-arrow-down message-attachment-icon"></i>
+                                <div className="message-attachment-meta">
+                                  <span className="message-attachment-name">{msg.fileMetadata.fileName}</span>
+                                  <span className="message-attachment-size">{formatFileSize(msg.fileMetadata.fileSize)}</span>
+                                </div>
+                                <i className="fa-solid fa-download" style={{ fontSize: '0.875rem' }}></i>
+                              </a>
+                            );
+                          })()}
 
                           {/* Text content */}
                           {msg.content && <p>{msg.content}</p>}

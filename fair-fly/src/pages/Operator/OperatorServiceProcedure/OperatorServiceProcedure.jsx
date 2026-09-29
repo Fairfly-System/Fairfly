@@ -7,6 +7,7 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import './operator-service-procedure.css';
 
 function getStepLink(step) {
@@ -42,6 +43,7 @@ export default function OperatorServiceProcedure() {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
   const [inquiryRequirements, setInquiryRequirements] = useState([]);
+  const { openLightbox } = useLightbox();
 
   // Directly subscribe to the specific active service document
   useEffect(() => {
@@ -477,18 +479,37 @@ export default function OperatorServiceProcedure() {
                       {/* Image Thumbnail Preview & Link */}
                       {fileMeta && isImage && (
                         <div className="op-submitted-img-box">
-                          <img src={fileMeta.url} alt={reqName} className="op-submitted-img-preview" />
+                          <img
+                            src={fileMeta.url}
+                            alt={reqName}
+                            className="op-submitted-img-preview"
+                            style={{ cursor: 'pointer' }}
+                            title="Click to view in Lightbox"
+                            onClick={() =>
+                              openLightbox({
+                                url: fileMeta.url,
+                                title: fileMeta.fileName || reqName,
+                                subtitle: `Client Requirement · ${serviceRecord?.serviceType || 'Ongoing Service'}`
+                              })
+                            }
+                          />
                           <div className="op-submitted-img-actions">
                             <span className="op-file-name">{fileMeta.fileName || 'Attached Image'}</span>
-                            <a
-                              href={fileMeta.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
                               className="op-req-view-btn"
-                              title="Open full resolution image"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                              title="View full resolution in Lightbox"
+                              onClick={() =>
+                                openLightbox({
+                                  url: fileMeta.url,
+                                  title: fileMeta.fileName || reqName,
+                                  subtitle: `Client Requirement · ${serviceRecord?.serviceType || 'Ongoing Service'}`
+                                })
+                              }
                             >
-                              <i className="fa-solid fa-arrow-up-right-from-square"></i> View Full Image
-                            </a>
+                              <i className="fa-solid fa-expand"></i> View Full Image
+                            </button>
                           </div>
                         </div>
                       )}
@@ -626,17 +647,37 @@ export default function OperatorServiceProcedure() {
                   )}
 
                   {stepFile && (
-                    <a
-                      href={stepFile.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="swm-btn-file-attach"
-                      title={`Open Attached Document: ${stepFile.name}`}
-                    >
-                      <i className="fa-solid fa-paperclip"></i>
-                      <span>{stepFile.name}</span>
-                      <i className="fa-solid fa-download download-icon"></i>
-                    </a>
+                    isImageUrl(stepFile.url, stepFile.name) ? (
+                      <button
+                        type="button"
+                        className="swm-btn-file-attach"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                        title={`View Attached Image: ${stepFile.name}`}
+                        onClick={() =>
+                          openLightbox({
+                            url: stepFile.url,
+                            title: stepFile.name,
+                            subtitle: `Procedure Attachment · Step ${step.stepNumber || sIdx + 1}`
+                          })
+                        }
+                      >
+                        <i className="fa-solid fa-paperclip"></i>
+                        <span>{stepFile.name}</span>
+                        <i className="fa-solid fa-expand download-icon"></i>
+                      </button>
+                    ) : (
+                      <a
+                        href={stepFile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="swm-btn-file-attach"
+                        title={`Open Attached Document: ${stepFile.name}`}
+                      >
+                        <i className="fa-solid fa-paperclip"></i>
+                        <span>{stepFile.name}</span>
+                        <i className="fa-solid fa-download download-icon"></i>
+                      </a>
+                    )
                   )}
                 </div>
               </article>

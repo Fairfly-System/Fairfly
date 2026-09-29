@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import Steps from './Steps/Steps';
+import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
 import './service-tracker.css';
 
 const CATEGORY_ICON_MAP = {
@@ -20,6 +21,7 @@ const CATEGORY_ICON_MAP = {
 };
 
 export default function ClientServiceTracker({ service }) {
+  const { openLightbox } = useLightbox();
   const [showSteps, setShowSteps] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
   const [inquiryRequirements, setInquiryRequirements] = useState([]);
@@ -315,26 +317,49 @@ export default function ClientServiceTracker({ service }) {
                   {fileUrl ? (
                     <div className="tracker-req-file-box">
                       {isImage && (
+                        <button
+                          type="button"
+                          className="tracker-img-thumb-link"
+                          title={`View in Lightbox: ${fileName || name}`}
+                          onClick={() =>
+                            openLightbox({
+                              imageUrl: fileUrl,
+                              title: fileName || name,
+                              subtitle: `Service Requirement · ${service.serviceTitle || service.serviceType || 'Ongoing Service'}`
+                            })
+                          }
+                        >
+                          <img src={fileUrl} alt={fileName || name} className="tracker-img-thumb" />
+                        </button>
+                      )}
+                      {isImage ? (
+                        <button
+                          type="button"
+                          className="tracker-file-link"
+                          title={`View in Lightbox: ${fileName || name}`}
+                          onClick={() =>
+                            openLightbox({
+                              imageUrl: fileUrl,
+                              title: fileName || name,
+                              subtitle: `Service Requirement · ${service.serviceTitle || service.serviceType || 'Ongoing Service'}`
+                            })
+                          }
+                        >
+                          <i className="fa-regular fa-image" style={{ marginRight: '0.35rem' }}></i>
+                          <span>{fileName || 'View Attached Image'}</span>
+                        </button>
+                      ) : (
                         <a
                           href={fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="tracker-img-thumb-link"
-                          title={`View full image: ${fileName || name}`}
+                          className="tracker-file-link"
+                          title={fileName ? `Open ${fileName}` : 'View Attached File'}
                         >
-                          <img src={fileUrl} alt={fileName || name} className="tracker-img-thumb" />
+                          <i className="fa-solid fa-file-arrow-down" style={{ marginRight: '0.35rem' }}></i>
+                          <span>{fileName || 'View Attached Document'}</span>
                         </a>
                       )}
-                      <a
-                        href={fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="tracker-file-link"
-                        title={fileName ? `Open ${fileName}` : 'View Attached File'}
-                      >
-                        <i className={isImage ? "fa-regular fa-image" : "fa-solid fa-file-arrow-down"} style={{ marginRight: '0.35rem' }}></i>
-                        <span>{fileName || (isImage ? 'View Attached Image' : 'View Attached Document')}</span>
-                      </a>
                     </div>
                   ) : isFile ? (
                     <span className="tracker-req-pending">

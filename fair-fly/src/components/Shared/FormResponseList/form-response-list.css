@@ -5,4 +5,20 @@
 .form-response-item dt { color: var(--text-secondary, #536563); font-size: .78rem; font-weight: 650; }
 .form-response-item dd { color: var(--text-primary, #172b2b); font-size: .8rem; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .form-response-item a { color: var(--link-color, #176b55); }
+.form-response-img-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--link-color, #176b55);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+.form-response-img-btn:hover {
+  opacity: 0.8;
+}
 @media (max-width: 560px) { .form-response-item { grid-template-columns: 1fr; gap: .12rem; } }

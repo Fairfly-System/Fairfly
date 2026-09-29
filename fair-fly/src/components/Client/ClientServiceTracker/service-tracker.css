@@ -284,6 +284,12 @@
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+button.tracker-img-thumb-link {
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
 .tracker-img-thumb-link:hover {
   transform: scale(1.05);
   box-shadow: var(--shadow-sm);
@@ -304,6 +310,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+button.tracker-file-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .tracker-file-link:hover {

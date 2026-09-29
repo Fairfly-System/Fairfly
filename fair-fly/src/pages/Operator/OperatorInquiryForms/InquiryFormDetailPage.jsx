@@ -8,6 +8,7 @@ import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/Record
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import CreateQuotationModal from '../../../components/Operator/CreateQuotationModal/CreateQuotationModal';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { updateInquiry, deleteInquiry } from '../../../services/inquiryService';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
@@ -99,6 +100,7 @@ export default function InquiryFormDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [uploadingReqId, setUploadingReqId] = useState(null);
+  const { openLightbox } = useLightbox();
 
   // Directly subscribe to the specific inquiry form document (1 document read instead of entire collection)
   useEffect(() => {
@@ -432,15 +434,34 @@ export default function InquiryFormDetailPage() {
 
                         <div className="inquiry-attach-actions-row">
                           {hasFile ? (
-                            <a
-                              href={req.file.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inquiry-doc-badge valid inquiry-action-link"
-                            >
-                              <i className="fa-solid fa-file-check"></i>
-                              <span>{req.file.fileName || 'View Document'}</span>
-                            </a>
+                            isImageUrl(req.file.url, req.file.fileName) ? (
+                              <button
+                                type="button"
+                                className="inquiry-doc-badge valid inquiry-action-link"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                                title="View Image in Lightbox"
+                                onClick={() =>
+                                  openLightbox({
+                                    url: req.file.url,
+                                    title: req.file.fileName || req.name || 'Inquiry Document',
+                                    subtitle: `Inquiry Attachment · ${form.clientName || 'Client'}`
+                                  })
+                                }
+                              >
+                                <i className="fa-regular fa-image"></i>
+                                <span>{req.file.fileName || 'View Image'}</span>
+                              </button>
+                            ) : (
+                              <a
+                                href={req.file.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inquiry-doc-badge valid inquiry-action-link"
+                              >
+                                <i className="fa-solid fa-file-check"></i>
+                                <span>{req.file.fileName || 'View Document'}</span>
+                              </a>
+                            )
                           ) : (
                             <label className="btn btn-secondary inquiry-attach-label">
                               <i className={uploadingReqId === reqKey ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'}></i>

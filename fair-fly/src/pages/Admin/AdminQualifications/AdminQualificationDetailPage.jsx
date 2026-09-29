@@ -12,6 +12,7 @@ import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { firestore } from '../../../firebase';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import './admin-qualification-detail.css';
 
 const ApproveIcon = (props) => <i className="fa-solid fa-certificate" {...props}></i>;
@@ -65,6 +66,7 @@ export default function AdminQualificationDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState(null); // 'approve' | 'reject' | null
   const [docToPreview, setDocToPreview] = useState(null);
+  const { openLightbox } = useLightbox();
 
   // Live performance stats for the operator
   const [activeServicesCount, setActiveServicesCount] = useState(0);
@@ -176,15 +178,14 @@ export default function AdminQualificationDetailPage() {
   // Document action handlers
   const handleViewDoc = (docItem) => {
     if (!docItem?.url) return;
+    if (isImageUrl(docItem.url, docItem.name)) {
+      openLightbox({ url: docItem.url, title: docItem.name || 'Supporting Document' });
+      return;
+    }
     const lowerName = (docItem.name || '').toLowerCase();
-    const isImage =
-      lowerName.endsWith('.png') ||
-      lowerName.endsWith('.jpg') ||
-      lowerName.endsWith('.jpeg') ||
-      lowerName.endsWith('.webp');
     const isPdf = lowerName.endsWith('.pdf');
 
-    if (isImage || isPdf) {
+    if (isPdf) {
       setDocToPreview(docItem);
     } else {
       window.open(docItem.url, '_blank', 'noopener,noreferrer');
@@ -741,15 +742,29 @@ export default function AdminQualificationDetailPage() {
                     paddingTop: '0.875rem'
                   }}
                 >
-                  <a
-                    href={docToPreview.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-link"
-                    style={{ fontSize: '0.8125rem' }}
-                  >
-                    Open Original in New Tab <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                  </a>
+                  {isImageUrl(docToPreview.url, docToPreview.name) ? (
+                    <button
+                      type="button"
+                      className="btn-link"
+                      style={{ fontSize: '0.8125rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      onClick={() => {
+                        openLightbox({ imageUrl: docToPreview.url, title: docToPreview.name || 'Supporting Document' });
+                        setDocToPreview(null);
+                      }}
+                    >
+                      View in Lightbox <i className="fa-solid fa-expand"></i>
+                    </button>
+                  ) : (
+                    <a
+                      href={docToPreview.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-link"
+                      style={{ fontSize: '0.8125rem' }}
+                    >
+                      Open Original in New Tab <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                  )}
 
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button

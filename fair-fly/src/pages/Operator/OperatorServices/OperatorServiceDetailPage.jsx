@@ -4,6 +4,7 @@ import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ServiceCarouselGallery from '../../../components/UI/ServiceCarouselGallery/ServiceCarouselGallery';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import ServiceModal from '../../../components/Admin/Modals/ServiceModal/ServiceModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
@@ -52,6 +53,7 @@ export default function OperatorServiceDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+  const { openLightbox } = useLightbox();
 
   // Directly subscribe to the specific service document
   useEffect(() => {
@@ -530,15 +532,27 @@ export default function OperatorServiceDetailPage() {
                           <div className="req-item-meta">
                             <span className="req-item-type">Type: {String(reqType || 'text').toUpperCase()}</span>
                             {hasAttachment && (
-                              <a
-                                href={attachmentUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="req-attachment-link"
-                              >
-                                <i className="fa-solid fa-paperclip"></i>
-                                {attachmentName}
-                              </a>
+                              isImageUrl(attachmentUrl, attachmentName) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openLightbox({ url: attachmentUrl, title: attachmentName })}
+                                  className="req-attachment-link"
+                                  title="View sample image"
+                                >
+                                  <i className="fa-solid fa-file-image"></i>
+                                  {attachmentName}
+                                </button>
+                              ) : (
+                                <a
+                                  href={attachmentUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="req-attachment-link"
+                                >
+                                  <i className="fa-solid fa-paperclip"></i>
+                                  {attachmentName}
+                                </a>
+                              )
                             )}
                           </div>
                         </div>
@@ -613,9 +627,21 @@ export default function OperatorServiceDetailPage() {
                                         </a>
                                       )}
                                       {fileUrl && (
-                                        <a href={fileUrl} target="_blank" rel="noreferrer" className="req-attachment-link" style={{ fontSize: '0.75rem' }}>
-                                          <i className="fa-solid fa-paperclip"></i> {fileName}
-                                        </a>
+                                        isImageUrl(fileUrl, fileName) ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => openLightbox({ imageUrl: fileUrl, title: fileName })}
+                                            className="req-attachment-link"
+                                            style={{ fontSize: '0.75rem' }}
+                                            title="View guide image"
+                                          >
+                                            <i className="fa-solid fa-file-image"></i> {fileName}
+                                          </button>
+                                        ) : (
+                                          <a href={fileUrl} target="_blank" rel="noreferrer" className="req-attachment-link" style={{ fontSize: '0.75rem' }}>
+                                            <i className="fa-solid fa-paperclip"></i> {fileName}
+                                          </a>
+                                        )
                                       )}
                                     </div>
                                   )}

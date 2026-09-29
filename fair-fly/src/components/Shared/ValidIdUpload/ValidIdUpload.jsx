@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, Trash2, Eye, Info, FileText } from 'lucide-react';
 import ValidIdInfoModal, { ACCEPTED_ID_TYPES } from '../ValidIdInfoModal/ValidIdInfoModal';
 import { useToast } from '../../UI/toast/ToastProvider';
+import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
 import './valid-id-upload.css';
 
 export default function ValidIdUpload({
@@ -18,6 +19,7 @@ export default function ValidIdUpload({
 }) {
   const { addToast } = useToast();
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const { openLightbox } = useLightbox();
 
   const frontInputRef = useRef(null);
   const backInputRef = useRef(null);
@@ -98,6 +100,14 @@ export default function ValidIdUpload({
                   src={fileData.previewUrl || fileData.url}
                   alt={label}
                   className="id-thumbnail-img"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() =>
+                    setLightboxData({
+                      url: fileData.previewUrl || fileData.url,
+                      title: fileData.name || label,
+                      subtitle: `${label} · ${idType || 'Government ID'}`
+                    })
+                  }
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
@@ -119,15 +129,32 @@ export default function ValidIdUpload({
             </div>
 
             <div className="id-uploaded-actions">
-              <a
-                href={fileData.previewUrl || fileData.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="id-action-icon-btn view"
-                title="Preview full image"
-              >
-                <Eye size={15} />
-              </a>
+              {isPdf ? (
+                <a
+                  href={fileData.previewUrl || fileData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="id-action-icon-btn view"
+                  title="View PDF document"
+                >
+                  <Eye size={15} />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  className="id-action-icon-btn view"
+                  title="Preview in Lightbox"
+                  onClick={() =>
+                    openLightbox({
+                      url: fileData.previewUrl || fileData.url,
+                      title: fileData.name || label,
+                      subtitle: `${label} · ${idType || 'Government ID'}`
+                    })
+                  }
+                >
+                  <Eye size={15} />
+                </button>
+              )}
               <button
                 type="button"
                 className="id-action-icon-btn delete"

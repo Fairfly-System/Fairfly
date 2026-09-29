@@ -22,7 +22,7 @@ const Toast = ({ message, type = 'info', onRemove, id }) => {
       }, 300); // matches animation duration in CSS
       return () => clearTimeout(animationTimer);
     }
-  }, [isExiting, id, onRemove]);
+  }, [isExiting]);
 
   const getIcon = () => {
     switch (type) {

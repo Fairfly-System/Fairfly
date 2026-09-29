@@ -4,6 +4,7 @@ import { fetchServiceById } from '../../../services/serviceService';
 import ClientServiceRequestModal from '../../../components/Client/ClientServiceRequestModal/ClientServiceRequestModal';
 import ClientAppointmentForm from '../../../components/Client/ClientAppointmentForm/ClientAppointmentForm';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './service-item-page.css';
@@ -67,6 +68,7 @@ export default function ServiceItemPage() {
 
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const { openLightbox } = useLightbox();
 
   useEffect(() => {
     if (!serviceId) return;
@@ -227,7 +229,22 @@ export default function ServiceItemPage() {
         
         {/* Left Column: Interactive Media Gallery */}
         <section className="service-gallery-card card">
-          <div className="service-main-image-viewport">
+          <div
+            className="service-main-image-viewport"
+            onClick={() => {
+              if (galleryImages.length > 0) {
+                openLightbox({
+                  images: galleryImages.map((url, i) => ({
+                    url,
+                    title: `${service.name} (${i === 0 ? 'Cover Photo' : `Photo ${i + 1}`})`
+                  })),
+                  activeIndex: activeImageIndex
+                });
+              }
+            }}
+            style={{ cursor: galleryImages.length > 0 ? 'pointer' : 'default' }}
+            title={galleryImages.length > 0 ? 'Click to inspect full image' : undefined}
+          >
             {galleryImages.length > 0 && (
               <img
                 src={galleryImages[activeImageIndex]}
@@ -461,14 +478,25 @@ export default function ServiceItemPage() {
                         <span className="service-req-name">{reqName}</span>
                         {reqDesc && <span className="service-req-desc">{reqDesc}</span>}
                         {attachment?.url && (
-                          <a
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="service-req-download-link"
-                          >
-                            <i className="fa-solid fa-download"></i> Download Template / Form: {attachment.name || 'Sample File'}
-                          </a>
+                          isImageUrl(attachment.url, attachment.name) ? (
+                            <button
+                              type="button"
+                              onClick={() => openLightbox({ url: attachment.url, title: attachment.name || 'Sample File' })}
+                              className="service-req-download-link"
+                              title="View template image"
+                            >
+                              <i className="fa-solid fa-file-image"></i> View Template / Form: {attachment.name || 'Sample File'}
+                            </button>
+                          ) : (
+                            <a
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="service-req-download-link"
+                            >
+                              <i className="fa-solid fa-download"></i> Download Template / Form: {attachment.name || 'Sample File'}
+                            </a>
+                          )
                         )}
                       </div>
                     </li>

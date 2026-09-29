@@ -622,6 +622,14 @@
   text-decoration: underline;
 }
 
+button.service-req-download-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 /* Actions CTA Bar */
 .service-actions-cta-bar {
   display: flex;

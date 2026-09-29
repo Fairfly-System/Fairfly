@@ -548,6 +548,14 @@
   text-decoration: none;
 }
 
+.message-attachment-card-btn {
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  border: none;
+}
+
 .message-bubble-row.sent .message-attachment-card {
   background: rgba(255, 255, 255, 0.15);
   color: #FFFFFF;
