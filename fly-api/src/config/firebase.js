@@ -41,7 +41,7 @@ const loadServiceAccountFromEnv = () => {
 };
 
 const loadServiceAccountFromFile = () => {
-  const envPath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  const envPath = process.env.GCS_SERVICE_ACCOUNT_KEY;
   let resolvedPath = envPath ? path.resolve(process.cwd(), envPath) : null;
 
   if (!resolvedPath || !fs.existsSync(resolvedPath)) {
@@ -60,7 +60,7 @@ const loadServiceAccountFromFile = () => {
 
 try {
   const serviceAccount = loadServiceAccountFromEnv() || loadServiceAccountFromFile();
-  let rawBucket = process.env.FIREBASE_STORAGE_BUCKET || 'fairfly-1e83b.firebasestorage.app';
+  let rawBucket = process.env.GCS_STORAGE_BUCKET || 'fairfly-1e83b.firebasestorage.app';
   if (rawBucket.startsWith('gs://')) {
     rawBucket = rawBucket.replace('gs://', '');
   }

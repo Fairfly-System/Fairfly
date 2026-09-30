@@ -1,5 +1,48 @@
 # Update Logs
 
+## [2026-09-30] Infrastructure: Firebase Cloud Functions Deployment for Express Backend
+
+### Overview
+Configured the `fly-api` Express backend to deploy as a Firebase 2nd-gen Cloud Function, enabling serverless hosting on the same domain as the Firebase Hosting frontend.
+
+### Key Changes
+- **`fly-api/src/server.js`**: Added `firebase-functions/v2/https` `onRequest` import. Local `app.listen()` is now conditional (skipped inside Cloud Functions via `K_SERVICE`/`FUNCTION_NAME` env detection). Exports `api` Cloud Function wrapping the Express app with `512MiB` memory and `60s` timeout in `us-central1`.
+- **`firebase.json`**: Changed `functions.source` from `"functions"` to `"fly-api"`. Split the invalid combined rewrite into two proper entries: `/api/**` → Cloud Function `api`, and `**` → `/index.html` for SPA routing.
+- **`fly-api/package.json`**: Added `firebase-functions` dependency and `engines.node: "20"` (user-applied).
+
+### Deployment
+```bash
+firebase deploy --only functions        # Deploy backend only
+firebase deploy --only functions,hosting # Deploy both
+```
+
+### Notes
+- The hosting rewrite `/api/**` → function `api` means the backend is accessible at `https://fairfly-1e83b.web.app/api/...` (same domain, no CORS issues in production).
+- Local dev still works via `node src/server.js` / `nodemon` as before.
+
+## [2026-09-30] UI / Theme: Lightbox Header & Footer White Theme Styling & Readability Enhancement
+
+### Overview
+Updated the `ImageLightbox` design styling to feature a clean, solid white theme across the header bar and footer toolbar with high-contrast text and interactive button controls for optimal readability and accessibility.
+
+### Key Changes
+1. **Header Bar (`.ff-lightbox-header`)**:
+   - Replaced dark backdrop with solid white (`#ffffff`), subtle bottom border (`#e2e8f0`), and crisp SaaS drop shadow (`box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08)`).
+   - Set title text color to high-contrast dark slate (`var(--text-dark, #0f172a)`).
+   - Styled subtitle to muted slate (`var(--text-mid, #475569)`).
+   - Transformed counter badge to brand tint background (`var(--purple-light-2, #eef2ff)`) with brand deep purple text (`var(--purple-dark, #4338ca)`).
+   - Updated action buttons (`.ff-lightbox-btn`) to clean light button styles (`#f8fafc` background, `#cbd5e1` border, `#1e293b` text) with hover states (`#eef2ff` brand highlight).
+   - Updated close button (`.ff-lightbox-btn.close`) to soft rose background (`#fee2e2`) with crimson text (`#b91c1c`) and strong red hover state (`#dc2626`).
+   - Improved zoom level indicator to bold dark slate (`var(--text-mid, #334155)`).
+2. **Footer Bar (`.ff-lightbox-footer`)**:
+   - Set background to solid white (`#ffffff`) with subtle top border (`#e2e8f0`) and elevation shadow.
+   - Text color updated to readable slate (`var(--text-mid, #475569)`).
+   - Keyboard hint tags (`.ff-lightbox-kbd`) updated to light gray (`#f1f5f9`), slate border (`#cbd5e1`), dark slate text (`#0f172a`), and subtle elevation.
+3. **Verification**:
+   - Full production build (`npm run build`) succeeded with 0 errors.
+
+---
+
 ## [2026-09-29] Architecture: Root-Level Lightbox Rendering via Global LightboxProvider & React Portals
 
 ### Overview

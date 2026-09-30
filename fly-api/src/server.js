@@ -12,14 +12,11 @@ const app = express();
 app.disable('x-powered-by');
 
 // Set the port from environment variables or default to 5001
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.APP_PORT || 5001;
 
 // Allowed origins configuration
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173'
+  process.env.FRONTEND_URL
 ].filter(Boolean);
 
 // Security headers middleware
@@ -46,11 +43,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
+// Parse JSON requests — skip multipart/form-data so multer can handle file uploads
+// (Cloud Functions pre-parses the body; consuming it here breaks multer's stream)
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.startsWith('multipart/form-data')) {
+    return next(); // Let multer handle multipart parsing
   }
-})); // Parse incoming JSON requests and preserve raw body buffer for webhook signature validation
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    }
+  })(req, res, next);
+});
 
 // Admin action audit logger — fires post-response via res.on('finish')
 const { adminLogger } = require('./middleware/adminLogger');
@@ -75,9 +80,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Start the server
-const server = app.listen(PORT, () => {
-  console.log(`FairFly Backend API server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode.`);
-});
+// Start local dev server only when NOT running inside Cloud Functions or Firebase CLI
+if (!process.env.K_SERVICE && !process.env.FUNCTION_NAME && !process.env.FIREBASE_CONFIG) {
+  const server = app.listen(PORT, () => {
+    console.log(`FairFly Backend API server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode.`);
+  });
+}
 
-module.exports = server; // Exported for integration tests if needed
+// Export the Express app for Firebase Cloud Functions (loaded by index.js)
+module.exports = { app };

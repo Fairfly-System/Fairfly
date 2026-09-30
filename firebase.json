@@ -1,9 +1,30 @@
 {
+  "functions": {
+    "source": "fly-api"
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "fair-fly/dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "function": "api"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   }
 }
