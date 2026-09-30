@@ -230,9 +230,8 @@ async function runTests() {
     assert.strictEqual(fulfillment.status, 'Pending');
     assert.ok(Array.isArray(fulfillment.steps), 'Workflow steps must be an array');
     assert.ok(fulfillment.steps.length > 0, 'Workflow steps must be populated');
-    assert.strictEqual(fulfillment.submittedRequirements.length, 1, 'Must preserve submitted requirements');
-    assert.strictEqual(fulfillment.submittedRequirements[0].file.fileName, 'client_pass.jpg', 'Must preserve file metadata');
-    assert.strictEqual(fulfillment.requirements.length, 1, 'Must mirror submitted requirements to procedure requirements');
+    assert.ok(fulfillment.submittedRequirementsId, 'Must reference submitted requirements ID');
+    assert.ok(fulfillment.submittedRequirementsId.startsWith('REQ-'), 'Must be a valid prefixed requirement reference ID');
   });
 
   // -------------------------------------------------------------

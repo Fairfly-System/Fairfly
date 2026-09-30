@@ -33,6 +33,36 @@ export const getEligibleContacts = async () => {
 };
 
 /**
+ * Batch fetch public user profiles for chat participants
+ * @param {string[]} userIds
+ * @returns {Promise<Record<string, { id: string, name: string, email: string, role: string, branchName: string|null }>>}
+ */
+export const getChatUserProfiles = async (userIds) => {
+  if (!Array.isArray(userIds) || userIds.length === 0) return {};
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/api/chats/users/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ userIds })
+    });
+
+    if (!res.ok) {
+      console.warn('Failed to batch fetch chat user profiles:', res.status);
+      return {};
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error in getChatUserProfiles:', error);
+    return {};
+  }
+};
+
+/**
  * Get or create a 1-to-1 direct conversation with a recipient
  */
 export const getOrCreateDirectChat = async (recipientId) => {

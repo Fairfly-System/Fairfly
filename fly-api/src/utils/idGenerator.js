@@ -14,6 +14,8 @@ const ID_PREFIXES = {
   INQUIRY: 'INQ',
   QUOTATION: 'QTN',
   ACTIVE_SERVICE: 'SVC',
+  SUBMITTED_REQUIREMENTS: 'REQ',
+  REQUIREMENT: 'REQ',
 
   // Catalog & templates
   SERVICE: 'CAT',

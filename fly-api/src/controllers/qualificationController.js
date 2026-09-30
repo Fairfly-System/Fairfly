@@ -79,8 +79,6 @@ const submitQualificationApplication = async (req, res) => {
 
     const applicationData = {
       operatorId,
-      operatorName: operatorData.name || operatorData.fullName || branchName,
-      branchName,
       email: req.user.email || operatorData.email || '',
       contactNumber: operatorData.contactNumber || operatorData.phone || '',
       address: operatorData.address || '',
@@ -107,11 +105,45 @@ const submitQualificationApplication = async (req, res) => {
       metadata: { applicationId: docId, operatorId }
     }).catch(e => console.warn('Qualification notification warning:', e.message));
 
-    return res.status(201).json({ id: docId, ...applicationData, message: 'Qualification application submitted successfully' });
+    return res.status(201).json({ id: docId, ...applicationData, operatorName: operatorData.name || operatorData.fullName || branchName, branchName, message: 'Qualification application submitted successfully' });
   } catch (error) {
     console.error('Error submitting qualification application:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
+};
+
+/**
+ * Helper to dynamically enrich applications with operator profile on read
+ */
+const enrichApplicationsWithOperatorData = async (apps) => {
+  if (!Array.isArray(apps) || apps.length === 0) return apps;
+  const operatorIds = [...new Set(apps.map(a => a.operatorId).filter(Boolean))];
+  const opMap = new Map();
+  await Promise.all(operatorIds.map(async (opId) => {
+    try {
+      const cached = userCache.get(opId);
+      if (cached) {
+        opMap.set(opId, cached);
+        return;
+      }
+      const uDoc = await getFromDatabase(`${COLLECTIONS.USERS}/${opId}`);
+      if (uDoc) {
+        opMap.set(opId, uDoc);
+        userCache.set(opId, uDoc);
+      }
+    } catch (e) {
+      console.warn('[Qualifications] Operator resolution notice:', opId, e.message);
+    }
+  }));
+
+  return apps.map(app => {
+    const op = opMap.get(app.operatorId) || {};
+    return {
+      ...app,
+      operatorName: app.operatorName || op.name || op.fullName || op.branchName || 'Branch Operator',
+      branchName: app.branchName || op.branchName || op.name || 'Branch Operator'
+    };
+  });
 };
 
 /**
@@ -134,7 +166,8 @@ const getQualificationApplications = async (req, res) => {
     }
 
     const results = await queryDatabaseAdvanced(COLLECTIONS.QUALIFICATION_APPLICATIONS, options);
-    return res.status(200).json(results);
+    const enrichedResults = await enrichApplicationsWithOperatorData(results);
+    return res.status(200).json(enrichedResults);
   } catch (error) {
     console.error('Error fetching qualification applications:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -185,6 +218,8 @@ const getQualificationApplicationById = async (req, res) => {
     return res.status(200).json({
       id,
       ...appDoc,
+      operatorName: appDoc.operatorName || operatorProfile?.name || operatorProfile?.branchName || 'Branch Operator',
+      branchName: appDoc.branchName || operatorProfile?.branchName || operatorProfile?.name || 'Branch Operator',
       operatorProfile,
       documents: Array.isArray(appDoc.documents) ? appDoc.documents : []
     });

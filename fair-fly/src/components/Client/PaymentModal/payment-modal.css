@@ -138,13 +138,22 @@
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-md, 8px);
   text-align: center;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .payment-method-pill:hover {
   border-color: var(--purple, #7c3aed);
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.payment-method-logo {
+  height: 28px;
+  width: auto;
+  max-width: 90px;
+  object-fit: contain;
+  margin-bottom: 0.35rem;
+  border-radius: 4px;
 }
 
 .payment-method-pill i {
@@ -237,7 +246,7 @@
 }
 
 .payment-submit-btn {
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  background: var(--purple, #7c3aed);
   color: #ffffff;
   border: none;
   padding: 0.625rem 1.25rem;
@@ -248,12 +257,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  transition: opacity 0.2s ease, transform 0.15s ease;
+  transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
 }
 
 .payment-submit-btn:hover:not(:disabled) {
-  opacity: 0.95;
+  background: var(--purple-hover, #6d28d9);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
 }

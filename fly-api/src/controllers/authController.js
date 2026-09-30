@@ -221,13 +221,12 @@ const requestOperatorPasswordReset = async (req, res) => {
     const nowIso = new Date().toISOString();
     const expiresAtIso = new Date(nowMs + 48 * 60 * 60 * 1000).toISOString(); // 48-hour validity
 
+    const resolvedOpName = userData.fullName || userData.name || userData.branchName || 'Operator';
+    const resolvedBranchName = userData.branchName || branchName || 'Branch Office';
+
     const newRequestDoc = {
-      id: requestId,
       operatorUid: userDoc.id,
       operatorEmail: normalizedEmail,
-      operatorName: userData.fullName || userData.name || userData.branchName || 'Operator',
-      branchUid: userData.branchUid || userDoc.id,
-      branchName: userData.branchName || branchName || 'Branch Office',
       reason: (reason && typeof reason === 'string' ? reason.trim().slice(0, 500) : 'Operator account password reset request'),
       status: 'PENDING',
       resetLinkSent: false,
@@ -246,10 +245,10 @@ const requestOperatorPasswordReset = async (req, res) => {
     // 7. Notify Admins/Super Admins
     notifyAdmins({
       title: 'Operator Password Reset Request',
-      message: `Operator ${newRequestDoc.operatorName} (${newRequestDoc.branchName}) requested a password reset. Review required.`,
+      message: `Operator ${resolvedOpName} (${resolvedBranchName}) requested a password reset. Review required.`,
       type: 'security',
       link: '/admin/operators',
-      metadata: { requestId, operatorEmail: normalizedEmail, branchName: newRequestDoc.branchName }
+      metadata: { requestId, operatorEmail: normalizedEmail, branchName: resolvedBranchName }
     }).catch(err => console.warn('[Auth] Notification to admins failed:', err.message));
 
     console.log(`[Auth] Operator password reset request created: ${requestId} for ${normalizedEmail}`);

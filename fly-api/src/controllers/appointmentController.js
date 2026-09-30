@@ -38,17 +38,16 @@ const createAppointment = async (req, res) => {
       return res.status(400).json({ error: 'Client name, phone number, and preferred date are required' });
     }
 
-    const now = new Date().toISOString();
-    const effectiveOperatorId = branchUid || '';
+    const resolvedBranchLocation = preferredBranchLocation || branchName || 'Main Branch';
+    const resolvedBranchUid = branchUid || '';
+
     const newAppointment = {
       clientUid: req.user?.uid || clientUid || '',
       clientName: clientName.trim(),
       clientEmail: clientEmail ? clientEmail.trim() : (req.user?.email || ''),
       clientPhone: clientPhone.trim(),
-      preferredBranchLocation: preferredBranchLocation || branchName || 'Main Branch',
-      branchUid: branchUid || '',
-      branchName: branchName || preferredBranchLocation || 'Main Branch',
-      operatorId: effectiveOperatorId,
+      preferredBranchLocation: resolvedBranchLocation,
+      branchUid: resolvedBranchUid,
       preferredDate: preferredDate,
       preferredTime: preferredTime || '10:00 AM',
       serviceType: serviceType || 'General Consultation',
@@ -63,7 +62,7 @@ const createAppointment = async (req, res) => {
     // 1. Dispatch branch notification strictly to the specific branch operator
     notifyBranch({
       branchUid: newAppointment.branchUid,
-      branchName: newAppointment.branchName,
+      branchName: resolvedBranchLocation,
       title: 'New Appointment Booking',
       message: `${newAppointment.clientName} booked for ${newAppointment.serviceType} on ${newAppointment.preferredDate} (${newAppointment.preferredTime})`,
       type: 'appointment',
@@ -77,14 +76,20 @@ const createAppointment = async (req, res) => {
         recipientUid: newAppointment.clientUid,
         recipientRole: 'client',
         title: 'Appointment Booking Pending',
-        message: `Your appointment for ${newAppointment.serviceType} on ${newAppointment.preferredDate} (${newAppointment.preferredTime}) at ${newAppointment.branchName} is pending operator confirmation.`,
+        message: `Your appointment for ${newAppointment.serviceType} on ${newAppointment.preferredDate} (${newAppointment.preferredTime}) at ${resolvedBranchLocation} is pending operator confirmation.`,
         type: 'appointment',
         link: '/client/appointments',
         metadata: { appointmentId: docId, status: 'Pending' }
       }).catch(e => console.warn('Appointment client receipt notification warning:', e.message));
     }
 
-    return res.status(201).json({ id: docId, ...newAppointment, message: 'Appointment requested successfully' });
+    return res.status(201).json({
+      id: docId,
+      ...newAppointment,
+      branchName: resolvedBranchLocation,
+      operatorId: resolvedBranchUid,
+      message: 'Appointment requested successfully'
+    });
   } catch (error) {
     console.error('Error creating appointment:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -166,7 +171,12 @@ const getAppointments = async (req, res) => {
       }
     }
 
-    return res.status(200).json(results);
+    const normalizedResults = results.map(app => ({
+      ...app,
+      branchName: app.branchName || app.preferredBranchLocation || 'Main Branch',
+      operatorId: app.operatorId || app.branchUid || ''
+    }));
+    return res.status(200).json(normalizedResults);
   } catch (error) {
     console.error('Error listing appointments:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -219,7 +229,7 @@ const updateAppointmentStatus = async (req, res) => {
     if (userRole === 'client' && normalizedStatus === 'Cancelled' && (existing.branchUid || existing.operatorId)) {
       notifyBranch({
         branchUid: existing.branchUid || existing.operatorId,
-        branchName: existing.branchName,
+        branchName: existing.preferredBranchLocation || existing.branchName || 'Main Branch',
         title: 'Appointment Cancelled by Client',
         message: `${existing.clientName} cancelled their appointment for ${existing.serviceType} scheduled on ${existing.preferredDate}.`,
         type: 'appointment',

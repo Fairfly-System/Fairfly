@@ -64,19 +64,41 @@ const PROHIBITED_DANGEROUS_TOKENS = new Set([
 ]);
 
 /**
- * Whitelist of Allowed Target Storage Folders
+ * Whitelist of Allowed Top-Level Root Storage Folders
  */
-const ALLOWED_FOLDERS = new Set([
+const ALLOWED_ROOT_FOLDERS = new Set([
   'uploads',
   'client_ids',
   'service_requirements',
+  'service_requests',
+  'submitted_requirements',
+  'inquiry_requirements',
+  'services',
+  'workflows',
   'workflow_documents',
   'resources',
   'announcements',
-  'inquiry_requirements',
+  'qualifications',
   'qualification_documents',
-  'chat_attachments'
+  'chat_attachments',
+  'tickets'
 ]);
+
+// Map legacy / ad-hoc folder aliases to canonical root folders
+const FOLDER_ALIASES = {
+  'form-answers': 'service_requirements',
+  'client-requirements': 'service_requirements',
+  'inquiries': 'service_requirements',
+  'service_store': 'services',
+  'service-requirements': 'service_requirements',
+  'service_covers': 'services',
+  'service_carousel': 'services',
+  'chat_files': 'chat_attachments',
+  'workflow-documents': 'workflow_documents',
+  'qualification-documents': 'qualifications'
+};
+
+const ALLOWED_FOLDERS = ALLOWED_ROOT_FOLDERS;
 
 /**
  * Validates metadata before file is buffered into memory (Used in Multer fileFilter)
@@ -274,22 +296,53 @@ function verifyFileContent(buffer, ext) {
 }
 
 /**
- * Sanitizes and validates target folder to prevent path traversal
+ * Sanitizes and validates target folder to prevent path traversal while supporting semantic subpaths.
+ * Example inputs: "service_requirements/REQ-12345", "client_ids/USR-CLT-9812", "chat_attachments/CNV-55"
  * @param {string} rawFolder 
- * @returns {string} Safe target folder name
+ * @returns {string} Safe target folder path
  */
 function sanitizeFolder(rawFolder) {
   if (!rawFolder || typeof rawFolder !== 'string') {
     return 'uploads';
   }
 
-  // Remove any path traversal components
-  const cleaned = rawFolder.replace(/[^a-zA-Z0-9_]/g, '');
-  if (ALLOWED_FOLDERS.has(cleaned)) {
-    return cleaned;
+  // Normalize slashes and trim whitespace
+  const normalized = rawFolder.replace(/\\/g, '/').trim();
+  const rawSegments = normalized.split('/').map(s => s.trim()).filter(Boolean);
+
+  if (rawSegments.length === 0) {
+    return 'uploads';
   }
 
-  return 'uploads';
+  // 1. Resolve and validate top-level root folder
+  let root = rawSegments[0].toLowerCase();
+  if (FOLDER_ALIASES[root]) {
+    root = FOLDER_ALIASES[root];
+  }
+
+  if (!ALLOWED_ROOT_FOLDERS.has(root)) {
+    return 'uploads';
+  }
+
+  // 2. Sanitize any nested subfolder segments (e.g. entity IDs like "REQ-123", "USR-CLT-55")
+  const safeSubSegments = [];
+  for (let i = 1; i < rawSegments.length; i++) {
+    const seg = rawSegments[i];
+    // Reject path traversal tokens
+    if (seg === '.' || seg === '..' || seg.includes('\0')) {
+      continue;
+    }
+    const cleanSeg = seg.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    if (cleanSeg) {
+      safeSubSegments.push(cleanSeg);
+    }
+  }
+
+  if (safeSubSegments.length > 0) {
+    return `${root}/${safeSubSegments.join('/')}`;
+  }
+
+  return root;
 }
 
 /**
@@ -308,6 +361,7 @@ function generateSafeDestination(folder, originalname) {
 module.exports = {
   ALLOWED_EXTENSIONS,
   CANONICAL_MIMES,
+  ALLOWED_ROOT_FOLDERS,
   ALLOWED_FOLDERS,
   validateUploadMetadata,
   verifyFileContent,

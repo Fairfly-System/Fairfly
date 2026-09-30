@@ -15,6 +15,7 @@ import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGr
 import useDebounce from '../../../hooks/useDebounce';
 import QuotationDetailModal from '../../../components/Client/QuotationDetailModal/QuotationDetailModal';
 import InquiryDetailModal from '../../../components/Client/InquiryDetailModal/InquiryDetailModal';
+import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import { acceptQuotation } from '../../../services/quotationService';
 import { verifyPayment } from '../../../services/paymentService';
 import './client-tracking.css';
@@ -69,6 +70,7 @@ export default function ClientTrackingPage() {
   // Payment Modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedQuotationForPayment, setSelectedQuotationForPayment] = useState(null);
+  const [quotationToAccept, setQuotationToAccept] = useState(null);
 
   // Modals
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -272,28 +274,30 @@ export default function ClientTrackingPage() {
     }
   }, [userToken, addToast]);
 
-  // Accept Quotation handler
-  const handleAcceptQuotation = (quotation) => {
+  // Accept Quotation modal triggers (replaces native window.confirm/alert with ConfirmationModal)
+  const handleInitiateAcceptQuotation = (quotation) => {
     if (!quotation?.id) return;
+    setQuotationToAccept(quotation);
+  };
 
-    const formattedAmount = Number(quotation.totalAmount || quotation.rate || 0).toLocaleString();
-    if (!window.confirm(`Accept Quotation ${quotation.quoteNo || ''} for ₱${formattedAmount}? You will be directed to secure PayMongo checkout to finalize your booking.`)) {
-      return;
-    }
+  const handleConfirmAcceptQuotation = () => {
+    if (!quotationToAccept?.id) return;
 
-    setAcceptingQuoteId(quotation.id);
+    const targetQuotation = quotationToAccept;
+    setAcceptingQuoteId(targetQuotation.id);
     acceptQuotation(
       userToken,
-      quotation.id,
+      targetQuotation.id,
       (res) => {
         setAcceptingQuoteId(null);
+        setQuotationToAccept(null);
         addToast(
           'Quotation accepted! Please proceed with payment to begin service fulfillment.',
           'success'
         );
         // Immediately present the payment modal with server quotation details
         setSelectedQuotationForPayment({
-          ...quotation,
+          ...targetQuotation,
           status: 'Accepted',
           paymentStatus: 'UNPAID',
         });
@@ -301,6 +305,7 @@ export default function ClientTrackingPage() {
       },
       (err) => {
         setAcceptingQuoteId(null);
+        setQuotationToAccept(null);
         console.error('Error accepting quotation:', err);
         addToast(err?.message || 'Failed to accept quotation. Please try again.', 'danger');
       }
@@ -425,11 +430,11 @@ export default function ClientTrackingPage() {
       result = result.filter((item) => {
         const controlNo = (item.controlNo || item.id || '').toLowerCase();
         const formNo = (item.formNo || '').toLowerCase();
-        const clientName = (item.clientName || '').toLowerCase();
+        const clientName = (item.clientName || item.fullName || '').toLowerCase();
         const serviceType = (item.serviceType || '').toLowerCase();
         const services = Array.isArray(item.servicesOffered) ? item.servicesOffered.join(' ').toLowerCase() : '';
         const reqs = (item.specifiedRequirements || '').toLowerCase();
-        const remarks = (item.remarks || '').toLowerCase();
+        const remarks = (item.notes || item.remarks || '').toLowerCase();
         const status = (item.status || '').toLowerCase();
         return controlNo.includes(q) || formNo.includes(q) || clientName.includes(q) || serviceType.includes(q) || services.includes(q) || reqs.includes(q) || remarks.includes(q) || status.includes(q);
       });
@@ -546,7 +551,7 @@ export default function ClientTrackingPage() {
               <button
                 type="button"
                 className="btn btn-primary btn-xs"
-                onClick={() => handleAcceptQuotation(quote)}
+                onClick={() => handleInitiateAcceptQuotation(quote)}
                 disabled={acceptingQuoteId === quote.id}
                 title="Accept Quotation & Proceed to Pay"
               >
@@ -1094,7 +1099,7 @@ export default function ClientTrackingPage() {
         quotation={viewingQuotation}
         onAcceptQuotation={(q) => {
           setViewingQuotation(null);
-          handleAcceptQuotation(q);
+          handleInitiateAcceptQuotation(q);
         }}
         onOpenPayment={(q) => {
           setViewingQuotation(null);
@@ -1110,6 +1115,23 @@ export default function ClientTrackingPage() {
         onClose={() => setViewingInquiry(null)}
         inquiry={viewingInquiry}
         onOpenPdf={(type, data) => handleOpenPdf(type, data)}
+      />
+
+      {/* Quotation Acceptance Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!quotationToAccept}
+        onClose={() => !acceptingQuoteId && setQuotationToAccept(null)}
+        icon="fa-solid fa-file-circle-check"
+        title="Accept Service Quotation"
+        message={
+          quotationToAccept
+            ? `Accept Quotation ${quotationToAccept.quoteNo || ''} for ₱${Number(quotationToAccept.totalAmount || quotationToAccept.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}? You can proceed directly to secure payment to begin service fulfillment.`
+            : ''
+        }
+        confirmText="Accept Quotation"
+        cancelText="Cancel"
+        onConfirm={handleConfirmAcceptQuotation}
+        isLoading={!!acceptingQuoteId}
       />
     </div>
   );

@@ -4,6 +4,8 @@ import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import { uploadFileToBackend } from '../../../utils/fileUploadApi';
+import { generateRequirementId } from '../../../utils/idGenerator';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { createInquiry } from '../../../services/inquiryService';
 import './client-service-request-modal.css';
@@ -288,6 +290,9 @@ export default function ClientServiceRequestModal({
     setIsSubmitting(true);
 
     try {
+      // Pre-generate requirement reference ID so storage files match the Firestore record ID
+      const serviceRequirementId = generateRequirementId();
+
       // Process File Uploads to Firebase Storage
       const submittedRequirements = await Promise.all(
         serviceRequirements.map(async (req, i) => {
@@ -300,26 +305,15 @@ export default function ClientServiceRequestModal({
 
           if (userState.file) {
             try {
-              const formData = new FormData();
-              formData.append('file', userState.file);
-              formData.append('folder', 'client-requirements');
-
-              const uploadRes = await fetch(`${API_BASE_URL}/api/upload`, {
-                method: 'POST',
-                headers: userToken ? { Authorization: `Bearer ${userToken}` } : {},
-                body: formData
-              });
-
-              if (uploadRes.ok) {
-                const uploadJson = await uploadRes.json();
-                if (uploadJson.success && uploadJson.url) {
-                  uploadedFileMeta = {
-                    url: uploadJson.url,
-                    fileName: uploadJson.fileName || userState.file.name,
-                    fileSize: uploadJson.fileSize || userState.file.size,
-                    storagePath: uploadJson.storagePath || ''
-                  };
-                }
+              const targetFolder = `service_requirements/${serviceRequirementId}`;
+              const uploadJson = await uploadFileToBackend(userState.file, targetFolder, userToken);
+              if (uploadJson && uploadJson.url) {
+                uploadedFileMeta = {
+                  url: uploadJson.url,
+                  fileName: uploadJson.fileName || userState.file.name,
+                  fileSize: uploadJson.fileSize || userState.file.size,
+                  storagePath: uploadJson.storagePath || ''
+                };
               }
             } catch (uploadErr) {
               console.error(`Failed to upload file for requirement ${reqName}:`, uploadErr);
@@ -352,6 +346,7 @@ export default function ClientServiceRequestModal({
         specifiedRequirements: additionalNotes.trim(),
         notes: additionalNotes.trim(),
         servicePrice: selectedService?.price || '',
+        submittedRequirementsId: serviceRequirementId,
         requirements: submittedRequirements,
         status: 'submitted'
       };

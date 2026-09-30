@@ -206,6 +206,9 @@ export default function CreateInquiryFormModal({ onClose }) {
           <div className="cif-field">
             <label>E-mail Address</label>
             <input name="email" type="email" placeholder="client@example.com" value={form.email} onChange={handleChange} disabled={isSubmitting} />
+            <small style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '0.25rem', display: 'block' }}>
+              If client has a FairFly account, this inquiry will automatically link to their portal.
+            </small>
           </div>
         </div>
 

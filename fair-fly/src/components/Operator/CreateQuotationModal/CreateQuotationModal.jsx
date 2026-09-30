@@ -109,7 +109,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
         setFormData((prev) => ({
           ...prev,
           inquiryId: initialData.id || null,
-          clientUid: initialData.clientUid || null,
+          clientUid: (initialData.clientUid && initialData.clientUid !== user?.uid) ? initialData.clientUid : null,
           clientName: initialData.clientName || initialData.fullName || '',
           contactPerson: initialData.contactPerson || initialData.fullName || '',
           clientEmail: initialData.email || '',
@@ -209,9 +209,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
 
     const payload = {
       ...formData,
-      submittedRequirements: Array.isArray(initialData?.requirements) && initialData.requirements.length > 0
-        ? initialData.requirements
-        : (Array.isArray(initialData?.submittedRequirements) ? initialData.submittedRequirements : []),
+      submittedRequirementsId: initialData?.submittedRequirementsId || null,
       rate: Number(formData.rate) || 0,
       taxAmount: Number(formData.taxAmount) || 0,
       totalAmount: Number(formData.totalAmount || formData.rate) || 0,
@@ -320,6 +318,9 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
                 disabled={isSubmitting}
                 className="form-input"
               />
+              <small style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '0.25rem', display: 'block' }}>
+                If client has a FairFly account, the quotation will automatically sync to their portal.
+              </small>
             </div>
           </div>
         </div>

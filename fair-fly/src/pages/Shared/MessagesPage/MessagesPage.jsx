@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -8,7 +8,9 @@ import {
   subscribeToMessages,
   sendDirectMessage,
   markChatAsRead,
-  getOrCreateDirectChat
+  getOrCreateDirectChat,
+  getChatUserProfiles,
+  getEligibleContacts
 } from '../../../services/chatService';
 import NewChatModal from '../../../components/Shared/Messaging/NewChatModal/NewChatModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
@@ -101,6 +103,10 @@ export default function MessagesPage() {
   const [filterTab, setFilterTab] = useState('all'); // 'all' | 'unread'
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
 
+  // Cached user profiles { [uid]: { id, name, email, role, branchName } }
+  const [userProfiles, setUserProfiles] = useState({});
+  const fetchedUserIdsRef = useRef(new Set());
+
   // Messages state
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -111,6 +117,35 @@ export default function MessagesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const { openLightbox } = useLightbox();
+
+  // Pre-load eligible contacts into user profiles cache
+  useEffect(() => {
+    let isMounted = true;
+    getEligibleContacts()
+      .then((contacts) => {
+        if (!isMounted || !Array.isArray(contacts)) return;
+        const profileMap = {};
+        contacts.forEach((c) => {
+          if (c.id) {
+            profileMap[c.id] = {
+              id: c.id,
+              name: c.name || c.fullName || c.branchName || 'User',
+              email: c.email || '',
+              role: c.role || 'user',
+              branchName: c.branchName || null
+            };
+            fetchedUserIdsRef.current.add(c.id);
+          }
+        });
+        setUserProfiles((prev) => ({ ...prev, ...profileMap }));
+      })
+      .catch((err) => {
+        console.warn('Could not pre-load contacts into user profile cache:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Handle direct navigation to a specific contact
   useEffect(() => {
@@ -133,6 +168,13 @@ export default function MessagesPage() {
     const openChat = async () => {
       try {
         const conv = await getOrCreateDirectChat(partnerId);
+        if (conv?.partnerProfile?.id) {
+          setUserProfiles((prev) => ({
+            ...prev,
+            [conv.partnerProfile.id]: conv.partnerProfile
+          }));
+          fetchedUserIdsRef.current.add(conv.partnerProfile.id);
+        }
         setActiveConversation(conv);
         navigate(location.pathname, { replace: true, state: {} });
       } catch (err) {
@@ -163,6 +205,32 @@ export default function MessagesPage() {
     return () => unsub();
   }, [currentUid]);
 
+  // Batch resolve any conversation partner IDs not present in user profile cache
+  useEffect(() => {
+    if (!conversations.length || !currentUid) return;
+
+    const missingIds = [];
+    conversations.forEach((conv) => {
+      const partnerId = conv.participants?.find((p) => p !== currentUid);
+      if (partnerId && !userProfiles[partnerId] && !fetchedUserIdsRef.current.has(partnerId)) {
+        missingIds.push(partnerId);
+        fetchedUserIdsRef.current.add(partnerId);
+      }
+    });
+
+    if (missingIds.length > 0) {
+      getChatUserProfiles(missingIds)
+        .then((newProfiles) => {
+          if (newProfiles && Object.keys(newProfiles).length > 0) {
+            setUserProfiles((prev) => ({ ...prev, ...newProfiles }));
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to batch resolve conversation partner profiles:', err);
+        });
+    }
+  }, [conversations, currentUid, userProfiles]);
+
   // Real-time subscription to active conversation's messages
   useEffect(() => {
     if (!activeConversation?.id) {
@@ -182,20 +250,20 @@ export default function MessagesPage() {
     return () => unsub();
   }, [activeConversation?.id, currentUid]);
 
-  // Helper to extract partner details
-  const getPartnerDetails = (conv) => {
+  // Helper to extract partner details from fresh user profile cache
+  const getPartnerDetails = useCallback((conv) => {
     if (!conv) return {};
     const partnerId = conv.participants?.find((p) => p !== currentUid);
-    const details = conv.participantDetails?.[partnerId] || {};
-    const role = conv.participantRoles?.[partnerId] || details.role || 'user';
+    const profile = (partnerId && userProfiles[partnerId]) || conv.participantDetails?.[partnerId] || {};
+    const role = profile.role || conv.participantRoles?.[partnerId] || 'user';
     return {
       id: partnerId,
-      name: details.name || details.fullName || details.branchName || 'User',
-      email: details.email || '',
+      name: profile.name || profile.fullName || profile.branchName || 'User',
+      email: profile.email || '',
       role,
-      branchName: details.branchName || null
+      branchName: profile.branchName || null
     };
-  };
+  }, [currentUid, userProfiles]);
 
   // Filtered conversations
   const filteredConversations = useMemo(() => {
@@ -217,11 +285,25 @@ export default function MessagesPage() {
       }
       return true;
     });
-  }, [conversations, debouncedSearch, filterTab, currentUid]);
+  }, [conversations, debouncedSearch, filterTab, currentUid, getPartnerDetails]);
 
   // Start chat with contact from NewChatModal
   const handleSelectContact = async (contact) => {
     try {
+      if (contact?.id) {
+        setUserProfiles((prev) => ({
+          ...prev,
+          [contact.id]: {
+            id: contact.id,
+            name: contact.name || contact.fullName || contact.branchName || 'User',
+            email: contact.email || '',
+            role: contact.role || 'user',
+            branchName: contact.branchName || null
+          }
+        }));
+        fetchedUserIdsRef.current.add(contact.id);
+      }
+
       const existing = conversations.find((c) => {
         const parts = c.participants || [];
         return parts.includes(contact.id);
@@ -234,6 +316,13 @@ export default function MessagesPage() {
       }
 
       const conv = await getOrCreateDirectChat(contact.id);
+      if (conv?.partnerProfile?.id) {
+        setUserProfiles((prev) => ({
+          ...prev,
+          [conv.partnerProfile.id]: conv.partnerProfile
+        }));
+        fetchedUserIdsRef.current.add(conv.partnerProfile.id);
+      }
       setActiveConversation(conv);
       addToast(`Chat opened with ${contact.name}`, 'info');
     } catch (error) {
@@ -269,7 +358,7 @@ export default function MessagesPage() {
         const authToken = userToken || (await user?.getIdToken());
         const uploadRes = await uploadFileToBackend(
           selectedFile,
-          `chat_files/${activeConversation.id}`,
+          `chat_attachments/${activeConversation.id}`,
           authToken
         );
 

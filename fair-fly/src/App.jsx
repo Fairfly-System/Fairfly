@@ -1,13 +1,8 @@
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, getDocs } from 'firebase/firestore';
 import Chatbot from './components/Shared/Chatbot/Chatbot'
 import Footer from './components/Shared/Footer/Footer'
-import Navbar from './components/Shared/Navbar/Navbar'
 import About from './pages/Index/About/About';
 import Landing from './pages/Index/Landing/Landing'
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router";
-import { useState, useEffect } from 'react';
-import { auth } from './firebase';
 import Login from './pages/Index/Login/login';
 import Register from './pages/Index/Register/Register';
 import VerifyEmail from './pages/Index/VerifyEmail/VerifyEmail';
@@ -34,7 +29,6 @@ import AdminWorkflowTemplates from './pages/Admin/AdminWorkflowTemplates/index';
 import OperatorLayout from './pages/Operator/OperatorLayout/OperatorLayout';
 import OperatorDashboard from './pages/Operator/OperatorDashboard/OperatorDashboard';
 import OperatorAppointments from './pages/Operator/OperatorAppointments/OperatorAppointments';
-import OperatorWorkflows from './pages/Operator/OperatorWorkflows/OperatorWorkflows';
 import OperatorHistory from './pages/Operator/OperatorHistory/OperatorHistory';
 import OperatorQuickLinks from './pages/Operator/OperatorQuickLinks/OperatorQuickLinks';
 import OperatorInquiryForms from './pages/Operator/OperatorInquiryForms/OperatorInquiryForms';

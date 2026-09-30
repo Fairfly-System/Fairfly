@@ -4,6 +4,7 @@ const {
   getContacts,
   getOrCreateConversation,
   getUserConversations,
+  getChatUsersBatch,
   postMessage,
   markConversationRead,
   getAnnouncements,
@@ -25,6 +26,7 @@ router.use(verifyFirebaseToken);
 router.get('/contacts', apiRateLimiter, getContacts);
 router.get('/conversations', apiRateLimiter, getUserConversations);
 router.post('/conversations', apiRateLimiter, allowedFields(['participantId', 'recipientId', 'targetUserId', 'recipientUid', 'otherUserId']), getOrCreateConversation);
+router.post('/users/batch', apiRateLimiter, allowedFields(['userIds']), getChatUsersBatch);
 router.post('/conversations/:id/messages', allowedFields(MESSAGE_ALLOWED_FIELDS), apiRateLimiter, postMessage);
 router.patch('/conversations/:id/read', apiRateLimiter, markConversationRead);
 

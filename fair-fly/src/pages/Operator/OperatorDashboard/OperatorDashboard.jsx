@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { collection, query, where, or, getDocs } from 'firebase/firestore';
+import { collection, query, where, or, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
@@ -46,22 +46,18 @@ function DashboardContent() {
             where('participants', 'array-contains', user.uid)
           );
           const convSnap = await getDocs(convQ);
-          const adminConv = convSnap.docs.find((d) => {
+          for (const d of convSnap.docs) {
             const data = d.data();
-            const roles = data.participantRoles || {};
-            return Object.entries(roles).some(([uid, role]) => uid !== user.uid && role === 'admin');
-          });
-
-          if (adminConv) {
-            const data = adminConv.data();
-            const adminId = data.participants?.find((p) => p !== user.uid);
-            const adminDetail = data.participantDetails?.[adminId];
-            if (adminId && adminDetail) {
-              setAssignedAdmin({
-                id: adminId,
-                ...adminDetail
-              });
-              return;
+            const partnerId = data.participants?.find((p) => p !== user.uid);
+            if (partnerId) {
+              const partnerSnap = await getDoc(doc(firestore, 'users', partnerId));
+              if (partnerSnap.exists() && partnerSnap.data()?.role === 'admin') {
+                setAssignedAdmin({
+                  id: partnerId,
+                  ...partnerSnap.data()
+                });
+                return;
+              }
             }
           }
 

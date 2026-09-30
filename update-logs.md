@@ -1,5 +1,138 @@
 # Update Logs
 
+## [2026-09-30] Architecture & Database: Firestore System-Wide Normalization, Foreign Key Resolution & Point-in-Time Snapshot Preservation Policy
+
+### Overview
+Executed a comprehensive Firestore data normalization across operational and transient collections (`passwordResetRequests`, `tickets`, `qualificationApplications`, `inquiries`, `appointments`) to eliminate redundant embedded user profiles, inner IDs, and duplicated alias fields. Established dynamic read-time enrichment in backend controllers to guarantee 100% backward compatibility for all existing UI tables and modals. Strictly preserved immutable point-in-time snapshots for financial (`payments`), contractual (`quotations`), and execution workflow (`activeServices`) documents, and codified the architectural decision framework into a new repository guideline rule (`Fair2/.agents/rules/normalization-guidelines.md`).
+
+### Key Changes
+1. **Repository Normalization Rule Established (`.agents/rules/normalization-guidelines.md`)**:
+   - Codified the core architectural rule: "If data can be normalized to save space and avoid stale state, normalize into reference IDs; if a critical snapshot is required for legal, financial, contractual, fulfillment, or audit-trail fidelity, preserve the point-in-time copy."
+   - Explicitly documented collections that must **never** be normalized (`payments`, `quotations`, `activeServices`, `messages[].senderName`).
+   - Detailed normalization standards: canonical field naming, eliminating inner `id` fields, and separating bulky child lists into referenced sub-collections.
+
+2. **`passwordResetRequests` Pruning & Dynamic Operator Resolution**:
+   - `fly-api/src/controllers/authController.js`: Stripped redundant `id`, `operatorName`, `branchUid`, and `branchName` from the stored request document. Kept foreign key `operatorUid` and functional `operatorEmail` (required for Firebase Auth reset link generation).
+   - `fly-api/src/controllers/passwordResetController.js`: Added dynamic read-time resolution in `getPasswordResetRequests`, `getPasswordResetRequestById`, and `approvePasswordResetRequest` with `userCache` to enrich `operatorName` and `branchName` from `users/{operatorUid}` without saving redundant data in Firestore.
+
+3. **`tickets` Root Normalization & Historical Message Transcript Preservation**:
+   - `fly-api/src/controllers/ticketController.js`: Removed redundant `operatorName` and `operatorEmail` from the root ticket document. Retained foreign key `operatorId`.
+   - Preserved `messages[].senderName` embedded in each message to guarantee historical chat transcript integrity.
+   - Added `enrichTicketsWithOperatorData` helper to dynamically enrich `operatorName` and `operatorEmail` on read in `getTickets` and `getTicketById`.
+
+4. **`qualificationApplications` Normalization**:
+   - `fly-api/src/controllers/qualificationController.js`: Removed `operatorName` and `branchName` from stored application documents. Retained `operatorId` and point-in-time contact fields (`email`, `contactNumber`, `address`) for Super Admin verification.
+   - Added dynamic operator profile enrichment on read in `getQualificationApplications` and `getQualificationApplicationById`.
+
+5. **`inquiries` Duplicate Alias Elimination & Remarks Preservation**:
+   - `fly-api/src/controllers/inquiryController.js`: Removed redundant duplicate alias fields: `fullName` (keeping canonical `clientName`) and `cellphone` (keeping canonical `phoneNumber`). Strictly preserved `remarks` as an active first-class operational feature for operator review, commentary, and special instructions across intake forms (`SAF-01-002`), modals, and PDF views.
+   - Sanitized incoming payloads in `updateInquiry` to prevent re-introduction of deprecated duplicate aliases (`fullName`, `cellphone`).
+   - Updated read endpoints and frontend components (`AdminInquiryDetailPage.jsx`, `InquiryFormDetailPage.jsx`, `InquiryDetailModal.jsx`, `ClientTrackingPage.jsx`) to smoothly handle canonical and legacy fields.
+
+6. **`appointments` Duplicate Field Cleanup**:
+   - `fly-api/src/controllers/appointmentController.js`: Removed duplicate `branchName` (in favor of user-selected `preferredBranchLocation`) and duplicate `operatorId` (in favor of standardized foreign key `branchUid`).
+   - Added response mapping fallback in `getAppointments` and updated branch notifications to use `preferredBranchLocation`.
+
+7. **`conversations` Participant Profile Normalization & Frontend In-Memory Caching**:
+   - `fly-api/src/controllers/chatController.js`: Completely eliminated bulky `participantDetails` (nested map of `{ [uid]: { uid, name, email, role, branchName } }`) and `participantRoles` from stored Firestore conversation documents. Retained strictly functional fields: `participants: [uid1, uid2]`, `unreadCount: { [uid]: 0 }`, `lastMessage`, `lastMessageAt`, `lastMessageSenderId`, timestamps.
+   - Built backend batch profile resolver `POST /api/chats/users/batch` (`getChatUsersBatch`) allowing authenticated users to safely resolve public chat profiles (`name`, `email`, `role`, `branchName`) with `userCache` acceleration.
+   - Re-engineered `fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx` with an in-memory `userProfiles` state cache: pre-populates contacts on mount, automatically batch-fetches missing partner profiles in a single query, and dynamically resolves current display names. When a user or branch renames themselves, the UI displays the latest profile without requiring cascading updates across existing conversation records.
+   - Updated `fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx` to dynamically resolve assigned admin profiles from the `users` collection.
+
+8. **Database Migration Script & Verification**:
+   - Created and executed `fly-api/src/scripts/migrateNormalizedCollections.js`: Inspected and migrated all existing documents across `tickets`, `qualificationApplications`, `inquiries`, `appointments`, and `conversations` with 0 errors.
+   - Validated automated test suites (`testSubmittedRequirements.js`, `testPaymentAndResetFlows.js`, `testChatNormalization.js`) with 100% assertions passing.
+   - Verified clean frontend production bundle build (`npm run build` in `fair-fly`, 0 errors).
+
+---
+
+### Overview
+Architected and implemented a normalized pseudo-relational model for client and operator submitted requirements across `inquiries`, `quotations`, and `activeServices` using a dedicated `submitted_requirements` Firestore collection and a single `submittedRequirementsId` (prefixed `REQ-`) foreign key reference. Completely eliminated bloated embedded requirements arrays and duplicate reference keys (`submitted_requirements`) from parent documents, streamlined `submitted_requirements` documents to strictly store the requirements array, a single submitter UID (`submittedBy`), and timestamps (eliminating redundant `clientUid`), and re-engineered Firebase Storage uploads to enforce structured, semantic folder paths (`service_requirements/{service_requirementID}`, `client_ids/{uid}`, `chat_attachments/{conversationId}`, `services/attachments`, `services/covers`, `services/carousel`, `workflows/{id}`, `resources/{id}`, `announcements/{id}`, `qualifications/{id}`).
+
+### Key Changes
+1. **Normalized Lean Requirements Model (`submitted_requirements`) & Single Submitter UID**:
+   - Built backend controller (`fly-api/src/controllers/submittedRequirementsController.js`) and routes (`fly-api/src/routes/submittedRequirementsRoutes.js`) mounted at `/api/submitted-requirements`.
+   - Streamlined `submitted_requirements` schema to store strictly: `requirements`, `submittedBy`, `createdAt`, `updatedAt` — the Firestore document ID serves as the sole record identity (no redundant `id` field inside the document). Eliminated duplicate submitter fields (`clientUid` removed in favor of single `submittedBy`) and all redundant metadata (`serviceTitle`, `clientName`, `branchName`, etc.).
+   - Fixed requirement persistence pipeline: Ensured `createSubmittedRequirementsRecord` is unconditionally invoked during `createInquiry` and `createActiveService` to guarantee the record is created in the `submitted_requirements` collection under the pre-allocated or generated ID.
+   - Enforced single foreign key reference `submittedRequirementsId` across `inquiries`, `quotations`, and `activeServices`, eliminating duplicate `submitted_requirements` fields.
+   - Stripped bloated `requirements` / `submittedRequirements` arrays from parent `inquiries`, `quotations`, and `activeServices` documents to ensure zero redundant byte storage.
+
+2. **Cost-Optimized Single-Document Targeted Querying**:
+   - Built lightweight React hook `useSubmittedRequirements(submittedRequirementsId, fallbackList)` (`fair-fly/src/hooks/useSubmittedRequirements.js`) that directly queries single documents `doc(firestore, 'submitted_requirements', id)` with `onSnapshot` / `getDoc` (exactly 1 read per view).
+   - Updated client and operator interfaces (`InquiryFormDetailPage.jsx`, `AdminInquiryDetailPage.jsx`, `InquiryDetailModal.jsx`, `QuotationDetailModal.jsx`, `ClientServiceTracker.jsx`, `OperatorServiceProcedure.jsx`, `CreateQuotationModal.jsx`) to consume `useSubmittedRequirements`.
+
+3. **Storage Upload Organization & Folder Hierarchy Correction**:
+   - Client submitted requirements uploads are now strictly scoped to `service_requirements/{service_requirementID}` (e.g. `service_requirements/REQ-xxxxxxxx`) using client-side pre-allocated requirement IDs matching the Firestore record, rather than the Catalog Service ID.
+   - Catalog service template files, attachments, covers, and carousels are organized under `services/attachments`, `services/covers`, and `services/carousel`.
+   - Re-architected `fly-api/src/utils/fileSecurity.js`: `sanitizeFolder` validates multi-segment paths against whitelisted root folders (`service_requirements`, `client_ids`, `chat_attachments`, `services`, `workflows`, `workflow_documents`, `resources`, `announcements`, `qualifications`, `tickets`) with aliases (`service_store`, `service_covers`, `service_carousel` $\to$ `services`, `chat_files` $\to$ `chat_attachments`) while strictly stripping directory traversal attempts (`..`, null bytes).
+
+4. **Database Migration & Security Rules Deployment**:
+   - Executed `fly-api/src/scripts/migrateSubmittedRequirements.js`: Cleaned and pruned existing Firestore records, deleted duplicate reference keys (`submitted_requirements`), stripped bloated arrays from parent documents, removed `clientUid` in favor of `submittedBy`, and backfilled `submitted_requirements`.
+   - Added strict RBAC match rules for `submitted_requirements` in `firestore.rules` verifying `resource.data.submittedBy == request.auth.uid` and deployed to cloud Firestore.
+
+### Verification
+- Executed migration script (`migrateSubmittedRequirements.js`) live with 100% completion (0 errors).
+- Automated test suite (`testSubmittedRequirements.js`) passed all 11/11 assertion checks.
+- Deployed live Firestore rules (`deployRules.js`) with zero errors.
+- Production build (`npm run build`) in `fair-fly` completed cleanly (0 errors).
+
+### Overview
+Replaced all browser native `alert()` and `window.confirm()` prompts on the client side with the system's native `<ConfirmationModal>` and toast notifications. Added a dedicated payment confirmation modal before gateway redirect, integrated official vector SVG badges for PayMongo payment channels, and eliminated all button gradient backgrounds in favor of solid SaaS design tokens.
+
+### Key Changes
+1. **Client-Side Quotation Acceptance Modal (`ClientTrackingPage.jsx`)**:
+   - Replaced browser `window.confirm()` and `alert()` in `handleAcceptQuotation` with `<ConfirmationModal>` component.
+   - Designed a clear, high-contrast modal displaying quotation number, total payable amount in Philippine Pesos (`₱`), and booking fulfillment notice.
+   - Standardized error handling to use system toast notifications (`addToast`) instead of modal/browser alerts.
+2. **Payment Checkout Confirmation Modal (`PaymentModal.jsx`)**:
+   - Integrated `<ConfirmationModal>` before initiating PayMongo checkout session to prevent accidental double-clicks or unexpected redirects.
+   - Shows total amount, quotation reference, and destination information.
+3. **Official Payment Method Logos (`fair-fly/public/paymentMethods/` & `PaymentModal.jsx`)**:
+   - Added official vector SVG badges for GCash, QR Ph, Maya, Credit/Debit Cards (Visa/Mastercard), BillEase, and GrabPay.
+   - Embedded SVG logos in `PaymentModal.jsx` with responsive sizing and styling in `payment-modal.css`.
+4. **Button Gradient Elimination (Solid Color System Standardization)**:
+   - Replaced `linear-gradient` button backgrounds with solid design tokens (`var(--purple, #7c3aed)` and `var(--purple-hover, #6d28d9)`):
+     - `client-tracking.css`: `.btn-pay`
+     - `payment-modal.css`: `.payment-submit-btn`
+     - `tickets.css`: `.ticket-action-btn.view-thread-btn`
+     - `tickets.css`: `.forum-send-btn`
+
+### Verification
+- Production build (`npm run build`) succeeded with 0 errors.
+- Scratch logic verification passed 100%.
+- Verified zero remaining gradients on buttons across all stylesheets.
+
+## [2026-09-30] Bugfix & Security: Server-Side Walk-in Client Account Resolution for Inquiries & Quotations
+
+### Overview
+Fixed a critical identity linkage defect where walk-in inquiries and generated quotations recorded by branch operators were tagged with the operator's own UID instead of linking to the client's registered account. This prevented the quotation and inquiry records from showing up on the client's tracking portal (`/client/tracking`).
+
+### Root Cause
+- In `fly-api/src/controllers/inquiryController.js`, `createInquiry` previously fell back to `req.user?.uid || clientUid || null`. Because operator tokens contain the operator's UID, `effectiveClientUid` was assigned the operator's UID, corrupting document ownership.
+- When generating a quotation from the inquiry in `CreateQuotationModal.jsx`, the modal inherited the operator's UID and sent it to `createQuotation`, which saved the quotation under the operator's UID.
+- In `ClientTrackingPage.jsx`, quotations and inquiries are queried by `where('clientUid', '==', user.uid)`. Because of the UID mismatch, genuine client accounts never retrieved their documents, and Firestore Security Rules (`resource.data.clientUid == request.auth.uid`) rejected direct document access.
+
+### Key Changes
+1. **`fly-api/src/controllers/inquiryController.js`**:
+   - Guarded `effectiveClientUid`: Staff accounts (`operator`, `branch_operator`, `admin`) are strictly excluded from being assigned as `clientUid`.
+   - Added authoritative server-side user resolution: If staff creates a walk-in inquiry with a client email, Firestore `users` collection is queried for `where('role', '==', 'client')` matching the normalized email. If a registered client is found, their `uid` is linked to `newInquiry.clientUid`.
+2. **`fly-api/src/controllers/quotationController.js`**:
+   - Added security check in `createQuotation`: Discards any incoming or inherited `clientUid` matching the operator or branch UID.
+   - Added automatic client account lookup by `clientEmail` (or originating inquiry email) in Firestore `users`.
+   - Inquiry self-healing: When creating a quotation, any linked inquiry with a missing or operator-polluted `clientUid` is automatically updated and synced with the resolved genuine `clientUid`.
+   - Self-healing on status change: In `updateQuotationStatus`, marking a quotation as `'Sent'` verifies `clientUid`, resolves it by `clientEmail` if missing or corrupted, persists the fix to Firestore, and delivers the notification to the actual client account.
+3. **`fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx`**:
+   - Filtered `initialData.clientUid` to ensure the operator's own UID is never pre-filled as `clientUid`.
+   - Added user-facing guidance under client email field informing operators of automatic portal syncing.
+4. **`fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx`**:
+   - Added user-facing guidance under client email field regarding automatic client account portal linking.
+
+### Verification
+- Production frontend build (`npm run build`) succeeded with 0 errors.
+- Syntax verification (`node --check`) passed on all modified controller files.
+- Automated security suite (`testSecurityFixes.js`) passed 24 unit/controller security assertions.
+- Logic assertions in scratch test confirmed correct resolution of client UIDs and rejection of operator UIDs.
+
 ## [2026-09-30] Infrastructure: Firebase Cloud Functions Deployment for Express Backend
 
 ### Overview

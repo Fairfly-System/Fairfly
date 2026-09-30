@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import Steps from './Steps/Steps';
 import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './service-tracker.css';
 
 const CATEGORY_ICON_MAP = {
@@ -26,9 +27,16 @@ export default function ClientServiceTracker({ service }) {
   const [showRequirements, setShowRequirements] = useState(false);
   const [inquiryRequirements, setInquiryRequirements] = useState([]);
 
-  // Fallback: If service record has no actual uploaded files, fetch from originating inquiry or quotation
+  // Primary: Targeted single-document hook for normalized submittedRequirements
+  const reqRefId = service?.submittedRequirementsId || null;
+  const { requirements: hookedReqs } = useSubmittedRequirements(
+    reqRefId,
+    service?.submittedRequirements || service?.requirements || []
+  );
+
+  // Fallback: If legacy activeService document has no submittedRequirementsId or attached files, fetch from originating inquiry/quotation
   useEffect(() => {
-    if (!service) return;
+    if (!service || reqRefId) return;
 
     const hasUploadedFiles = (list) => {
       if (!Array.isArray(list) || list.length === 0) return false;
@@ -72,16 +80,6 @@ export default function ClientServiceTracker({ service }) {
               if (isMounted) setInquiryRequirements(quoteReqs);
               return;
             }
-            if (quoteData.inquiryId) {
-              const inqSnap = await getDoc(doc(firestore, 'inquiries', quoteData.inquiryId));
-              if (inqSnap.exists()) {
-                const reqs = extractReqs(inqSnap.data());
-                if (reqs && reqs.length > 0) {
-                  if (isMounted) setInquiryRequirements(reqs);
-                  return;
-                }
-              }
-            }
           }
         }
       } catch (err) {
@@ -94,9 +92,12 @@ export default function ClientServiceTracker({ service }) {
     return () => {
       isMounted = false;
     };
-  }, [service]);
+  }, [service, reqRefId]);
 
   const requirementsList = useMemo(() => {
+    if (Array.isArray(hookedReqs) && hookedReqs.length > 0) {
+      return hookedReqs;
+    }
     const hasUploadedFiles = (list) => {
       if (!Array.isArray(list) || list.length === 0) return false;
       return list.some((r) => {
@@ -122,7 +123,7 @@ export default function ClientServiceTracker({ service }) {
       return service.requirements;
     }
     return [];
-  }, [service, inquiryRequirements]);
+  }, [service, hookedReqs, inquiryRequirements]);
 
   if (!service) return null;
 

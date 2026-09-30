@@ -1,6 +1,7 @@
 import React from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './inquiry-detail-modal.css';
 
 function formatRequirementsText(specifiedRequirements, requirements) {
@@ -37,13 +38,18 @@ export default function InquiryDetailModal({
   onOpenPdf
 }) {
   const { openLightbox } = useLightbox();
+
+  const submittedReqId = inquiry?.submittedRequirementsId || null;
+  const { requirements: dynamicReqs } = useSubmittedRequirements(submittedReqId, inquiry?.requirements);
+
   if (!inquiry) return null;
 
   const servicesList = Array.isArray(inquiry.servicesOffered)
     ? inquiry.servicesOffered
     : (inquiry.serviceType ? [inquiry.serviceType] : []);
 
-  const requirementsText = formatRequirementsText(inquiry.specifiedRequirements, inquiry.requirements);
+  const effectiveReqs = dynamicReqs && dynamicReqs.length > 0 ? dynamicReqs : (inquiry.requirements || []);
+  const requirementsText = formatRequirementsText(inquiry.specifiedRequirements, effectiveReqs);
 
   return (
     <BaseModal
@@ -141,9 +147,9 @@ export default function InquiryDetailModal({
             <i className="fa-solid fa-list-check"></i>
             Specified Requirements & Details
           </div>
-          {Array.isArray(inquiry.requirements) && inquiry.requirements.length > 0 && typeof inquiry.requirements[0] === 'object' ? (
+          {Array.isArray(effectiveReqs) && effectiveReqs.length > 0 && typeof effectiveReqs[0] === 'object' ? (
             <div className="inq-reqs-grid">
-              {inquiry.requirements.map((req, rIdx) => {
+              {effectiveReqs.map((req, rIdx) => {
                 const reqName = req.name || req.title || `Requirement ${rIdx + 1}`;
                 const fileObj = req.file;
                 const fileUrl = fileObj?.url || (typeof fileObj === 'string' ? fileObj : null) || req.fileUrl || req.url;
@@ -217,15 +223,15 @@ export default function InquiryDetailModal({
           )}
         </div>
 
-        {/* Operator Remarks */}
-        {inquiry.remarks && (
+        {/* Operator Remarks / Notes */}
+        {(inquiry.notes || inquiry.remarks) && (
           <div className="inq-modal-section" style={{ background: 'var(--warning-yellow-light, #fffbeb)', borderColor: '#fde68a' }}>
             <div className="inq-section-heading" style={{ color: '#b45309' }}>
               <i className="fa-solid fa-circle-info" style={{ color: '#d97706' }}></i>
               Operator Remarks & Updates
             </div>
             <div className="inq-text-block" style={{ color: '#78350f' }}>
-              {inquiry.remarks}
+              {inquiry.notes || inquiry.remarks}
             </div>
           </div>
         )}

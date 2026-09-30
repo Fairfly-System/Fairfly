@@ -8,6 +8,7 @@ import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './operator-service-procedure.css';
 
 function getStepLink(step) {
@@ -45,6 +46,13 @@ export default function OperatorServiceProcedure() {
   const [inquiryRequirements, setInquiryRequirements] = useState([]);
   const { openLightbox } = useLightbox();
 
+  // Targeted single-document hook for normalized submittedRequirements
+  const reqRefId = serviceRecord?.submittedRequirementsId || null;
+  const { requirements: hookedReqs } = useSubmittedRequirements(
+    reqRefId,
+    serviceRecord?.submittedRequirements || serviceRecord?.requirements || []
+  );
+
   // Directly subscribe to the specific active service document
   useEffect(() => {
     if (!id) {
@@ -73,7 +81,7 @@ export default function OperatorServiceProcedure() {
 
   // Fallback: If legacy activeService document has empty submittedRequirements or no attached files, fetch originating inquiry or quotation requirements
   useEffect(() => {
-    if (!serviceRecord) return;
+    if (!serviceRecord || reqRefId) return;
 
     const hasUploadedFiles = (list) => {
       if (!Array.isArray(list) || list.length === 0) return false;
@@ -117,16 +125,6 @@ export default function OperatorServiceProcedure() {
               if (isMounted) setInquiryRequirements(quoteReqs);
               return;
             }
-            if (quoteData.inquiryId) {
-              const inqSnap = await getDoc(doc(firestore, 'inquiries', quoteData.inquiryId));
-              if (inqSnap.exists()) {
-                const reqs = extractReqs(inqSnap.data());
-                if (reqs && reqs.length > 0) {
-                  if (isMounted) setInquiryRequirements(reqs);
-                  return;
-                }
-              }
-            }
           }
         }
       } catch (err) {
@@ -139,7 +137,7 @@ export default function OperatorServiceProcedure() {
     return () => {
       isMounted = false;
     };
-  }, [serviceRecord]);
+  }, [serviceRecord, reqRefId]);
 
   const isUnauthorized = useMemo(() => {
     if (!serviceRecord || !user?.uid) return false;
@@ -150,6 +148,9 @@ export default function OperatorServiceProcedure() {
   }, [serviceRecord, user, userDetails]);
 
   const displayRequirements = useMemo(() => {
+    if (Array.isArray(hookedReqs) && hookedReqs.length > 0) {
+      return hookedReqs;
+    }
     const hasUploadedFiles = (list) => {
       if (!Array.isArray(list) || list.length === 0) return false;
       return list.some((r) => {
@@ -175,7 +176,7 @@ export default function OperatorServiceProcedure() {
       return serviceRecord.requirements;
     }
     return [];
-  }, [serviceRecord, inquiryRequirements]);
+  }, [serviceRecord, hookedReqs, inquiryRequirements]);
 
   if (loading) {
     return (

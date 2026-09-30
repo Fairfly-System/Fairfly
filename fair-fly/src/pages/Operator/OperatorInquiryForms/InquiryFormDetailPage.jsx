@@ -11,6 +11,8 @@ import CreateQuotationModal from '../../../components/Operator/CreateQuotationMo
 import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { updateInquiry, deleteInquiry } from '../../../services/inquiryService';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
+import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './inquiry-form-detail.css';
 
@@ -45,11 +47,12 @@ function parseInquiryData(inquiry) {
     requirementsText = inquiry.requirements.trim();
   }
 
-  // 2. Parse Remarks
-  if (typeof inquiry.remarks === 'string' && inquiry.remarks.trim()) {
-    remarksText = inquiry.remarks.trim();
-  } else if (typeof inquiry.remarks === 'object' && inquiry.remarks !== null) {
-    remarksText = Object.entries(inquiry.remarks)
+  // 2. Parse Remarks / Notes
+  const rawRemarks = inquiry.remarks || inquiry.notes;
+  if (typeof rawRemarks === 'string' && rawRemarks.trim()) {
+    remarksText = rawRemarks.trim();
+  } else if (typeof rawRemarks === 'object' && rawRemarks !== null) {
+    remarksText = Object.entries(rawRemarks)
       .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
       .join('\n');
   }
@@ -126,9 +129,13 @@ export default function InquiryFormDetailPage() {
     return () => unsub();
   }, [id]);
 
+  const submittedReqId = form?.submittedRequirementsId || null;
+  const { requirements: normalizedReqs } = useSubmittedRequirements(submittedReqId, form?.requirements);
+
   const parsedData = useMemo(() => {
-    return parseInquiryData(form);
-  }, [form]);
+    const combinedForm = form ? { ...form, requirements: normalizedReqs.length > 0 ? normalizedReqs : form.requirements } : null;
+    return parseInquiryData(combinedForm);
+  }, [form, normalizedReqs]);
 
   const handleDelete = async () => {
     if (!form) return;
@@ -152,8 +159,9 @@ export default function InquiryFormDetailPage() {
     setUploadingReqId(reqId);
 
     try {
-      const uploadResult = await uploadFileToBackend(file, 'inquiry_requirements', userToken);
-      const currentList = Array.isArray(form.requirements) ? form.requirements : parsedData.requirementsList;
+      const targetFolder = `service_requirements/${submittedReqId || form.id}`;
+      const uploadResult = await uploadFileToBackend(file, targetFolder, userToken);
+      const currentList = normalizedReqs.length > 0 ? normalizedReqs : (Array.isArray(form.requirements) ? form.requirements : parsedData.requirementsList);
       const updatedReqs = currentList.map(r => {
         if (r.id === reqId || r.name === reqId) {
           return {
@@ -169,6 +177,21 @@ export default function InquiryFormDetailPage() {
         }
         return r;
       });
+
+      if (submittedReqId) {
+        try {
+          await fetch(`${API_BASE_URL}/api/submitted-requirements/${submittedReqId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(userToken ? { Authorization: `Bearer ${userToken}` } : {})
+            },
+            body: JSON.stringify({ requirements: updatedReqs })
+          });
+        } catch (subErr) {
+          console.warn('Could not sync to submitted-requirements endpoint:', subErr);
+        }
+      }
 
       updateInquiry(
         userToken,

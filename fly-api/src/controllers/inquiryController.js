@@ -5,18 +5,22 @@ const {
   updateToDatabase, 
   deleteFromDatabase 
 } = require('../services/firebaseService');
+const { db } = require('../config/firebase');
 const {
   createNotification,
   notifyBranch,
   notifyAdmins
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
+const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
 
 const COLLECTIONS = {
   INQUIRIES: 'inquiries',
   QUOTATIONS: 'quotations',
   SERVICES: 'services',
-  FORM_SCHEMAS: 'formSchemas'
+  FORM_SCHEMAS: 'formSchemas',
+  USERS: 'users',
+  SUBMITTED_REQUIREMENTS: 'submitted_requirements'
 };
 
 const DEFAULT_INQUIRY_SCHEMA = {
@@ -101,7 +105,9 @@ const createInquiry = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const isOperatorUser = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    const userRole = req.userDetails?.role;
+    const isStaff = userRole === 'operator' || userRole === 'branch_operator' || userRole === 'admin';
+    const isOperatorUser = userRole === 'operator' || userRole === 'branch_operator';
     let effectiveBranchUid = branchUid || req.userDetails?.branchUid || (isOperatorUser ? req.user?.uid : null);
     let effectiveBranchName = branchName || req.userDetails?.branchName || null;
 
@@ -114,7 +120,54 @@ const createInquiry = async (req, res) => {
       } catch (err) {}
     }
     effectiveBranchName = effectiveBranchName || 'Branch Office';
-    const effectiveClientUid = req.user?.uid || clientUid || null;
+
+    // Derive effectiveClientUid securely:
+    // If an authenticated client is submitting their own inquiry, bind directly to their UID.
+    // If staff (operator/admin) is recording a walk-in intake, DO NOT bind to staff UID.
+    // Look up client by email to link to their genuine registered account.
+    let effectiveClientUid = null;
+    if (!isStaff && userRole === 'client') {
+      effectiveClientUid = req.user?.uid || null;
+    } else {
+      // 1. If clientUid was provided and does not match the staff member's own UID, verify it exists as a client
+      if (clientUid && clientUid !== req.user?.uid) {
+        try {
+          const clientDoc = await getFromDatabase(`${COLLECTIONS.USERS}/${clientUid}`);
+          if (clientDoc && clientDoc.role === 'client') {
+            effectiveClientUid = clientUid;
+          }
+        } catch (cErr) {
+          console.warn('[Inquiry] Error verifying provided clientUid:', cErr.message);
+        }
+      }
+
+      // 2. Authoritative server-side lookup: Match client by registered email if still unresolved
+      if (!effectiveClientUid && resolvedEmail) {
+        try {
+          const normalizedEmail = resolvedEmail.toLowerCase();
+          const clientSnap = await db.collection(COLLECTIONS.USERS)
+            .where('email', '==', normalizedEmail)
+            .where('role', '==', 'client')
+            .limit(1)
+            .get();
+
+          if (!clientSnap.empty) {
+            effectiveClientUid = clientSnap.docs[0].id;
+          } else if (resolvedEmail !== normalizedEmail) {
+            const rawSnap = await db.collection(COLLECTIONS.USERS)
+              .where('email', '==', resolvedEmail)
+              .where('role', '==', 'client')
+              .limit(1)
+              .get();
+            if (!rawSnap.empty) {
+              effectiveClientUid = rawSnap.docs[0].id;
+            }
+          }
+        } catch (lookupErr) {
+          console.warn('[Inquiry] Error looking up client account by email:', lookupErr.message);
+        }
+      }
+    }
 
     // Resolve services offered array
     let resolvedServices = [];
@@ -131,14 +184,30 @@ const createInquiry = async (req, res) => {
       ? specifiedRequirements.trim()
       : (typeof requirements === 'string' ? requirements.trim() : (notes || ''));
 
+    const rawReqsArray = Array.isArray(requirements) && requirements.length > 0
+      ? requirements
+      : (Array.isArray(req.body.submittedRequirements) && req.body.submittedRequirements.length > 0
+        ? req.body.submittedRequirements
+        : (resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []));
+
+    let effectiveSubmittedReqId = req.body.submittedRequirementsId || null;
+    if (rawReqsArray.length > 0) {
+      try {
+        effectiveSubmittedReqId = await createSubmittedRequirementsRecord({
+          submittedBy: effectiveClientUid || req.user?.uid || null,
+          requirements: rawReqsArray
+        });
+      } catch (err) {
+        console.warn('[Inquiry] Could not create submitted_requirements document:', err.message);
+      }
+    }
+
     const newInquiry = {
       clientUid: effectiveClientUid,
-      fullName: resolvedName.trim(),
       clientName: resolvedName.trim(),
       contactPerson: (contactPerson || '').trim(),
       email: resolvedEmail,
       phoneNumber: resolvedPhone,
-      cellphone: resolvedPhone,
       telNo: telNo || '',
       address: address || '',
       population: population || '',
@@ -150,9 +219,9 @@ const createInquiry = async (req, res) => {
       servicesOffered: resolvedServices,
       servicePrice: servicePrice || '',
       specifiedRequirements: resolvedSpecReqs,
-      requirements: Array.isArray(requirements) ? requirements : (resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []),
+      submittedRequirementsId: effectiveSubmittedReqId,
       notes: notes || remarks || resolvedSpecReqs || '',
-      remarks: remarks || notes || '',
+      remarks: remarks || '',
       agentName: agentName || (isOperatorUser ? req.userDetails?.name : 'Online Intake'),
       agentSignature: agentSignature || '',
       agentContact: req.userDetails?.phone || req.userDetails?.phoneNumber || '',
@@ -172,6 +241,8 @@ const createInquiry = async (req, res) => {
     };
 
     const docId = await addToDatabase(COLLECTIONS.INQUIRIES, newInquiry, ID_PREFIXES.INQUIRY);
+
+
 
     // 1. Notify Assigned Branch Operator(s)
     notifyBranch({
@@ -246,7 +317,18 @@ const getInquiries = async (req, res) => {
     }
 
     const results = await queryDatabaseAdvanced(COLLECTIONS.INQUIRIES, options);
-    return res.status(200).json(results);
+    const normalizedResults = results.map(inq => {
+      const clientName = inq.clientName || inq.fullName || '';
+      const phoneNumber = inq.phoneNumber || inq.cellphone || '';
+      return {
+        ...inq,
+        clientName,
+        phoneNumber,
+        fullName: clientName,
+        cellphone: phoneNumber
+      };
+    });
+    return res.status(200).json(normalizedResults);
   } catch (error) {
     console.error('Error listing inquiries:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -274,7 +356,17 @@ const getInquiryById = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: You do not have permission to view this inquiry.' });
     }
 
-    return res.status(200).json({ id, ...inquiry });
+    const clientName = inquiry.clientName || inquiry.fullName || '';
+    const phoneNumber = inquiry.phoneNumber || inquiry.cellphone || '';
+
+    return res.status(200).json({
+      id,
+      ...inquiry,
+      clientName,
+      phoneNumber,
+      fullName: clientName,
+      cellphone: phoneNumber
+    });
   } catch (error) {
     console.error('Error getting inquiry by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -307,6 +399,16 @@ const updateInquiry = async (req, res) => {
       ...req.body,
       updatedAt: new Date().toISOString()
     };
+
+    // Normalize duplicate contact fields to canonical keys
+    if (updateData.fullName) {
+      if (!updateData.clientName) updateData.clientName = updateData.fullName;
+      delete updateData.fullName;
+    }
+    if (updateData.cellphone) {
+      if (!updateData.phoneNumber) updateData.phoneNumber = updateData.cellphone;
+      delete updateData.cellphone;
+    }
 
     await updateToDatabase(dbPath, updateData);
     return res.status(200).json({ message: 'Inquiry updated successfully' });
@@ -367,7 +469,20 @@ const confirmInquiry = async (req, res) => {
     }
 
     // 1. Mandatory Requirements Validation
-    const requirements = Array.isArray(inquiry.requirements) ? inquiry.requirements : [];
+    let requirements = Array.isArray(inquiry.requirements) ? inquiry.requirements : [];
+    let resolvedReqId = inquiry.submittedRequirementsId || null;
+
+    if (requirements.length === 0 && resolvedReqId) {
+      try {
+        const reqDoc = await getFromDatabase(`${COLLECTIONS.SUBMITTED_REQUIREMENTS}/${resolvedReqId}`);
+        if (reqDoc && Array.isArray(reqDoc.requirements)) {
+          requirements = reqDoc.requirements;
+        }
+      } catch (rErr) {
+        console.warn('[Inquiry] Error fetching submitted_requirements in confirmInquiry:', rErr.message);
+      }
+    }
+
     const missingReqs = requirements.filter((r) => {
       if (r.required !== false) {
         // Must have uploaded file URL or filled value
@@ -403,6 +518,20 @@ const confirmInquiry = async (req, res) => {
       ? requirements.map(r => `• ${r.name || r.title || 'Requirement'}${r.file?.fileName ? ` (${r.file.fileName})` : ''}`).join('\n')
       : inquiry.notes || 'Standard Client Requirements';
 
+    if (!resolvedReqId && requirements.length > 0) {
+      try {
+        resolvedReqId = await createSubmittedRequirementsRecord({
+          submittedBy: inquiry.clientUid || req.user?.uid,
+          requirements: requirements
+        });
+        await updateToDatabase(dbPath, {
+          submittedRequirementsId: resolvedReqId
+        });
+      } catch (err) {
+        console.warn('[Inquiry] Could not auto-create submitted_requirements in confirm:', err.message);
+      }
+    }
+
     // 4. Auto-create Quotation in quotations collection
     const quoteNo = `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const quotationPayload = {
@@ -413,8 +542,7 @@ const confirmInquiry = async (req, res) => {
       clientPhone: inquiry.phoneNumber || inquiry.cellphone || '',
       serviceId: inquiry.serviceId || null,
       serviceTitle: serviceTitle,
-      requirements: formattedReqsList,
-      submittedRequirements: Array.isArray(requirements) ? requirements : [],
+      submittedRequirementsId: resolvedReqId,
       tourDates: inquiry.dateInquired || now.split('T')[0],
       inclusions: adminService?.description ? `- Standard ${serviceTitle} inclusions` : '- Standard package inclusions',
       exclusions: '- Toll fees, personal expenses, and incidental items',
@@ -445,6 +573,7 @@ const confirmInquiry = async (req, res) => {
       confirmedAt: now,
       confirmedQuotationId: quotationDocId,
       confirmedActiveServiceId: null,
+      submittedRequirementsId: resolvedReqId,
       updatedAt: now
     });
 

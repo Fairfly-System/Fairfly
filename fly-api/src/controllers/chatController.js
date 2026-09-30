@@ -2,6 +2,7 @@ const { db } = require('../config/firebase');
 const { createNotification, notifyAllOperators } = require('../services/notificationService');
 const { deleteRecordStorageFiles, extractStorageUrls, deleteFilesFromStorage } = require('../services/storageService');
 const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
+const { userCache } = require('../services/cacheService');
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -187,45 +188,37 @@ const getOrCreateConversation = async (req, res) => {
     }
 
     if (existingConv) {
+      const existingData = existingConv.data();
+      const otherUid = existingData.participants?.find(p => p !== currentUid);
+      let partnerProfile = null;
+      if (otherUid) {
+        const cached = userCache.get(otherUid) || recipientData;
+        partnerProfile = {
+          id: otherUid,
+          name: getDisplayName(cached, cached?.email),
+          email: cached?.email || '',
+          role: cached?.role || 'user',
+          branchName: cached?.branchName || null
+        };
+      }
       return res.status(200).json({
         id: existingConv.id,
-        ...existingConv.data(),
+        ...existingData,
+        partnerProfile,
         isExisting: true
       });
     }
 
-    // Create new conversation document
+    // Create new normalized conversation document (no redundant participantDetails/participantRoles)
     const now = new Date().toISOString();
-    const currentDisplayName = getDisplayName(req.userDetails, req.user.email);
     const recipientDisplayName = getDisplayName(recipientData, recipientData.email);
 
     const newConversationData = {
       type: 'direct',
       participants: [currentUid, recipientId],
-      participantRoles: {
-        [currentUid]: currentRole,
-        [recipientId]: recipientRole
-      },
-      participantDetails: {
-        [currentUid]: {
-          uid: currentUid,
-          name: currentDisplayName,
-          email: req.user.email || '',
-          role: currentRole,
-          branchName: req.userDetails?.branchName || null
-        },
-        [recipientId]: {
-          uid: recipientId,
-          name: recipientDisplayName,
-          email: recipientData.email || '',
-          role: recipientRole,
-          branchName: recipientData.branchName || null
-        }
-      },
       lastMessage: '',
       lastMessageAt: now,
       lastMessageSenderId: null,
-      lastMessageSenderName: null,
       unreadCount: {
         [currentUid]: 0,
         [recipientId]: 0
@@ -241,6 +234,13 @@ const getOrCreateConversation = async (req, res) => {
     return res.status(201).json({
       id: docRef.id,
       ...newConversationData,
+      partnerProfile: {
+        id: recipientId,
+        name: recipientDisplayName,
+        email: recipientData.email || '',
+        role: recipientRole,
+        branchName: recipientData.branchName || null
+      },
       isExisting: false
     });
   } catch (error) {
@@ -310,13 +310,9 @@ const postMessage = async (req, res) => {
 
     const messagePayload = {
       senderId: currentUid,
-      senderName: senderDisplayName,
-      senderRole: currentRole,
       content: content || (fileMetadata ? `Shared a file: ${fileMetadata.fileName}` : ''),
       messageType, // 'text' | 'file' | 'image'
       fileMetadata: fileMetadata || null,
-      read: false,
-      timestamp: now,
       createdAt: now
     };
 
@@ -334,13 +330,25 @@ const postMessage = async (req, res) => {
       lastMessage: messagePayload.content.substring(0, 120),
       lastMessageAt: now,
       lastMessageSenderId: currentUid,
-      lastMessageSenderName: senderDisplayName,
       [`unreadCount.${recipientId}`]: newRecipientUnread
     });
 
     // In-app notification for the recipient
     if (recipientId) {
-      const recipientRole = convData.participantRoles?.[recipientId] || 'client';
+      let recipientRole = convData.participantRoles?.[recipientId];
+      if (!recipientRole) {
+        let cached = userCache.get(recipientId);
+        if (!cached) {
+          const rDoc = await db.collection(COLLECTIONS.USERS).doc(recipientId).get();
+          if (rDoc.exists) {
+            cached = rDoc.data();
+            userCache.set(recipientId, cached);
+          }
+        }
+        recipientRole = cached?.role;
+      }
+      recipientRole = recipientRole || 'client';
+
       createNotification({
         recipientUid: recipientId,
         recipientRole,
@@ -604,10 +612,62 @@ const deleteAnnouncement = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/chats/users/batch
+ * Retrieve public chat profiles for a list of user IDs (cached via userCache)
+ */
+const getChatUsersBatch = async (req, res) => {
+  try {
+    const { userIds } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(200).json({});
+    }
+
+    const uniqueIds = [...new Set(userIds.filter(Boolean))].slice(0, 50);
+    const profiles = {};
+
+    for (const uid of uniqueIds) {
+      let uData = userCache.get(uid);
+      if (!uData) {
+        const doc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+        if (doc.exists) {
+          uData = doc.data();
+          userCache.set(uid, uData);
+        }
+      }
+
+      if (uData) {
+        profiles[uid] = {
+          id: uid,
+          name: uData.branchName || uData.name || uData.fullName || uData.username || uData.email?.split('@')[0] || 'User',
+          email: uData.email || '',
+          role: uData.role || 'user',
+          branchName: uData.branchName || null,
+          isSuperAdmin: Boolean(uData.isSuperAdmin)
+        };
+      } else {
+        profiles[uid] = {
+          id: uid,
+          name: 'User',
+          email: '',
+          role: 'user',
+          branchName: null
+        };
+      }
+    }
+
+    return res.status(200).json(profiles);
+  } catch (error) {
+    console.error('Error in getChatUsersBatch:', error);
+    return res.status(500).json({ error: 'Failed to retrieve user profiles' });
+  }
+};
+
 module.exports = {
   getContacts,
   getOrCreateConversation,
   getUserConversations,
+  getChatUsersBatch,
   postMessage,
   markConversationRead,
   getAnnouncements,

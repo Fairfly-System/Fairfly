@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40">
+  <rect width="120" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <g transform="translate(10, 8)">
+    <rect x="0" y="0" width="10" height="10" rx="2" fill="#0038A8"/>
+    <rect x="2" y="2" width="6" height="6" rx="1" fill="#FFFFFF"/>
+    <rect x="3.5" y="3.5" width="3" height="3" fill="#0038A8"/>
+    
+    <rect x="14" y="0" width="10" height="10" rx="2" fill="#CE1126"/>
+    <rect x="16" y="2" width="6" height="6" rx="1" fill="#FFFFFF"/>
+    <rect x="17.5" y="3.5" width="3" height="3" fill="#CE1126"/>
+
+    <rect x="0" y="14" width="10" height="10" rx="2" fill="#FCD116"/>
+    <rect x="2" y="16" width="6" height="6" rx="1" fill="#FFFFFF"/>
+    <rect x="3.5" y="17.5" width="3" height="3" fill="#FCD116"/>
+
+    <circle cx="19" cy="19" r="4" fill="#0038A8"/>
+  </g>
+  <text x="44" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="900" fill="#0F172A" letter-spacing="-0.5">QR <tspan fill="#CE1126">Ph</tspan></text>
+</svg>

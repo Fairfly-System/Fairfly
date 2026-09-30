@@ -257,7 +257,7 @@ export default function OperatorServicesContent() {
         serviceData.requirements.map(async (req) => {
           if (req.attachment && req.attachment.pendingFile) {
             const file = req.attachment.pendingFile;
-            const { url: downloadUrl } = await uploadFileToBackend(file, 'service_requirements', userToken);
+            const { url: downloadUrl } = await uploadFileToBackend(file, 'services/attachments', userToken);
             const { pendingFile, ...restAttachment } = req.attachment;
             return {
               ...req,

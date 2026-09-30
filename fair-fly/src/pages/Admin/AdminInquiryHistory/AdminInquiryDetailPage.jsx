@@ -9,6 +9,7 @@ import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModa
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { deleteInquiry } from '../../../services/inquiryService';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './admin-inquiry-history.css';
 import '../../Operator/OperatorInquiryForms/inquiry-form-detail.css';
@@ -44,11 +45,12 @@ function parseInquiryData(inquiry) {
     requirementsText = inquiry.requirements.trim();
   }
 
-  // 2. Parse Remarks
-  if (typeof inquiry.remarks === 'string' && inquiry.remarks.trim()) {
-    remarksText = inquiry.remarks.trim();
-  } else if (typeof inquiry.remarks === 'object' && inquiry.remarks !== null) {
-    remarksText = Object.entries(inquiry.remarks)
+  // 2. Parse Remarks / Notes
+  const rawRemarks = inquiry.remarks || inquiry.notes;
+  if (typeof rawRemarks === 'string' && rawRemarks.trim()) {
+    remarksText = rawRemarks.trim();
+  } else if (typeof rawRemarks === 'object' && rawRemarks !== null) {
+    remarksText = Object.entries(rawRemarks)
       .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
       .join('\n');
   }
@@ -123,9 +125,13 @@ export default function AdminInquiryDetailPage() {
     return () => unsub();
   }, [id]);
 
+  const submittedReqId = inquiry?.submittedRequirementsId || null;
+  const { requirements: normalizedReqs } = useSubmittedRequirements(submittedReqId, inquiry?.requirements);
+
   const parsedData = useMemo(() => {
-    return parseInquiryData(inquiry);
-  }, [inquiry]);
+    const combinedInquiry = inquiry ? { ...inquiry, requirements: normalizedReqs.length > 0 ? normalizedReqs : inquiry.requirements } : null;
+    return parseInquiryData(combinedInquiry);
+  }, [inquiry, normalizedReqs]);
 
   const handleDelete = async () => {
     if (!inquiry) return;
@@ -223,11 +229,11 @@ export default function AdminInquiryDetailPage() {
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Client / Company Name</span>
-                  <span className="detail-value detail-value-bold">{inquiry.fullName || inquiry.clientName || 'N/A'}</span>
+                  <span className="detail-value detail-value-bold">{inquiry.clientName || inquiry.fullName || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Contact Person</span>
-                  <span className="detail-value">{inquiry.contactPerson || inquiry.fullName || 'N/A'}</span>
+                  <span className="detail-value">{inquiry.contactPerson || inquiry.clientName || inquiry.fullName || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Cellphone Number</span>

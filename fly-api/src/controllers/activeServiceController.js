@@ -13,6 +13,7 @@ const {
 } = require('../services/notificationService');
 const { createPaymongoRefund } = require('../services/paymongoService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
+const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
@@ -21,7 +22,8 @@ const COLLECTIONS = {
   USERS: 'users',
   PAYMENTS: 'payments',
   QUOTATIONS: 'quotations',
-  INQUIRIES: 'inquiries'
+  INQUIRIES: 'inquiries',
+  SUBMITTED_REQUIREMENTS: 'submitted_requirements'
 };
 
 const DEFAULT_FALLBACK_STEPS = [
@@ -243,6 +245,22 @@ const createActiveService = async (req, res) => {
     targetBranchUid = targetBranchUid || 'OP-ACCOUNT';
     resolvedBranchName = resolvedBranchName || 'Branch Office';
 
+    const submittedReqsArray = Array.isArray(req.body.submittedRequirements) 
+      ? req.body.submittedRequirements 
+      : (Array.isArray(req.body.requirements) ? req.body.requirements : []);
+    let effectiveSubmittedReqId = req.body.submittedRequirementsId || null;
+
+    if (submittedReqsArray.length > 0) {
+      try {
+        effectiveSubmittedReqId = await createSubmittedRequirementsRecord({
+          submittedBy: req.user?.uid || req.body.clientUid || null,
+          requirements: submittedReqsArray
+        });
+      } catch (err) {
+        console.warn('[ActiveService] Could not auto-create submitted_requirements:', err.message);
+      }
+    }
+
     const newService = {
       clientUid: req.user?.uid || req.body.clientUid || null,
       clientName: clientName.trim(),
@@ -252,8 +270,7 @@ const createActiveService = async (req, res) => {
       serviceUID: serviceId || null,
       serviceType: finalServiceTitle,
       price,
-      requirements: serviceRequirements,
-      submittedRequirements: Array.isArray(req.body.submittedRequirements) ? req.body.submittedRequirements : [],
+      submittedRequirementsId: effectiveSubmittedReqId,
       source: req.body.source || (req.user?.uid ? 'Client Portal' : 'Walk-in'),
       priority: priority || 'Normal Priority',
       priorityType: (priority || '').toLowerCase().includes('high') ? 'high' : 'normal',

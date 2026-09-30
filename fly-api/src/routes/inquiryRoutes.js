@@ -48,6 +48,7 @@ const INQUIRY_ALLOWED_FIELDS = [
   'customFields',
   'clientUid',
   'status',
+  'submittedRequirementsId',
   'confirmedQuotationId',
   'confirmedActiveServiceId',
   'id',

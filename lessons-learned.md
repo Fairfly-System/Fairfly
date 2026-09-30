@@ -1,6 +1,21 @@
 # Lessons Learned
 # A File for Agents to write their mistakes so that next runs can prevent doing the same thing (Automatic Improvement)
 
+## [2026-09-30] Over-Pruning Operational 'remarks' Field as Redundant During Normalization
+- **Problem**: During Firestore data normalization on `inquiries`, the `remarks` field was erroneously treated as a duplicate alias of `notes` and slated for deletion, breaking operator workflow and contradicting the audit summary table.
+- **Root Cause**:
+  1. The normalization audit's summary table only flagged duplicate contact aliases (`fullName` vs `clientName`, `cellphone` vs `phoneNumber`), but Section 5 of the audit artifact included an exploratory row proposing to merge `remarks` into `notes`.
+  2. In FairFly, `notes` historically captured raw client intake notes or specified requirements, whereas `remarks` is an active operational feature (used for operator remarks, review notes, special instructions on form `SAF-01-002`, modals, and PDFs). Treating them as synonymous was a false positive.
+- **Prevention**:
+  1. Never delete or merge fields based solely on textual similarity without checking their semantic role in UI forms, modals, PDF templates, and user workflows.
+  2. Always strictly align field removal actions with the approved scope in the audit summary table.
+  3. Formally protect active operational commentary fields (such as `remarks`) from automated pruning by codifying their retention in repository rules (`normalization-guidelines.md`).
+
+## [2026-09-30] Operator Walk-In Intake Misattributed clientUid to Operator Account
+- **Problem**: When an operator created an inquiry for a walk-in client and subsequently generated a quotation, the quotation and inquiry never appeared in the client's account portal even though the client had a registered account in the system.
+- **Root Cause**: `createInquiry` used `const effectiveClientUid = req.user?.uid || clientUid || null;`. When an operator submitted the request, their own JWT token `req.user.uid` took precedence, tagging the operator's UID as the `clientUid`. The quotation inherited this corrupted UID. In `ClientTrackingPage`, queries filter by `where('clientUid', '==', user.uid)`, returning 0 results, and Firestore rules prevented unauthorized access.
+- **Prevention**: Never default `clientUid` to `req.user.uid` when the caller is staff (`operator`, `branch_operator`, `admin`). When recording walk-in client intakes, perform authoritative server-side user resolution by checking the `users` collection for `where('role', '==', 'client')` and matching the client's registered email address. Also discard staff UIDs if mistakenly passed as `clientUid` in downstream quotation workflows.
+
 ## [2026-08-23] Undefined Function Reference in Resource Modal Handler
 - **Problem**: Runtime `ReferenceError: handleSubmitResource is not defined` occurred in `<ResourcesContent>` component when rendering `ResourceModal`.
 - **Root Cause**: During refactoring of `ResourcesContent.jsx` to the new service layer (`resourceService.js`), the handler was renamed to `handleFormSubmit`, but the JSX prop `<ResourceModal onSubmit={handleSubmitResource} />` was not updated to match the new handler name.

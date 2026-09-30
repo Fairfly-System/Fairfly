@@ -5,6 +5,7 @@ const {
   updateToDatabase, 
   deleteFromDatabase 
 } = require('../services/firebaseService');
+const { db } = require('../config/firebase');
 const { compileWorkflowStepsForService } = require('./activeServiceController');
 const {
   createNotification,
@@ -12,11 +13,14 @@ const {
   notifyAdmins
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
+const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
 
 const COLLECTIONS = {
   QUOTATIONS: 'quotations',
   INQUIRIES: 'inquiries',
-  ACTIVE_SERVICES: 'activeServices'
+  ACTIVE_SERVICES: 'activeServices',
+  USERS: 'users',
+  SUBMITTED_REQUIREMENTS: 'submitted_requirements'
 };
 
 /**
@@ -91,11 +95,59 @@ const createQuotation = async (req, res) => {
       effectiveBranchName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Office';
     }
 
+    // Security Check: If effectiveClientUid matches the operator's/branch's UID, discard it!
+    // An operator can never be the client for their own branch quotation.
+    if (effectiveClientUid && (effectiveClientUid === req.user?.uid || effectiveClientUid === effectiveBranchUid)) {
+      effectiveClientUid = null;
+    }
+
+    // Authoritative lookup: Link to client account by registered email if effectiveClientUid is not set
+    const targetEmail = (clientEmail || linkedInquiry?.email || '').trim().toLowerCase();
+    if (targetEmail) {
+      try {
+        const clientSnap = await db.collection(COLLECTIONS.USERS)
+          .where('email', '==', targetEmail)
+          .where('role', '==', 'client')
+          .limit(1)
+          .get();
+
+        if (!clientSnap.empty) {
+          effectiveClientUid = clientSnap.docs[0].id;
+        } else {
+          const rawEmail = (clientEmail || linkedInquiry?.email || '').trim();
+          if (rawEmail && rawEmail !== targetEmail) {
+            const rawSnap = await db.collection(COLLECTIONS.USERS)
+              .where('email', '==', rawEmail)
+              .where('role', '==', 'client')
+              .limit(1)
+              .get();
+            if (!rawSnap.empty) {
+              effectiveClientUid = rawSnap.docs[0].id;
+            }
+          }
+        }
+      } catch (lookupErr) {
+        console.warn('[Quotation] Error looking up client account by email:', lookupErr.message);
+      }
+    }
+
     const effectiveSubmittedReqs = Array.isArray(submittedRequirements) && submittedRequirements.length > 0
       ? submittedRequirements
       : (Array.isArray(linkedInquiry?.requirements) && linkedInquiry.requirements.length > 0
         ? linkedInquiry.requirements
         : (Array.isArray(linkedInquiry?.submittedRequirements) ? linkedInquiry.submittedRequirements : []));
+
+    let effectiveSubmittedReqId = req.body.submittedRequirementsId || linkedInquiry?.submittedRequirementsId || null;
+    if (effectiveSubmittedReqs.length > 0 && !linkedInquiry?.submittedRequirementsId) {
+      try {
+        effectiveSubmittedReqId = await createSubmittedRequirementsRecord({
+          submittedBy: effectiveClientUid || req.user?.uid,
+          requirements: effectiveSubmittedReqs
+        });
+      } catch (err) {
+        console.warn('[Quotation] Could not create submitted_requirements in createQuotation:', err.message);
+      }
+    }
 
     const newQuotation = {
       clientUid: effectiveClientUid,
@@ -105,8 +157,7 @@ const createQuotation = async (req, res) => {
       clientPhone: clientPhone ? clientPhone.trim() : '',
       serviceId: serviceId || null,
       serviceTitle: (serviceTitle || 'General Service').trim(),
-      requirements: requirements || '',
-      submittedRequirements: effectiveSubmittedReqs,
+      submittedRequirementsId: effectiveSubmittedReqId,
       tourDates: tourDates || '',
       inclusions: inclusions || '',
       exclusions: exclusions || '',
@@ -133,14 +184,19 @@ const createQuotation = async (req, res) => {
 
     const docId = await addToDatabase(COLLECTIONS.QUOTATIONS, newQuotation, ID_PREFIXES.QUOTATION);
 
-    // If linked to an inquiry, update inquiry status to quotation_created
+    // If linked to an inquiry, update inquiry status to quotation_created and sync clientUid
     if (inquiryId) {
       try {
-        await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${inquiryId}`, {
+        const inquiryUpdates = {
           status: 'quotation_created',
           confirmedQuotationId: docId,
           updatedAt: now
-        });
+        };
+        // Heal linked inquiry clientUid if it was missing or mistakenly set to operator UID
+        if (effectiveClientUid && (!linkedInquiry?.clientUid || linkedInquiry.clientUid === req.user?.uid || linkedInquiry.clientUid === effectiveBranchUid)) {
+          inquiryUpdates.clientUid = effectiveClientUid;
+        }
+        await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${inquiryId}`, inquiryUpdates);
       } catch (upInqErr) {
         console.error(`Failed to update inquiry ${inquiryId} with quotation reference:`, upInqErr);
       }
@@ -236,10 +292,36 @@ const updateQuotationStatus = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    await updateToDatabase(dbPath, {
+    let clientUidToNotify = existing.clientUid;
+
+    // Self-heal: If existing quotation has no clientUid or has operator UID, look up registered client by email
+    const isCorruptedClientUid = !clientUidToNotify || clientUidToNotify === req.user?.uid || clientUidToNotify === existing.branchUid || clientUidToNotify === existing.operatorId;
+    if (isCorruptedClientUid && existing.clientEmail) {
+      try {
+        const normalizedEmail = existing.clientEmail.trim().toLowerCase();
+        const clientSnap = await db.collection(COLLECTIONS.USERS)
+          .where('email', '==', normalizedEmail)
+          .where('role', '==', 'client')
+          .limit(1)
+          .get();
+
+        if (!clientSnap.empty) {
+          clientUidToNotify = clientSnap.docs[0].id;
+        }
+      } catch (e) {
+        console.warn('[Quotation] Could not resolve clientUid on status update:', e.message);
+      }
+    }
+
+    const quotationUpdates = {
       status,
       updatedAt: now
-    });
+    };
+    if (clientUidToNotify && clientUidToNotify !== existing.clientUid) {
+      quotationUpdates.clientUid = clientUidToNotify;
+    }
+
+    await updateToDatabase(dbPath, quotationUpdates);
 
     // Sync status back to originating inquiry if applicable
     if (existing.inquiryId) {
@@ -249,10 +331,14 @@ const updateQuotationStatus = async (req, res) => {
 
       if (linkedInquiryStatus) {
         try {
-          await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${existing.inquiryId}`, {
+          const inquirySync = {
             status: linkedInquiryStatus,
             updatedAt: now
-          });
+          };
+          if (clientUidToNotify) {
+            inquirySync.clientUid = clientUidToNotify;
+          }
+          await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${existing.inquiryId}`, inquirySync);
         } catch (inqErr) {
           console.error(`Failed to update inquiry status on quotation status change:`, inqErr);
         }
@@ -260,9 +346,9 @@ const updateQuotationStatus = async (req, res) => {
     }
 
     // Notify Client when quotation is marked Sent
-    if (status === 'Sent' && existing.clientUid) {
+    if (status === 'Sent' && clientUidToNotify) {
       createNotification({
-        recipientUid: existing.clientUid,
+        recipientUid: clientUidToNotify,
         recipientRole: 'client',
         title: 'Quotation Ready for Review',
         message: `Quotation ${existing.quoteNo} for "${existing.serviceTitle}" is ready for your review.`,
@@ -325,19 +411,22 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
   assignedOperatorId = assignedOperatorId || 'OP-ACCOUNT';
   assignedBranchName = assignedBranchName || 'Branch Office';
 
-  // Inherit submitted requirements with attached file metadata from quotation or originating inquiry
-  let resolvedSubmittedReqs = [];
-  if (Array.isArray(quotation.submittedRequirements) && quotation.submittedRequirements.length > 0) {
-    resolvedSubmittedReqs = quotation.submittedRequirements;
-  } else if (originatingInquiry && Array.isArray(originatingInquiry.requirements) && originatingInquiry.requirements.length > 0) {
-    resolvedSubmittedReqs = originatingInquiry.requirements;
-  } else if (originatingInquiry && Array.isArray(originatingInquiry.submittedRequirements) && originatingInquiry.submittedRequirements.length > 0) {
-    resolvedSubmittedReqs = originatingInquiry.submittedRequirements;
-  }
+  let resolvedSubmittedReqId = quotation.submittedRequirementsId || quotation.submitted_requirements || originatingInquiry?.submittedRequirementsId || originatingInquiry?.submitted_requirements || null;
 
-  const resolvedRequirements = resolvedSubmittedReqs.length > 0
-    ? resolvedSubmittedReqs
-    : (quotation.requirements ? [{ name: 'Client Specifications', value: quotation.requirements, required: false }] : []);
+  const resolvedSubmittedReqs = Array.isArray(quotation.submittedRequirements) 
+    ? quotation.submittedRequirements 
+    : (Array.isArray(originatingInquiry?.requirements) ? originatingInquiry.requirements : []);
+
+  if (!resolvedSubmittedReqId && resolvedSubmittedReqs.length > 0) {
+    try {
+      resolvedSubmittedReqId = await createSubmittedRequirementsRecord({
+        submittedBy: quotation.clientUid || (payment ? payment.clientUid : null),
+        requirements: resolvedSubmittedReqs
+      });
+    } catch (err) {
+      console.warn('[Quotation] Could not create submitted_requirements in fulfillment:', err.message);
+    }
+  }
 
   return {
     id: activeServiceDocId,
@@ -349,8 +438,7 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
     serviceUID: quotation.serviceId || null,
     serviceType: serviceTitle,
     price: servicePrice,
-    requirements: resolvedRequirements,
-    submittedRequirements: resolvedSubmittedReqs,
+    submittedRequirementsId: resolvedSubmittedReqId,
     priority: 'Normal Priority',
     priorityType: 'normal',
     status: 'Pending',

@@ -1,5 +1,6 @@
 const { admin, db } = require('../config/firebase');
 const { sendPasswordResetEmail } = require('../services/emailService');
+const { userCache } = require('../services/cacheService');
 
 const COLLECTIONS = {
   PASSWORD_RESET_REQUESTS: 'passwordResetRequests',
@@ -43,7 +44,39 @@ const getPasswordResetRequests = async (req, res) => {
     // Sort newest first
     requests.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-    return res.status(200).json(requests);
+    // Dynamic read-time resolution for normalized operator data
+    const operatorUids = [...new Set(requests.map(r => r.operatorUid).filter(Boolean))];
+    const opMap = new Map();
+    if (operatorUids.length > 0) {
+      await Promise.all(operatorUids.map(async (uid) => {
+        try {
+          const cached = userCache.get(uid);
+          if (cached) {
+            opMap.set(uid, cached);
+            return;
+          }
+          const uDoc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+          if (uDoc.exists) {
+            const uData = uDoc.data();
+            opMap.set(uid, uData);
+            userCache.set(uid, uData);
+          }
+        } catch (e) {
+          console.warn('[PasswordReset] Operator profile resolution notice:', uid, e.message);
+        }
+      }));
+    }
+
+    const enrichedRequests = requests.map(r => {
+      const u = opMap.get(r.operatorUid) || {};
+      return {
+        ...r,
+        operatorName: r.operatorName || u.fullName || u.name || u.branchName || 'Operator',
+        branchName: r.branchName || u.branchName || 'Branch Office'
+      };
+    });
+
+    return res.status(200).json(enrichedRequests);
   } catch (error) {
     console.error('Error in getPasswordResetRequests:', error);
     return res.status(500).json({ error: 'Failed to retrieve password reset requests: ' + error.message });
@@ -89,9 +122,14 @@ const getPasswordResetRequestById = async (req, res) => {
       }
     }
 
+    const operatorName = data.operatorName || operatorProfile?.fullName || operatorProfile?.name || operatorProfile?.branchName || 'Operator';
+    const branchName = data.branchName || operatorProfile?.branchName || 'Branch Office';
+
     return res.status(200).json({
       id: docSnap.id,
       ...data,
+      operatorName,
+      branchName,
       operatorProfile
     });
   } catch (error) {
@@ -150,7 +188,17 @@ const approvePasswordResetRequest = async (req, res) => {
     const resetLink = await admin.auth().generatePasswordResetLink(operatorEmail);
 
     // 3. Send branded transactional email containing the reset link
-    const recipientName = requestData.operatorName || authUser.displayName || 'Branch Operator';
+    let recipientName = requestData.operatorName || authUser.displayName;
+    if (!recipientName && requestData.operatorUid) {
+      try {
+        const uDoc = await db.collection(COLLECTIONS.USERS).doc(requestData.operatorUid).get();
+        if (uDoc.exists) {
+          const u = uDoc.data();
+          recipientName = u.fullName || u.name || u.branchName;
+        }
+      } catch (err) {}
+    }
+    recipientName = recipientName || 'Branch Operator';
     const emailResult = await sendPasswordResetEmail(operatorEmail, recipientName, resetLink);
 
     // 4. Update request document status to APPROVED

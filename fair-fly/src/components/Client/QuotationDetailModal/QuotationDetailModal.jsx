@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './quotation-detail-modal.css';
 
 export default function QuotationDetailModal({
@@ -13,6 +14,13 @@ export default function QuotationDetailModal({
   isAccepting = false,
 }) {
   const { openLightbox } = useLightbox();
+
+  const reqReferenceId = quotation?.submittedRequirementsId || quotation?.inquiryId || null;
+  const { requirements: resolvedReqs, loading: loadingReqs } = useSubmittedRequirements(
+    reqReferenceId,
+    quotation?.submittedRequirements || quotation?.requirements || []
+  );
+
   if (!quotation) return null;
 
   const totalAmt = Number(quotation.totalAmount || quotation.rate || 0);
@@ -20,6 +28,9 @@ export default function QuotationDetailModal({
   const isSent = quotation.status === 'Sent';
   const isPaid = quotation.paymentStatus === 'PAID';
   const isPaymentPending = quotation.paymentStatus === 'PAYMENT_PENDING';
+  const displayRequirements = Array.isArray(resolvedReqs) && resolvedReqs.length > 0
+    ? resolvedReqs
+    : (Array.isArray(quotation.submittedRequirements) ? quotation.submittedRequirements : (Array.isArray(quotation.requirements) ? quotation.requirements : []));
 
   return (
     <BaseModal
@@ -108,15 +119,15 @@ export default function QuotationDetailModal({
         </div>
 
         {/* Submitted Requirements / Files */}
-        {((Array.isArray(quotation.submittedRequirements) && quotation.submittedRequirements.length > 0) ||
-          (Array.isArray(quotation.requirements) && quotation.requirements.length > 0)) && (
+        {displayRequirements.length > 0 && (
           <div className="quote-modal-section">
             <div className="quote-section-heading">
               <i className="fa-solid fa-clipboard-check"></i>
               Submitted Client Requirements & Documents
+              {loadingReqs && <span style={{ fontSize: '0.75rem', fontWeight: 'normal', opacity: 0.7, marginLeft: '0.5rem' }}>(Loading...)</span>}
             </div>
             <div className="quote-reqs-grid">
-              {(quotation.submittedRequirements || quotation.requirements).map((req, rIdx) => {
+              {displayRequirements.map((req, rIdx) => {
                 const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
                 const fileObj = typeof req === 'object' ? req.file : null;
                 const fileUrl = typeof req === 'object' ? (fileObj?.url || (typeof fileObj === 'string' ? fileObj : null) || req.fileUrl || req.url) : null;

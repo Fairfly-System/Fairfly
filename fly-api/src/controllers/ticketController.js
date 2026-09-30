@@ -6,9 +6,44 @@ const {
 } = require('../services/firebaseService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
+const { userCache } = require('../services/cacheService');
 
 const COLLECTIONS = {
   TICKETS: 'tickets'
+};
+
+/**
+ * Dynamically resolve and enrich normalized operator data on read
+ */
+const enrichTicketsWithOperatorData = async (tickets) => {
+  if (!Array.isArray(tickets) || tickets.length === 0) return tickets;
+  const operatorIds = [...new Set(tickets.map(t => t.operatorId).filter(Boolean))];
+  const opMap = new Map();
+  await Promise.all(operatorIds.map(async (opId) => {
+    try {
+      const cached = userCache.get(opId);
+      if (cached) {
+        opMap.set(opId, cached);
+        return;
+      }
+      const uDoc = await getFromDatabase(`users/${opId}`);
+      if (uDoc) {
+        opMap.set(opId, uDoc);
+        userCache.set(opId, uDoc);
+      }
+    } catch (e) {
+      console.warn('[Tickets] Operator profile resolution notice:', opId, e.message);
+    }
+  }));
+
+  return tickets.map(ticket => {
+    const op = opMap.get(ticket.operatorId) || {};
+    return {
+      ...ticket,
+      operatorName: ticket.operatorName || op.branchName || op.name || op.fullName || 'Operator Branch',
+      operatorEmail: ticket.operatorEmail || op.email || 'operator@fairfly.com'
+    };
+  });
 };
 
 /**
@@ -74,8 +109,6 @@ const createTicket = async (req, res) => {
 
     const newTicketData = {
       operatorId: opId,
-      operatorName: opName,
-      operatorEmail: opEmail,
       title: title.trim(),
       category: category || 'General',
       priority: priority || 'Medium',
@@ -93,12 +126,12 @@ const createTicket = async (req, res) => {
     // Notify admins
     notifyAdmins({
       title: 'New Support Ticket',
-      message: `${newTicketData.operatorName} submitted ticket: "${newTicketData.title}" (${newTicketData.priority})`,
+      message: `${opName} submitted ticket: "${newTicketData.title}" (${newTicketData.priority})`,
       type: 'ticket',
       link: '/admin/tickets'
     }).catch(e => console.warn('Ticket notification warning:', e.message));
 
-    return res.status(201).json({ id: docId, ...newTicketData, message: 'Ticket created successfully' });
+    return res.status(201).json({ id: docId, ...newTicketData, operatorName: opName, operatorEmail: opEmail, message: 'Ticket created successfully' });
   } catch (error) {
     console.error('Error creating support ticket:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -138,8 +171,9 @@ const getTickets = async (req, res) => {
       const allResults = await queryDatabaseAdvanced(COLLECTIONS.TICKETS, options);
       const total = allResults.length;
       const paginated = allResults.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+      const enrichedPaginated = await enrichTicketsWithOperatorData(paginated);
       return res.status(200).json({
-        data: paginated,
+        data: enrichedPaginated,
         total,
         page: pageNum,
         limit: limitNum,
@@ -152,7 +186,8 @@ const getTickets = async (req, res) => {
     }
 
     const results = await queryDatabaseAdvanced(COLLECTIONS.TICKETS, options);
-    return res.status(200).json(results);
+    const enrichedResults = await enrichTicketsWithOperatorData(results);
+    return res.status(200).json(enrichedResults);
   } catch (error) {
     console.error('Error retrieving support tickets:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -182,7 +217,31 @@ const getTicketById = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: You do not have permission to view this ticket.' });
     }
 
-    return res.status(200).json({ id, ...ticket });
+    let opName = ticket.operatorName;
+    let opEmail = ticket.operatorEmail;
+    if ((!opName || !opEmail) && ticket.operatorId) {
+      try {
+        const cached = userCache.get(ticket.operatorId);
+        if (cached) {
+          opName = opName || cached.branchName || cached.name || cached.fullName;
+          opEmail = opEmail || cached.email;
+        } else {
+          const opUser = await getFromDatabase(`users/${ticket.operatorId}`);
+          if (opUser) {
+            opName = opName || opUser.branchName || opUser.name || opUser.fullName;
+            opEmail = opEmail || opUser.email;
+            userCache.set(ticket.operatorId, opUser);
+          }
+        }
+      } catch (err) {}
+    }
+
+    return res.status(200).json({
+      id,
+      ...ticket,
+      operatorName: opName || 'Operator Branch',
+      operatorEmail: opEmail || 'operator@fairfly.com'
+    });
   } catch (error) {
     console.error('Error retrieving ticket by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });

@@ -26,6 +26,7 @@ const ACTIVE_SERVICE_ALLOWED_FIELDS = [
   'branchName',
   'additionalNotes',
   'submittedRequirements',
+  'submittedRequirementsId',
   'source',
   'status'
 ];
