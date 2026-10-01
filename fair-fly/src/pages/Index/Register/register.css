@@ -272,6 +272,25 @@
   gap: 0.3125rem;
 }
 
+/* 3-Column Name Row: First Name (1fr) - M.I. (0.38fr) - Last Name (1fr) */
+.auth-name-row {
+  display: grid;
+  grid-template-columns: 1fr 0.38fr 1fr;
+  gap: 0.625rem;
+}
+
+.auth-input-wrapper.mi-input input {
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 540px) {
+  .auth-name-row {
+    grid-template-columns: 1fr 0.45fr 1fr;
+    gap: 0.5rem;
+  }
+}
+
 .auth-input-label {
   font-size: 0.8125rem;
   font-weight: 600;

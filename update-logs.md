@@ -1,5 +1,35 @@
 # Update Logs
 
+## [2026-10-01] Standardization: Split Name Fields (First Name, M.I., Last Name) & Company vs. Individual Client Type in Inquiry Forms
+
+### Overview
+Standardized name input fields across client registration (`Register.jsx`), customer service inquiry modal (`ClientInquiryModal.jsx`), and operator service inquiry intake modal (`CreateInquiryFormModal.jsx`) to align with the 3-column layout (**First Name**, **M.I.**, **Last Name**) used on the Franchise Application Form. Additionally implemented an **Individual vs. Company** client type toggle on both inquiry modals: when "Company" is selected, the forms prompt for the Company / Organization Name and provide the 3 name fields for the focal Contact Person (Representative). Maintained complete backward compatibility by auto-composing canonical `fullName`, `clientName`, and `contactPerson` attributes in backend controllers and service payloads.
+
+### Key Changes
+1. **Client Registration Form (`Register.jsx`, `register.css`)**:
+   - Replaced single `fullName` input with responsive 3-column name row: First Name (`firstName`, required), M.I. (`middleInitial`, optional, uppercase, max 3 chars), and Last Name (`lastName`, required).
+   - Added validation helpers `validateFirstName` and `validateLastName` (minimum 2 characters).
+   - Derives composite `fullName` on submission and passes discrete name fields (`firstName`, `middleInitial`, `lastName`) alongside `fullName` to `initiateRegistration`.
+   - Added responsive grid styles `.auth-name-row` with mobile breakpoint optimization.
+
+2. **Customer Service Inquiry Modal (`ClientInquiryModal.jsx`, `client-inquiry-modal.css`)**:
+   - Added interactive `Client Type` toggle: **Individual** vs. **Company / Organization**.
+   - If **Individual**: Displays 3-column name row (First Name, M.I., Last Name).
+   - If **Company**: Displays Company Name field, followed by the 3-column name row (First Name, M.I., Last Name) specifically for the Contact Person / Representative.
+   - Enhanced prefill logic to parse `userDetails` into discrete first, middle, and last names for both individual and contact person state.
+   - Dynamically constructs canonical `clientName` (Company Name if company, or Individual full name if individual) and canonical `contactPerson`.
+
+3. **Operator Service Inquiry Modal (`CreateInquiryFormModal.jsx`, `create-inquiry-form-modal.css`)**:
+   - Added `Client Type` segmented selector (**Individual** vs. **Company / Organization**) in Section 1.
+   - Dynamically renders either Individual 3-column name fields or Company Name + Contact Person 3-column name fields.
+   - Updated form validation and state to handle `clientType`, `companyName`, and discrete name fields for both flows.
+
+4. **Backend Registration & Inquiry Controllers (`verificationService.js`, `inquiryController.js`)**:
+   - `fly-api/src/services/verificationService.js`: Accepted `firstName`, `middleInitial`, `lastName` in `createPendingRegistration`, validating inputs and saving them to `pendingRegistrations` and verified `users` profiles.
+   - `fly-api/src/controllers/inquiryController.js`: Supported `clientType`, `companyName`, `firstName`, `middleInitial`, `lastName`, and contact person name fields in `createInquiry`. Stored structured fields while guaranteeing canonical `clientName` and `contactPerson` resolution.
+
+---
+
 ## [2026-09-30] Architecture & Database: Firestore System-Wide Normalization, Foreign Key Resolution & Point-in-Time Snapshot Preservation Policy
 
 ### Overview
