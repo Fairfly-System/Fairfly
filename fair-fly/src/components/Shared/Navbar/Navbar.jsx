@@ -120,13 +120,13 @@ export default function Navbar() {
 
           {/* Center: Navigation buttons between Services and About */}
           <div className="nav-center nav-desktop-links">
-            <a
-              href="/home#services"
-              className={`linkNav ${isHome && activeSection === 'services' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'services')}
+            <NavLink
+              to="/services"
+              className={({ isActive }) => `linkNav ${isActive ? 'active' : ''}`}
+              onClick={closeMobileMenu}
             >
               Services
-            </a>
+            </NavLink>
 
             <a
               href="/home#business-system"
@@ -208,14 +208,14 @@ export default function Navbar() {
 
         <div className={`nav-mobile-drawer ${isMobileMenuOpen ? 'open' : ''}`}>
           <div className="nav-mobile-links">
-            <a
-              href="/home#services"
-              className={`nav-mobile-item ${isHome && activeSection === 'services' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'services')}
+            <NavLink
+              to="/services"
+              className={({ isActive }) => `nav-mobile-item ${isActive ? 'active' : ''}`}
+              onClick={closeMobileMenu}
             >
               <i className="fa-solid fa-plane-up"></i>
               <span>Services</span>
-            </a>
+            </NavLink>
 
             <a
               href="/home#business-system"

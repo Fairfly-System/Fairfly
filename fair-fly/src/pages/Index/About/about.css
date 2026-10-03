@@ -228,10 +228,20 @@
   transform: translateY(-2px);
 }
 
-@media (max-width: 700px) {
-  .branchCard { grid-template-columns: 1fr; gap: 1rem; }
-  .headOfficeCard { grid-template-columns: 1fr; gap: 1rem; }
-  .section { padding: 2rem 1rem; }
+@media (max-width: 60rem) {
+  .about-header { padding: 3rem 1.5rem 0; }
+  .about-section { padding: 1.5rem 1rem; }
+  .branchCard { grid-template-columns: 1fr 1fr; gap: 1.25rem; padding: 1.75rem 1.5rem; }
+  .branchLeft { grid-column: 1 / -1; }
+  .headOfficeCard { grid-template-columns: 1fr; gap: 1.25rem; padding: 1.75rem 1.5rem; }
+}
+
+@media (max-width: 40rem) {
+  .about-title { font-size: 2rem; }
+  .subtitle { font-size: 0.875rem; }
+  .branchCard { grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem 1rem; }
+  .headOfficeCard { padding: 1.25rem 1rem; }
+  .connectSection { padding: 1.5rem 1rem; }
 }
 
 @keyframes fadeDown {

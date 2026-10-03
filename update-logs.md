@@ -1,5 +1,34 @@
 # Update Logs
 
+## [2026-10-04] UI / UX: Mobile & Tablet Responsiveness Overhaul, Dedicated Services Page Separation & Logo Brand Typography Alignment
+
+### Overview
+Executed a comprehensive mobile and tablet responsiveness optimization across all landing sections, public pages, and navigation systems. Separated the Available Travel & Document Services catalog into its own dedicated public route (`/services`), updated the landing page Hero call-to-actions and Navbar routing accordingly, and styled the brand name "fairfly" in the hero heading to exactly match the official logo's dual-tone color palette (`fair` in royal blue/purple, `fly` in vibrant orange) and rounded geometric font typography (`Fredoka`).
+
+### Key Changes
+1. **Brand Typography & Color Alignment (`Landing.jsx`, `landing.css`, `index.html`, `index.css`)**:
+   - Imported Google Font `Fredoka` (weights 600, 700, 800, 900) and established `--font-logo` token in `src/index.css`.
+   - Updated Hero heading "Across the Philippines with Fairfly" to render dual-tone logo typography: `<span className="hero-heading-brand"><span className="brand-fair">fair</span><span className="brand-fly">fly</span></span>`.
+   - Styled `.brand-fair` in official brand blue/purple (`#4F6BF5`) and `.brand-fly` in official brand orange (`#FF8738`) with bold rounded letterforms matching `/FairflyLogo.png`.
+
+2. **Dedicated Services Page Separation (`ServicesPage.jsx`, `services-page.css`, `App.jsx`, `Navbar.jsx`)**:
+   - Created dedicated public page `fair-fly/src/pages/Index/ServicesPage/ServicesPage.jsx` and registered route `/services` in `App.jsx`.
+   - Designed a full hero banner with breadcrumb navigation, ISO 9001:2000 & operator trust badges, full search & category filtering, interactive cards grid, service detail modal, and footer CTA.
+   - Updated Public `Navbar.jsx`: "Services" link now routes directly to `/services` as an active `NavLink` across both desktop and mobile slide drawer.
+   - Updated Landing Page: "Browse Services" button links to `/services` via React Router `Link`, and replaced inline services with a sleek Services Teaser banner directing visitors to the dedicated catalog.
+
+3. **System-Wide Mobile & Tablet Responsiveness**:
+   - **Hero Section (`landing.css`)**: Implemented responsive typography clamping, full-width stacked action buttons on mobile screens (< 48rem / 768px), and responsive 2x2 / 1-column grid layout for the Trust Strip.
+   - **Public Navbar (`navbar.css`)**: Refined mobile drawer slide animation, optimized logo scaling on small devices (`height: 2.25rem`), and enhanced touchable tap targets.
+   - **Services Catalog & Detail Modal (`services.css`, `service-detail-modal.css`)**: Set 3 columns for desktop (> 1024px), 2 columns for tablets (641px - 1024px), and 1 column for mobile (<= 640px). Enabled smooth horizontal touch momentum scrolling on category chips without scrollbar clutter.
+   - **About Page (`about.css`)**: Adjusted `.branchCard` and `.headOfficeCard` grid layouts for tablet (601px - 960px) and mobile (<= 640px) viewports with comfortable padding.
+   - **Explore Destination Grid (`explore.css`)**: Fixed mobile grid rows definition for all 7 destination cards with consistent card heights.
+
+4. **Verification**:
+   - Production bundle build (`npm run build` in `fair-fly`) completed cleanly in 7.83s with 0 errors.
+
+---
+
 ## [2026-10-01] Standardization: Split Name Fields (First Name, M.I., Last Name) & Company vs. Individual Client Type in Inquiry Forms
 
 ### Overview
