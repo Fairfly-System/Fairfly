@@ -1,5 +1,32 @@
 # Update Logs
 
+## [2026-10-04] Services Page: Comprehensive Category & Multi-Field Search Filtering Fix
+
+### Overview
+Overhauled the service filtering logic on the Services Catalog ([`Services.jsx`](file:///c:/Users/Ier%20Reyes/Fairfly/fair-fly/src/components/Shared/Services/Services.jsx)) to guarantee reliable matching across database categories (such as `"Visa & Embassy Assistance"`, `"Passport Processing"`, `"PSA & Civil Documents"`, `"Airline Ticketing"`, `"Tour Packages"`, and custom database categories), with real-time count badges and multi-field search across titles, descriptions, tags, requirements, and categories.
+
+### Key Changes
+1. **Dynamic Category Configuration & Matching (`Services.jsx`)**:
+   - Built `isServiceMatchingCategory(service, tab)` with keyword synonym matching (e.g. matching `"Visa & Embassy Assistance"` to the Visa tab, `"Flight Ticketing"` to the Flights tab).
+   - Created dynamic `categoryTabs` computation that automatically tallies accurate service counts and discovers custom categories created in Firestore.
+   - Filtered out empty categories (`count === 0`) dynamically while preserving `'All Services'`.
+2. **Enhanced Search Matching**:
+   - Expanded search filtering to check `name`, `category`, `description`, `tags`, and `requirements` text simultaneously.
+
+---
+
+## [2026-10-04] Services Page: Removed Redundant Top Hero Header Banner
+
+### Overview
+Streamlined the dedicated Services Catalog route (`/services`) by removing the redundant top hero banner (`.services-hero-header`) so that visitors immediately view the core interactive Services catalog and category filter toolbar.
+
+### Key Changes
+1. **Services Page Layout (`ServicesPage.jsx`, `services-page.css`)**:
+   - Removed the top `.services-hero-header` section (breadcrumb, duplicate headline, and trust pills).
+   - Retained the clean, interactive `<Services />` catalog header and `<FooterCard />`.
+
+---
+
 ## [2026-10-04] UI / Typography: Fredoka Bold Display Heading Style Applied Across Landing Page
 
 ### Overview
