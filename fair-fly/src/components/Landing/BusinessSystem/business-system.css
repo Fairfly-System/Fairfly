@@ -38,11 +38,12 @@
 }
 
 .bs-title {
+  font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
   font-size: clamp(1.875rem, 3.5vw, 2.5rem);
   font-weight: 800;
   color: var(--text-dark);
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
 .bs-title-accent {

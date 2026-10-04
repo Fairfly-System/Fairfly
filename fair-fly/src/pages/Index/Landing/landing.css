@@ -99,12 +99,13 @@
 .hero-heading {
   position: relative;
   z-index: 1;
-  font-size: clamp(2rem, 3.8vw, 3.25rem);
+  font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
+  font-size: clamp(2rem, 3vw, 3.25rem);
   font-weight: 800;
   color: var(--text-dark);
   line-height: 1.18;
   margin-bottom: 1.25rem;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.015em;
   max-width: 100%;
 }
 
@@ -316,6 +317,7 @@
 }
 
 .teaser-title {
+  font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-dark, #0f172a);

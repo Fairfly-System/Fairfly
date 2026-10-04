@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 440px;
+  max-width: 600px;
   margin: 0 auto;
   user-select: none;
 }
@@ -32,7 +32,7 @@
 .puzzle-house-svg {
   width: 100%;
   height: auto;
-  max-height: 400px;
+  max-height: 600px;
   overflow: visible;
   filter: drop-shadow(0 14px 28px rgba(15, 23, 42, 0.08));
 }

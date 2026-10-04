@@ -1,5 +1,23 @@
 # Update Logs
 
+## [2026-10-04] UI / Typography: Fredoka Bold Display Heading Style Applied Across Landing Page
+
+### Overview
+Applied the rounded, extra-bold display typography style (`Fredoka` 800 weight, tight geometric tracking) matching the official FairFly brand identity across major landing page titles and section headers.
+
+### Key Changes
+1. **Typography Design Tokens (`index.css`)**:
+   - Added `--font-display: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;` token for display headlines.
+2. **Applied Display Font to Major Headings**:
+   - **Hero Section (`landing.css`)**: Updated `.hero-heading` with `font-family: var(--font-display)` and `font-weight: 800`.
+   - **Services Teaser (`landing.css`)**: Updated `.teaser-title` with `font-family: var(--font-display)`.
+   - **Franchise Section (`franchise-section.css`)**: Updated `.fr-title` with `font-family: var(--font-display)`.
+   - **Services Catalog (`services.css`)**: Updated `.landing-services-title` with `font-family: var(--font-display)`.
+   - **Footer Card (`footer-card.css`)**: Updated `.footer-title` with `font-family: var(--font-display)`.
+   - **Landing System Modules (`business-system.css`, `service-guidelines.css`, `business-model.css`, `training-comparison.css`)**: Updated `.bs-title`, `.sg-title`, `.bm-title`, `.tc-title` with `font-family: var(--font-display)`.
+
+---
+
 ## [2026-10-04] Landing Page: 3D Puzzle House Hero Section Integration & Visual Scale Enhancement
 
 ### Overview

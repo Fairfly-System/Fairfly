@@ -17,11 +17,12 @@
 }
 
 .footer-title {
+  font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
   font-size: clamp(2rem, 3.5vw, 2.75rem);
   font-weight: 800;
   color: var(--text-dark);
   margin-bottom: 1rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   line-height: 1.2;
 }
 
