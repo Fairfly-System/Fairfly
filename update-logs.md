@@ -1,5 +1,21 @@
 # Update Logs
 
+## [2026-10-04] Landing Page: 3D Puzzle House Hero Section Integration & Visual Scale Enhancement
+
+### Overview
+Integrated the 3D glossy vector Puzzle House illustration directly into the Landing Page Hero section ([`Landing.jsx`](file:///c:/Users/Ier%20Reyes/Fairfly/fair-fly/src/pages/Index/Landing/Landing.jsx)), paired alongside the hero text and action buttons without modifying any existing wording or content. Enhanced the scale and proportions of the puzzle house visual for increased prominence across desktop and responsive viewports.
+
+### Key Changes
+1. **Visual Scale & Layout Proportions (`puzzle-house.css`, `landing.css`)**:
+   - Increased max container width to `560px` and max height to `480px` for a bolder visual presence.
+   - Optimized grid column ratios (`1.05fr : 0.95fr`) in `.hero-main-container` with responsive scaling for tablet (`480px` max-width) and mobile screens.
+2. **Hero Section Integration (`Landing.jsx`, `landing.css`)**:
+   - Added `<PuzzleHouse />` into `.hero-main-container` next to the untouched heading, subtitle, and action buttons.
+3. **Interactive 3D Puzzle House Asset (`PuzzleHouse.jsx`, `puzzle-house.css`)**:
+   - High-fidelity 3D glossy puzzle house with interlocking jigsaw pieces, subtle floating animation, soft floor shadow, and ground mirror reflection.
+
+---
+
 ## [2026-10-04] UI / UX: Mobile & Tablet Responsiveness Overhaul, Dedicated Services Page Separation & Logo Brand Typography Alignment
 
 ### Overview

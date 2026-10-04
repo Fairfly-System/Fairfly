@@ -37,13 +37,38 @@
 .hero-bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.80) 0%,
-    rgba(248, 250, 252, 0.88) 45%,
-    rgba(248, 250, 252, 0.97) 85%,
-    var(--bg, #F8FAFC) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(248, 250, 252, 0.80) 0%,
+      rgba(248, 250, 252, 0.88) 45%,
+      rgba(248, 250, 252, 0.97) 85%,
+      var(--bg, #F8FAFC) 100%);
+}
+
+.hero-main-container {
+  position: relative;
+  z-index: 1;
+  max-width: 78rem;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 3rem;
+  margin-bottom: 3.5rem;
+  text-align: left;
+}
+
+.hero-text-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.hero-puzzle-col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .hero-badge {
@@ -59,7 +84,7 @@
   font-weight: 700;
   padding: 0.375rem 1rem;
   border-radius: var(--radius-full);
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
   letter-spacing: 0.02em;
 }
 
@@ -74,13 +99,13 @@
 .hero-heading {
   position: relative;
   z-index: 1;
-  font-size: clamp(2rem, 4.2vw, 3.5rem);
+  font-size: clamp(2rem, 3.8vw, 3.25rem);
   font-weight: 800;
   color: var(--text-dark);
   line-height: 1.18;
   margin-bottom: 1.25rem;
   letter-spacing: -0.03em;
-  max-width: 60rem;
+  max-width: 100%;
 }
 
 /* Fairfly brand logo styling: matches logo typography and colors */
@@ -105,11 +130,11 @@
 .hero-sub {
   position: relative;
   z-index: 1;
-  font-size: 1.0625rem;
+  font-size: 1.05rem;
   color: var(--text-mid);
-  max-width: 46rem;
+  max-width: 100%;
   line-height: 1.65;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
   font-weight: 400;
 }
 
@@ -118,9 +143,9 @@
   z-index: 1;
   display: flex;
   gap: 0.875rem;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  margin-bottom: 3.5rem;
+  margin-bottom: 0;
 }
 
 .btn-hero-primary {
@@ -361,9 +386,32 @@
 /* --------------------------------------------------------------------------
    Responsive Adaptations for Tablets & Mobile
    -------------------------------------------------------------------------- */
-@media (max-width: 64rem) { /* 1024px */
+@media (max-width: 64rem) {
+
+  /* 1024px */
   .hero {
     padding: 4.5rem 1.5rem 3.5rem;
+  }
+
+  .hero-main-container {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-text-col {
+    align-items: center;
+    text-align: center;
+  }
+
+  .hero-actions {
+    justify-content: center;
+  }
+
+  .hero-puzzle-col {
+    max-width: 380px;
+    margin: 0 auto;
   }
 
   .hero-trust-strip {
@@ -389,7 +437,9 @@
   }
 }
 
-@media (max-width: 48rem) { /* 768px */
+@media (max-width: 48rem) {
+
+  /* 768px */
   .hero {
     padding: 3.5rem 1rem 2.5rem;
     min-height: auto;
@@ -438,7 +488,9 @@
   }
 }
 
-@media (max-width: 24rem) { /* 384px (small phones) */
+@media (max-width: 24rem) {
+
+  /* 384px (small phones) */
   .hero-heading {
     font-size: 1.625rem;
   }

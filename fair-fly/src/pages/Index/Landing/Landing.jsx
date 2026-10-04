@@ -8,6 +8,7 @@ import BusinessSystem from '../../../components/Landing/BusinessSystem/BusinessS
 import ServiceGuidelines from '../../../components/Landing/ServiceGuidelines/ServiceGuidelines';
 import BusinessModel from '../../../components/Landing/BusinessModel/BusinessModel';
 import TrainingComparison from '../../../components/Landing/TrainingComparison/TrainingComparison';
+import PuzzleHouse from '../../../components/Landing/FranchisePuzzleBanner/PuzzleHouse';
 
 export default function Landing() {
   return (
@@ -26,38 +27,46 @@ export default function Landing() {
           <div className="hero-bg-overlay" />
         </div>
 
-        <div className="hero-badge">
-          <span className="hero-badge-dot" />
-          <span>Standardized Travel Management System</span>
-        </div>
+        <div className="hero-main-container">
+          <div className="hero-text-col">
+            <div className="hero-badge">
+              <span className="hero-badge-dot" />
+              <span>Standardized Travel Management System</span>
+            </div>
 
-        <h1 className="hero-heading">
-          Standardized Travel & Document Processing
-          <br />
-          Across the Philippines with{' '}
-          <span className="hero-heading-brand">
-            <span className="brand-fair">fair</span>
-            <span className="brand-fly">fly</span>
-          </span>
-        </h1>
+            <h1 className="hero-heading">
+              Standardized Travel & Document Processing
+              <br />
+              Across the Philippines with{' '}
+              <span className="hero-heading-brand">
+                <span className="brand-fair">fair</span>
+                <span className="brand-fly">fly</span>
+              </span>
+            </h1>
 
-        <p className="hero-sub">
-          An ISO 9001:2000-ready cloud ecosystem. From expedited passport filing, PSA civil documents, and international flight ticketing to asset-light franchise operations with zero physical inventory liability.
-        </p>
+            <p className="hero-sub">
+              An ISO 9001:2000-ready cloud ecosystem. From expedited passport filing, PSA civil documents, and international flight ticketing to asset-light franchise operations with zero physical inventory liability.
+            </p>
 
-        <div className="hero-actions">
-          <Link to="/services" className="btn-hero-primary">
-            <span>Browse Services</span>
-            <i className="fa-solid fa-arrow-right"></i>
-          </Link>
-          <a href="#business-system" className="btn-hero-secondary">
-            <i className="fa-solid fa-microchip"></i>
-            <span>Explore Business System</span>
-          </a>
-          <a href="#franchise-section" className="btn-hero-outline">
-            <i className="fa-solid fa-building-flag"></i>
-            <span>Franchise Inquiries</span>
-          </a>
+            <div className="hero-actions">
+              <Link to="/services" className="btn-hero-primary">
+                <span>Browse Services</span>
+                <i className="fa-solid fa-arrow-right"></i>
+              </Link>
+              <a href="#business-system" className="btn-hero-secondary">
+                <i className="fa-solid fa-microchip"></i>
+                <span>Explore Business System</span>
+              </a>
+              <a href="#franchise-section" className="btn-hero-outline">
+                <i className="fa-solid fa-building-flag"></i>
+                <span>Franchise Inquiries</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="hero-puzzle-col">
+            <PuzzleHouse />
+          </div>
         </div>
 
         {/* Metric Trust Strip */}
