@@ -2,6 +2,7 @@
   padding: 5rem 1.5rem;
   background-color: var(--bg);
   position: relative;
+  scroll-margin-top: 5.5rem;
 }
 
 .bm-container {
@@ -38,11 +39,12 @@
 }
 
 .bm-title {
+  font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
   font-size: clamp(1.875rem, 3.5vw, 2.5rem);
   font-weight: 800;
   color: var(--text-dark);
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
 .bm-title-accent {

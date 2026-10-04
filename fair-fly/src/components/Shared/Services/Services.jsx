@@ -157,13 +157,55 @@ const DEFAULT_OPERATOR_SERVICES = [
   }
 ];
 
-const CATEGORY_TABS = [
-  { id: 'all', label: 'All Services', icon: 'fa-solid fa-layer-group' },
-  { id: 'Passport Processing', label: 'Passport', icon: 'fa-solid fa-id-card' },
-  { id: 'PSA & Civil Documents', label: 'PSA Documents', icon: 'fa-regular fa-file-lines' },
-  { id: 'Visa Assistance', label: 'Visa Assistance', icon: 'fa-solid fa-passport' },
-  { id: 'Airline Ticketing', label: 'Flight Tickets', icon: 'fa-solid fa-plane-departure' },
-  { id: 'Tour Packages', label: 'Tour Packages', icon: 'fa-solid fa-map-location-dot' },
+const BASE_CATEGORY_CONFIG = [
+  {
+    id: 'all',
+    label: 'All Services',
+    icon: 'fa-solid fa-layer-group',
+    keywords: [],
+  },
+  {
+    id: 'passport',
+    label: 'Passport',
+    icon: 'fa-solid fa-id-card',
+    keywords: ['passport', 'dfa', 'renewal', 'expedite'],
+  },
+  {
+    id: 'psa',
+    label: 'PSA Documents',
+    icon: 'fa-regular fa-file-lines',
+    keywords: ['psa', 'civil', 'birth', 'marriage', 'cenomar', 'death'],
+  },
+  {
+    id: 'visa',
+    label: 'Visa Assistance',
+    icon: 'fa-solid fa-passport',
+    keywords: ['visa', 'embassy', 'kvac', 'schengen', 'consular'],
+  },
+  {
+    id: 'flights',
+    label: 'Flight Tickets',
+    icon: 'fa-solid fa-plane-departure',
+    keywords: ['airline', 'flight', 'ticketing', 'ticket', 'airfare', 'promo'],
+  },
+  {
+    id: 'tours',
+    label: 'Tour Packages',
+    icon: 'fa-solid fa-map-location-dot',
+    keywords: ['tour', 'package', 'beachfront', 'island', 'travel package', 'holiday', 'itinerary', 'resort'],
+  },
+  {
+    id: 'insurance',
+    label: 'Insurance & Hotels',
+    icon: 'fa-solid fa-hotel',
+    keywords: ['insurance', 'hotel', 'accommodation'],
+  },
+  {
+    id: 'authentication',
+    label: 'Authentication',
+    icon: 'fa-solid fa-stamp',
+    keywords: ['authentication', 'legalization', 'apostille', 'red ribbon', 'notarization'],
+  },
 ];
 
 function getCategoryVisuals(category, name) {
@@ -206,68 +248,38 @@ function getCategoryVisuals(category, name) {
   };
 }
 
-/**
- * Robust matcher supporting category variations and tags (e.g. Visa & Embassy Assistance, Visa Assistance, #Visa tag)
- */
-function matchesCategoryTab(service, tabId) {
-  if (!service || !tabId || tabId === 'all') return true;
+function isServiceMatchingCategory(service, tab) {
+  if (!tab || tab.id === 'all') return true;
+  if (!service) return false;
 
-  const cat = (service.category || '').toLowerCase();
-  const tags = Array.isArray(service.tags)
-    ? service.tags.map((t) => (typeof t === 'string' ? t.toLowerCase() : ''))
-    : [];
-  const name = (service.name || service.title || '').toLowerCase();
+  const category = (service.category || '').toLowerCase().trim();
+  const name = (service.name || '').toLowerCase().trim();
+  const tabId = (tab.id || '').toLowerCase().trim();
+  const tabLabel = (tab.label || '').toLowerCase().trim();
 
-  if (tabId === 'Visa Assistance' || tabId === 'visa') {
-    return (
-      cat.includes('visa') ||
-      cat.includes('embassy') ||
-      tags.some((t) => t.includes('visa')) ||
-      name.includes('visa')
-    );
+  // 1. Direct match with ID, Label, or substring
+  if (category === tabId || category === tabLabel) return true;
+  if (category.includes(tabId) || (category.length > 3 && tabLabel.includes(category))) return true;
+
+  // 2. Keyword check against category, name, and tags
+  if (Array.isArray(tab.keywords) && tab.keywords.length > 0) {
+    const serviceTags = Array.isArray(service.tags)
+      ? service.tags.map((t) => String(t).toLowerCase())
+      : [];
+
+    const matchesKeyword = tab.keywords.some((kw) => {
+      const kwLower = kw.toLowerCase();
+      return (
+        category.includes(kwLower) ||
+        name.includes(kwLower) ||
+        serviceTags.some((t) => t.includes(kwLower))
+      );
+    });
+
+    if (matchesKeyword) return true;
   }
 
-  if (tabId === 'Passport Processing' || tabId === 'passport') {
-    return (
-      cat.includes('passport') ||
-      cat.includes('dfa') ||
-      tags.some((t) => t.includes('passport') || t.includes('dfa')) ||
-      name.includes('passport')
-    );
-  }
-
-  if (tabId === 'PSA & Civil Documents' || tabId === 'psa') {
-    return (
-      cat.includes('psa') ||
-      cat.includes('civil') ||
-      tags.some((t) => t.includes('psa') || t.includes('birthcert') || t.includes('cenomar')) ||
-      name.includes('psa')
-    );
-  }
-
-  if (tabId === 'Airline Ticketing' || tabId === 'flight') {
-    return (
-      cat.includes('airline') ||
-      cat.includes('flight') ||
-      cat.includes('ticket') ||
-      tags.some((t) => t.includes('flight') || t.includes('airline') || t.includes('ticket')) ||
-      name.includes('flight') ||
-      name.includes('airline')
-    );
-  }
-
-  if (tabId === 'Tour Packages' || tabId === 'tour') {
-    return (
-      cat.includes('tour') ||
-      cat.includes('package') ||
-      tags.some((t) => t.includes('tour') || t.includes('package')) ||
-      name.includes('tour') ||
-      name.includes('package')
-    );
-  }
-
-  const searchId = tabId.toLowerCase();
-  return cat.includes(searchId) || tags.some((t) => t.includes(searchId));
+  return false;
 }
 
 function formatProcessingTime(processingTime) {
@@ -372,26 +384,84 @@ export default function Services() {
     });
   }, [dbServices]);
 
+  // Dynamically compute category tabs with accurate counts
+  const categoryTabs = useMemo(() => {
+    const configured = BASE_CATEGORY_CONFIG.map((tab) => {
+      const count =
+        tab.id === 'all'
+          ? allServices.length
+          : allServices.filter((s) => isServiceMatchingCategory(s, tab)).length;
+      return { ...tab, count };
+    });
+
+    // Capture any custom categories added in Firestore that don't match base tabs
+    const customTabs = [];
+    allServices.forEach((service) => {
+      if (service.category) {
+        const matchesAnyBase = BASE_CATEGORY_CONFIG.slice(1).some((bt) =>
+          isServiceMatchingCategory(service, bt)
+        );
+        if (!matchesAnyBase) {
+          const rawCat = service.category.trim();
+          const customId = rawCat.toLowerCase();
+          if (!customTabs.some((ct) => ct.id === customId)) {
+            const count = allServices.filter(
+              (s) => (s.category || '').trim().toLowerCase() === customId
+            ).length;
+            customTabs.push({
+              id: customId,
+              label: rawCat,
+              icon: 'fa-solid fa-tag',
+              keywords: [customId],
+              count,
+            });
+          }
+        }
+      }
+    });
+
+    // Display 'all' plus any category with services
+    return [...configured, ...customTabs].filter(
+      (tab) => tab.id === 'all' || tab.count > 0
+    );
+  }, [allServices]);
+
   const [selectedService, setSelectedService] = useState(null);
 
   // Filter by category and search term with robust tag support
   const filteredServices = useMemo(() => {
-    return allServices.filter((service) => {
-      // Category & Tag Match
-      const matchesCategory = matchesCategoryTab(service, activeCategory);
+    const queryStr = searchTerm.toLowerCase().trim();
+    const selectedTab =
+      categoryTabs.find((t) => t.id === activeCategory) || {
+        id: 'all',
+        keywords: [],
+      };
 
-      // Search Match
-      const queryStr = searchTerm.toLowerCase().trim();
-      const matchesSearch =
-        !queryStr ||
-        (service.name && service.name.toLowerCase().includes(queryStr)) ||
-        (service.description && service.description.toLowerCase().includes(queryStr)) ||
-        (service.category && service.category.toLowerCase().includes(queryStr)) ||
-        (Array.isArray(service.tags) && service.tags.some((t) => String(t).toLowerCase().includes(queryStr)));
+    return allServices.filter((service) => {
+      // 1. Category Match
+      const matchesCategory = isServiceMatchingCategory(service, selectedTab);
+
+      // 2. Search Match
+      if (!queryStr) return matchesCategory;
+
+      const nameMatch = (service.name || '').toLowerCase().includes(queryStr);
+      const catMatch = (service.category || '').toLowerCase().includes(queryStr);
+      const descMatch = (service.description || '').toLowerCase().includes(queryStr);
+      const tagsMatch =
+        Array.isArray(service.tags) &&
+        service.tags.some((t) => String(t).toLowerCase().includes(queryStr));
+      const reqsMatch =
+        Array.isArray(service.requirements) &&
+        service.requirements.some((r) => {
+          const text = typeof r === 'string' ? r : r.name || r.title || '';
+          return text.toLowerCase().includes(queryStr);
+        });
+
+      const matchesSearch = nameMatch || catMatch || descMatch || tagsMatch || reqsMatch;
 
       return matchesCategory && matchesSearch;
     });
-  }, [allServices, activeCategory, searchTerm]);
+  }, [allServices, activeCategory, searchTerm, categoryTabs]);
 
   // Handle Avail Service Button -> Go to login page with service parameter
   const handleAvailService = (service) => {
@@ -417,11 +487,7 @@ export default function Services() {
         <div className="services-toolbar">
           {/* Category Filter Chips */}
           <div className="services-category-chips">
-            {CATEGORY_TABS.map((tab) => {
-              const count = tab.id === 'all'
-                ? allServices.length
-                : allServices.filter((s) => matchesCategoryTab(s, tab.id)).length;
-
+            {categoryTabs.map((tab) => {
               return (
                 <button
                   key={tab.id}
@@ -431,7 +497,7 @@ export default function Services() {
                 >
                   <i className={tab.icon}></i>
                   <span>{tab.label}</span>
-                  <span className="chip-count">{count}</span>
+                  <span className="chip-count">{tab.count}</span>
                 </button>
               );
             })}

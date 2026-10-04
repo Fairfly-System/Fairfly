@@ -26,12 +26,15 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   const [loadingBranches, setLoadingBranches] = useState(false);
 
   // Form State corresponding to SAF-01-002
-  const [clientName, setClientName] = useState(
-    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
-  );
-  const [contactPerson, setContactPerson] = useState(
-    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
-  );
+  const [clientType, setClientType] = useState('individual'); // 'individual' | 'company'
+  const [companyName, setCompanyName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleInitial, setMiddleInitial] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [contactPersonFirstName, setContactPersonFirstName] = useState('');
+  const [contactPersonMiddleInitial, setContactPersonMiddleInitial] = useState('');
+  const [contactPersonLastName, setContactPersonLastName] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
   const [population, setPopulation] = useState('');
   const [address, setAddress] = useState(userDetails?.address || '');
   const [telNo, setTelNo] = useState(userDetails?.telNo || userDetails?.telephoneNumber || '');
@@ -49,16 +52,30 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   // Prefill user details when opening or when user details become available
   useEffect(() => {
     if (isOpen && (userDetails || user)) {
-      const resolvedName = userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '';
+      const rawFullName = (userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '').trim();
+      const nameParts = rawFullName ? rawFullName.split(/\s+/) : [];
+      const initialFirst = userDetails?.firstName || nameParts[0] || '';
+      const initialLast = userDetails?.lastName || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : '');
+      const initialMiddle = userDetails?.middleInitial || (nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '');
+
       const resolvedPhone = userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || '';
       const resolvedEmail = userDetails?.email || user?.email || '';
       const resolvedAddress = userDetails?.address || '';
       const resolvedTel = userDetails?.telNo || userDetails?.telephoneNumber || '';
 
-      if (resolvedName) {
-        setClientName(resolvedName);
-        setContactPerson(resolvedName);
+      if (initialFirst) {
+        setFirstName((prev) => prev || initialFirst);
+        setContactPersonFirstName((prev) => prev || initialFirst);
       }
+      if (initialMiddle) {
+        setMiddleInitial((prev) => prev || initialMiddle);
+        setContactPersonMiddleInitial((prev) => prev || initialMiddle);
+      }
+      if (initialLast) {
+        setLastName((prev) => prev || initialLast);
+        setContactPersonLastName((prev) => prev || initialLast);
+      }
+      if (rawFullName) setContactPerson((prev) => prev || rawFullName);
       if (resolvedPhone) setCellphone(resolvedPhone);
       if (resolvedEmail) setEmail(resolvedEmail);
       if (resolvedAddress) setAddress(resolvedAddress);
@@ -123,14 +140,18 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   }, [isOpen, userToken]);
 
   const isFormValid = useMemo(() => {
+    const hasValidName = clientType === 'company'
+      ? Boolean(companyName.trim() && contactPersonFirstName.trim() && contactPersonLastName.trim())
+      : Boolean(firstName.trim() && lastName.trim());
+
     return Boolean(
-      clientName.trim() &&
+      hasValidName &&
       (cellphone.trim() || email.trim()) &&
       selectedServices.length > 0 &&
       specifiedRequirements.trim() &&
       (!branchesList.length || selectedBranchUid)
     );
-  }, [clientName, cellphone, email, selectedServices, specifiedRequirements, branchesList, selectedBranchUid]);
+  }, [clientType, companyName, contactPersonFirstName, contactPersonLastName, firstName, lastName, cellphone, email, selectedServices, specifiedRequirements, branchesList, selectedBranchUid]);
 
   if (!isOpen) return null;
 
@@ -143,10 +164,30 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!clientName.trim()) {
-      addToast('Please enter your full name or company name', 'warning');
-      return;
+    if (clientType === 'company') {
+      if (!companyName.trim()) {
+        addToast('Please enter the company name', 'warning');
+        return;
+      }
+      if (!contactPersonFirstName.trim()) {
+        addToast('Please enter the contact person first name', 'warning');
+        return;
+      }
+      if (!contactPersonLastName.trim()) {
+        addToast('Please enter the contact person last name', 'warning');
+        return;
+      }
+    } else {
+      if (!firstName.trim()) {
+        addToast('Please enter your first name', 'warning');
+        return;
+      }
+      if (!lastName.trim()) {
+        addToast('Please enter your last name', 'warning');
+        return;
+      }
     }
+
     if (!cellphone.trim() && !email.trim()) {
       addToast('Please provide at least a phone number or email address', 'warning');
       return;
@@ -161,11 +202,26 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
     }
 
     const selectedBranchObj = branchesList.find((b) => (b.uid || b.id) === selectedBranchUid);
+    const resolvedClientName = clientType === 'company'
+      ? companyName.trim()
+      : [firstName.trim(), middleInitial.trim(), lastName.trim()].filter(Boolean).join(' ');
+
+    const resolvedContactPerson = clientType === 'company'
+      ? [contactPersonFirstName.trim(), contactPersonMiddleInitial.trim(), contactPersonLastName.trim()].filter(Boolean).join(' ')
+      : (contactPerson.trim() || resolvedClientName);
 
     const payload = {
       clientUid: user?.uid || null,
-      clientName: clientName.trim(),
-      contactPerson: contactPerson.trim() || clientName.trim(),
+      clientType,
+      companyName: clientType === 'company' ? companyName.trim() : '',
+      clientName: resolvedClientName,
+      firstName: (clientType === 'company' ? contactPersonFirstName : firstName).trim(),
+      middleInitial: (clientType === 'company' ? contactPersonMiddleInitial : middleInitial).trim(),
+      lastName: (clientType === 'company' ? contactPersonLastName : lastName).trim(),
+      contactPerson: resolvedContactPerson,
+      contactPersonFirstName: (clientType === 'company' ? contactPersonFirstName : firstName).trim(),
+      contactPersonMiddleInitial: (clientType === 'company' ? contactPersonMiddleInitial : middleInitial).trim(),
+      contactPersonLastName: (clientType === 'company' ? contactPersonLastName : lastName).trim(),
       population: population.trim(),
       address: address.trim(),
       telNo: telNo.trim(),
@@ -238,22 +294,157 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
           </h3>
 
           <div className="inquiry-fields-grid">
-            <div className="inquiry-field-group col-span-2">
-              <label htmlFor="clientName">
-                Name of Client / Company <span className="req-star">*</span>
-              </label>
-              <input
-                id="clientName"
-                type="text"
-                className="input-base"
-                placeholder="e.g. John Doe / Acme Travel Group"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                required
-              />
+            {/* Client Type Selector */}
+            <div className="client-type-selector">
+              <span className="client-type-label">
+                <i className="fa-solid fa-sliders"></i> Client Type:
+              </span>
+              <div className="client-type-options">
+                <button
+                  type="button"
+                  className={`client-type-btn ${clientType === 'individual' ? 'active' : ''}`}
+                  onClick={() => setClientType('individual')}
+                >
+                  <i className="fa-solid fa-user"></i>
+                  <span>Individual</span>
+                </button>
+                <button
+                  type="button"
+                  className={`client-type-btn ${clientType === 'company' ? 'active' : ''}`}
+                  onClick={() => setClientType('company')}
+                >
+                  <i className="fa-solid fa-building"></i>
+                  <span>Company / Organization</span>
+                </button>
+              </div>
             </div>
 
-            <div className="inquiry-field-group">
+            {clientType === 'company' ? (
+              <>
+                {/* Company Name */}
+                <div className="inquiry-field-group col-span-2">
+                  <label htmlFor="inq-companyName">
+                    Company / Organization Name <span className="req-star">*</span>
+                  </label>
+                  <input
+                    id="inq-companyName"
+                    type="text"
+                    className="input-base"
+                    placeholder="e.g. Acme Travel & Tours Corp."
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Contact Person Name (3 fields: First Name, M.I., Last Name) */}
+                <div className="inquiry-field-group col-span-2" style={{ marginTop: '0.25rem' }}>
+                  <label style={{ fontWeight: 700, color: 'var(--text-dark, #0f172a)' }}>
+                    Contact Person Name (Representative) <span className="req-star">*</span>
+                  </label>
+                </div>
+
+                <div className="inquiry-name-row">
+                  <div className="inquiry-field-group">
+                    <label htmlFor="inq-cpFirstName">
+                      First Name <span className="req-star">*</span>
+                    </label>
+                    <input
+                      id="inq-cpFirstName"
+                      type="text"
+                      className="input-base"
+                      placeholder="Juan"
+                      value={contactPersonFirstName}
+                      onChange={(e) => setContactPersonFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="inquiry-field-group mi-input">
+                    <label htmlFor="inq-cpMiddleInitial">M.I.</label>
+                    <input
+                      id="inq-cpMiddleInitial"
+                      type="text"
+                      className="input-base"
+                      placeholder="D."
+                      maxLength={3}
+                      value={contactPersonMiddleInitial}
+                      onChange={(e) => setContactPersonMiddleInitial(e.target.value.toUpperCase())}
+                    />
+                  </div>
+
+                  <div className="inquiry-field-group">
+                    <label htmlFor="inq-cpLastName">
+                      Last Name <span className="req-star">*</span>
+                    </label>
+                    <input
+                      id="inq-cpLastName"
+                      type="text"
+                      className="input-base"
+                      placeholder="Dela Cruz"
+                      value={contactPersonLastName}
+                      onChange={(e) => setContactPersonLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Individual Name Row: First Name - M.I. - Last Name */}
+                <div className="inquiry-field-group col-span-2">
+                  <label style={{ fontWeight: 700, color: 'var(--text-dark, #0f172a)' }}>
+                    Full Name <span className="req-star">*</span>
+                  </label>
+                </div>
+                <div className="inquiry-name-row">
+                  <div className="inquiry-field-group">
+                    <label htmlFor="inq-firstName">
+                      First Name <span className="req-star">*</span>
+                    </label>
+                    <input
+                      id="inq-firstName"
+                      type="text"
+                      className="input-base"
+                      placeholder="Juan"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="inquiry-field-group mi-input">
+                    <label htmlFor="inq-middleInitial">M.I.</label>
+                    <input
+                      id="inq-middleInitial"
+                      type="text"
+                      className="input-base"
+                      placeholder="D."
+                      maxLength={3}
+                      value={middleInitial}
+                      onChange={(e) => setMiddleInitial(e.target.value.toUpperCase())}
+                    />
+                  </div>
+
+                  <div className="inquiry-field-group">
+                    <label htmlFor="inq-lastName">
+                      Last Name <span className="req-star">*</span>
+                    </label>
+                    <input
+                      id="inq-lastName"
+                      type="text"
+                      className="input-base"
+                      placeholder="Dela Cruz"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="inquiry-field-group col-span-2">
               <label htmlFor="population">Population / Pax Count</label>
               <input
                 id="population"
@@ -262,18 +453,6 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
                 placeholder="e.g. 45 pax, 1 family"
                 value={population}
                 onChange={(e) => setPopulation(e.target.value)}
-              />
-            </div>
-
-            <div className="inquiry-field-group">
-              <label htmlFor="contactPerson">Contact Person</label>
-              <input
-                id="contactPerson"
-                type="text"
-                className="input-base"
-                placeholder="Name of focal representative"
-                value={contactPerson}
-                onChange={(e) => setContactPerson(e.target.value)}
               />
             </div>
 

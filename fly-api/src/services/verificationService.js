@@ -31,6 +31,9 @@ const generateSecure6DigitCode = () => {
  * Initiate registration and send 6-character code
  */
 const createPendingRegistration = async ({
+  firstName,
+  middleInitial,
+  lastName,
   fullName,
   email,
   phone,
@@ -41,9 +44,30 @@ const createPendingRegistration = async ({
   idFrontName,
   idBackName
 }) => {
-  // 1. Validation
-  if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2) {
-    return { status: 400, error: 'Name must be at least 2 characters long.' };
+  // 1. Validation & Name Normalization
+  let resolvedFirstName = (firstName || '').trim();
+  let resolvedMiddleInitial = (middleInitial || '').trim();
+  let resolvedLastName = (lastName || '').trim();
+  let resolvedFullName = (fullName || '').trim();
+
+  if (resolvedFirstName && resolvedLastName) {
+    if (resolvedFirstName.length < 2) {
+      return { status: 400, error: 'First name must be at least 2 characters long.' };
+    }
+    if (resolvedLastName.length < 2) {
+      return { status: 400, error: 'Last name must be at least 2 characters long.' };
+    }
+    resolvedFullName = [resolvedFirstName, resolvedMiddleInitial, resolvedLastName].filter(Boolean).join(' ');
+  } else if (resolvedFullName) {
+    if (resolvedFullName.length < 2) {
+      return { status: 400, error: 'Name must be at least 2 characters long.' };
+    }
+    const parts = resolvedFullName.split(/\s+/);
+    resolvedFirstName = parts[0] || '';
+    resolvedLastName = parts.length > 1 ? parts[parts.length - 1] : '';
+    resolvedMiddleInitial = parts.length > 2 ? parts.slice(1, -1).join(' ') : '';
+  } else {
+    return { status: 400, error: 'First name and last name are required.' };
   }
 
   if (!email || typeof email !== 'string' || !email.trim()) {
@@ -131,8 +155,11 @@ const createPendingRegistration = async ({
   const now = Date.now();
 
   const pendingData = {
-    fullName: fullName.trim(),
-    name: fullName.trim(),
+    firstName: resolvedFirstName,
+    middleInitial: resolvedMiddleInitial,
+    lastName: resolvedLastName,
+    fullName: resolvedFullName,
+    name: resolvedFullName,
     email: normalizedEmail,
     phone: phone.trim(),
     password, // temporary server-side storage until verification completes
@@ -152,7 +179,7 @@ const createPendingRegistration = async ({
   await pendingDocRef.set(pendingData);
 
   // 5. Send verification email
-  await sendVerificationCodeEmail(normalizedEmail, fullName.trim(), code);
+  await sendVerificationCodeEmail(normalizedEmail, resolvedFullName, code);
 
   return {
     status: 200,
@@ -266,6 +293,9 @@ const verifyRegistrationCode = async ({ email, code }) => {
 
   const now = new Date().toISOString();
   const userProfile = {
+    firstName: pendingData.firstName || (pendingData.fullName ? pendingData.fullName.split(/\s+/)[0] : ''),
+    middleInitial: pendingData.middleInitial || '',
+    lastName: pendingData.lastName || (pendingData.fullName ? pendingData.fullName.split(/\s+/).slice(1).join(' ') : ''),
     fullName: pendingData.fullName,
     name: pendingData.fullName,
     email: pendingData.email,

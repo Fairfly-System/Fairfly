@@ -29,6 +29,14 @@ export default function CreateInquiryFormModal({ onClose }) {
   const [form, setForm] = useState({
     formNo: 'SAF-01-002',
     controlNo: `23-${Math.floor(100 + Math.random() * 900)}`,
+    clientType: 'individual',
+    companyName: '',
+    firstName: '',
+    middleInitial: '',
+    lastName: '',
+    contactPersonFirstName: '',
+    contactPersonMiddleInitial: '',
+    contactPersonLastName: '',
     clientName: '',
     contactPerson: '',
     cellphone: '',
@@ -112,17 +120,39 @@ export default function CreateInquiryFormModal({ onClose }) {
   };
 
   const isFormValid = Boolean(
-    form.clientName.trim() &&
+    (form.clientType === 'company'
+      ? (form.companyName.trim() && form.contactPersonFirstName.trim() && form.contactPersonLastName.trim())
+      : (form.firstName.trim() && form.lastName.trim())) &&
     (form.cellphone.trim() || form.email.trim()) &&
     ((form.servicesOffered || []).length > 0 || form.serviceType.trim()) &&
     form.specifiedRequirements.trim()
   );
 
   const handleSubmit = () => {
-    if (!form.clientName.trim()) {
-      addToast('Client or Company name is required', 'error');
-      return;
+    if (form.clientType === 'company') {
+      if (!form.companyName.trim()) {
+        addToast('Company name is required', 'error');
+        return;
+      }
+      if (!form.contactPersonFirstName.trim()) {
+        addToast('Contact person first name is required', 'error');
+        return;
+      }
+      if (!form.contactPersonLastName.trim()) {
+        addToast('Contact person last name is required', 'error');
+        return;
+      }
+    } else {
+      if (!form.firstName.trim()) {
+        addToast('First name is required', 'error');
+        return;
+      }
+      if (!form.lastName.trim()) {
+        addToast('Last name is required', 'error');
+        return;
+      }
     }
+
     if (!form.cellphone.trim() && !form.email.trim()) {
       addToast('Please provide at least a cellphone number or email', 'error');
       return;
@@ -136,8 +166,26 @@ export default function CreateInquiryFormModal({ onClose }) {
       return;
     }
 
+    const canonicalClientName = form.clientType === 'company'
+      ? form.companyName.trim()
+      : [form.firstName.trim(), form.middleInitial.trim(), form.lastName.trim()].filter(Boolean).join(' ');
+
+    const canonicalContactPerson = form.clientType === 'company'
+      ? [form.contactPersonFirstName.trim(), form.contactPersonMiddleInitial.trim(), form.contactPersonLastName.trim()].filter(Boolean).join(' ')
+      : (form.contactPerson.trim() || canonicalClientName);
+
     const payload = {
       ...form,
+      clientType: form.clientType,
+      companyName: form.clientType === 'company' ? form.companyName.trim() : '',
+      clientName: canonicalClientName,
+      firstName: (form.clientType === 'company' ? form.contactPersonFirstName : form.firstName).trim(),
+      middleInitial: (form.clientType === 'company' ? form.contactPersonMiddleInitial : form.middleInitial).trim(),
+      lastName: (form.clientType === 'company' ? form.contactPersonLastName : form.lastName).trim(),
+      contactPerson: canonicalContactPerson,
+      contactPersonFirstName: (form.clientType === 'company' ? form.contactPersonFirstName : form.firstName).trim(),
+      contactPersonMiddleInitial: (form.clientType === 'company' ? form.contactPersonMiddleInitial : form.middleInitial).trim(),
+      contactPersonLastName: (form.clientType === 'company' ? form.contactPersonLastName : form.lastName).trim(),
       formNo: 'SAF-01-002',
       branchUid: (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator') ? user?.uid : null,
       branchName: userDetails?.branchName || userDetails?.name || 'Branch Office',
@@ -187,16 +235,135 @@ export default function CreateInquiryFormModal({ onClose }) {
           <i className="fa-solid fa-user"></i> 1. Client Information
         </h3>
 
-        <div className="cif-row2">
-          <div className="cif-field">
-            <label>Name of Client / Company <span>*</span></label>
-            <input name="clientName" placeholder="Client or company name" value={form.clientName} onChange={handleChange} disabled={isSubmitting} />
-          </div>
-          <div className="cif-field">
-            <label>Contact Person</label>
-            <input name="contactPerson" placeholder="Contact person name" value={form.contactPerson} onChange={handleChange} disabled={isSubmitting} />
+        {/* Client Type Selector */}
+        <div className="cif-type-selector">
+          <span className="cif-type-label">
+            <i className="fa-solid fa-sliders"></i> Client Type:
+          </span>
+          <div className="cif-type-options">
+            <button
+              type="button"
+              className={`cif-type-btn ${form.clientType === 'individual' ? 'active' : ''}`}
+              onClick={() => setForm((prev) => ({ ...prev, clientType: 'individual' }))}
+            >
+              <i className="fa-solid fa-user"></i>
+              <span>Individual</span>
+            </button>
+            <button
+              type="button"
+              className={`cif-type-btn ${form.clientType === 'company' ? 'active' : ''}`}
+              onClick={() => setForm((prev) => ({ ...prev, clientType: 'company' }))}
+            >
+              <i className="fa-solid fa-building"></i>
+              <span>Company / Organization</span>
+            </button>
           </div>
         </div>
+
+        {form.clientType === 'company' ? (
+          <>
+            {/* Company Name */}
+            <div className="cif-field" style={{ marginBottom: '0.875rem' }}>
+              <label>Company / Organization Name <span>*</span></label>
+              <input
+                name="companyName"
+                placeholder="e.g. Acme Travel & Tours Corp."
+                value={form.companyName}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            {/* Contact Person Name Label */}
+            <div style={{ marginBottom: '0.35rem' }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-dark, #334155)' }}>
+                Contact Person Name (Representative) <span style={{ color: 'var(--red, #ef4444)' }}>*</span>
+              </label>
+            </div>
+
+            {/* Contact Person 3 Name Fields */}
+            <div className="cif-row-name">
+              <div className="cif-field">
+                <label>First Name <span>*</span></label>
+                <input
+                  name="contactPersonFirstName"
+                  placeholder="Juan"
+                  value={form.contactPersonFirstName}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+              <div className="cif-field mi-input">
+                <label>M.I.</label>
+                <input
+                  name="contactPersonMiddleInitial"
+                  placeholder="D."
+                  maxLength={3}
+                  value={form.contactPersonMiddleInitial}
+                  onChange={(e) => setForm((prev) => ({ ...prev, contactPersonMiddleInitial: e.target.value.toUpperCase() }))}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="cif-field">
+                <label>Last Name <span>*</span></label>
+                <input
+                  name="contactPersonLastName"
+                  placeholder="Dela Cruz"
+                  value={form.contactPersonLastName}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Individual Name Row: First Name - M.I. - Last Name (matching Franchise Application Form) */}
+            <div style={{ marginBottom: '0.35rem' }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-dark, #334155)' }}>
+                Full Name <span>*</span>
+              </label>
+            </div>
+            <div className="cif-row-name">
+              <div className="cif-field">
+                <label>First Name <span>*</span></label>
+                <input
+                  name="firstName"
+                  placeholder="Juan"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+              <div className="cif-field mi-input">
+                <label>M.I.</label>
+                <input
+                  name="middleInitial"
+                  placeholder="D."
+                  maxLength={3}
+                  value={form.middleInitial}
+                  onChange={(e) => setForm((prev) => ({ ...prev, middleInitial: e.target.value.toUpperCase() }))}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="cif-field">
+                <label>Last Name <span>*</span></label>
+                <input
+                  name="lastName"
+                  placeholder="Dela Cruz"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="cif-row2">
           <div className="cif-field">
@@ -204,22 +371,22 @@ export default function CreateInquiryFormModal({ onClose }) {
             <input name="cellphone" placeholder="+63 912 345 6789" value={form.cellphone} onChange={handleChange} disabled={isSubmitting} />
           </div>
           <div className="cif-field">
+            <label>Telephone No.</label>
+            <input name="telNo" placeholder="Landline telephone" value={form.telNo} onChange={handleChange} disabled={isSubmitting} />
+          </div>
+        </div>
+
+        <div className="cif-row2">
+          <div className="cif-field">
             <label>E-mail Address</label>
             <input name="email" type="email" placeholder="client@example.com" value={form.email} onChange={handleChange} disabled={isSubmitting} />
             <small style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '0.25rem', display: 'block' }}>
               If client has a FairFly account, this inquiry will automatically link to their portal.
             </small>
           </div>
-        </div>
-
-        <div className="cif-row2">
           <div className="cif-field">
             <label>Complete Address <span>*</span></label>
             <input name="address" placeholder="Unit / Street / City" value={form.address} onChange={handleChange} disabled={isSubmitting} />
-          </div>
-          <div className="cif-field">
-            <label>Telephone No.</label>
-            <input name="telNo" placeholder="Landline telephone" value={form.telNo} onChange={handleChange} disabled={isSubmitting} />
           </div>
         </div>
 

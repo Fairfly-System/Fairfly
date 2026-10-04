@@ -15,7 +15,9 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    middleInitial: "",
+    lastName: "",
     email: "",
     phone: "",
     password: "",
@@ -52,15 +54,29 @@ export default function Register() {
   // -----------------------
   // VALIDATION FUNCTIONS
   // -----------------------
-  const validateFullName = (name) => {
+  const validateFirstName = (name) => {
     if (name.trim().length < 2) {
       setErrors((prev) => ({
         ...prev,
-        fullName: "Name must be at least 2 characters",
+        firstName: "First name must be at least 2 characters",
       }));
     } else {
       setErrors((prev) => {
-        const { fullName, ...rest } = prev;
+        const { firstName, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  const validateLastName = (name) => {
+    if (name.trim().length < 2) {
+      setErrors((prev) => ({
+        ...prev,
+        lastName: "Last name must be at least 2 characters",
+      }));
+    } else {
+      setErrors((prev) => {
+        const { lastName, ...rest } = prev;
         return rest;
       });
     }
@@ -135,7 +151,8 @@ export default function Register() {
     const hasErrors = Object.keys(errors).length > 0;
 
     const requiredFields = [
-      "fullName",
+      "firstName",
+      "lastName",
       "email",
       "phone",
       "password",
@@ -193,9 +210,14 @@ export default function Register() {
         finalBackUrl = resBack.url;
       }
 
+      const derivedFullName = [formData.firstName.trim(), formData.middleInitial.trim(), formData.lastName.trim()].filter(Boolean).join(" ");
+
       initiateRegistration(
         {
-          fullName: formData.fullName.trim(),
+          firstName: formData.firstName.trim(),
+          middleInitial: formData.middleInitial.trim(),
+          lastName: formData.lastName.trim(),
+          fullName: derivedFullName,
           email: targetEmail,
           phone: formData.phone.trim(),
           password: formData.password,
@@ -315,25 +337,63 @@ export default function Register() {
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit}>
-            {/* FULL NAME */}
-            <div className="auth-input-group">
-              <label className="auth-input-label">Full Name</label>
-              <div className={`auth-input-wrapper ${errors.fullName ? 'has-error' : ''}`}>
-                <User size={18} className="auth-input-icon" />
-                <input
-                  type="text"
-                  className="auth-input"
-                  value={formData.fullName}
-                  onChange={(e) => {
-                    handleInputChange(e.target.value, "fullName");
-                    validateFullName(e.target.value);
-                  }}
-                  placeholder="Juan Dela Cruz"
-                  autoComplete="name"
-                  required
-                />
+            {/* NAME ROW: First Name - M.I. - Last Name (matching Franchise Application Form) */}
+            <div className="auth-name-row">
+              <div className="auth-input-group">
+                <label className="auth-input-label">First Name *</label>
+                <div className={`auth-input-wrapper ${errors.firstName ? 'has-error' : ''}`}>
+                  <User size={18} className="auth-input-icon" />
+                  <input
+                    type="text"
+                    className="auth-input"
+                    value={formData.firstName}
+                    onChange={(e) => {
+                      handleInputChange(e.target.value, "firstName");
+                      validateFirstName(e.target.value);
+                    }}
+                    placeholder="Juan"
+                    autoComplete="given-name"
+                    required
+                  />
+                </div>
+                {errors.firstName && <p className="auth-input-error">{errors.firstName}</p>}
               </div>
-              {errors.fullName && <p className="auth-input-error">{errors.fullName}</p>}
+
+              <div className="auth-input-group auth-input-group--mi">
+                <label className="auth-input-label">M.I.</label>
+                <div className="auth-input-wrapper mi-input">
+                  <input
+                    type="text"
+                    className="auth-input"
+                    value={formData.middleInitial}
+                    maxLength={3}
+                    onChange={(e) => {
+                      handleInputChange(e.target.value.toUpperCase(), "middleInitial");
+                    }}
+                    placeholder="D."
+                    autoComplete="additional-name"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-input-group">
+                <label className="auth-input-label">Last Name *</label>
+                <div className={`auth-input-wrapper ${errors.lastName ? 'has-error' : ''}`}>
+                  <input
+                    type="text"
+                    className="auth-input"
+                    value={formData.lastName}
+                    onChange={(e) => {
+                      handleInputChange(e.target.value, "lastName");
+                      validateLastName(e.target.value);
+                    }}
+                    placeholder="Dela Cruz"
+                    autoComplete="family-name"
+                    required
+                  />
+                </div>
+                {errors.lastName && <p className="auth-input-error">{errors.lastName}</p>}
+              </div>
             </div>
 
             {/* EMAIL */}

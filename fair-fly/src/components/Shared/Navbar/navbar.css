@@ -307,7 +307,11 @@
 /* Breakpoint for tablet & mobile */
 @media (max-width: 64rem) {
   .nav {
-    padding: 0.75rem 1.25rem;
+    padding: 0.625rem 1.25rem;
+  }
+
+  .nav-logo-img {
+    height: 2.5rem;
   }
 
   .nav-desktop-links,
@@ -317,6 +321,26 @@
 
   .nav-mobile-controls {
     display: flex;
+  }
+}
+
+@media (max-width: 48rem) {
+  .nav {
+    padding: 0.5rem 1rem;
+  }
+
+  .nav-logo-img {
+    height: 2.25rem;
+  }
+
+  .nav-mobile-drawer {
+    padding: 1rem 1.25rem 1.5rem;
+    gap: 1rem;
+  }
+
+  .nav-mobile-item {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
   }
 }
 

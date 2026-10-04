@@ -58,17 +58,17 @@ export default function FranchiseSection() {
 
   return (
     <section id="franchise-section" className="fr-section">
-      <div className="fr-wrap">
-        <div className="fr-left">
-          <div className="fr-badge">
-            <i className="fa-solid fa-building-flag"></i> Franchise Opportunity
-          </div>
+      <div className="fr-container">
+        <div className="fr-wrap">
+          <div className="fr-left">
+            <div className="fr-badge">
+              <i className="fa-solid fa-building-flag"></i> Franchise Opportunity
+            </div>
 
-          <h2 className="fr-title">
-            Own a Fairfly
-            <br />
-            <span className="fr-titleOrange">Franchise Branch</span>
-          </h2>
+            <h2 className="fr-title">
+              Own a Fairfly
+              <span className="fr-titleOrange">Franchise Branch</span>
+            </h2>
 
           <p className="fr-desc">
             Join the Fairfly family and build your own thriving travel business. We provide
@@ -116,8 +116,9 @@ export default function FranchiseSection() {
           </div>
         </div>
       </div>
+    </div>
 
-      <FranchiseApplicationForm isOpen={isModalOpen} onClose={closeModal} />
-    </section>
-  )
+    <FranchiseApplicationForm isOpen={isModalOpen} onClose={closeModal} />
+  </section>
+)
 }

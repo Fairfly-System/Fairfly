@@ -1,6 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router';
 import './landing.css';
-import Services from '../../../components/Shared/Services/Services';
 import FooterCard from '../../../components/UI/FooterCard/FooterCard';
 import FranchiseSection from '../../../components/FranchiseSection/FranchiseSection';
 import Explore from '../../../components/Explore/Explore';
@@ -8,6 +8,7 @@ import BusinessSystem from '../../../components/Landing/BusinessSystem/BusinessS
 import ServiceGuidelines from '../../../components/Landing/ServiceGuidelines/ServiceGuidelines';
 import BusinessModel from '../../../components/Landing/BusinessModel/BusinessModel';
 import TrainingComparison from '../../../components/Landing/TrainingComparison/TrainingComparison';
+import PuzzleHouse from '../../../components/Landing/FranchisePuzzleBanner/PuzzleHouse';
 
 export default function Landing() {
   return (
@@ -26,34 +27,45 @@ export default function Landing() {
           <div className="hero-bg-overlay" />
         </div>
 
-        <div className="hero-badge">
-          <span className="hero-badge-dot" />
-          <span>Standardized Travel Management System</span>
-        </div>
+        <div className="hero-main-container">
+          <div className="hero-text-col">
+            <div className="hero-badge">
+              <span className="hero-badge-dot" />
+              <span>Standardized Travel Management System</span>
+            </div>
 
-        <h1 className="hero-heading">
-          Start Your Journey as a Franchise Partner
-          <br />
-          Build your Travel Business with <span className="hero-heading-brand">Fairfly</span>
-        </h1>
+            <h1 className="hero-heading">
+              Start Your Journey as a Franchise Partner,
+              Build your Travel Business with{' '}
+              <span className="hero-heading-brand">
+                <span className="brand-fair">fair</span>
+                <span className="brand-fly">fly</span>
+              </span>
+            </h1>
 
-        <p className="hero-sub">
-          An ISO 9001:2000-ready cloud ecosystem. From expedited passport filing, PSA civil documents, and international flight ticketing to asset-light franchise operations with zero physical inventory liability.
-        </p>
+            <p className="hero-sub">
+              An ISO 9001:2000-ready cloud ecosystem. From expedited passport filing, PSA civil documents, and international flight ticketing to asset-light franchise operations with zero physical inventory liability.
+            </p>
 
-        <div className="hero-actions">
-          <a href="#services" className="btn-hero-primary">
-            <span>Browse Services</span>
-            <i className="fa-solid fa-arrow-right"></i>
-          </a>
-          <a href="#business-system" className="btn-hero-secondary">
-            <i className="fa-solid fa-microchip"></i>
-            <span>Explore Business System</span>
-          </a>
-          <a href="#franchise-section" className="btn-hero-outline">
-            <i className="fa-solid fa-building-flag"></i>
-            <span>Franchise Inquiries</span>
-          </a>
+            <div className="hero-actions">
+              <Link to="/services" className="btn-hero-primary">
+                <span>Browse Services</span>
+                <i className="fa-solid fa-arrow-right"></i>
+              </Link>
+              <a href="#business-system" className="btn-hero-secondary">
+                <i className="fa-solid fa-microchip"></i>
+                <span>Explore Business System</span>
+              </a>
+              <a href="#franchise-section" className="btn-hero-outline">
+                <i className="fa-solid fa-building-flag"></i>
+                <span>Franchise Inquiries</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="hero-puzzle-col">
+            <PuzzleHouse />
+          </div>
         </div>
 
         {/* Metric Trust Strip */}
@@ -100,8 +112,34 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Core Services Catalog */}
-      <Services />
+      {/* Core Services Teaser Strip */}
+      <section className="landing-services-teaser">
+        <div className="teaser-container">
+          <div className="teaser-left">
+            <div className="teaser-badge">
+              <i className="fa-solid fa-briefcase"></i>
+              <span>Available Services</span>
+            </div>
+            <h2 className="teaser-title">Looking for Travel & Document Assistance?</h2>
+            <p className="teaser-desc">
+              Explore our full catalog of certified DFA passport expediting, PSA civil registry document retrieval, embassy tourist visa filings, flight bookings, and holiday tour packages.
+            </p>
+            <div className="teaser-pills">
+              <span className="teaser-pill"><i className="fa-solid fa-id-card"></i> Passport Filing</span>
+              <span className="teaser-pill"><i className="fa-regular fa-file-lines"></i> PSA Certificates</span>
+              <span className="teaser-pill"><i className="fa-solid fa-passport"></i> Visa Assistance</span>
+              <span className="teaser-pill"><i className="fa-solid fa-plane-departure"></i> Flight Ticketing</span>
+              <span className="teaser-pill"><i className="fa-solid fa-map-location-dot"></i> Tour Packages</span>
+            </div>
+          </div>
+          <div className="teaser-right">
+            <Link to="/services" className="btn-teaser-cta">
+              <span>View All Services Catalog</span>
+              <i className="fa-solid fa-arrow-right"></i>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* ISO 9001-2000 Quality Management System Section (Slides 2-6) */}
       <BusinessSystem />

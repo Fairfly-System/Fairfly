@@ -2,6 +2,7 @@ import Chatbot from './components/Shared/Chatbot/Chatbot'
 import Footer from './components/Shared/Footer/Footer'
 import About from './pages/Index/About/About';
 import Landing from './pages/Index/Landing/Landing'
+import ServicesPage from './pages/Index/ServicesPage/ServicesPage';
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router";
 import Login from './pages/Index/Login/login';
 import Register from './pages/Index/Register/Register';
@@ -200,6 +201,7 @@ function App() {
               <Route element={<Index />}>
                 <Route index element={<Navigate to="/home" replace />} />
                 <Route path="/home" element={<Landing />} />
+                <Route path="/services" element={<ServicesPage />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />

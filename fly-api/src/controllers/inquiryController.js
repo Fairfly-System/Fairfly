@@ -63,6 +63,14 @@ const DEFAULT_INQUIRY_SCHEMA = {
 const createInquiry = async (req, res) => {
   try {
     const { 
+      clientType,
+      companyName,
+      firstName,
+      middleInitial,
+      lastName,
+      contactPersonFirstName,
+      contactPersonMiddleInitial,
+      contactPersonLastName,
       fullName,
       clientName,
       contactPerson,
@@ -96,12 +104,34 @@ const createInquiry = async (req, res) => {
       status
     } = req.body;
 
-    const resolvedName = fullName || clientName;
+    const isCompany = clientType === 'company';
+    const contactParts = [contactPersonFirstName, contactPersonMiddleInitial, contactPersonLastName]
+      .filter(Boolean)
+      .map(s => String(s).trim())
+      .filter(Boolean)
+      .join(' ');
+    const indivParts = [firstName, middleInitial, lastName]
+      .filter(Boolean)
+      .map(s => String(s).trim())
+      .filter(Boolean)
+      .join(' ');
+
+    let resolvedName = '';
+    let resolvedContactPerson = '';
+
+    if (isCompany) {
+      resolvedName = (companyName || clientName || fullName || '').trim();
+      resolvedContactPerson = (contactPerson || contactParts || '').trim();
+    } else {
+      resolvedName = (clientName || fullName || indivParts || '').trim();
+      resolvedContactPerson = (contactPerson || resolvedName).trim();
+    }
+
     const resolvedPhone = (phoneNumber || cellphone || '').trim();
     const resolvedEmail = (email || '').trim();
 
     if (!resolvedName || (!resolvedPhone && !resolvedEmail)) {
-      return res.status(400).json({ error: 'Client name and at least one contact method are required' });
+      return res.status(400).json({ error: (isCompany ? 'Company name' : 'Client name') + ' and at least one contact method are required' });
     }
 
     const now = new Date().toISOString();
@@ -204,8 +234,16 @@ const createInquiry = async (req, res) => {
 
     const newInquiry = {
       clientUid: effectiveClientUid,
+      clientType: isCompany ? 'company' : 'individual',
+      companyName: isCompany ? (companyName || resolvedName).trim() : '',
       clientName: resolvedName.trim(),
-      contactPerson: (contactPerson || '').trim(),
+      firstName: (firstName || contactPersonFirstName || '').trim(),
+      middleInitial: (middleInitial || contactPersonMiddleInitial || '').trim(),
+      lastName: (lastName || contactPersonLastName || '').trim(),
+      contactPerson: (resolvedContactPerson || resolvedName).trim(),
+      contactPersonFirstName: (contactPersonFirstName || firstName || '').trim(),
+      contactPersonMiddleInitial: (contactPersonMiddleInitial || middleInitial || '').trim(),
+      contactPersonLastName: (contactPersonLastName || lastName || '').trim(),
       email: resolvedEmail,
       phoneNumber: resolvedPhone,
       telNo: telNo || '',

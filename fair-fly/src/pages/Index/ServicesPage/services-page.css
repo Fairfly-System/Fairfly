@@ -1,0 +1,15 @@
+/* ==========================================================================
+   FairFly Dedicated Services Catalog Page
+   ========================================================================== */
+
+.services-page-wrapper {
+  min-height: 100vh;
+  background-color: var(--bg, #f8fafc);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main Content Area */
+.services-page-main {
+  flex: 1;
+}

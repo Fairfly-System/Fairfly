@@ -1,0 +1,133 @@
+.puzzle-house-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  user-select: none;
+}
+
+.puzzle-house-stage {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: puzzleFloat 6s ease-in-out infinite alternate;
+}
+
+@keyframes puzzleFloat {
+  0% {
+    transform: translateY(0px);
+  }
+
+  100% {
+    transform: translateY(-6px);
+  }
+}
+
+.puzzle-house-svg {
+  width: 100%;
+  height: auto;
+  max-height: 600px;
+  overflow: visible;
+  filter: drop-shadow(0 14px 28px rgba(15, 23, 42, 0.08));
+}
+
+.puzzle-piece {
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  transform-origin: 270px 240px;
+}
+
+.puzzle-piece:hover {
+  filter: brightness(1.08) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.22));
+}
+
+.roof-piece:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.chimney-piece:hover {
+  transform: translateY(-5px) scale(1.03);
+}
+
+.blue-piece:hover {
+  transform: translate(-3px, -2px) scale(1.02);
+}
+
+.purple-piece:hover {
+  transform: translate(3px, -2px) scale(1.02);
+}
+
+.green-piece:hover {
+  transform: translate(-3px, 3px) scale(1.02);
+}
+
+.orange-piece:hover {
+  transform: translate(3px, 3px) scale(1.02);
+}
+
+/* Tooltip on piece hover */
+.puzzle-piece-tooltip {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid var(--border-color);
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.18), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  width: 90%;
+  max-width: 320px;
+  z-index: 10;
+  pointer-events: none;
+  animation: tooltipFadeUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tooltipFadeUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(8px) scale(1);
+  }
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.tooltip-badge {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: #ffffff;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tooltip-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.tooltip-desc {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-mid);
+  margin: 0;
+}

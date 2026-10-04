@@ -1,5 +1,95 @@
 # Update Logs
 
+## [2026-10-04] Services Page: Comprehensive Category & Multi-Field Search Filtering Fix
+
+### Overview
+Overhauled the service filtering logic on the Services Catalog ([`Services.jsx`](file:///c:/Users/Ier%20Reyes/Fairfly/fair-fly/src/components/Shared/Services/Services.jsx)) to guarantee reliable matching across database categories (such as `"Visa & Embassy Assistance"`, `"Passport Processing"`, `"PSA & Civil Documents"`, `"Airline Ticketing"`, `"Tour Packages"`, and custom database categories), with real-time count badges and multi-field search across titles, descriptions, tags, requirements, and categories.
+
+### Key Changes
+1. **Dynamic Category Configuration & Matching (`Services.jsx`)**:
+   - Built `isServiceMatchingCategory(service, tab)` with keyword synonym matching (e.g. matching `"Visa & Embassy Assistance"` to the Visa tab, `"Flight Ticketing"` to the Flights tab).
+   - Created dynamic `categoryTabs` computation that automatically tallies accurate service counts and discovers custom categories created in Firestore.
+   - Filtered out empty categories (`count === 0`) dynamically while preserving `'All Services'`.
+2. **Enhanced Search Matching**:
+   - Expanded search filtering to check `name`, `category`, `description`, `tags`, and `requirements` text simultaneously.
+
+---
+
+## [2026-10-04] Services Page: Removed Redundant Top Hero Header Banner
+
+### Overview
+Streamlined the dedicated Services Catalog route (`/services`) by removing the redundant top hero banner (`.services-hero-header`) so that visitors immediately view the core interactive Services catalog and category filter toolbar.
+
+### Key Changes
+1. **Services Page Layout (`ServicesPage.jsx`, `services-page.css`)**:
+   - Removed the top `.services-hero-header` section (breadcrumb, duplicate headline, and trust pills).
+   - Retained the clean, interactive `<Services />` catalog header and `<FooterCard />`.
+
+---
+
+## [2026-10-04] UI / Typography: Fredoka Bold Display Heading Style Applied Across Landing Page
+
+### Overview
+Applied the rounded, extra-bold display typography style (`Fredoka` 800 weight, tight geometric tracking) matching the official FairFly brand identity across major landing page titles and section headers.
+
+### Key Changes
+1. **Typography Design Tokens (`index.css`)**:
+   - Added `--font-display: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;` token for display headlines.
+2. **Applied Display Font to Major Headings**:
+   - **Hero Section (`landing.css`)**: Updated `.hero-heading` with `font-family: var(--font-display)` and `font-weight: 800`.
+   - **Services Teaser (`landing.css`)**: Updated `.teaser-title` with `font-family: var(--font-display)`.
+   - **Franchise Section (`franchise-section.css`)**: Updated `.fr-title` with `font-family: var(--font-display)`.
+   - **Services Catalog (`services.css`)**: Updated `.landing-services-title` with `font-family: var(--font-display)`.
+   - **Footer Card (`footer-card.css`)**: Updated `.footer-title` with `font-family: var(--font-display)`.
+   - **Landing System Modules (`business-system.css`, `service-guidelines.css`, `business-model.css`, `training-comparison.css`)**: Updated `.bs-title`, `.sg-title`, `.bm-title`, `.tc-title` with `font-family: var(--font-display)`.
+
+---
+
+## [2026-10-04] Landing Page: 3D Puzzle House Hero Section Integration & Visual Scale Enhancement
+
+### Overview
+Integrated the 3D glossy vector Puzzle House illustration directly into the Landing Page Hero section ([`Landing.jsx`](file:///c:/Users/Ier%20Reyes/Fairfly/fair-fly/src/pages/Index/Landing/Landing.jsx)), paired alongside the hero text and action buttons without modifying any existing wording or content. Enhanced the scale and proportions of the puzzle house visual for increased prominence across desktop and responsive viewports.
+
+### Key Changes
+1. **Visual Scale & Layout Proportions (`puzzle-house.css`, `landing.css`)**:
+   - Increased max container width to `560px` and max height to `480px` for a bolder visual presence.
+   - Optimized grid column ratios (`1.05fr : 0.95fr`) in `.hero-main-container` with responsive scaling for tablet (`480px` max-width) and mobile screens.
+2. **Hero Section Integration (`Landing.jsx`, `landing.css`)**:
+   - Added `<PuzzleHouse />` into `.hero-main-container` next to the untouched heading, subtitle, and action buttons.
+3. **Interactive 3D Puzzle House Asset (`PuzzleHouse.jsx`, `puzzle-house.css`)**:
+   - High-fidelity 3D glossy puzzle house with interlocking jigsaw pieces, subtle floating animation, soft floor shadow, and ground mirror reflection.
+
+---
+
+## [2026-10-04] UI / UX: Mobile & Tablet Responsiveness Overhaul, Dedicated Services Page Separation & Logo Brand Typography Alignment
+
+### Overview
+Executed a comprehensive mobile and tablet responsiveness optimization across all landing sections, public pages, and navigation systems. Separated the Available Travel & Document Services catalog into its own dedicated public route (`/services`), updated the landing page Hero call-to-actions and Navbar routing accordingly, and styled the brand name "fairfly" in the hero heading to exactly match the official logo's dual-tone color palette (`fair` in royal blue/purple, `fly` in vibrant orange) and rounded geometric font typography (`Fredoka`).
+
+### Key Changes
+1. **Brand Typography & Color Alignment (`Landing.jsx`, `landing.css`, `index.html`, `index.css`)**:
+   - Imported Google Font `Fredoka` (weights 600, 700, 800, 900) and established `--font-logo` token in `src/index.css`.
+   - Updated Hero heading "Across the Philippines with Fairfly" to render dual-tone logo typography: `<span className="hero-heading-brand"><span className="brand-fair">fair</span><span className="brand-fly">fly</span></span>`.
+   - Styled `.brand-fair` in official brand blue/purple (`#4F6BF5`) and `.brand-fly` in official brand orange (`#FF8738`) with bold rounded letterforms matching `/FairflyLogo.png`.
+
+2. **Dedicated Services Page Separation (`ServicesPage.jsx`, `services-page.css`, `App.jsx`, `Navbar.jsx`)**:
+   - Created dedicated public page `fair-fly/src/pages/Index/ServicesPage/ServicesPage.jsx` and registered route `/services` in `App.jsx`.
+   - Designed a full hero banner with breadcrumb navigation, ISO 9001:2000 & operator trust badges, full search & category filtering, interactive cards grid, service detail modal, and footer CTA.
+   - Updated Public `Navbar.jsx`: "Services" link now routes directly to `/services` as an active `NavLink` across both desktop and mobile slide drawer.
+   - Updated Landing Page: "Browse Services" button links to `/services` via React Router `Link`, and replaced inline services with a sleek Services Teaser banner directing visitors to the dedicated catalog.
+
+3. **System-Wide Mobile & Tablet Responsiveness**:
+   - **Hero Section (`landing.css`)**: Implemented responsive typography clamping, full-width stacked action buttons on mobile screens (< 48rem / 768px), and responsive 2x2 / 1-column grid layout for the Trust Strip.
+   - **Public Navbar (`navbar.css`)**: Refined mobile drawer slide animation, optimized logo scaling on small devices (`height: 2.25rem`), and enhanced touchable tap targets.
+   - **Services Catalog & Detail Modal (`services.css`, `service-detail-modal.css`)**: Set 3 columns for desktop (> 1024px), 2 columns for tablets (641px - 1024px), and 1 column for mobile (<= 640px). Enabled smooth horizontal touch momentum scrolling on category chips without scrollbar clutter.
+   - **About Page (`about.css`)**: Adjusted `.branchCard` and `.headOfficeCard` grid layouts for tablet (601px - 960px) and mobile (<= 640px) viewports with comfortable padding.
+   - **Explore Destination Grid (`explore.css`)**: Fixed mobile grid rows definition for all 7 destination cards with consistent card heights.
+
+4. **Verification**:
+   - Production bundle build (`npm run build` in `fair-fly`) completed cleanly in 7.83s with 0 errors.
+
+---
+
 ## [2026-10-02] Feature & Security: Backend Chatbot Grounding on Firestore Services & Branches Directory
 
 ### Overview
@@ -354,7 +444,33 @@ Architected and implemented an end-to-end dedicated workflow for **Aspiring Fran
   - Validated post-consultation operator creation, franchise application approval, and operatorId foreign key linkage.
   - Test suite result: **21 Passed, 0 Failed**.
 - **Production Build Validation**:
-  - Executed `npm run build` in `fair-fly`: Vite build completed cleanly in 3.25s with 0 errors.
+## [2026-10-01] Standardization: Split Name Fields (First Name, M.I., Last Name) & Company vs. Individual Client Type in Inquiry Forms
+
+### Overview
+Standardized name input fields across client registration (`Register.jsx`), customer service inquiry modal (`ClientInquiryModal.jsx`), and operator service inquiry intake modal (`CreateInquiryFormModal.jsx`) to align with the 3-column layout (**First Name**, **M.I.**, **Last Name**) used on the Franchise Application Form. Additionally implemented an **Individual vs. Company** client type toggle on both inquiry modals: when "Company" is selected, the forms prompt for the Company / Organization Name and provide the 3 name fields for the focal Contact Person (Representative). Maintained complete backward compatibility by auto-composing canonical `fullName`, `clientName`, and `contactPerson` attributes in backend controllers and service payloads.
+
+### Key Changes
+1. **Client Registration Form (`Register.jsx`, `register.css`)**:
+   - Replaced single `fullName` input with responsive 3-column name row: First Name (`firstName`, required), M.I. (`middleInitial`, optional, uppercase, max 3 chars), and Last Name (`lastName`, required).
+   - Added validation helpers `validateFirstName` and `validateLastName` (minimum 2 characters).
+   - Derives composite `fullName` on submission and passes discrete name fields (`firstName`, `middleInitial`, `lastName`) alongside `fullName` to `initiateRegistration`.
+   - Added responsive grid styles `.auth-name-row` with mobile breakpoint optimization.
+
+2. **Customer Service Inquiry Modal (`ClientInquiryModal.jsx`, `client-inquiry-modal.css`)**:
+   - Added interactive `Client Type` toggle: **Individual** vs. **Company / Organization**.
+   - If **Individual**: Displays 3-column name row (First Name, M.I., Last Name).
+   - If **Company**: Displays Company Name field, followed by the 3-column name row (First Name, M.I., Last Name) specifically for the Contact Person / Representative.
+   - Enhanced prefill logic to parse `userDetails` into discrete first, middle, and last names for both individual and contact person state.
+   - Dynamically constructs canonical `clientName` (Company Name if company, or Individual full name if individual) and canonical `contactPerson`.
+
+3. **Operator Service Inquiry Modal (`CreateInquiryFormModal.jsx`, `create-inquiry-form-modal.css`)**:
+   - Added `Client Type` segmented selector (**Individual** vs. **Company / Organization**) in Section 1.
+   - Dynamically renders either Individual 3-column name fields or Company Name + Contact Person 3-column name fields.
+   - Updated form validation and state to handle `clientType`, `companyName`, and discrete name fields for both flows.
+
+4. **Backend Registration & Inquiry Controllers (`verificationService.js`, `inquiryController.js`)**:
+   - `fly-api/src/services/verificationService.js`: Accepted `firstName`, `middleInitial`, `lastName` in `createPendingRegistration`, validating inputs and saving them to `pendingRegistrations` and verified `users` profiles.
+   - `fly-api/src/controllers/inquiryController.js`: Supported `clientType`, `companyName`, `firstName`, `middleInitial`, `lastName`, and contact person name fields in `createInquiry`. Stored structured fields while guaranteeing canonical `clientName` and `contactPerson` resolution.
 
 ---
 
@@ -2228,7 +2344,6 @@ Moved inline styles (`style={{ ... }}`) across Inquiry, Quotation, Qualification
 
 ### Summary of Changes
 - Resolved `ReferenceError: userToken is not defined` when uploading files or images in the chat messaging module.
->>>>>>> 9db8a74c359953f71a219e1370975e552cfe86a7
 
 ---
 
@@ -2256,10 +2371,7 @@ Moved inline styles (`style={{ ... }}`) across Inquiry, Quotation, Qualification
 - Resolved "Endpoint not found" error by restarting the `fly-api` server under `nodemon` and adding endpoint aliases.
 
 ---
-<<<<<<< HEAD
 
-=======
->>>>>>> 9db8a74c359953f71a219e1370975e552cfe86a7
 ## [2026-08-26] Fix: Chat Conversation Deduplication & Support Lead Navigation
 
 ### Files Modified

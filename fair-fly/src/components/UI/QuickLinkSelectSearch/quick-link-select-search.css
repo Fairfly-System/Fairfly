@@ -1,0 +1,233 @@
+/* ==========================================================================
+   QuickLinkSelectSearch Component Styles
+   ========================================================================== */
+
+.quicklink-search-container {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+}
+
+.quicklink-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.quicklink-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-light, #94a3b8);
+  font-size: 0.8125rem;
+  pointer-events: none;
+}
+
+.quicklink-search-input {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 2.125rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-sm, 0.375rem);
+  background-color: var(--card-bg, #ffffff);
+  color: var(--text-dark, #1e293b);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.quicklink-search-input:focus {
+  border-color: var(--purple, #6b6ff5);
+  box-shadow: 0 0 0 3px rgba(107, 111, 245, 0.15);
+}
+
+.quicklink-search-clear-btn {
+  position: absolute;
+  right: 0.625rem;
+  background: none;
+  border: none;
+  color: var(--text-light, #94a3b8);
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.quicklink-search-clear-btn:hover {
+  color: var(--text-dark, #334155);
+  background-color: var(--bg-hover, #f1f5f9);
+}
+
+/* Selected Badge Row */
+.quicklink-selected-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(107, 111, 245, 0.08);
+  border: 1px solid rgba(107, 111, 245, 0.2);
+  border-radius: var(--radius-sm, 0.375rem);
+  font-size: 0.75rem;
+  color: var(--purple-dark, #4f46e5);
+}
+
+.quicklink-selected-badge-info {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quicklink-selected-badge-clear {
+  background: none;
+  border: none;
+  color: var(--purple-dark, #4f46e5);
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  font-size: 0.6875rem;
+  display: flex;
+  align-items: center;
+  border-radius: 0.25rem;
+}
+
+.quicklink-selected-badge-clear:hover {
+  background-color: rgba(107, 111, 245, 0.15);
+}
+
+/* Dropdown Menu */
+.quicklink-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background-color: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  max-height: 16rem;
+  overflow-y: auto;
+  z-index: 1050;
+  padding: 0.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.quicklink-dropdown-header {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-light, #94a3b8);
+  padding: 0.375rem 0.5rem 0.125rem;
+}
+
+.quicklink-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.quicklink-dropdown-item:hover,
+.quicklink-dropdown-item:focus {
+  background-color: var(--bg-hover, #f8fafc);
+  outline: none;
+}
+
+.quicklink-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+}
+
+.quicklink-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.quicklink-item-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-dark, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quicklink-item-url {
+  font-size: 0.6875rem;
+  color: var(--text-light, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Category Pill */
+.quicklink-category-pill {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--bg, #f1f5f9);
+  color: var(--text-light, #475569);
+  flex-shrink: 0;
+  text-transform: capitalize;
+}
+
+.quicklink-category-pill.airlines {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.quicklink-category-pill.hotels {
+  background-color: #ede9fe;
+  color: #6d28d9;
+}
+
+.quicklink-category-pill.government {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.quicklink-category-pill.visa {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Empty State in Dropdown */
+.quicklink-empty-dropdown {
+  padding: 1rem 0.75rem;
+  text-align: center;
+  color: var(--text-light, #64748b);
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.quicklink-empty-dropdown i {
+  font-size: 1.25rem;
+  color: var(--text-light, #94a3b8);
+  margin-bottom: 0.25rem;
+}
