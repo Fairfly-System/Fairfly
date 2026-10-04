@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
+import { useAuthContext } from '../../../context/AuthContext';
 import './tickets.css';
 
 export default function TicketThread({
@@ -9,8 +12,134 @@ export default function TicketThread({
   onStatusChange,
   isLoading = false,
 }) {
+  const { user, userDetails } = useAuthContext();
   const [replyText, setReplyText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [participants, setParticipants] = useState(() => ticket?.participants || {});
+  const fetchedIdsRef = useRef(new Set());
+
+  // Merge server-provided participants when ticket prop updates
+  useEffect(() => {
+    if (ticket?.participants && Object.keys(ticket.participants).length > 0) {
+      setParticipants((prev) => ({
+        ...prev,
+        ...ticket.participants,
+      }));
+    }
+  }, [ticket?.participants]);
+
+  // Immediately cache current authenticated user in participants
+  useEffect(() => {
+    if (user?.uid && userDetails) {
+      const currentRole = userDetails.role || 'user';
+      const currentName =
+        userDetails.branchName ||
+        userDetails.name ||
+        userDetails.fullName ||
+        (currentRole === 'admin' ? 'Super Admin' : 'Branch Operator');
+
+      setParticipants((prev) => {
+        if (prev[user.uid]) return prev;
+        return {
+          ...prev,
+          [user.uid]: {
+            id: user.uid,
+            name: currentName,
+            role: currentRole,
+            email: user.email || userDetails.email || '',
+          },
+        };
+      });
+    }
+  }, [user?.uid, userDetails]);
+
+  // Fallback cache for operator info if provided on ticket
+  useEffect(() => {
+    if (ticket?.operatorId) {
+      setParticipants((prev) => {
+        if (prev[ticket.operatorId]) return prev;
+        return {
+          ...prev,
+          [ticket.operatorId]: {
+            id: ticket.operatorId,
+            name: ticket.operatorName || 'Operator Branch',
+            role: 'operator',
+            email: ticket.operatorEmail || '',
+          },
+        };
+      });
+    }
+  }, [ticket?.operatorId, ticket?.operatorName, ticket?.operatorEmail]);
+
+  // Resolve any unknown participants (operatorId or senderId) from Firestore once and cache in state
+  useEffect(() => {
+    if (!ticket) return;
+
+    const messages = ticket.messages || [];
+    const missingIds = [];
+
+    if (ticket.operatorId && !participants[ticket.operatorId] && !fetchedIdsRef.current.has(ticket.operatorId)) {
+      missingIds.push(ticket.operatorId);
+      fetchedIdsRef.current.add(ticket.operatorId);
+    }
+
+    messages.forEach((msg) => {
+      if (msg.senderId && !participants[msg.senderId] && !fetchedIdsRef.current.has(msg.senderId)) {
+        missingIds.push(msg.senderId);
+        fetchedIdsRef.current.add(msg.senderId);
+      }
+    });
+
+    if (missingIds.length === 0) return;
+
+    const resolveParticipants = async () => {
+      const updates = {};
+      await Promise.all(
+        missingIds.map(async (senderId) => {
+          try {
+            const userDocRef = doc(firestore, 'users', senderId);
+            const snap = await getDoc(userDocRef);
+            if (snap.exists()) {
+              const uData = snap.data();
+              const uRole = uData.role || (senderId === ticket.operatorId ? 'operator' : 'admin');
+              const uName =
+                uData.branchName ||
+                uData.name ||
+                uData.fullName ||
+                (uRole === 'admin' ? 'Super Admin' : 'Branch Operator');
+              updates[senderId] = {
+                id: senderId,
+                name: uName,
+                role: uRole,
+                email: uData.email || '',
+              };
+            } else {
+              const isOp = senderId === ticket.operatorId;
+              updates[senderId] = {
+                id: senderId,
+                name: isOp ? (ticket.operatorName || 'Operator') : 'Support Admin',
+                role: isOp ? 'operator' : 'admin',
+              };
+            }
+          } catch (err) {
+            console.warn('Failed to fetch participant for ticket thread:', senderId, err);
+            const isOp = senderId === ticket.operatorId;
+            updates[senderId] = {
+              id: senderId,
+              name: isOp ? (ticket.operatorName || 'Operator') : 'Support Admin',
+              role: isOp ? 'operator' : 'admin',
+            };
+          }
+        })
+      );
+
+      if (Object.keys(updates).length > 0) {
+        setParticipants((prev) => ({ ...prev, ...updates }));
+      }
+    };
+
+    resolveParticipants();
+  }, [ticket, participants]);
 
   if (!ticket) {
     return (
@@ -53,6 +182,11 @@ export default function TicketThread({
   };
 
   const messages = ticket.messages || [];
+
+  // Derive operator display details
+  const opInfo = participants[ticket.operatorId] || {};
+  const operatorDisplayName = opInfo.name || ticket.operatorName || 'Operator Branch';
+  const operatorDisplayEmail = opInfo.email || ticket.operatorEmail;
 
   return (
     <div className="ticket-thread-container page-fade-in">
@@ -110,16 +244,16 @@ export default function TicketThread({
           <div className="thread-meta-bar">
             <div className="thread-meta-item">
               <i className="fa-solid fa-building"></i>
-              <span>Branch: <strong>{ticket.operatorName || 'Operator Branch'}</strong></span>
+              <span>Branch: <strong>{operatorDisplayName}</strong></span>
             </div>
             <div className="thread-meta-item">
               <i className="fa-solid fa-id-badge"></i>
               <span>Operator UID: <code className="ticket-uid-code">{ticket.operatorId || 'N/A'}</code></span>
             </div>
-            {ticket.operatorEmail && (
+            {operatorDisplayEmail && (
               <div className="thread-meta-item">
                 <i className="fa-solid fa-envelope"></i>
-                <span>Email: <strong>{ticket.operatorEmail}</strong></span>
+                <span>Email: <strong>{operatorDisplayEmail}</strong></span>
               </div>
             )}
             <div className="thread-meta-item">
@@ -138,7 +272,7 @@ export default function TicketThread({
               <div className="forum-author-info">
                 <div className="forum-author-avatar operator">OP</div>
                 <div className="forum-author-name">
-                  {ticket.operatorName || 'Operator'}
+                  {operatorDisplayName}
                   <span className="role-badge operator">OPERATOR</span>
                 </div>
               </div>
@@ -152,15 +286,29 @@ export default function TicketThread({
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isOp = (msg.senderRole || '').toLowerCase() === 'operator';
+            const senderInfo = participants[msg.senderId] || {};
+            const senderRole = (
+              senderInfo.role ||
+              msg.senderRole ||
+              (msg.senderId === ticket.operatorId ? 'operator' : 'admin')
+            ).toLowerCase();
+
+            const isOp = senderRole === 'operator' || senderRole === 'branch_operator';
             const roleClass = isOp ? 'operator' : 'admin';
             const roleLabel = isOp ? 'OPERATOR' : 'ADMIN';
-            const initials = (msg.senderName || (isOp ? 'Op' : 'Ad'))
+
+            const senderDisplayName =
+              senderInfo.name ||
+              msg.senderName ||
+              (isOp ? operatorDisplayName : 'Support Admin');
+
+            const initials = senderDisplayName
               .split(' ')
               .map((w) => w[0])
+              .filter(Boolean)
               .join('')
               .toUpperCase()
-              .slice(0, 2);
+              .slice(0, 2) || (isOp ? 'OP' : 'AD');
 
             return (
               <div key={msg.id || index} className={`forum-post-card ${isOp ? 'op-post' : 'admin-post'}`}>
@@ -168,7 +316,7 @@ export default function TicketThread({
                   <div className="forum-author-info">
                     <div className={`forum-author-avatar ${roleClass}`}>{initials}</div>
                     <div className="forum-author-name">
-                      {msg.senderName || (isOp ? 'Operator' : 'Super Admin')}
+                      {senderDisplayName}
                       <span className={`role-badge ${roleClass}`}>{roleLabel}</span>
                     </div>
                   </div>
@@ -225,7 +373,7 @@ export default function TicketThread({
         <div className="closed-forum-banner">
           <i className="fa-solid fa-lock"></i>
           <p>
-            This support forum thread was closed by <strong>{ticket.closedBy || 'Admin'}</strong>
+            This support forum thread was closed
             {ticket.closedAt ? ` on ${new Date(ticket.closedAt).toLocaleString()}` : ''}.
           </p>
           <button
@@ -242,3 +390,4 @@ export default function TicketThread({
     </div>
   );
 }
+

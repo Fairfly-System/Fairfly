@@ -406,6 +406,20 @@ const bulkDeleteQuickLinks = async (req, res) => {
   }
 };
 
+const fetchActiveServicesInternal = async () => {
+  let servicesList = staticDataCache.get(CACHE_KEYS.SERVICES);
+  if (!servicesList) {
+    const rawData = await getAllFromDatabase(COLLECTIONS.SERVICES);
+    servicesList = rawData 
+      ? Object.entries(rawData).map(([id, val]) => ({ id, ...val }))
+      : [];
+    staticDataCache.set(CACHE_KEYS.SERVICES, servicesList, 300);
+  }
+  return (servicesList || []).filter(
+    (s) => s.status !== 'Disabled' && s.status !== 'Inactive'
+  );
+};
+
 const getServices = async (req, res) => {
   try {
     const { branchUid } = req.query;
@@ -454,6 +468,7 @@ const getServiceById = async (req, res) => {
 module.exports = {
   getServices,
   getServiceById,
+  fetchActiveServicesInternal,
   createService,
   updateService,
   deleteService,
@@ -465,3 +480,4 @@ module.exports = {
   deleteQuickLink,
   bulkDeleteQuickLinks
 };
+

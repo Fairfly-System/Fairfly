@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  submitApplication, 
-  getApplications, 
-  getApplicationById, 
+const {
+  submitApplication,
+  getApplications,
+  getApplicationById,
   updateApplicationStatus,
   getFranchiseApplicationSchema,
   saveFranchiseApplicationSchema
@@ -35,10 +35,16 @@ const FRANCHISE_ALLOWED_FIELDS = [
   // Business fields
   'businessExperience',
   'investmentCapacity',
-  'investmentBudget',
+  // Identifier & Pre-allocated ID
+  'id',
   // Meeting
   'preferredMeetingDate',
   'preferredMeetingTime',
+  'preferredMeetingStartTime',
+  'preferredMeetingEndTime',
+  'noPreferenceSchedule',
+  // Capability proofs
+  'proofOfCapability',
   // Additional
   'additionalMessage',
   // Custom form builder fields

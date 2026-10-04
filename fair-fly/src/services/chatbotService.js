@@ -3,6 +3,10 @@ import { API_BASE_URL } from '../utils/config';
 
 const chatbotUrl = (path) => `${API_BASE_URL}/api/chatbot${path}`;
 
+export function sendChatbotMessage(payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(chatbotUrl('/message'), 'POST', payload, {}, successCallback, errorCallback, setIsLoading);
+}
+
 export function fetchChatbotConfig(successCallback, errorCallback, setIsLoading) {
   return ApiCaller(chatbotUrl('/config'), 'GET', null, {}, successCallback, errorCallback, setIsLoading);
 }

@@ -90,8 +90,43 @@
   color: var(--text-light);
 }
 
+.op-history-table-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--purple, #5558E3);
+  color: #ffffff !important;
+  border: 1px solid transparent;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.op-history-table-attach-btn i,
+.op-history-table-attach-btn span {
+  color: #ffffff !important;
+}
+
+.op-history-table-attach-btn:hover {
+  background: var(--purple-dark, #4338CA);
+  color: #ffffff !important;
+}
+
+.op-history-table-attach-btn.is-none,
+.op-history-table-attach-btn.is-none i,
+.op-history-table-attach-btn.is-none span {
+  background: #f1f5f9;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0;
+  cursor: default;
+}
+
 @media (max-width: 48rem) {
   .op-history {
     padding: 1rem;
   }
 }
+

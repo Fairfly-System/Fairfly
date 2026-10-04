@@ -22,9 +22,9 @@ const createAdmin = async (req, res) => {
   let uid;
 
   try {
-    const { email, password, username, fullName, phone, assignedOperators } = req.body;
+    const { email, password, username, fullName, name, phone, status, assignedOperators } = req.body;
 
-    if (!email || !password || (!username && !fullName)) {
+    if (!email || !password || (!username && !fullName && !name)) {
       return res.status(400).json({ error: 'Email, password, and username/name are required' });
     }
 
@@ -32,7 +32,7 @@ const createAdmin = async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const displayName = (fullName || username || '').trim();
+    const displayName = (fullName || name || username || '').trim();
 
     try {
       const generatedUid = generatePrefixedId(ID_PREFIXES.ADMIN);
@@ -57,7 +57,7 @@ const createAdmin = async (req, res) => {
       phone: phone ? phone.trim() : '',
       role: 'admin',
       isSuperAdmin: false,
-      status: 'Active',
+      status: status || 'Active',
       assignedOperators: Array.isArray(assignedOperators) ? assignedOperators : [],
       createdBySuperAdmin: req.user?.uid || 'superadmin',
       createdByName: req.userDetails?.fullName || req.userDetails?.name || 'Super Admin',
@@ -89,11 +89,12 @@ const getAdmins = async (req, res) => {
 
     const admins = snapshot.docs.map(doc => {
       const data = doc.data();
-      const isSuper = data.isSuperAdmin === true || data.email === 'admin@gmail.com';
+      const { password: _p, ...cleanData } = data;
+      const isSuper = cleanData.isSuperAdmin === true || cleanData.email === 'admin@gmail.com';
       return {
         id: doc.id,
         uid: doc.id,
-        ...data,
+        ...cleanData,
         isSuperAdmin: isSuper
       };
     });
@@ -146,10 +147,11 @@ const getAdminById = async (req, res) => {
       console.warn('Could not fetch adminLogs (index may be building):', logErr.message);
     }
 
+    const { password: _p, ...cleanData } = data;
     return res.status(200).json({
       id: adminDoc.id,
       uid: adminDoc.id,
-      ...data,
+      ...cleanData,
       isSuperAdmin: isSuper,
       recentActions
     });
@@ -189,7 +191,18 @@ const updateAdmin = async (req, res) => {
     if (updates.username !== undefined) sanitizedUpdates.username = updates.username.trim();
     if (updates.name !== undefined) sanitizedUpdates.name = updates.name.trim();
     if (updates.phone !== undefined) sanitizedUpdates.phone = updates.phone.trim();
-    if (updates.status !== undefined) sanitizedUpdates.status = updates.status;
+    if (updates.status !== undefined) {
+      sanitizedUpdates.status = updates.status;
+      const isDisabling = updates.status === 'Inactive' || updates.status === 'Disabled';
+      try {
+        await admin.auth().updateUser(id, { disabled: isDisabling });
+        if (isDisabling) {
+          await admin.auth().revokeRefreshTokens(id);
+        }
+      } catch (authErr) {
+        console.warn(`[Admin] Could not sync disabled state to Firebase Auth for admin ${id}:`, authErr.message);
+      }
+    }
     if (updates.assignedOperators !== undefined) sanitizedUpdates.assignedOperators = updates.assignedOperators;
 
     await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, sanitizedUpdates);

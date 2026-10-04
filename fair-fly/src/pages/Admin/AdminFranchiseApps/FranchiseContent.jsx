@@ -47,8 +47,9 @@ export default function FranchiseContent() {
   const searchFilterFn = useCallback((app) => {
     if (!debouncedSearch) return true;
     const q = debouncedSearch.toLowerCase();
+    const appFullName = app.fullName || [app.firstName, app.middleInitial, app.lastName].filter(Boolean).join(' ').trim();
     return (
-      (app.fullName || '').toLowerCase().includes(q) ||
+      appFullName.toLowerCase().includes(q) ||
       (app.email || '').toLowerCase().includes(q) ||
       (app.preferredBranchLocation || '').toLowerCase().includes(q)
     );
@@ -254,26 +255,29 @@ export default function FranchiseContent() {
           </div>
         ) : (
           <div className="franchise-cards-list">
-            {franchiseApplications.map((application) => (
-              <FranchiseCard
-                key={application.id}
-                avatar={`https://placehold.co/400x400/6B6FF5/FFFFFF?text=` + (application.fullName || 'F').substring(0, 1).toUpperCase()}
-                name={application.fullName}
-                email={application.email}
-                status={(application.status || 'PENDING').toUpperCase()}
-                contactNumber={application.phoneNumber}
-                address={application.preferredBranchLocation}
-                experience={application.businessExperience + ' year(s)'}
-                investmentCapacity={'PHP ' + application.investmentCapacity}
-                preferredMeetingDate={
-                  application.preferredMeetingDate
-                    ? new Date(application.preferredMeetingDate).toLocaleDateString()
-                    : 'N/A'
-                }
-                additionalMessage={application.additionalMessage}
-                onView={() => navigate(`/admin/franchise-apps/${application.id}`)}
-              />
-            ))}
+            {franchiseApplications.map((application) => {
+              const appFullName = application.fullName || [application.firstName, application.middleInitial, application.lastName].filter(Boolean).join(' ').trim() || 'Franchise Applicant';
+              return (
+                <FranchiseCard
+                  key={application.id}
+                  avatar={`https://placehold.co/400x400/6B6FF5/FFFFFF?text=` + (appFullName || 'F').substring(0, 1).toUpperCase()}
+                  name={appFullName}
+                  email={application.email}
+                  status={(application.status || 'PENDING').toUpperCase()}
+                  contactNumber={application.phoneNumber}
+                  address={application.preferredBranchLocation}
+                  experience={application.businessExperience ? application.businessExperience + ' year(s)' : 'N/A'}
+                  investmentCapacity={application.investmentCapacity ? (application.investmentCapacity.startsWith('₱') ? application.investmentCapacity : 'PHP ' + application.investmentCapacity) : 'N/A'}
+                  preferredMeetingDate={
+                    application.preferredMeetingDate
+                      ? new Date(application.preferredMeetingDate).toLocaleDateString()
+                      : 'N/A'
+                  }
+                  additionalMessage={application.additionalMessage}
+                  onView={() => navigate(`/admin/franchise-apps/${application.id}`)}
+                />
+              );
+            })}
           </div>
         )}
 

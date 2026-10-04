@@ -24,10 +24,11 @@ export default function QuotationDetailModal({
   if (!quotation) return null;
 
   const totalAmt = Number(quotation.totalAmount || quotation.rate || 0);
-  const isAccepted = quotation.status === 'Accepted';
-  const isSent = quotation.status === 'Sent';
+  const isFulfilled = (quotation.status || '').toLowerCase() === 'fulfilled' || (quotation.fulfillmentStatus || '').toLowerCase() === 'fulfilled';
+  const isAccepted = quotation.status === 'Accepted' && !isFulfilled;
+  const isSent = quotation.status === 'Sent' && !isFulfilled;
   const isPaid = quotation.paymentStatus === 'PAID';
-  const isPaymentPending = quotation.paymentStatus === 'PAYMENT_PENDING';
+  const isPaymentPending = quotation.paymentStatus === 'PAYMENT_PENDING' && !isFulfilled;
   const displayRequirements = Array.isArray(resolvedReqs) && resolvedReqs.length > 0
     ? resolvedReqs
     : (Array.isArray(quotation.submittedRequirements) ? quotation.submittedRequirements : (Array.isArray(quotation.requirements) ? quotation.requirements : []));
@@ -57,12 +58,17 @@ export default function QuotationDetailModal({
             <span className={`quote-status-pill status-${(quotation.status || 'draft').toLowerCase()}`}>
               {quotation.status}
             </span>
-            {isAccepted && (
+            {isFulfilled ? (
+              <span className="quote-payment-badge paid">
+                <i className="fa-solid fa-trophy"></i>
+                FULFILLED
+              </span>
+            ) : isAccepted ? (
               <span className={`quote-payment-badge ${(quotation.paymentStatus || 'unpaid').toLowerCase()}`}>
                 <i className={`fa-solid ${isPaid ? 'fa-check' : isPaymentPending ? 'fa-clock' : 'fa-circle-exclamation'}`}></i>
                 {isPaid ? 'PAID' : isPaymentPending ? 'PAYMENT PENDING' : 'UNPAID'}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -310,11 +316,15 @@ export default function QuotationDetailModal({
               </button>
             )}
 
-            {isPaid && (
+            {isFulfilled ? (
+              <span className="quote-paid-notice" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#86efac' }}>
+                <i className="fa-solid fa-trophy"></i> Fulfilled · Service Completed
+              </span>
+            ) : isPaid ? (
               <span className="quote-paid-notice">
                 <i className="fa-solid fa-circle-check"></i> Paid · Custom Service Active
               </span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

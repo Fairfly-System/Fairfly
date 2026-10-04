@@ -32,9 +32,9 @@ export default function Landing() {
         </div>
 
         <h1 className="hero-heading">
-          Standardized Travel & Document Processing
+          Start Your Journey as a Franchise Partner
           <br />
-          Across the Philippines with <span className="hero-heading-brand">Fairfly</span>
+          Build your Travel Business with <span className="hero-heading-brand">Fairfly</span>
         </h1>
 
         <p className="hero-sub">

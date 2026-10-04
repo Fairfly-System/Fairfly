@@ -118,11 +118,15 @@ const createTemplate = async (req, res) => {
       return res.status(400).json({ error: 'Executable files (.exe, .bat, .sh, etc.) are prohibited for security.' });
     }
 
+    const resolvedType = (templateData.serviceType || templateData.type || 'General').trim();
+
     const sanitizedData = {
       ...templateData,
+      serviceType: resolvedType,
+      type: resolvedType,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'active',
+      status: templateData.status || 'active',
       version: 1
     };
 
@@ -149,8 +153,15 @@ const updateTemplate = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Template not found' });
 
+    const sanitizedUpdates = { ...updates };
+    if (updates.serviceType !== undefined || updates.type !== undefined) {
+      const resolvedType = (updates.serviceType || updates.type || existing.serviceType || existing.type || 'General').trim();
+      sanitizedUpdates.serviceType = resolvedType;
+      sanitizedUpdates.type = resolvedType;
+    }
+
     await updateToDatabase(dbPath, {
-      ...updates,
+      ...sanitizedUpdates,
       updatedAt: new Date().toISOString()
     });
 

@@ -1,5 +1,363 @@
 # Update Logs
 
+## [2026-10-02] Feature & Security: Backend Chatbot Grounding on Firestore Services & Branches Directory
+
+### Overview
+Architected and deployed a cost-effective, secure backend AI Chatbot proxy (`POST /api/chatbot/message`) on Express (`fly-api`). Grounded the AI model directly on real-time active services and branch directories stored in Firestore, while keeping the Google Gemini API key protected on the server side and completely eliminating frontend credential exposure.
+
+### Key Architecture & Cost-Optimization
+- **Server-Side In-Memory Caching (`staticDataCache`)**:
+  - Cached active branches (`branches-list`) and active services (`services-list`) for 300 seconds (5 minutes) in Node.js memory.
+  - Reduced Firestore database reads from thousands per day to a tiny fraction of the free tier (<1,000 reads/day under continuous traffic).
+  - Automatically invalidates branch and service cache keys upon CUD mutations.
+- **Grounding Persona Builder (`botPersona.js`)**:
+  - Automatically formats the live **Official Fairfly Branch Directory** (branch name, physical address, contact phone, branch email, qualified certification).
+  - Automatically formats the live **Fairfly Service Catalog** (service name, category, price in ₱, processing time, required documents, nationwide vs branch-exclusive availability).
+  - Instructs the AI assistant to refer visitors to their nearest branch for consultations, appointments, and applications.
+- **Zero-Dependency Native REST Invocation**:
+  - Utilized Node 22 native `fetch` directly to Google Generative Language API without adding third-party npm package overhead.
+  - Configured primary model `gemini-3.5-flash-lite` with automatic fallback to `gemini-3.5-flash`.
+- **Backend Route & Payload Defense (`chatbotRoutes.js`, `chatbotController.js`)**:
+  - Rate-limited via `apiRateLimiter` to protect against brute-force flooding.
+  - Whitelisted input payload with `allowedFields(['message', 'history'])` and enforced strict string length limits.
+- **Frontend Refactoring (`Chatbot.jsx`, `chatbotService.js`)**:
+  - Replaced frontend `@google/generative-ai` calls with clean, lightweight `sendChatbotMessage` API calls.
+  - Removed client-side `VITE_GEMINI_API_KEY` dependency.
+
+## [2026-10-02] Cleanup: Complete Frontend Console Logging Removal & Vite 8 Production Strip Configuration
+
+### Overview
+Cleaned up all verbose development console logging across the frontend codebase (`fair-fly`) per user request. Configured Vite 8 build toolchain (`oxc: { drop: ['console', 'debugger'] }`) to guarantee that any remaining or third-party diagnostic log and debug calls are automatically stripped during production bundle compilation.
+
+### Changes
+- **`fair-fly/src/utils/ApiCaller.js`**:
+  - Removed debug log outputting `loading state set to false after API call to <url>` that fired repeatedly across all dashboard and data-fetching network requests.
+- **`fair-fly/src/context/AuthContext.jsx`**:
+  - Removed authentication state logs (`User changed`, `No user is present`, `User token refreshed:`, `User document exists!`, `User details set to state:`, `User document does not exist!`).
+  - Removed diagnostic `useEffect` printing `userDetails` objects to the browser console.
+- **`fair-fly/vite.config.js`**:
+  - Added `oxc: { drop: ['console', 'debugger'] }` compiler configuration for Vite 8 / Rolldown to automatically strip console statements from production distributions.
+- **Verification & Deployment**:
+  - Ran ripgrep verification confirming 0 remaining `console.log` statements across `fair-fly/src`.
+  - Built production bundle (`npm run build`) cleanly in 2.88s with 0 errors.
+  - Deployed cleanly to Firebase Hosting (`https://fairfly-1e83b.web.app`).
+
+## [2026-10-02] Fix: AI Chatbot 404 Model Not Found Error (`gemini-3.5-flash-lite`)
+
+### Overview
+Resolved a `404 Not Found` failure when sending messages to the AI Chatbot on deployment. Upgraded the underlying Google Gemini model from the deprecated `gemini-2.5-flash-lite` to the officially supported `gemini-3.5-flash-lite` with automatic fallback to `gemini-3.5-flash`.
+
+### Root Cause
+In `fair-fly/src/components/Shared/Chatbot/Chatbot.jsx`, the generative model name was hardcoded to:
+`model: "gemini-2.5-flash-lite"`
+Google's Gemini API rejected this endpoint with HTTP `404 Not Found`:
+`[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [404] This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements.`
+
+### Changes
+- **`fair-fly/src/components/Shared/Chatbot/Chatbot.jsx`**:
+  - Updated primary model to use `import.meta.env.VITE_GEMINI_MODEL || "gemini-3.5-flash-lite"`.
+  - Added graceful fallback handling: if the primary model throws or encounters network/availability issues, it automatically falls back to `gemini-3.5-flash` so users always receive assistance.
+  - Added API key validation guard to prevent silent network exceptions if `VITE_GEMINI_API_KEY` is missing.
+  - Tested conversation flow directly against Google's Generative Language API; confirmed high-quality conversational responses.
+  - Built and deployed live to Firebase Hosting.
+
+## [2026-10-02] Security & Auth: Multi-Tier Defense for Disabled & Deactivated Accounts
+
+### Overview
+Architected and deployed a 4-tier defense-in-depth system preventing disabled, deactivated, pending, or suspended accounts (across operators, clients, and administrators) from logging into the platform or executing backend API actions, while also evicting active sessions in real time.
+
+### Root Cause
+1. **Frontend Status Mismatch**: `Login.jsx` only verified `userData.status === 'Deactivated'`. When operators or clients were disabled by administrators, their status was stored as `'Disabled'`, which bypassed the check and permitted successful sign-in.
+2. **Missing Firebase Auth State Sync**: When administrators updated an account status to `Disabled` or `Inactive` in `operatorController` or `clientController`, the backend only modified the Firestore record. It never set `disabled: true` in Firebase Authentication or called `revokeRefreshTokens(uid)`.
+3. **No Active Session Eviction**: `AuthContext.jsx` listened to user document snapshots via `onSnapshot`, but only signed out if the document was completely deleted, allowing users to remain logged in if their account was disabled during an active session.
+4. **Permissive API Middleware**: The `verifyFirebaseToken` middleware validated cryptographic JWT signatures and checked role permissions, but did not enforce status checks against disabled records.
+
+### Key Changes
+1. **Tier 1 — Pre-Login Account Status Validation Endpoint (`POST /api/auth/login-check`)**:
+   - Added rate-limited public endpoint in `fly-api/src/routes/authRoutes.js` and `fly-api/src/controllers/authController.js`.
+   - Validates whether an account is `Disabled`, `Deactivated`, `Suspended`, `Pending`, or `Rejected`. Returns `403 Forbidden` with informative, user-friendly messages prior to credential submission.
+   - Includes anti-enumeration protection (returns `allowed: true` for non-existent accounts so standard Firebase Auth error handling applies).
+   - Integrated into `fair-fly/src/pages/Index/Login/login.jsx` as Step 1 of the login pipeline.
+2. **Tier 2 — Native Firebase Auth Synchronization & Token Revocation**:
+   - In `operatorController.js` (`updateOperator`, `bulkStatusOperators`): Synchronizes `admin.auth().updateUser(id, { disabled: isDisabling })` and calls `admin.auth().revokeRefreshTokens(id)` when setting status to `Disabled` or `Inactive`. Re-enables when set to `Active`.
+   - In `clientController.js` (`updateClient`, `approveClient`, `rejectClient`, `bulkStatusClients`): Automatically disables Firebase Auth user records and revokes refresh tokens on deactivation/rejection, and re-enables on approval/activation.
+   - In `adminController.js` (`updateAdmin`): Enforces Firebase Auth disabled synchronization for Support Administrators.
+3. **Tier 3 — Real-Time Active Session Eviction (`AuthContext.jsx`)**:
+   - In `fair-fly/src/context/AuthContext.jsx`, the Firestore real-time `onSnapshot` listener detects when `status` transitions to `Disabled`, `Deactivated`, `Suspended`, or `Inactive`.
+   - Immediately executes `signOut(auth)`, resets state context, and alerts the user via toast notification.
+4. **Tier 4 — Backend API Gatekeeper (`verifyFirebaseToken` Middleware)**:
+   - In `fly-api/src/middleware/auth.js`, intercepts all authenticated API requests. If the resolved `userDetails` has a disabled or deactivated status, rejects the request immediately with HTTP `403 Forbidden`.
+5. **Role-Based Post-Login Navigation**:
+   - Updated `Login.jsx` to dynamically navigate users to their respective portals (`/admin`, `/operator`, `/client`) upon successful sign-in instead of hardcoded `/client`.
+
+### Verification
+- Executed automated test suite `fly-api/src/scripts/testDisabledAccountFlow.js`:
+  - Verified Tier 1 pre-login check allows active users (200) and blocks disabled users (403).
+  - Verified anti-enumeration for non-existent users (200).
+  - Verified Tier 2 Firebase Auth `disabled: true` synchronization on operator status change.
+  - Verified Tier 4 `verifyFirebaseToken` gatekeeper returns 403 on disabled user API calls.
+  - Verified re-enabling an operator sets `disabled: false` and allows login again.
+  - Test suite result: **10 Passed, 0 Failed**.
+- Deployed backend Cloud Functions `api(asia-southeast1)` successfully.
+- Built and deployed frontend to Firebase Hosting (`https://fairfly-1e83b.web.app`).
+
+## [2026-10-02] Fix: Character Encoding Mojibake in Franchise Application Form
+
+### Overview
+Fixed character encoding corruption (mojibake) in the Franchise Application Form (`FranchiseApplicationForm.jsx`) where double-encoded UTF-8 characters caused the Philippine Peso currency symbol (`₱`), hyphens/dashes (`-`), and quotes to display as corrupted strings like `â,±50,000`, `â€“`, and `0â€“2 years experience`.
+
+### Root Cause
+`FranchiseApplicationForm.jsx` had been saved with mojibake characters in string literals for `INVESTMENT_CAPACITY_OPTIONS`, `BUSINESS_EXPERIENCE_OPTIONS`, `MEETING_TIME_OPTIONS`, and informational description text. For instance, the UTF-8 bytes for `₱` (`0xE2 0x82 0xB1`) and en-dash `–` (`0xE2 0x80 0x93`) were interpreted through Windows-1252 / ISO-8859-1 as `â‚±` and `â€“`.
+
+### Changes
+- **`fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx`**:
+  - Restored clean Philippine Peso symbol (`₱`) in `INVESTMENT_CAPACITY_OPTIONS`: `Less than ₱50,000`, `₱50,000 - ₱100,000`, `₱100,000 - ₱200,000`, `₱200,000 - ₱500,000`, and `₱500,000+`.
+  - Replaced corrupted dashes in `BUSINESS_EXPERIENCE_OPTIONS` with clean hyphens (`0-2 years experience`, `3-5 years experience`).
+  - Restored meeting time labels (`Morning (9:00 AM - 12:00 PM)`, `Afternoon (1:00 PM - 5:00 PM)`).
+  - Fixed modal description text: `you within 2-3 business days.`
+  - Cleaned up corrupted em-dashes in code comments.
+  - Verified 0 remaining `â` mojibake occurrences across the entire codebase.
+  - Successfully built and deployed to Firebase Hosting.
+
+## [2026-10-02] Enhancement: Landing Page Services Preview (Removed Placeholder Images & Fixed Visa Tag Filtering)
+
+### Overview
+1. **Uniform Cover Image Banner with Brand Logo Fallback**: Retained the full Cover Image UI and banner container (`service-card-media`) on every card to ensure uniform card dimensions when services with uploaded images and services without images are displayed together. Replaced external/broken placeholder images with the official `/FairflyLogo.png` brand logo on a clean, modern radial backdrop.
+2. **Fixed Visa Assistance Tag Filtering**: Resolved an issue where the "Visa Assistance" category tab failed to display visa services (e.g., Canada, South Korea, Australia Visa applications) stored in Firestore under `"Visa & Embassy Assistance"` or tagged with `"Visa"`.
+
+### Root Cause
+- **Placeholder Images**: `Services.jsx` defaulted missing image paths to `/services/passport.jpg`, which failed to load and fell back to Unsplash stock photography.
+- **Visa Tag Filtering**: The category filter used strict substring matching (`service.category.toLowerCase().includes('visa assistance')`). Services created via the Admin portal use the standard category `"Visa & Embassy Assistance"`, which did not contain the substring `"visa assistance"`. Additionally, tags (such as `tags: ['Visa']`) were not evaluated during category tab filtering or tab badge count calculations.
+
+### Changes
+- **`fair-fly/src/components/Shared/Services/Services.jsx`**:
+  - Maintained the uniform `service-card-media` cover image banner on every card. When no cover image has been uploaded by the admin/operator, it displays `/FairflyLogo.png` centered on a sleek brand backdrop.
+  - Implemented `matchesCategoryTab` to evaluate both category variations (e.g. `"Visa & Embassy Assistance"`, `"Visa Assistance"`) and tag arrays (e.g. `tags.includes('Visa')`).
+  - Implemented `getCategoryVisuals` providing dedicated icons and gradients based on service category.
+  - Added service tags `#tag` rendering with click-to-filter support.
+  - Synchronized category tab badge counts with `matchesCategoryTab`.
+- **`fair-fly/src/components/Shared/Services/services.css`**:
+  - Added styles for `.service-card-media.service-card-media-logo`, `.service-card-logo-backdrop`, `.service-card-brand-logo`, and `.service-tag-pill`.
+- **`fair-fly/src/components/Shared/Services/ServiceDetailModal.jsx` & `service-detail-modal.css`**:
+  - Maintained the hero media banner in the modal, displaying `/FairflyLogo.png` on a subtle brand backdrop when no custom cover image is uploaded.
+
+
+## [2026-10-02] Fix: Client Appointment Booking 500 Internal Server Error (Undeclared 'now')
+
+### Overview
+Resolved a critical backend bug where booking branch appointments via the Client Portal (or Operator interface) returned HTTP `500 (Internal Server Error)`.
+
+### Root Cause
+In `fly-api/src/controllers/appointmentController.js`, `createAppointment` referenced `createdAt: now` and `updatedAt: now` on the appointment model without `const now` being declared in scope. This caused a runtime `ReferenceError: now is not defined`, resulting in a 500 error response.
+
+### Changes
+- **`fly-api/src/controllers/appointmentController.js`**:
+  - Declared `const now = new Date().toISOString();` prior to `newAppointment` construction in `createAppointment`.
+  - Audited all controllers across `fly-api/src/controllers/` to verify no other undeclared timestamp identifiers exist.
+- **`lessons-learned.md`**:
+  - Logged root cause and prevention strategy regarding scoped timestamp variable declarations.
+
+
+## [2026-10-02] Enhancement: Quotation Fulfillment Status Synchronization & View State
+
+### Overview
+Updated the Quotation Detail view and backend synchronization so that when a service fulfillment is completed (`status === 'Completed'`), the quotation view updates dynamically:
+1. Replaces the `PAID` status badge with **`FULFILLED`**.
+2. Replaces the `Quotation Paid · Service Fulfillment Active` banner with **`Fulfilled`**.
+3. Omits the "View Ongoing Service" button and action buttons from the banner once fulfilled.
+
+### Root Cause & Implementation Details
+- Previously, when an active service finished its workflow steps (`allCompleted`), `activeServiceController.js` only updated the active service document and did not synchronize the linked quotation document's status.
+- In `QuotationDetailPage.jsx`, the banner and status label only checked `quotation.status === 'PAID'` and did not reactively observe the linked active service completion or display a dedicated `Fulfilled` state.
+
+### Changes
+- **`fly-api/src/controllers/activeServiceController.js`**:
+  - In `updateStepStatus`, when `allCompleted` is true and `serviceRecord.quotationId` exists, automatically updates `quotations/${serviceRecord.quotationId}` with `{ status: 'Fulfilled', serviceStatus: 'Completed', fulfillmentStatus: 'Fulfilled', fulfilledAt: now, updatedAt: now }`.
+- **`fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx`**:
+  - Added real-time Firestore listener for the linked `activeServices` record (using `quotation.activeServiceId` or fallback query `where('quotationId', '==', quotation.id)`).
+  - Derived `isFulfilled` state (`status === 'Fulfilled'`, `fulfillmentStatus === 'Fulfilled'`, or `activeService.status === 'Completed'`).
+  - Updated `getStatusLabel()` to display `FULFILLED` and `getStatusType()` to return `success`.
+  - Updated the banner header to display `Fulfilled` and omitted the action button group (`View Ongoing Service` / `Originating Inquiry`) when fulfilled.
+- **`fair-fly/src/pages/Operator/OperatorQuotations/quotation-detail.css`**:
+  - Added `.quote-accepted-banner.fulfilled-banner` styles with emerald theme accents and clear typography.
+- **`fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx`**:
+  - Mapped `'fulfilled'` status to `'status-pill-completed'` in `getQuotationStatusClass`.
+- **`fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx`**:
+  - Added support for `isFulfilled` state, showing `FULFILLED` badge and `Fulfilled · Service Completed` notice in the client quotation modal.
+
+
+## [2026-10-02] Fix: Ticket Creation 400 Bad Request (operatorId, operatorName, operatorEmail) & Admin Tickets Page Margin Gap
+
+### Overview
+1. **Ticket Creation Input Whitelist**: Resolved an issue where creating a support ticket via `CreateTicketModal.jsx` in the Admin Portal failed with HTTP `400 Bad Request: Invalid fields in request body (operatorId, operatorName, operatorEmail)`.
+2. **Admin Tickets Page Layout**: Resolved a layout defect on the Tickets page (`/admin/tickets`) where the KPI cards section and the Table section had zero margin/gap space between them.
+
+### Root Cause
+1. **Allowed Fields Mismatch**: In `fly-api/src/routes/ticketRoutes.js`, `TICKET_ALLOWED_FIELDS` was defined as `['title', 'category', 'priority', 'initialMessage']`. However, `CreateTicketModal.jsx` sends `operatorId`, `operatorName`, and `operatorEmail` when an admin creates a ticket on behalf of a branch or when an operator context is provided. The zero-trust `allowedFields` middleware rejected these required fields.
+2. **Broken Page Margin**: In `TicketsContent.jsx`, the KPI cards (`kpi-grid-4`) and the Table card (`tickets-table-card`) were nested inside an obsolete wrapper (`<div className="tickets-layout-single"><section className="tickets-left-pane">`). Neither wrapper element was styled with flex gap or bottom margins, isolating the inner sections from `.tickets-page { gap: 1.25rem; }` and causing the table card to render directly flush beneath the KPI cards.
+
+### Changes
+- **`fly-api/src/routes/ticketRoutes.js`**:
+  - Expanded `TICKET_ALLOWED_FIELDS` to include `'operatorId'`, `'operatorName'`, and `'operatorEmail'`.
+- **`fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx`**:
+  - Removed obsolete wrapper tags (`tickets-layout-single` and `tickets-left-pane`).
+  - Promoted `<section className="services-summary-grid kpi-grid-4">` and `<section className="card tickets-table-card">` to direct children of `<main className="tickets-page page-fade-in">`, standardizing the layout with the other admin pages.
+- **`fair-fly/src/pages/Admin/AdminTickets/admin-tickets.css`**:
+  - Defined explicit flex column and `1.25rem` gap rules for `.tickets-layout-single, .tickets-left-pane`, and ensured `.tickets-page .services-summary-grid` uses clean `margin-bottom: 0`.
+- **Build & Deploy**:
+  - Rebuilt production frontend bundle using Vite (`npm run build`).
+  - Redeployed Cloud Functions (`api`) and Hosting via Firebase CLI.
+
+## [2026-10-02] Fix: Workflow Template Creation & Update 400 Bad Request (Invalid fields: type, serviceType)
+
+### Overview
+Resolved an issue where creating or editing workflow templates in the Admin Portal (`/admin/workflows`) or attaching a new workflow template from service modals failed with HTTP `400 Bad Request: Invalid fields in request body (type, serviceType)`.
+
+### Root Cause
+`WORKFLOW_TEMPLATE_FIELDS` in `fly-api/src/routes/workflowRoutes.js` guarded route payloads (`POST /workflow/templates`, `PATCH /workflow/templates/:id`, `POST /workflows`, `PATCH /workflows/:id`, `PUT /workflows/:id`) with:
+`['title', 'name', 'description', 'steps', 'status', 'category']`.
+However, `WorkflowForm.jsx` submits `type` and `serviceType` to categorize the workflow process (e.g. PSA, Passport, Visa). The zero-trust `allowedFields` middleware rejected both fields, blocking template creation and updates.
+
+### Changes
+- **`fly-api/src/routes/workflowRoutes.js`**:
+  - Expanded `WORKFLOW_TEMPLATE_FIELDS` to include `'type'`, `'serviceType'`, and `'version'`.
+- **`fly-api/src/controllers/workflowController.js`**:
+  - In `createTemplate`, normalized and synchronized `type` and `serviceType` from `(templateData.serviceType || templateData.type || 'General').trim()`.
+  - In `updateTemplate`, synchronized `type` and `serviceType` if either or both are updated.
+- **Client & Build**:
+  - Rebuilt frontend with `npm run build`.
+  - Redeployed Cloud Functions (`api`) and Hosting via Firebase CLI.
+
+## [2026-10-02] Fix: Administrator Account Creation 400 Bad Request (Invalid Fields)
+
+### Overview
+Resolved an issue where attempting to create a new Administrator via the Admin Portal (`/admin/administrators`) resulted in a `400 Bad Request` ("Invalid fields") error.
+
+### Root Cause
+Zero-trust input whitelisting middleware `allowedFields` in `fly-api/src/routes/adminRoutes.js` was configured with `['email', 'password', 'username', 'fullName', 'phone', 'assignedOperators']`. However, the frontend form `AdminForm.jsx` sends `name` (for display name consistency) and `status` (`'Active' | 'Inactive'`). The server-side request validator strictly rejected these unexpected properties, blocking administrator creation.
+
+### Changes
+- **`fly-api/src/routes/adminRoutes.js`**:
+  - Added `'name'` and `'status'` to `allowedFields` for `POST /admins` and `PATCH /admins/:id`.
+- **`fly-api/src/controllers/adminController.js`**:
+  - Updated `createAdmin` to extract `name` and `status` from `req.body`.
+  - Configured `status: status || 'Active'` on the new Firestore administrator record.
+  - Allowed `name` as fallback for `displayName` and `fullName`.
+- **`fly-api/src/middleware/allowedFields.js`**:
+  - Enhanced error response to explicitly enumerate the offending keys (`Invalid fields: ${invalidFields.join(', ')}`) in non-production or for diagnostic transparency.
+- **`fair-fly` Build & Deployment**:
+  - Rebuilt production client bundle using Vite (`npm run build`).
+  - Redeployed Cloud Functions (`api`) and Hosting via Firebase CLI.
+
+## [2026-10-02] Security & Data Architecture: Lean Franchise Applications & Plaintext Password Elimination
+
+### Overview
+1. **Franchise Application Bloat & Redundancy Reduction**:
+   - Analyzed Firestore `franchiseApplications` collection (specifically record `FRA-ttKKt0pD8GBpOZ7G6AmE`).
+   - Identified and eradicated redundant fields: `id` (inherent in the document path), `fullName` (derivable from `firstName`, `middleInitial`, `lastName`), and `preferredMeetingTime` (derivable from `preferredMeetingStartTime` & `preferredMeetingEndTime`).
+   - Updated the submission pipeline (`fly-api/src/controllers/franchiseController.js` and `fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx`) to omit storing these redundant fields in Firestore.
+   - Updated all data consumers (`FranchiseContent.jsx`, `FranchiseAppDetailPage.jsx`, `ApplicationModal.jsx`, and backend endpoints `getApplications`, `getApplicationById`) to dynamically derive `fullName` and `preferredMeetingTime` with robust fallbacks.
+   - Cleaned existing document `FRA-ttKKt0pD8GBpOZ7G6AmE` in Firestore by deleting `id`, `fullName`, and `preferredMeetingTime` fields.
+
+2. **Plaintext Password Removal & Exposure Elimination**:
+   - Identified security flaw where `createOperator` in `operatorController.js` spread `operatorData` directly into Firestore `users` documents, persisting plaintext passwords in Firestore.
+   - Sanitized `operatorController.js` to strip `password` before saving operator records.
+   - Sanitized `getOperators`, `getOperatorById`, `getAdmins`, and `getAdminById` to never return any `password` field in API responses.
+   - Migrated existing Firestore `users` documents, permanently deleting all plaintext `password` fields from existing operator/admin records.
+
+3. **Storage Security & Build Deployment**:
+   - Re-instated `storage.rules` ensuring Firebase Storage rules are valid and enforceable.
+   - Built production frontend bundle with Vite (`npm run build`).
+   - Redeployed services using Firebase CLI.
+
+## [2026-10-01] Fix: Franchise Application File Upload Deferred to Submit
+
+### Overview
+Files attached to the franchise application form were immediately uploaded to Firebase Storage upon selection. This was incorrect — orphan files would accumulate in Storage for every form open/close cycle even if the form was never submitted.
+
+### Changes
+- **`FranchiseApplicationForm.jsx`**:
+  - Replaced `handleUploadFiles` (which uploaded immediately) with `handleSelectFiles` (validates and stages `File` objects locally).
+  - Added `pendingFiles` state (`File[]`) to hold staged files. `formData.proofOfCapability` no longer stores pre-uploaded file metadata.
+  - `handleRemoveProof` now removes from `pendingFiles` instead of `formData`.
+  - `handleSubmit` converted to `async`. On submit: (1) uploads all `pendingFiles` to Storage sequentially under `franchise_applications/{id}/proofs/`, (2) builds the payload with `uploadedProofs`, (3) calls the backend API.
+  - `uploadProgress` changed from a single number to `{ current, total }` to show per-file progress (`Uploading 2/4...`).
+  - Submit button now shows two phases: **"Uploading N/M..."** (upload phase) then **"Submitting..."** (API phase). Cancel button is also disabled during both phases.
+  - Dropzone simplified — no longer has `is-uploading` class or spinner state; hint text updated to "uploaded when you submit".
+  - `handleClose` and success callback both clear `pendingFiles`.
+  - File chip label changed from "X files attached" → "X files ready to upload".
+  - Deduplication by `name + size` prevents the same file from being added twice.
+
+## [2026-10-01] Refactor: AdminAppointments Portal Scoped to Franchise Consultations Only
+
+### Overview
+Refactored `AdminAppointments` (`/admin/appointments`) to be strictly dedicated to aspiring franchisee consultation scheduling. Previously, the portal queried all appointments and relied on a type-filter dropdown to separate client bookings from franchise consultations. This was incorrect — client service appointments must never appear here.
+
+### Changes
+- **`AdminAppointments.jsx`**: Added `where('type', '==', 'franchise_consultation')` to the Firestore `onSnapshot` query at the source, ensuring only franchise consultation documents are ever fetched. KPI aggregation counts (`getCountFromServer`) are similarly scoped. Removed the `typeFilter` state and the type-filter `<select>` dropdown from the toolbar. Removed redundant `isFranchise` branching in columns and detail modal (every record is guaranteed to be a franchise consultation). Updated page title to "Franchise Consultations", KPI card label ("Awaiting Confirmation"), column header ("Applicant", "Preferred Location"), and modal title ("Franchise Consultation Details"). Search field now matches against `notes` instead of `serviceType/purpose` which is not relevant to franchisee records.
+- **`AdminLayout.jsx`**: Scoped the sidebar badge `qAppointments` listener to `where('type', '==', 'franchise_consultation')` so the nav badge count only reflects pending franchise consultations. Renamed nav label from "Appointments" → "Consultations" for clarity.
+
+## [2026-10-01] Feature & Workflow: Aspiring Franchisee Application, Capability-Proof Storage, Collision-Detected Consultation Scheduling & Post-Consultation Operator Account Creation
+
+### Overview
+Architected and implemented an end-to-end dedicated workflow for **Aspiring Franchisees** applying to become FairFly franchise operators, completely decoupled from the existing Client → Operator appointment system. The workflow encompasses:
+1. Public franchise application submission with capability-proof multi-file uploads (stored under secure subpaths `franchise_applications/{appId}/proofs/`) and preferred consultation windows (or "No preference / Admin to schedule").
+2. Server-side mathematical interval collision detection (`newStart < existingEnd && newEnd > existingStart`) returning `409 Conflict` on overlapping consultation schedules while permitting adjacent slots.
+3. Enhanced Admin Franchise Detail Page with capability attachments preview/download, applicant preferences display, and a collision-aware consultation scheduler modal replacing immediate direct approval.
+4. Extracted reusable `AppointmentCalendar` component supporting Month and Week views, legend, status filters, and responsive layout, retrofitted into `OperatorAppointmentCalendar`.
+5. Comprehensive Admin Appointments Portal (`/admin/appointments`) featuring Calendar and Table views, search, status and type filtering, consultation details modal, and real-time badge count in `AdminLayout`.
+6. Post-consultation franchise approval pipeline: When consultation appointments reach `Completed`, admins can trigger "Grant Franchise & Create Operator Account", opening a pre-populated `OperatorModal` that creates the operator branch account and automatically updates the franchise application to `approved` and the consultation appointment to `Completed` with `operatorId` foreign key linkage.
+
+### Key Changes
+1. **Multi-Tier Storage Security & Path Validation (`fly-api/src/utils/fileSecurity.js`)**:
+   - Added `franchise_applications` to `ALLOWED_ROOT_FOLDERS` and `FOLDER_ALIASES`.
+   - In `sanitizeFolder`, enforced 3-level folder structure `franchise_applications/{appId}/{subfolder}` strictly restricted to `proofs`, `contracts`, and `consultations`, preventing arbitrary directory traversal or unsanitized root storage.
+2. **Franchise Application Route & Controller Enhancements (`fly-api/src/routes/franchiseRoutes.js`, `fly-api/src/controllers/franchiseController.js`)**:
+   - Expanded `FRANCHISE_ALLOWED_FIELDS` whitelist with `id`, `proofOfCapability`, `preferredMeetingDate`, `preferredMeetingTime`, `preferredMeetingStartTime`, `preferredMeetingEndTime`, `noPreferenceSchedule`.
+   - Updated `submitApplication` to support client-preallocated IDs (`FRA-...`) via `addToDocumentWithId`.
+   - Added `appointment_scheduled` to allowed statuses in `updateApplicationStatus`.
+3. **Collision-Detected Consultation Scheduling Endpoint (`fly-api/src/routes/appointmentRoutes.js`, `fly-api/src/controllers/appointmentController.js`)**:
+   - Added `POST /api/appointments/schedule-franchise` guarded by `verifyFirebaseToken`, `requireRole('admin')`, rate limiting, and allowed fields.
+   - Implemented strict interval overlap collision detection: queries existing active appointments for the specified date and verifies `newStart < existingEnd && newEnd > existingStart`, returning `409 Conflict` with conflicting time window if occupied. Correctly permits back-to-back adjacent slots (e.g. 10:00–11:00 and 11:00–12:00).
+   - On success, creates appointment with `type: 'franchise_consultation'`, `status: 'Confirmed'`, and updates the franchise application to `status: 'appointment_scheduled'` with `consultationAppointmentId`.
+   - Supported `Completed` status transition in `updateAppointmentStatus`.
+4. **Post-Consultation Operator Account Creation Linkage (`fly-api/src/routes/operatorRoutes.js`, `fly-api/src/controllers/operatorController.js`)**:
+   - Added `franchiseApplicationId` and `appointmentId` to allowed fields for `POST /operators`.
+   - In `createOperator`, when `franchiseApplicationId` is provided, automatically updates the franchise application to `status: 'approved'` and sets `operatorId: uid`, while updating the associated consultation appointment to `status: 'Completed'` and linking `operatorId: uid`.
+5. **Frontend Franchise Application Form Enhancements (`fair-fly/src/components/Shared/FranchiseApplicationForm/`)**:
+   - Pre-allocates unique franchise application ID (`FRA-...` via `generateFranchiseId`).
+   - Added capability-proof multi-file drag-and-drop dropzone supporting up to 25MB total payload, file size validation, progress indicators, and removal chips.
+   - Added meeting schedule preferences: date picker, start time, end time with chronological validation, and "No preference / Admin to schedule" toggle.
+6. **Franchise Detail Page Consultation Scheduler (`fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseAppDetailPage.jsx`)**:
+   - Replaced immediate direct approval with "Schedule Consultation Appointment" workflow.
+   - Built schedule modal dialog with date and time selectors, notes, conflict error alert display, and capability proof download cards.
+7. **Reusable Appointment Calendar (`fair-fly/src/components/Shared/AppointmentCalendar/`)**:
+   - Created shared component supporting Month/Week views, legend, status pills, date range navigation, and click handlers.
+   - Refactored `OperatorAppointmentCalendar.jsx` to delegate calendar rendering to `AppointmentCalendar`.
+8. **Admin Appointments Portal (`fair-fly/src/pages/Admin/AdminAppointments/`)**:
+   - Built full portal with KPI metric cards (Total, Pending, Confirmed, Completed), search with 300ms debounce, status and type filters, and Calendar/Table view toggle.
+   - Table view powered by `<DataTable>` and `<Pagination>`.
+   - Comprehensive Appointment Details Modal (`<BaseModal>`) displaying applicant credentials, scheduled time window, capability proofs, notes, and status transition actions.
+   - For completed franchise consultations, prominent CTA "Grant Franchise & Create Operator Account" launches pre-populated `OperatorModal`, linking the accounts upon creation.
+9. **Admin Navigation & Routing (`fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx`, `fair-fly/src/App.jsx`)**:
+   - Registered `/admin/appointments` navigation link in `baseAdminLinks` with icon `fa-regular fa-calendar-check`.
+   - Added real-time Firestore listener for pending appointments badge counter.
+   - Registered `<Route path="appointments" element={<AdminAppointments />} />` under admin routes in `App.jsx`.
+10. **Component Documentation (`Fair2/Fairfly/component-list.md`)**:
+    - Documented `AppointmentCalendar` component with props, appropriate usage, and styles.
+
+### Verification
+- **Automated Verification Script (`fly-api/src/scripts/testFranchiseAppointments.js`)**:
+  - Validated storage subfolder security for `franchise_applications` (proofs, contracts, consultations, and fallback normalization).
+  - Validated collision detection logic: detected partial overlap, start overlap, interior subset, and encompassing superset; allowed preceding and subsequent adjacent slots.
+  - Validated end-to-end franchise application persistence, appointment scheduling, and status updates.
+  - Validated post-consultation operator creation, franchise application approval, and operatorId foreign key linkage.
+  - Test suite result: **21 Passed, 0 Failed**.
+- **Production Build Validation**:
+  - Executed `npm run build` in `fair-fly`: Vite build completed cleanly in 3.25s with 0 errors.
+
+---
+
 ## [2026-09-30] Architecture & Database: Firestore System-Wide Normalization, Foreign Key Resolution & Point-in-Time Snapshot Preservation Policy
 
 ### Overview
@@ -3559,3 +3917,93 @@ All messages are computed via `useMemo` from data already available through `use
 
 ### Breaking Changes
 - None. Fully backward-compatible with existing `userCache` and `staticDataCache` callers.
+
+---
+
+## [2026-10-02] Support Ticket Data Lean-Out, Dynamic Participant Resolution & Redundancy Removal
+
+### Files Modified
+- `fly-api/src/routes/ticketRoutes.js`
+- `fly-api/src/controllers/ticketController.js`
+- `fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx`
+- `fair-fly/src/pages/Operator/OperatorTickets/OperatorTicketsContent.jsx`
+- `fair-fly/src/components/Admin/Tickets/TicketThread.jsx`
+- `fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx`
+- `fair-fly/src/pages/Admin/AdminTickets/admin-tickets.css`
+
+### Summary of Changes
+- **Lean Ticket Whitelist**: Updated `TICKET_ALLOWED_FIELDS` to strictly `['title', 'category', 'priority', 'initialMessage', 'operatorId']`, dropping `operatorName` and `operatorEmail`.
+- **Server-Side Identity Derivation**: In `ticketController.js`, removed `operatorName` and `operatorEmail` from ticket creation body extraction. Resolved operator branch details dynamically via `userCache` and Firestore lookups.
+- **Redundant Message Field Removal**: Stripped redundant `senderName` and `senderRole` from all message items in `ticket.messages` (`initialMessageObj` and `newMessageObj`), persisting only `{ id, senderId, message, createdAt }`.
+- **Single Terminal Field (`closedAt`)**: Removed redundant `closedBy` field from ticket documents and controllers, standardizing exclusively on the ISO timestamp `closedAt`.
+- **Dynamic In-Memory Participant Resolution**: In `TicketThread.jsx`, introduced an in-memory/React state `participants` map (`{ [uid]: { id, name, role, email } }`). Pre-populated from backend `ticket.participants` (resolved in `getTicketById`) and cached client-side lookups for any unknown sender IDs to avoid repeated Firestore network requests.
+- **Backwards-Compatible Thread UI**: Rendered participant names and role badges by matching `msg.senderId` against the cached `participants` map with fallback to existing ticket operator metadata. Updated closed banner to use `closedAt`.
+- **Admin Tickets Page Layout Fix**: Removed unstyled wrapper `div`s and restored layout margin spacing between KPI cards and the tickets table.
+
+### Reason
+- Fulfill user request to lean out the ticket schema and message array by removing redundant fields (`operatorName`, `operatorEmail`, `senderName`, `senderRole`, `closedBy`) and resolving participants via caching.
+
+### Breaking Changes
+- None. Fully backward-compatible with existing ticket records.
+
+---
+
+## [2026-10-02] Service History Client Requirements & Lightbox Attachments Viewer
+
+### Files Modified
+- `fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx`
+- `fair-fly/src/components/Operator/HistoryDetailModal/history-detail-modal.css`
+- `fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx`
+- `fair-fly/src/pages/Operator/OperatorHistory/operator-history.css`
+
+### Summary of Changes
+- **Client Requirements Integration in History**: Integrated `useSubmittedRequirements` into `HistoryDetailModal.jsx` to dynamically load client-submitted requirements and uploaded documents for completed or cancelled service records (via `submittedRequirementsId` or originating inquiries/quotations fallback).
+- **Universal Image Lightbox Linking**: Connected the application's root `useLightbox()` hook in `HistoryDetailModal.jsx`. Image requirement thumbnails and file actions can now be clicked to open high-resolution previews in `ImageLightbox`, supporting keyboard navigation, zoom controls, and gallery browsing across all attachments.
+- **Document & Data Support**: Handled non-image documents (e.g. PDF certificates) with clean document cards, file metadata, and secure download links. Handled text and date responses with formatted value cards.
+- **Table Requirements Column**: Added a "Client Requirements" column to the Service History table in `OperatorHistory.jsx` with quick action buttons (`<i className="fa-solid fa-paperclip"></i> View Files`) to directly inspect requirements from the history table.
+
+### Reason
+- Fulfill user request to display and link client-submitted attachments/requirements at Service History with direct System Lightbox inspection.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-10-02] Fix React Error #310, Enhance 'View Files' Contrast & Strip Legacy Fallback Bloat
+
+### Files Modified
+- `fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx`
+- `fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx`
+- `fair-fly/src/pages/Operator/OperatorHistory/operator-history.css`
+- `lessons-learned.md`
+
+### Summary of Changes
+- **React Error #310 Resolution**: Resolved the React Hook order mismatch by strictly calling all hooks unconditionally at the top level of `HistoryDetailModal.jsx` and conditionally mounting `<HistoryDetailModal>` in `OperatorHistory.jsx` only when `isModalOpen && selectedRecord` is true, ensuring complete unmounting when closed.
+- **Removed Legacy Fallback Bloat**: Stripped obsolete fallback parameter passing and array checking (`submittedRequirements`, `requirements`), querying directly with `useSubmittedRequirements(reqRefId)`. Checked attachments using a clean `if (!submittedDocs || submittedDocs.length === 0)` empty state.
+- **Enhanced Button Readability**: Updated `.op-history-table-attach-btn` and its nested text `span` / `i` in `operator-history.css` with `color: #ffffff !important` to ensure crisp white contrast against the purple button background.
+
+### Reason
+- Address user report of Minified React error #310 when viewing files in service history, poor button readability on "View Files", and request to remove unnecessary legacy fallback bloat.
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-10-02] HistoryDetailModal Button & Badge Contrast and Readability Fixes
+
+### Files Modified
+- `fair-fly/src/components/Operator/HistoryDetailModal/history-detail-modal.css`
+
+### Summary of Changes
+- **High-Contrast Count Badge**: Replaced the low-contrast purple-on-purple styling of `.op-history-reqs-count-badge` with a soft lilac background (`var(--purple-light-2, #EEF2FF)`), dark indigo text (`var(--purple-dark, #4338CA)`), bold font weight (`700`), and a subtle border.
+- **Lightbox Action Buttons**: Replaced `.op-history-lightbox-action-btn` and `.op-history-gallery-btn` purple-on-purple text with solid brand purple backgrounds (`#5558E3`) and crisp pure white text (`#ffffff !important`) and icons with smooth hover transitions.
+- **Document Download Buttons**: Updated `.op-history-doc-download-btn` with a subtle slate border and dark text for clean visibility.
+
+### Reason
+- Resolve poor contrast and illegibility on buttons and count badges inside the service history requirements section.
+
+### Breaking Changes
+- None.
+

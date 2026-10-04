@@ -257,9 +257,7 @@ export default function TicketsContent() {
         }}
       />
 
-      <div className="tickets-layout-single">
-        <section className="tickets-left-pane">
-          <section className="kpi-grid-4">
+      <section className="services-summary-grid kpi-grid-4">
             <KpiCard
               title="Total Tickets"
               value={totalTickets}
@@ -403,9 +401,7 @@ export default function TicketsContent() {
               onPageSizeChange={setPageSize}
               pageSizeOptions={[5]}
             />
-          </section>
-        </section>
-      </div>
+      </section>
 
       <CreateTicketModal
         ref={createModalRef}

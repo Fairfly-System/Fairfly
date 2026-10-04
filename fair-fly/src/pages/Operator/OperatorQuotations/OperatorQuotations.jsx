@@ -18,7 +18,7 @@ import CreateQuotationModal from '../../../components/Operator/CreateQuotationMo
 
 function getQuotationStatusClass(status) {
   const s = (status || '').toLowerCase();
-  if (s === 'paid' || s === 'accepted' || s === 'confirmed') return 'status-pill-completed';
+  if (s === 'paid' || s === 'accepted' || s === 'confirmed' || s === 'fulfilled') return 'status-pill-completed';
   if (s === 'sent') return 'status-pill-active';
   if (s === 'rejected' || s === 'cancelled') return 'status-pill-disabled';
   return 'status-pill-pending';

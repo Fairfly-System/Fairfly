@@ -3,13 +3,24 @@ const router = express.Router();
 const {
   createAppointment,
   getAppointments,
-  updateAppointmentStatus
+  updateAppointmentStatus,
+  scheduleFranchiseAppointment
 } = require('../controllers/appointmentController');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
-const { verifyFirebaseToken } = require('../middleware/auth');
+const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { publicRateLimiter, apiRateLimiter } = require('../middleware/rateLimiter');
 
 const { allowedFields } = require('../middleware/allowedFields');
+
+const SCHEDULE_FRANCHISE_ALLOWED_FIELDS = [
+  'franchiseApplicationId',
+  'appointmentDate',
+  'preferredDate',
+  'startTime',
+  'endTime',
+  'notes',
+  'location'
+];
 
 const APPOINTMENT_ALLOWED_FIELDS = [
   'clientUid',
@@ -35,6 +46,19 @@ router.post(
   },
   allowedFields(APPOINTMENT_ALLOWED_FIELDS),
   createAppointment
+);
+
+// Admin-only: Schedule franchise consultation appointment with collision detection
+router.post(
+  '/schedule-franchise',
+  performanceProfiler(
+    'POST /appointments/schedule-franchise',
+    verifyFirebaseToken,
+    requireRole('admin'),
+    allowedFields(SCHEDULE_FRANCHISE_ALLOWED_FIELDS),
+    apiRateLimiter,
+    scheduleFranchiseAppointment
+  )
 );
 
 router.get('/', performanceProfiler('GET /appointments', verifyFirebaseToken, apiRateLimiter, getAppointments));

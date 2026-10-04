@@ -5,6 +5,8 @@ import { API_BASE_URL } from '../../../utils/config';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import { fetchFranchiseApplicationSchema } from '../../../services/franchiseService';
+import { generateFranchiseId } from '../../../utils/idGenerator';
+import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 
 // PSGC Cloud API — fetches Philippine standard geographic data
 const PSGC_BASE = 'https://psgc.cloud/api';
@@ -19,24 +21,24 @@ async function fetchPsgc(path) {
 const BUSINESS_EXPERIENCE_OPTIONS = [
   { value: '', label: 'Select your experience level', disabled: true },
   { value: 'No prior business experience', label: 'No prior business experience' },
-  { value: '0-2 years experience', label: '0–2 years experience' },
-  { value: '3-5 years experience', label: '3–5 years experience' },
+  { value: '0-2 years experience', label: '0-2 years experience' },
+  { value: '3-5 years experience', label: '3-5 years experience' },
   { value: 'Over 5 years experience', label: 'Over 5 years experience' },
 ];
 
 const INVESTMENT_CAPACITY_OPTIONS = [
   { value: '', label: 'Select investment range', disabled: true },
   { value: 'Less than ₱50,000', label: 'Less than ₱50,000' },
-  { value: '₱50,000 – ₱100,000', label: '₱50,000 – ₱100,000' },
-  { value: '₱100,000 – ₱200,000', label: '₱100,000 – ₱200,000' },
-  { value: '₱200,000 – ₱500,000', label: '₱200,000 – ₱500,000' },
+  { value: '₱50,000 - ₱100,000', label: '₱50,000 - ₱100,000' },
+  { value: '₱100,000 - ₱200,000', label: '₱100,000 - ₱200,000' },
+  { value: '₱200,000 - ₱500,000', label: '₱200,000 - ₱500,000' },
   { value: '₱500,000+', label: '₱500,000+' },
 ];
 
 const MEETING_TIME_OPTIONS = [
-  { value: '', label: 'Select time', disabled: true },
-  { value: 'morning', label: 'Morning (9:00 AM – 12:00 PM)' },
-  { value: 'afternoon', label: 'Afternoon (1:00 PM – 5:00 PM)' },
+  { value: '', label: 'Select time slot', disabled: true },
+  { value: 'morning', label: 'Morning (9:00 AM - 12:00 PM)' },
+  { value: 'afternoon', label: 'Afternoon (1:00 PM - 5:00 PM)' },
 ];
 
 const EMPTY_FORM = {
@@ -55,17 +57,27 @@ const EMPTY_FORM = {
   investmentCapacity: '',
   preferredMeetingDate: '',
   preferredMeetingTime: '',
+  preferredMeetingStartTime: '09:00',
+  preferredMeetingEndTime: '10:00',
+  noPreferenceSchedule: false,
+  proofOfCapability: [],
   additionalMessage: '',
   customFields: {},
 };
 
 export default function FranchiseApplicationForm({ isOpen, onClose }) {
-  const { user, userDetails } = useAuthContext();
+  const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
 
+  const [franchiseAppId, setFranchiseAppId] = useState(() => generateFranchiseId());
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  // Files are held locally until submit — not uploaded until the form is submitted
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const fileInputRef = useRef(null);
   const [customFieldsSchema, setCustomFieldsSchema] = useState([]);
 
   // Location data states
@@ -260,6 +272,13 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
     return typeof val === 'string' && val.trim().length > 0;
   });
 
+  const isMeetingValid = formData.noPreferenceSchedule || Boolean(
+    formData.preferredMeetingDate &&
+    formData.preferredMeetingStartTime &&
+    formData.preferredMeetingEndTime &&
+    formData.preferredMeetingStartTime < formData.preferredMeetingEndTime
+  );
+
   const isFormValid = Boolean(
     formData.firstName.trim() &&
     formData.lastName.trim() &&
@@ -270,33 +289,108 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
     formData.barangay &&
     formData.businessExperience &&
     formData.investmentCapacity &&
-    formData.preferredMeetingDate &&
-    formData.preferredMeetingTime &&
+    isMeetingValid &&
     areCustomFieldsValid &&
+    !isLoading &&
+    !isUploadingFiles &&
     Object.keys(errors).length === 0
   );
 
-  const handleSubmit = (e) => {
+  const ALLOWED_EXTS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+  /**
+   * Validates and stages selected files locally.
+   * No upload happens here — files are held as File objects until form submit.
+   */
+  const handleSelectFiles = (files) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    const valid = [];
+
+    for (const file of fileList) {
+      const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+      if (!ALLOWED_EXTS.includes(ext)) {
+        addToast(`"${file.name}" has an unsupported format. Allowed: PDF, Office docs, Images.`, 'error');
+        continue;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        addToast(`"${file.name}" exceeds the 25MB limit.`, 'error');
+        continue;
+      }
+      // Deduplicate by name+size
+      const isDuplicate = pendingFiles.some(
+        (existing) => existing.name === file.name && existing.size === file.size
+      );
+      if (isDuplicate) {
+        addToast(`"${file.name}" is already attached.`, 'warn');
+        continue;
+      }
+      valid.push(file);
+    }
+
+    if (valid.length > 0) {
+      setPendingFiles((prev) => [...prev, ...valid]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveProof = (indexToRemove) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
 
-    // Derive canonical fields expected by backend
-    const fullName = [formData.firstName, formData.middleInitial, formData.lastName]
-      .filter(Boolean).join(' ').trim();
+    // Step 1: Upload any staged files to Storage before submitting the form
+    let uploadedProofs = [];
+    if (pendingFiles.length > 0) {
+      setIsUploadingFiles(true);
+      setUploadProgress({ current: 0, total: pendingFiles.length });
+      const uploadFolder = `franchise_applications/${franchiseAppId}/proofs`;
 
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
+        try {
+          const res = await uploadFileToBackend(file, uploadFolder, userToken);
+          uploadedProofs.push({
+            name: file.name,
+            fileName: res.fileName || file.name,
+            storagePath: res.storagePath,
+            url: res.url,
+            size: res.fileSize || file.size,
+            type: res.contentType || file.type || 'application/octet-stream'
+          });
+        } catch (err) {
+          addToast(`Failed to upload "${file.name}": ${err.message}`, 'error');
+        }
+        setUploadProgress({ current: i + 1, total: pendingFiles.length });
+      }
+
+      setIsUploadingFiles(false);
+      setUploadProgress({ current: 0, total: 0 });
+    }
+
+    // Step 2: Build the final lean payload
     const addressParts = [formData.barangay, formData.municipality, formData.province];
     if (formData.building.trim()) addressParts.unshift(formData.building.trim());
     const preferredBranchLocation = addressParts.filter(Boolean).join(', ');
 
     // eslint-disable-next-line no-unused-vars
-    const { provinceCode, municipalityCode, ...rest } = formData;
+    const { provinceCode, municipalityCode, preferredMeetingTime, ...rest } = formData;
 
     const payload = {
       ...rest,
-      fullName,
+      id: franchiseAppId,
       preferredBranchLocation,
+      preferredMeetingDate: formData.noPreferenceSchedule ? '' : formData.preferredMeetingDate,
+      preferredMeetingStartTime: formData.noPreferenceSchedule ? '' : formData.preferredMeetingStartTime,
+      preferredMeetingEndTime: formData.noPreferenceSchedule ? '' : formData.preferredMeetingEndTime,
+      noPreferenceSchedule: Boolean(formData.noPreferenceSchedule),
+      proofOfCapability: uploadedProofs
     };
 
+    // Step 3: Submit the application
     ApiCaller(
       `${API_BASE_URL}/api/franchise/applications`,
       'POST',
@@ -305,7 +399,9 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
       () => {
         onClose();
         setFormData(EMPTY_FORM);
+        setPendingFiles([]);
         setErrors({});
+        setFranchiseAppId(generateFranchiseId());
         addToast('Application submitted successfully!', 'success');
       },
       (error) => {
@@ -318,7 +414,9 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
 
   const handleClose = () => {
     setFormData(EMPTY_FORM);
+    setPendingFiles([]);
     setErrors({});
+    setFranchiseAppId(generateFranchiseId());
     onClose();
   };
 
@@ -341,7 +439,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
         <p className="modalDescription">
           Join our growing family of successful franchisees. Fill out this form to
           schedule a meeting with our franchise development team. We&apos;ll contact
-          you within 2–3 business days.
+          you within 2-3 business days.
         </p>
 
         <form className="franchiseApplicationForm" onSubmit={handleSubmit} noValidate>
@@ -524,36 +622,171 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
             </select>
           </div>
 
-          {/* Preferred Meeting Date — Time */}
-          <div className="formRow">
-            <div className="formGroup">
-              <label htmlFor="faf-date">Preferred Meeting Date *</label>
-              <input
-                id="faf-date"
-                type="date"
-                min={todayStr}
-                value={formData.preferredMeetingDate}
-                onChange={(e) => handleChange('preferredMeetingDate', e.target.value)}
-                required
-              />
-              {errors.preferredMeetingDate && (
-                <p className="error">{errors.preferredMeetingDate}</p>
-              )}
+          {/* Preferred Meeting Schedule Section */}
+          <div className="formSection">
+            <div className="formSectionLabel">
+              <i className="fa-regular fa-calendar-check" /> Consultation Schedule Preference
             </div>
 
-            <div className="formGroup">
-              <label htmlFor="faf-time">Preferred Meeting Time *</label>
-              <select
-                id="faf-time"
-                value={formData.preferredMeetingTime}
-                onChange={(e) => set('preferredMeetingTime', e.target.value)}
-                required
-              >
-                {MEETING_TIME_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>
-                ))}
-              </select>
+            <div className="faf-checkbox-group">
+              <label className="faf-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.noPreferenceSchedule}
+                  onChange={(e) => set('noPreferenceSchedule', e.target.checked)}
+                />
+                <span>No preference / Let Fairfly Admin schedule my consultation</span>
+              </label>
             </div>
+
+            {!formData.noPreferenceSchedule && (
+              <>
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label htmlFor="faf-date">Preferred Meeting Date *</label>
+                    <input
+                      id="faf-date"
+                      type="date"
+                      min={todayStr}
+                      value={formData.preferredMeetingDate}
+                      onChange={(e) => handleChange('preferredMeetingDate', e.target.value)}
+                      required={!formData.noPreferenceSchedule}
+                    />
+                    {errors.preferredMeetingDate && (
+                      <p className="error">{errors.preferredMeetingDate}</p>
+                    )}
+                  </div>
+
+                  <div className="formRow" style={{ gap: '8px' }}>
+                    <div className="formGroup">
+                      <label htmlFor="faf-start-time">Start Time *</label>
+                      <input
+                        id="faf-start-time"
+                        type="time"
+                        value={formData.preferredMeetingStartTime}
+                        onChange={(e) => set('preferredMeetingStartTime', e.target.value)}
+                        required={!formData.noPreferenceSchedule}
+                      />
+                    </div>
+                    <div className="formGroup">
+                      <label htmlFor="faf-end-time">End Time *</label>
+                      <input
+                        id="faf-end-time"
+                        type="time"
+                        value={formData.preferredMeetingEndTime}
+                        onChange={(e) => set('preferredMeetingEndTime', e.target.value)}
+                        required={!formData.noPreferenceSchedule}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {formData.preferredMeetingStartTime && formData.preferredMeetingEndTime &&
+                 formData.preferredMeetingStartTime >= formData.preferredMeetingEndTime && (
+                  <p className="error" style={{ marginTop: '-8px' }}>
+                    Start time must be earlier than end time.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Proof of Capability Upload Section */}
+          <div className="formSection">
+            <div className="formSectionLabel">
+              <i className="fa-solid fa-file-shield" /> Proof of Capability & Documents
+            </div>
+            <p className="faf-section-desc">
+              Attach supporting documents (Financial capacity, DTI / SEC permit, Government IDs, or Bank Statements). Supported formats: PDF, Word, Excel, Images (Max 25MB).
+            </p>
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.gif"
+              style={{ display: 'none' }}
+              onChange={(e) => handleSelectFiles(e.target.files)}
+            />
+
+            {/* Dropzone - files are staged locally and uploaded when the form is submitted */}
+            <div
+              className="faf-dropzone"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files) {
+                  handleSelectFiles(e.dataTransfer.files);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Attach capability documents"
+            >
+              <div className="faf-dropzone-idle">
+                <i className="fa-solid fa-cloud-arrow-up faf-upload-icon" />
+                <p className="faf-dropzone-text">
+                  <strong>Click to attach</strong> or drag &amp; drop documents here
+                </p>
+                <span className="faf-dropzone-sub">
+                  PDF, DOCX, XLSX, PNG, JPG up to 25MB each - uploaded when you submit
+                </span>
+              </div>
+            </div>
+
+            {/* Staged File Chips — files are held locally and uploaded on submit */}
+            {pendingFiles.length > 0 && (
+              <div className="faf-proofs-list">
+                <span className="faf-proofs-count">
+                  {pendingFiles.length} {pendingFiles.length === 1 ? 'file' : 'files'} ready to upload:
+                </span>
+                <div className="faf-proofs-chips">
+                  {pendingFiles.map((file, idx) => {
+                    const ext = (file.name || '').split('.').pop().toLowerCase();
+                    const iconClass = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)
+                      ? 'fa-solid fa-file-image'
+                      : ext === 'pdf'
+                      ? 'fa-solid fa-file-pdf'
+                      : ['doc', 'docx'].includes(ext)
+                      ? 'fa-solid fa-file-word'
+                      : ['xls', 'xlsx'].includes(ext)
+                      ? 'fa-solid fa-file-excel'
+                      : 'fa-solid fa-file-lines';
+
+                    const sizeLabel = file.size ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : '';
+
+                    return (
+                      <div key={`${file.name}-${file.size}-${idx}`} className="faf-file-chip">
+                        <i className={`${iconClass} faf-chip-icon`} />
+                        <span className="faf-chip-name" title={file.name}>
+                          {file.name}
+                        </span>
+                        {sizeLabel && <span className="faf-chip-size">({sizeLabel})</span>}
+                        <button
+                          type="button"
+                          className="faf-chip-remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveProof(idx);
+                          }}
+                          aria-label={`Remove ${file.name}`}
+                          title="Remove file"
+                        >
+                          <i className="fa-solid fa-xmark" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Custom Dynamic Fields (if configured by admin) */}
@@ -608,8 +841,13 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
           </div>
 
           <div className="formActions">
-            <button type="submit" className="submitBtn" disabled={!isFormValid || isLoading}>
-              {isLoading ? (
+            <button type="submit" className="submitBtn" disabled={!isFormValid || isLoading || isUploadingFiles}>
+              {isUploadingFiles ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin" />
+                  Uploading {uploadProgress.current}/{uploadProgress.total}...
+                </>
+              ) : isLoading ? (
                 <>
                   <i className="fa-solid fa-spinner fa-spin" />
                   Submitting...
@@ -618,7 +856,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
                 'Submit Application'
               )}
             </button>
-            <button type="button" className="cancelBtn" onClick={handleClose}>
+            <button type="button" className="cancelBtn" onClick={handleClose} disabled={isLoading || isUploadingFiles}>
               Cancel
             </button>
           </div>

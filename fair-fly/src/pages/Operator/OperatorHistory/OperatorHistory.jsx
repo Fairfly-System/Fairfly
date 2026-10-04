@@ -119,6 +119,29 @@ export default function OperatorHistory() {
         key: 'date',
         header: tab === 'appointments' ? 'Preferred Date' : 'Date Finished / Updated',
       },
+      ...(tab === 'services'
+        ? [
+            {
+              key: 'requirements',
+              header: 'Client Requirements',
+              render: (item) => {
+                const hasReqs = Boolean(item.submittedRequirementsId);
+                return (
+                  <button
+                    type="button"
+                    className={`op-history-table-attach-btn ${!hasReqs ? 'is-none' : ''}`}
+                    onClick={() => handleOpenDetailModal(item)}
+                    title={hasReqs ? 'Click to inspect client requirements & attachments' : 'No requirements recorded'}
+                    disabled={!hasReqs}
+                  >
+                    <i className="fa-solid fa-paperclip"></i>
+                    <span>{hasReqs ? 'View Files' : 'None'}</span>
+                  </button>
+                );
+              },
+            },
+          ]
+        : []),
       {
         key: 'status',
         header: 'Status',
@@ -232,12 +255,14 @@ export default function OperatorHistory() {
       </section>
 
       {/* Detail Modal for View Action */}
-      <HistoryDetailModal
-        isOpen={isModalOpen}
-        onClose={handleCloseDetailModal}
-        data={selectedRecord}
-        type={tab === 'appointments' ? 'appointment' : 'service'}
-      />
+      {isModalOpen && selectedRecord && (
+        <HistoryDetailModal
+          isOpen={isModalOpen}
+          onClose={handleCloseDetailModal}
+          data={selectedRecord}
+          type={tab === 'appointments' ? 'appointment' : 'service'}
+        />
+      )}
     </main>
   );
 }

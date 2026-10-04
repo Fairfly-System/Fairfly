@@ -1,6 +1,12 @@
 # Lessons Learned
 # A File for Agents to write their mistakes so that next runs can prevent doing the same thing (Automatic Improvement)
 
+## [2026-10-02] Undeclared 'now' Timestamp Variable Causing 500 Internal Server Error in Appointment Creation
+- **Problem**: When a client or operator attempted to schedule a branch appointment via `POST /api/appointments`, the request failed with HTTP `500 (Internal Server Error)`.
+- **Root Cause**: In `fly-api/src/controllers/appointmentController.js`, `createAppointment` constructed the `newAppointment` payload with `createdAt: now` and `updatedAt: now`, but `const now = new Date().toISOString();` had not been declared in the function scope. This triggered an unhandled `ReferenceError: now is not defined`, throwing into the catch block and returning a 500 response.
+- **Prevention**: Always declare timestamp variables (`const now = new Date().toISOString();`) before referencing them in model constructions, or use inline timestamp generators (`new Date().toISOString()`). Run automated static analysis or scope checkers across controllers to verify that identifiers like `now` are never referenced out of scope.
+
+
 ## [2026-09-30] Over-Pruning Operational 'remarks' Field as Redundant During Normalization
 - **Problem**: During Firestore data normalization on `inquiries`, the `remarks` field was erroneously treated as a duplicate alias of `notes` and slated for deletion, breaking operator workflow and contradicting the audit summary table.
 - **Root Cause**:
@@ -134,4 +140,42 @@
 - **Problem**: Submitting a service request from the client-side Service Store modal (`ClientServiceRequestModal.jsx`) failed with HTTP 400 `Invalid fields in request body`.
 - **Root Cause**: The route `POST /api/services/active` in `activeServiceRoutes.js` guarded the request with `allowedFields(ACTIVE_SERVICE_ALLOWED_FIELDS)`, but omitted `submittedRequirements` and `source` from the allowed array, causing Express middleware to reject the valid client request payload.
 - **Prevention**: When defining route-level `allowedFields` whitelists, cross-reference all frontend components that POST to that route (`ClientServiceRequestModal.jsx`, `AddServiceModal.jsx`) and include all supported schema fields (`submittedRequirements`, `source`, etc.) in the whitelist.
+
+## [2026-10-02] Incomplete allowedFields Whitelist on Admin Account Creation Route
+- **Problem**: Creating a new Support Administrator from the Admin portal (`AdminForm.jsx`) failed with HTTP 400 Bad Request ("Invalid fields").
+- **Root Cause**: The route `POST /api/admins` in `adminRoutes.js` guarded payloads with `allowedFields(['email', 'password', 'username', 'fullName', 'phone', 'assignedOperators'])`. However, `AdminForm.jsx` included `name` (to support display name fallbacks) and `status` (`'Active' | 'Inactive'`), which were omitted from the whitelist, triggering an immediate 400 rejection before reaching the controller.
+- **Prevention**: Whenever adding or modifying form fields in frontend modals, always verify that the corresponding backend route whitelist (`allowedFields`) and controller handlers permit the exact fields sent. Additionally, configure `allowedFields` middleware to return the rejected field names in the error response for rapid root cause diagnosis.
+
+## [2026-10-02] allowedFields Middleware Omission of type and serviceType on Workflow Template Routes
+- **Problem**: Creating or editing workflow templates from the Admin Portal (`/admin/workflows`) failed with HTTP 400 Bad Request ("Invalid fields in request body: type, serviceType").
+- **Root Cause**: `WORKFLOW_TEMPLATE_FIELDS` in `workflowRoutes.js` omitted `type` and `serviceType`, even though `WorkflowForm.jsx` submits both to categorize process workflows (e.g., PSA, Visa, Passport).
+- **Prevention**: Ensure data dictionary and route schemas define all metadata/classification fields (`type`, `serviceType`, `category`) that UI forms provide for catalog and workflow entities.
+
+## [2026-10-02] Incomplete allowedFields Whitelist on Ticket Creation & Obsolete Flex Wrapper Divs
+- **Problem**: 
+  1. Creating a support ticket from the Admin portal (`CreateTicketModal.jsx`) failed with HTTP 400 Bad Request ("Invalid fields in request body: operatorId, operatorName, operatorEmail").
+  2. The Admin Tickets page (`TicketsContent.jsx`) displayed zero margin spacing between the KPI metrics cards and the table card.
+- **Root Cause**: 
+  1. `TICKET_ALLOWED_FIELDS` in `ticketRoutes.js` only included `['title', 'category', 'priority', 'initialMessage']`, omitting the operator identity fields sent when creating tickets on behalf of branches.
+  2. `TicketsContent.jsx` retained retired `<div className="tickets-layout-single"><section className="tickets-left-pane">` wrapper elements with no flex gap or margin styling, breaking the layout cascade from the parent `.tickets-page`.
+- **Prevention**: 
+  1. When forms allow cross-account actions (like admin-on-behalf-of-branch creation), ensure foreign key and profile fields (`operatorId`, `operatorName`, `operatorEmail`) are included in route whitelists.
+  2. Avoid unstyled intermediate wrapper `<div>` and `<section>` tags between flex parents and child cards; adhere to the top-level standard structure (`page-fade-in` > `services-summary-grid` > `card`).
+
+## [2026-10-02] Redundant Embedded User Details and Status Fields in Firestore Documents
+- **Problem**: Ticket documents and their embedded `messages` array stored redundant copies of `operatorName`, `operatorEmail`, `senderName`, `senderRole`, and duplicate closing indicators (`closedBy` alongside `closedAt`). This bloated Firestore document sizes and resulted in 400 Bad Request errors when forms submitted extraneous identity fields instead of deriving them from foreign keys (`operatorId`, `senderId`).
+- **Root Cause**: Denormalizing display names and roles directly into every nested message item without utilizing state caching or relational user lookups, and storing redundant closing metadata (`closedBy` and `closedAt`) simultaneously.
+- **Prevention**: Store only primary foreign keys (`operatorId`, `senderId`) and essential content (`id`, `message`, `createdAt`) in database records and thread messages. Resolve participant display details (`name`, `role`, `email`) once on the backend or cache them in frontend component state (`participants` map in `TicketThread.jsx`), eliminating repetitive Firestore lookups and document bloat. Standardize terminal states on a single timestamp field (`closedAt`).
+
+## [2026-10-02] Minified React Error #310 from Modal Hook Order and Unmounted Modal Lifecycles
+- **Problem**: Clicking 'View Files' in the Service History table crashed the React application with `Uncaught Error: Minified React error #310` ("Rendered more hooks than during the previous render") at `useSubmittedRequirements` in `HistoryDetailModal`.
+- **Root Cause**: 
+  1. `HistoryDetailModal` had an early return `if (!isOpen || !data) return null;` placed before downstream custom hook invocations in an earlier revision, causing the hook count to change between when the modal was closed (`isOpen=false`) and opened (`isOpen=true`).
+  2. The parent page (`OperatorHistory.jsx`) mounted `<HistoryDetailModal>` continuously in the DOM even when closed, causing it to participate in every render pass with fluctuating parameters.
+  3. Extraneous fallback parameters and checks (`submittedRequirements`, `requirements`) bloated the query logic instead of relying on a clean single foreign key (`submittedRequirementsId`).
+- **Prevention**:
+  1. Never place early returns before hook calls. All hooks (`useLightbox`, `useSubmittedRequirements`, `useMemo`) must be invoked unconditionally at the very top level of functional components.
+  2. Conditionally mount modals in parent components (`{isModalOpen && selectedRecord && <HistoryDetailModal ... />}`), ensuring the child only mounts when active and completely unmounts when closed.
+  3. Keep requirement queries lean: look up by `submittedRequirementsId` directly, and show the empty state simply when `!submittedDocs || submittedDocs.length === 0`.
+
 

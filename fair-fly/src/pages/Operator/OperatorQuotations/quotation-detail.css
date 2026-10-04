@@ -149,3 +149,21 @@
   white-space: pre-line;
 }
 
+.quote-accepted-banner.fulfilled-banner {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.quote-accepted-banner.fulfilled-banner .quote-accepted-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.quote-accepted-banner.fulfilled-banner .quote-accepted-title {
+  color: #15803d;
+}
+
+.quote-accepted-banner.fulfilled-banner .quote-accepted-sub {
+  color: #166534;
+}
+

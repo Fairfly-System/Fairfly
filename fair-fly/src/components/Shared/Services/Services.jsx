@@ -7,6 +7,7 @@ import ServiceDetailModal from './ServiceDetailModal';
 import './services.css';
 
 // Curated operator services that represent the core FairFly franchise offerings
+// Curated operator services that represent the core FairFly franchise offerings
 const DEFAULT_OPERATOR_SERVICES = [
   {
     id: 'op-passport-expedite',
@@ -24,9 +25,7 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['DFA', 'Passport', 'Renewal', 'Expedited'],
     featured: true,
     icon: 'fa-solid fa-id-card',
-    iconBg: 'linear-gradient(135deg, #6366f1, #818cf8)',
-    image: '/services/passport.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80'
+    iconBg: 'linear-gradient(135deg, #6366f1, #818cf8)'
   },
   {
     id: 'op-psa-civil-docs',
@@ -44,14 +43,12 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['PSA', 'BirthCert', 'CENOMAR', 'Authentication'],
     featured: true,
     icon: 'fa-regular fa-file-lines',
-    iconBg: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
-    image: '/services/psa-docs.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80'
+    iconBg: 'linear-gradient(135deg, #3b82f6, #60a5fa)'
   },
   {
     id: 'op-japan-visa',
     name: 'Japan Tourist Visa Assistance (Single & Multiple Entry)',
-    category: 'Visa Assistance',
+    category: 'Visa & Embassy Assistance',
     price: '₱2,800',
     processingTime: { min: 7, max: 10, unit: 'days' },
     requirements: [
@@ -62,12 +59,10 @@ const DEFAULT_OPERATOR_SERVICES = [
       'Detailed Daily Travel Itinerary'
     ],
     description: 'Embassy-accredited visa filing with full documentation audit, itinerary crafting, financial proof verification, and submission tracking.',
-    tags: ['Japan', 'TouristVisa', 'Embassy', 'MultipleEntry'],
+    tags: ['Visa', 'Japan', 'TouristVisa', 'Embassy', 'MultipleEntry'],
     featured: true,
     icon: 'fa-solid fa-passport',
-    iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)',
-    image: '/services/japan-visa.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80'
+    iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)'
   },
   {
     id: 'op-flight-ticketing',
@@ -85,9 +80,7 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Airlines', 'PromoFares', 'Domestic', 'International'],
     featured: true,
     icon: 'fa-solid fa-plane-departure',
-    iconBg: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
-    image: '/services/flight-ticket.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80'
+    iconBg: 'linear-gradient(135deg, #0ea5e9, #38bdf8)'
   },
   {
     id: 'op-boracay-package',
@@ -105,14 +98,12 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Boracay', 'TourPackage', 'BeachResort', 'IslandHopping'],
     featured: true,
     icon: 'fa-solid fa-map-location-dot',
-    iconBg: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-    image: '/services/boracay.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
+    iconBg: 'linear-gradient(135deg, #f59e0b, #fbbf24)'
   },
   {
     id: 'op-korea-visa',
     name: 'South Korea Tourist Visa & E-Arrival Processing',
-    category: 'Visa Assistance',
+    category: 'Visa & Embassy Assistance',
     price: '₱2,500',
     processingTime: { min: 8, max: 12, unit: 'days' },
     requirements: [
@@ -123,17 +114,15 @@ const DEFAULT_OPERATOR_SERVICES = [
       'KVAC Application Form'
     ],
     description: 'Complete KVAC South Korea visa consultation, form preparation, financial assessment, and visa application submission assistance.',
-    tags: ['Korea', 'KVAC', 'Visa', 'Seoul'],
+    tags: ['Visa', 'Korea', 'KVAC', 'Seoul'],
     featured: false,
-    icon: 'fa-solid fa-plane-up',
-    iconBg: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
-    image: '/services/korea-visa.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=800&q=80'
+    icon: 'fa-solid fa-passport',
+    iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)'
   },
   {
     id: 'op-schengen-visa',
     name: 'Schengen European Tourist & Business Visa Assistance',
-    category: 'Visa Assistance',
+    category: 'Visa & Embassy Assistance',
     price: '₱4,950',
     processingTime: { min: 15, max: 20, unit: 'days' },
     requirements: [
@@ -144,12 +133,10 @@ const DEFAULT_OPERATOR_SERVICES = [
       'Bank Statements & Solvency Proof'
     ],
     description: 'Expert consultation for France, Italy, Spain, and Germany Schengen visa applications, mock interview prep, and appointment booking.',
-    tags: ['Schengen', 'Europe', 'VFS', 'TLScontact'],
+    tags: ['Visa', 'Schengen', 'Europe', 'VFS', 'TLScontact'],
     featured: false,
-    icon: 'fa-solid fa-earth-europe',
-    iconBg: 'linear-gradient(135deg, #10b981, #34d399)',
-    image: '/services/schengen-visa.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=800&q=80'
+    icon: 'fa-solid fa-passport',
+    iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)'
   },
   {
     id: 'op-singapore-twin-tour',
@@ -166,9 +153,7 @@ const DEFAULT_OPERATOR_SERVICES = [
     tags: ['Singapore', 'Malaysia', 'TourPackage', 'TwinCity'],
     featured: false,
     icon: 'fa-solid fa-compass',
-    iconBg: 'linear-gradient(135deg, #14b8a6, #2dd4bf)',
-    image: '/services/singapore-tour.jpg',
-    fallbackImage: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=800&q=80'
+    iconBg: 'linear-gradient(135deg, #14b8a6, #2dd4bf)'
   }
 ];
 
@@ -180,6 +165,110 @@ const CATEGORY_TABS = [
   { id: 'Airline Ticketing', label: 'Flight Tickets', icon: 'fa-solid fa-plane-departure' },
   { id: 'Tour Packages', label: 'Tour Packages', icon: 'fa-solid fa-map-location-dot' },
 ];
+
+function getCategoryVisuals(category, name) {
+  const cat = (category || '').toLowerCase();
+  const title = (name || '').toLowerCase();
+
+  if (cat.includes('visa') || cat.includes('embassy') || title.includes('visa')) {
+    return {
+      icon: 'fa-solid fa-passport',
+      iconBg: 'linear-gradient(135deg, #ec4899, #f472b6)',
+    };
+  }
+  if (cat.includes('passport') || title.includes('passport') || cat.includes('dfa')) {
+    return {
+      icon: 'fa-solid fa-id-card',
+      iconBg: 'linear-gradient(135deg, #6366f1, #818cf8)',
+    };
+  }
+  if (cat.includes('psa') || cat.includes('civil') || title.includes('psa') || title.includes('birth') || title.includes('marriage')) {
+    return {
+      icon: 'fa-regular fa-file-lines',
+      iconBg: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
+    };
+  }
+  if (cat.includes('flight') || cat.includes('airline') || cat.includes('ticket') || title.includes('flight')) {
+    return {
+      icon: 'fa-solid fa-plane-departure',
+      iconBg: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
+    };
+  }
+  if (cat.includes('tour') || title.includes('tour') || title.includes('package')) {
+    return {
+      icon: 'fa-solid fa-map-location-dot',
+      iconBg: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+    };
+  }
+  return {
+    icon: 'fa-solid fa-briefcase',
+    iconBg: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+  };
+}
+
+/**
+ * Robust matcher supporting category variations and tags (e.g. Visa & Embassy Assistance, Visa Assistance, #Visa tag)
+ */
+function matchesCategoryTab(service, tabId) {
+  if (!service || !tabId || tabId === 'all') return true;
+
+  const cat = (service.category || '').toLowerCase();
+  const tags = Array.isArray(service.tags)
+    ? service.tags.map((t) => (typeof t === 'string' ? t.toLowerCase() : ''))
+    : [];
+  const name = (service.name || service.title || '').toLowerCase();
+
+  if (tabId === 'Visa Assistance' || tabId === 'visa') {
+    return (
+      cat.includes('visa') ||
+      cat.includes('embassy') ||
+      tags.some((t) => t.includes('visa')) ||
+      name.includes('visa')
+    );
+  }
+
+  if (tabId === 'Passport Processing' || tabId === 'passport') {
+    return (
+      cat.includes('passport') ||
+      cat.includes('dfa') ||
+      tags.some((t) => t.includes('passport') || t.includes('dfa')) ||
+      name.includes('passport')
+    );
+  }
+
+  if (tabId === 'PSA & Civil Documents' || tabId === 'psa') {
+    return (
+      cat.includes('psa') ||
+      cat.includes('civil') ||
+      tags.some((t) => t.includes('psa') || t.includes('birthcert') || t.includes('cenomar')) ||
+      name.includes('psa')
+    );
+  }
+
+  if (tabId === 'Airline Ticketing' || tabId === 'flight') {
+    return (
+      cat.includes('airline') ||
+      cat.includes('flight') ||
+      cat.includes('ticket') ||
+      tags.some((t) => t.includes('flight') || t.includes('airline') || t.includes('ticket')) ||
+      name.includes('flight') ||
+      name.includes('airline')
+    );
+  }
+
+  if (tabId === 'Tour Packages' || tabId === 'tour') {
+    return (
+      cat.includes('tour') ||
+      cat.includes('package') ||
+      tags.some((t) => t.includes('tour') || t.includes('package')) ||
+      name.includes('tour') ||
+      name.includes('package')
+    );
+  }
+
+  const searchId = tabId.toLowerCase();
+  return cat.includes(searchId) || tags.some((t) => t.includes(searchId));
+}
 
 function formatProcessingTime(processingTime) {
   if (!processingTime) return '1-3 Days';
@@ -249,43 +338,47 @@ export default function Services() {
       return DEFAULT_OPERATOR_SERVICES;
     }
 
-    // Use DB services, mapping missing UI fields with clean defaults
-    return dbServices.map((service, index) => {
-      const fallback = DEFAULT_OPERATOR_SERVICES[index % DEFAULT_OPERATOR_SERVICES.length];
+    // Use DB services, mapping missing UI fields with clean defaults (no placeholder images)
+    return dbServices.map((service) => {
+      const visuals = getCategoryVisuals(service.category, service.name || service.title);
+      const rawCover = service.coverImage || service.coverPhoto || service.coverPhotoUrl || service.image;
+      const isValidImage =
+        typeof rawCover === 'string' &&
+        rawCover.trim().length > 0 &&
+        !rawCover.includes('unsplash.com') &&
+        !rawCover.startsWith('/services/');
+
       return {
-        ...fallback,
         ...service,
-        id: service.id || fallback.id,
-        name: service.name || service.title || fallback.name,
-        category: service.category || fallback.category,
-        price: service.price || fallback.price,
-        processingTime: service.processingTime || fallback.processingTime,
-        requirements: Array.isArray(service.requirements) && service.requirements.length > 0
+        id: service.id,
+        name: service.name || service.title || 'Custom Service',
+        category: service.category || 'General Service',
+        price: service.price || '₱950',
+        processingTime: service.processingTime || '3-5 days',
+        requirements: Array.isArray(service.requirements)
           ? service.requirements
-          : fallback.requirements,
-        description: service.description || fallback.description,
-        tags: Array.isArray(service.tags) && service.tags.length > 0
-          ? service.tags
-          : fallback.tags,
-        featured: service.featured !== undefined ? service.featured : fallback.featured,
-        icon: service.icon || fallback.icon,
-        iconBg: service.iconBg || fallback.iconBg,
-        coverImage: service.coverImage || service.coverPhoto || service.coverPhotoUrl,
-        image: service.image || service.coverImage || fallback.image,
-        fallbackImage: service.fallbackImage || fallback.fallbackImage,
+          : Array.isArray(service.actions)
+          ? service.actions
+          : [],
+        description:
+          service.description ||
+          'Standardized service processing handled directly by certified FairFly franchise operators.',
+        tags: Array.isArray(service.tags) ? service.tags : [],
+        featured: Boolean(service.featured),
+        icon: service.icon || visuals.icon,
+        iconBg: service.iconBg || visuals.iconBg,
+        coverImage: isValidImage ? rawCover : null,
       };
     });
   }, [dbServices]);
 
   const [selectedService, setSelectedService] = useState(null);
 
-  // Filter by category and search term
+  // Filter by category and search term with robust tag support
   const filteredServices = useMemo(() => {
     return allServices.filter((service) => {
-      // Category Match
-      const matchesCategory =
-        activeCategory === 'all' ||
-        (service.category && service.category.toLowerCase().includes(activeCategory.toLowerCase()));
+      // Category & Tag Match
+      const matchesCategory = matchesCategoryTab(service, activeCategory);
 
       // Search Match
       const queryStr = searchTerm.toLowerCase().trim();
@@ -294,7 +387,7 @@ export default function Services() {
         (service.name && service.name.toLowerCase().includes(queryStr)) ||
         (service.description && service.description.toLowerCase().includes(queryStr)) ||
         (service.category && service.category.toLowerCase().includes(queryStr)) ||
-        (Array.isArray(service.tags) && service.tags.some((t) => t.toLowerCase().includes(queryStr)));
+        (Array.isArray(service.tags) && service.tags.some((t) => String(t).toLowerCase().includes(queryStr)));
 
       return matchesCategory && matchesSearch;
     });
@@ -327,7 +420,7 @@ export default function Services() {
             {CATEGORY_TABS.map((tab) => {
               const count = tab.id === 'all'
                 ? allServices.length
-                : allServices.filter((s) => s.category && s.category.toLowerCase().includes(tab.id.toLowerCase())).length;
+                : allServices.filter((s) => matchesCategoryTab(s, tab.id)).length;
 
               return (
                 <button
@@ -409,17 +502,31 @@ export default function Services() {
                   }}
                   aria-label={`View details for ${service.name}`}
                 >
-                  {/* Photo Media Banner with single clean category tag */}
-                  <div className="service-card-media">
-                    <img
-                      src={service.image || service.coverImage || '/services/passport.jpg'}
-                      alt={service.name}
-                      className="service-card-img"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.src = service.fallbackImage || 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80';
-                      }}
-                    />
+                  {/* Uniform Cover Image Banner: Real cover image or FairFly Brand Logo */}
+                  <div className={`service-card-media ${!service.coverImage ? 'service-card-media-logo' : ''}`}>
+                    {service.coverImage ? (
+                      <img
+                        src={service.coverImage}
+                        alt={service.name}
+                        className="service-card-img"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const logoEl = e.currentTarget.parentElement?.querySelector('.service-card-logo-backdrop');
+                          if (logoEl) logoEl.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="service-card-logo-backdrop"
+                      style={{ display: service.coverImage ? 'none' : 'flex' }}
+                    >
+                      <img
+                        src="/FairflyLogo.png"
+                        alt="FairFly"
+                        className="service-card-brand-logo"
+                      />
+                    </div>
                     {service.category && (
                       <span className="service-card-category-pill">
                         {service.category}
@@ -449,6 +556,25 @@ export default function Services() {
                     </div>
 
                     <p className="service-card-description">{service.description}</p>
+
+                    {/* Service Tags */}
+                    {Array.isArray(service.tags) && service.tags.length > 0 && (
+                      <div className="service-card-tags">
+                        {service.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="service-tag-pill"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSearchTerm(tag);
+                            }}
+                            title={`Filter by #${tag}`}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Clean footer: Starting price on left, single CTA on right */}

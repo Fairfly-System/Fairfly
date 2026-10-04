@@ -4,6 +4,18 @@
   gap: 1.25rem;
 }
 
+.tickets-page .services-summary-grid {
+  margin-bottom: 0;
+}
+
+.tickets-layout-single,
+.tickets-left-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
 .tickets-table-card {
   padding: 1.5rem;
 }

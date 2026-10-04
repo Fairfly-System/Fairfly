@@ -430,6 +430,21 @@ const updateStepStatus = async (req, res) => {
         updatedAt: now
       });
 
+      // Synchronize linked Quotation record status to 'Fulfilled'
+      if (allCompleted && serviceRecord.quotationId) {
+        try {
+          await updateToDatabase(`${COLLECTIONS.QUOTATIONS}/${serviceRecord.quotationId}`, {
+            status: 'Fulfilled',
+            serviceStatus: 'Completed',
+            fulfillmentStatus: 'Fulfilled',
+            fulfilledAt: now,
+            updatedAt: now
+          });
+        } catch (qErr) {
+          console.warn(`[updateStepStatus] Error updating quotation ${serviceRecord.quotationId}:`, qErr.message);
+        }
+      }
+
       // Send in-app notification to the client
       if (serviceRecord.clientUid) {
         try {

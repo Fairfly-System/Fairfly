@@ -4,7 +4,7 @@
   inset: 0;
   background-color: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(4px);
-  z-index: 9999;
+  z-index: 9999999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -442,10 +442,12 @@
   body * {
     visibility: hidden;
   }
+
   .pdf-sheet,
   .pdf-sheet * {
     visibility: visible;
   }
+
   .pdf-sheet {
     position: absolute;
     left: 0;
@@ -456,4 +458,3 @@
     box-shadow: none;
   }
 }
-

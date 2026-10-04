@@ -28,9 +28,6 @@ const AuthProvider = ({ children }) => {
 
         //Listen to Auth Changes
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-
-            console.log('User changed');
-
             //Clean up the subscription from the previous user
             if (unsubscribeToUserDoc) {
                 unsubscribeToUserDoc(); // Unsubscribe from the previous user's document listener
@@ -39,7 +36,6 @@ const AuthProvider = ({ children }) => {
 
             //If no user is present (firebaseUser is null or undefined or "" or 0 or false or NaN or Expired), set the user and userDetails to null and set the loading to false
             if (!firebaseUser) {
-                console.log('No user is present');
                 setUser(null);
                 setUserDetails(null);
                 setUserLoading(false);
@@ -55,7 +51,6 @@ const AuthProvider = ({ children }) => {
                 if (user) {
                     user.getIdToken().then((token) => {
                         setUserToken(token);
-                        console.log('User token refreshed:');
                     }).catch((error) => {
                         console.error('Error getting user token:', error);
                         addToast('Error getting user token.', 'error');
@@ -67,14 +62,34 @@ const AuthProvider = ({ children }) => {
 
             //Now Listen to the user details, Assign unsubscribeToUserDoc to the unsubscribe function
             //Listen to users/UID in the firestore database
-            unsubscribeToUserDoc = onSnapshot(doc(firestore, 'users/' + firebaseUser.uid), (userdoc) => {
+            unsubscribeToUserDoc = onSnapshot(doc(firestore, 'users/' + firebaseUser.uid), async (userdoc) => {
                 if (userdoc.exists()) {
-                    console.log('User document exists!');
-                    setUserDetails({ id: userdoc.id, ...userdoc.data() });
-                    console.log('User details set to state:', { id: userdoc.id, ...userdoc.data() });
+                    const data = userdoc.data();
+                    const status = (data.status || '').toLowerCase();
+                    const isAccountDisabled = status === 'disabled' || 
+                                              status === 'deactivated' || 
+                                              status === 'suspended' || 
+                                              status === 'inactive' ||
+                                              data.disabled === true;
+
+                    if (isAccountDisabled) {
+                        console.warn(`[AuthContext] Current account ${firebaseUser.uid} is disabled/deactivated. Forcing immediate sign-out.`);
+                        try {
+                            await signOut(auth);
+                        } catch (signOutErr) {
+                            console.error('Error during forced sign-out of disabled user:', signOutErr);
+                        }
+                        setUser(null);
+                        setUserDetails(null);
+                        setUserLoading(false);
+                        setUserToken(null);
+                        addToast('Your account has been disabled. You have been signed out. Please contact FairFly administration for assistance.', 'error');
+                        return;
+                    }
+
+                    setUserDetails({ id: userdoc.id, ...data });
                 } else {
                     signOut(auth);
-                    console.log('User document does not exist!');
                     setUserDetails(null);
                 }
                 setUserLoading(false);
@@ -94,9 +109,6 @@ const AuthProvider = ({ children }) => {
 
     }, []);
 
-    useEffect(() => {
-        console.log(userDetails);
-    }, [userDetails]);
 
     return (
         //Return the provider with the user and userDetails with  .Provider

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, limit } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -52,6 +52,54 @@ export default function QuotationDetailPage() {
     );
     return () => unsub();
   }, [id]);
+
+  // Subscribe to linked active service document if quotation has an associated activeServiceId or quotation.id
+  const [activeService, setActiveService] = useState(null);
+
+  useEffect(() => {
+    if (!quotation) {
+      setActiveService(null);
+      return;
+    }
+
+    if (quotation.activeServiceId) {
+      const unsub = onSnapshot(
+        doc(firestore, 'activeServices', quotation.activeServiceId),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setActiveService({ id: docSnap.id, ...docSnap.data() });
+          } else {
+            setActiveService(null);
+          }
+        },
+        (err) => {
+          console.warn('[QuotationDetailPage] activeService listener error:', err);
+        }
+      );
+      return () => unsub();
+    } else if (quotation.id) {
+      const q = query(
+        collection(firestore, 'activeServices'),
+        where('quotationId', '==', quotation.id),
+        limit(1)
+      );
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const docSnap = snapshot.docs[0];
+            setActiveService({ id: docSnap.id, ...docSnap.data() });
+          } else {
+            setActiveService(null);
+          }
+        },
+        (err) => {
+          console.warn('[QuotationDetailPage] activeServices query error:', err);
+        }
+      );
+      return () => unsub();
+    }
+  }, [quotation?.id, quotation?.activeServiceId]);
 
   // Form state for inline editing
   const [formData, setFormData] = useState({
@@ -122,10 +170,13 @@ export default function QuotationDetailPage() {
     });
   };
 
+  const isFulfilled = (quotation?.status || '').toLowerCase() === 'fulfilled' ||
+    (quotation?.fulfillmentStatus || '').toLowerCase() === 'fulfilled' ||
+    (activeService?.status || '').toLowerCase() === 'completed';
   const isPaid = (quotation?.status || '').toUpperCase() === 'PAID' || (quotation?.paymentStatus || '').toUpperCase() === 'PAID';
-  const isAccepted = quotation?.status === 'Accepted' || isPaid;
+  const isAccepted = quotation?.status === 'Accepted' || isPaid || isFulfilled;
   const isCancelled = (quotation?.status || '').toLowerCase() === 'cancelled';
-  const isFinalized = isPaid || isAccepted || isCancelled;
+  const isFinalized = isPaid || isAccepted || isCancelled || isFulfilled;
 
   const handleSaveChanges = async () => {
     if (!formData.clientName || !formData.serviceTitle || formData.rate === '') {
@@ -312,6 +363,7 @@ export default function QuotationDetailPage() {
 
   const getStatusType = () => {
     if (!quotation) return 'neutral';
+    if (isFulfilled) return 'success';
     const status = (quotation.status || '').toLowerCase();
     if (status === 'paid') return 'success';
     if (status === 'accepted' || status === 'confirmed') return 'success';
@@ -320,11 +372,17 @@ export default function QuotationDetailPage() {
     return 'neutral';
   };
 
+  const getStatusLabel = () => {
+    if (!quotation) return 'DRAFT';
+    if (isFulfilled) return 'FULFILLED';
+    return quotation.status ? quotation.status.toUpperCase() : 'DRAFT';
+  };
+
   return (
     <RecordDetailLayout
       title={quotation?.quoteNo || 'Quotation Profile'}
       subtitle={quotation?.serviceTitle || 'Service Booking Tour'}
-      status={quotation?.status ? quotation.status.toUpperCase() : 'DRAFT'}
+      status={getStatusLabel()}
       statusType={getStatusType()}
       breadcrumbs={breadcrumbs}
       backTo="/operator/quotations"
@@ -336,45 +394,53 @@ export default function QuotationDetailPage() {
     >
       {quotation && (
         <div className="quotation-detail-wrapper">
-          {/* Active Custom Service / Accepted Banner */}
+          {/* Active Custom Service / Accepted / Fulfilled Banner */}
           {isFinalized && !isCancelled && (
-            <div className={`inquiry-confirmed-banner quote-accepted-banner ${isPaid ? 'paid-banner' : ''}`}>
+            <div className={`inquiry-confirmed-banner quote-accepted-banner ${isFulfilled ? 'fulfilled-banner' : isPaid ? 'paid-banner' : ''}`}>
               <div className="quote-accepted-info">
                 <div className="quote-accepted-icon">
-                  <i className={isPaid ? "fa-solid fa-badge-check" : "fa-solid fa-circle-check"}></i>
+                  <i className={isFulfilled ? "fa-solid fa-trophy" : isPaid ? "fa-solid fa-badge-check" : "fa-solid fa-circle-check"}></i>
                 </div>
                 <div>
                   <h4 className="quote-accepted-title">
-                    {isPaid ? 'Quotation Paid · Service Fulfillment Active' : 'Quotation Accepted · Awaiting Payment'}
+                    {isFulfilled
+                      ? 'Fulfilled'
+                      : isPaid
+                      ? 'Quotation Paid · Service Fulfillment Active'
+                      : 'Quotation Accepted · Awaiting Payment'}
                   </h4>
                   <p className="quote-accepted-sub">
-                    {isPaid
+                    {isFulfilled
+                      ? 'All workflow procedure steps and documentation have been finalized and delivered to the client.'
+                      : isPaid
                       ? 'Payment has been authoritatively verified. The custom service has been initialized in active fulfillment.'
                       : 'This quotation has been officially accepted. Service fulfillment will activate upon payment confirmation.'}
                   </p>
                 </div>
               </div>
 
-              <div className="quote-accepted-actions">
-                {quotation.activeServiceId && (
-                  <Link
-                    to={`/operator/services/${quotation.activeServiceId}/procedure`}
-                    className="btn btn-primary btn-sm quote-link-btn ongoing"
-                  >
-                    <i className="fa-solid fa-gears"></i>
-                    <span>View Ongoing Service</span>
-                  </Link>
-                )}
-                {quotation.inquiryId && (
-                  <Link
-                    to={`/operator/inquiry-forms/${quotation.inquiryId}`}
-                    className="btn btn-secondary btn-sm quote-link-btn"
-                  >
-                    <i className="fa-solid fa-file-signature"></i>
-                    <span>Originating Inquiry</span>
-                  </Link>
-                )}
-              </div>
+              {!isFulfilled && (
+                <div className="quote-accepted-actions">
+                  {quotation.activeServiceId && (
+                    <Link
+                      to={`/operator/services/${quotation.activeServiceId}/procedure`}
+                      className="btn btn-primary btn-sm quote-link-btn ongoing"
+                    >
+                      <i className="fa-solid fa-gears"></i>
+                      <span>View Ongoing Service</span>
+                    </Link>
+                  )}
+                  {quotation.inquiryId && (
+                    <Link
+                      to={`/operator/inquiry-forms/${quotation.inquiryId}`}
+                      className="btn btn-secondary btn-sm quote-link-btn"
+                    >
+                      <i className="fa-solid fa-file-signature"></i>
+                      <span>Originating Inquiry</span>
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

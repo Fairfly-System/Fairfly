@@ -796,4 +796,27 @@
   | `data` | `Object` | `null` | Yes | Service or appointment record object |
   | `type` | `'service' \| 'appointment'` | `'service'` | No | Explicit type indicator for modal view mode |
 
+---
+
+### `AppointmentCalendar`
+- **Location:** [`src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx)
+- **Style File:** [`src/components/Shared/AppointmentCalendar/AppointmentCalendar.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.css)
+- **Functionality:** Reusable interactive appointment calendar supporting Month and Week views, legend, status filters, date range navigation, today highlight, appointment chips with status colors, and responsive design. Used across both Admin Appointments portal and Operator Appointment management.
+- **Appropriate Use:** Rendering scheduled consultations and client appointments across calendar views.
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `role` | `'admin' \| 'operator'` | `'admin'` | No | Portal role determining badge rendering |
+  | `appointments` | `Array<Object>` | `[]` | No | List of appointment documents |
+  | `onSelectAppointment` | `Function` | `undefined` | No | Callback when an appointment chip is clicked `(appt) => void` |
+  | `onDateClick` | `Function` | `undefined` | No | Callback when a calendar day cell is clicked `(dateStr) => void` |
+  | `isLoading` | `boolean` | `false` | No | Displays loading overlay over calendar |
+  | `onDateRangeChange` | `Function` | `undefined` | No | Callback when month/week navigates `({ startDateStr, endDateStr }) => void` |
+  | `onRefresh` | `Function` | `undefined` | No | Callback invoked on manual refresh |
+  | `initialViewMode` | `'month' \| 'week'` | `'month'` | No | Starting calendar view mode |
+  | `showStatusFilter` | `boolean` | `true` | No | Whether to show internal status filter pills |
+  | `statusFilter` | `string` | `undefined` | No | Controlled status filter value |
+  | `onStatusFilterChange` | `Function` | `undefined` | No | Callback for status filter change |
+
+
 

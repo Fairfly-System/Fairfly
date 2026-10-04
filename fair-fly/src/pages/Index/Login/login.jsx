@@ -9,6 +9,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import TermsPrivacyModal from '../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal';
+import { API_BASE_URL } from '../../../utils/config';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,17 +37,49 @@ export default function Login() {
     if (!isFormValid || isLoading) return;
 
     setIsLoading(true);
+    const cleanEmail = email.trim();
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      // Step 1: Pre-login status check with backend ("Never Trust the Client")
+      try {
+        const checkRes = await fetch(`${API_BASE_URL}/api/auth/login-check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail })
+        });
+
+        const checkData = await checkRes.json();
+        if (!checkRes.ok) {
+          setIsLoading(false);
+          addToast(checkData.error || "Unable to sign in with this account. Please contact FairFly administration.", "error");
+          return;
+        }
+      } catch (checkErr) {
+        // Log warning if network check fails, fallback to Firebase Auth
+        console.warn("Backend pre-check connection warning:", checkErr);
+      }
+
+      // Step 2: Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       const uid = userCredential.user.uid;
 
-      // Check Firestore user profile status
+      // Step 3: Check Firestore user profile status
       const userSnap = await getDoc(doc(firestore, 'users', uid));
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        const status = (userData.status || '').toLowerCase();
+        const approvalStatus = (userData.approvalStatus || '').toLowerCase();
+
+        // If account is disabled, deactivated, or suspended
+        if (status === 'disabled' || status === 'deactivated' || status === 'suspended' || userData.disabled === true) {
+          await signOut(auth);
+          setIsLoading(false);
+          addToast("Your account has been disabled. Please contact FairFly administration for assistance.", "error");
+          return;
+        }
 
         // If client and status is Pending
-        if (userData.role === 'client' && (userData.status === 'Pending' || userData.approvalStatus === 'Pending')) {
+        if (userData.role === 'client' && (status === 'pending' || approvalStatus === 'pending')) {
           await signOut(auth);
           setIsLoading(false);
           addToast("Your account is currently pending administrator verification. You will be notified via email once approved.", "info");
@@ -54,7 +87,7 @@ export default function Login() {
         }
 
         // If client and status is Rejected
-        if (userData.role === 'client' && (userData.status === 'Rejected' || userData.approvalStatus === 'Rejected')) {
+        if (userData.role === 'client' && (status === 'rejected' || approvalStatus === 'rejected')) {
           await signOut(auth);
           setIsLoading(false);
           const reason = userData.rejectionReason ? ` Reason: ${userData.rejectionReason}` : '';
@@ -62,13 +95,16 @@ export default function Login() {
           return;
         }
 
-        // If deactivated
-        if (userData.status === 'Deactivated') {
-          await signOut(auth);
-          setIsLoading(false);
-          addToast("Your account has been deactivated. Please contact FairFly support.", "error");
-          return;
-        }
+        setIsLoading(false);
+        // Step 4: Role-based navigation
+        const targetRoute = userData.role === 'admin' 
+          ? '/admin' 
+          : (userData.role === 'operator' || userData.role === 'branch_operator') 
+          ? '/operator' 
+          : '/client';
+        navigate(targetRoute);
+        addToast("Welcome back! You have successfully signed in.", "success");
+        return;
       }
 
       setIsLoading(false);
@@ -76,7 +112,11 @@ export default function Login() {
       addToast("Welcome back! You have successfully signed in.", "success");
     } catch (error) {
       setIsLoading(false);
-      addToast(toFriendlyMessage(error, "Incorrect email or password. Please double-check and try again."), "error");
+      if (error?.code === 'auth/user-disabled') {
+        addToast("This account has been disabled. Please contact FairFly administration for assistance.", "error");
+      } else {
+        addToast(toFriendlyMessage(error, "Incorrect email or password. Please double-check and try again."), "error");
+      }
     }
   };
 

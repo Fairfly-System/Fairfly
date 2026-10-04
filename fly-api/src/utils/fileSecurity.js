@@ -81,7 +81,8 @@ const ALLOWED_ROOT_FOLDERS = new Set([
   'qualifications',
   'qualification_documents',
   'chat_attachments',
-  'tickets'
+  'tickets',
+  'franchise_applications'
 ]);
 
 // Map legacy / ad-hoc folder aliases to canonical root folders
@@ -95,7 +96,10 @@ const FOLDER_ALIASES = {
   'service_carousel': 'services',
   'chat_files': 'chat_attachments',
   'workflow-documents': 'workflow_documents',
-  'qualification-documents': 'qualifications'
+  'qualification-documents': 'qualifications',
+  'franchiseApps': 'franchise_applications',
+  'franchise_apps': 'franchise_applications',
+  'franchise_proofs': 'franchise_applications'
 };
 
 const ALLOWED_FOLDERS = ALLOWED_ROOT_FOLDERS;
@@ -336,6 +340,15 @@ function sanitizeFolder(rawFolder) {
     if (cleanSeg) {
       safeSubSegments.push(cleanSeg);
     }
+  }
+
+  const ALLOWED_FRANCHISE_SUBFOLDERS = new Set(['proofs', 'contracts', 'consultations']);
+  if (root === 'franchise_applications') {
+    const appId = safeSubSegments[0] || 'general';
+    const subfolder = safeSubSegments[1] && ALLOWED_FRANCHISE_SUBFOLDERS.has(safeSubSegments[1].toLowerCase())
+      ? safeSubSegments[1].toLowerCase()
+      : 'proofs';
+    return `${root}/${appId}/${subfolder}`;
   }
 
   if (safeSubSegments.length > 0) {

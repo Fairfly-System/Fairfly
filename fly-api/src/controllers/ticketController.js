@@ -53,8 +53,6 @@ const createTicket = async (req, res) => {
   try {
     const { 
       operatorId, 
-      operatorName, 
-      operatorEmail, 
       title, 
       category, 
       priority, 
@@ -75,24 +73,20 @@ const createTicket = async (req, res) => {
       ? req.user.uid
       : (operatorId || req.user?.uid);
 
-    let opName = operatorName || req.userDetails?.branchName || req.userDetails?.name || 'Operator Account';
-    let opEmail = operatorEmail || req.userDetails?.email || req.user?.email || 'operator@fairfly.com';
-
-    // If opId is available, verify and enrich with Firestore users document
-    if (opId) {
-      try {
-        const userDoc = await getFromDatabase(`users/${opId}`);
-        if (userDoc) {
-          opName = userDoc.branchName || userDoc.name || opName;
-          opEmail = userDoc.email || opEmail;
-        }
-      } catch (err) {
-        console.warn('User record lookup notice for operatorId:', opId, err.message);
-      }
-    }
-
     if (!opId) {
       return res.status(400).json({ error: 'Operator account UID is required to create a ticket' });
+    }
+
+    // Resolve operator name dynamically for notifications
+    let opName = req.userDetails?.branchName || req.userDetails?.name || 'Branch Operator';
+    try {
+      const userDoc = userCache.get(opId) || await getFromDatabase(`users/${opId}`);
+      if (userDoc) {
+        opName = userDoc.branchName || userDoc.name || opName;
+        userCache.set(opId, userDoc);
+      }
+    } catch (err) {
+      console.warn('User record lookup notice for operatorId:', opId, err.message);
     }
 
     const firstMsgText = initialMessage && initialMessage.trim() ? initialMessage.trim() : title.trim();
@@ -101,8 +95,6 @@ const createTicket = async (req, res) => {
     const initialMessageObj = {
       id: `msg_${Date.now()}_1`,
       senderId: opId,
-      senderName: opName,
-      senderRole: 'operator',
       message: firstMsgText,
       createdAt: now
     };
@@ -116,7 +108,6 @@ const createTicket = async (req, res) => {
       createdAt: now,
       updatedAt: now,
       closedAt: null,
-      closedBy: null,
       lastMessage: firstMsgText,
       messages: [initialMessageObj]
     };
@@ -131,7 +122,7 @@ const createTicket = async (req, res) => {
       link: '/admin/tickets'
     }).catch(e => console.warn('Ticket notification warning:', e.message));
 
-    return res.status(201).json({ id: docId, ...newTicketData, operatorName: opName, operatorEmail: opEmail, message: 'Ticket created successfully' });
+    return res.status(201).json({ id: docId, ...newTicketData, operatorName: opName, message: 'Ticket created successfully' });
   } catch (error) {
     console.error('Error creating support ticket:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -236,11 +227,50 @@ const getTicketById = async (req, res) => {
       } catch (err) {}
     }
 
+    // Resolve participants map for thread senders & operator
+    const participants = {};
+    if (ticket.operatorId) {
+      participants[ticket.operatorId] = {
+        id: ticket.operatorId,
+        name: opName || 'Operator Branch',
+        email: opEmail || 'operator@fairfly.com',
+        role: 'operator'
+      };
+    }
+
+    const senderIds = [...new Set((ticket.messages || []).map(m => m.senderId).filter(Boolean))];
+    for (const sId of senderIds) {
+      if (!participants[sId]) {
+        let sUser = userCache.get(sId);
+        if (!sUser) {
+          try {
+            sUser = await getFromDatabase(`users/${sId}`);
+            if (sUser) userCache.set(sId, sUser);
+          } catch (e) {}
+        }
+        if (sUser) {
+          participants[sId] = {
+            id: sId,
+            name: sUser.branchName || sUser.name || sUser.fullName || (sUser.role === 'admin' ? 'Super Admin' : 'Branch Operator'),
+            role: sUser.role || (sId === ticket.operatorId ? 'operator' : 'admin'),
+            email: sUser.email || ''
+          };
+        } else {
+          participants[sId] = {
+            id: sId,
+            name: sId === ticket.operatorId ? (opName || 'Operator') : 'Admin',
+            role: sId === ticket.operatorId ? 'operator' : 'admin'
+          };
+        }
+      }
+    }
+
     return res.status(200).json({
       id,
       ...ticket,
       operatorName: opName || 'Operator Branch',
-      operatorEmail: opEmail || 'operator@fairfly.com'
+      operatorEmail: opEmail || 'operator@fairfly.com',
+      participants
     });
   } catch (error) {
     console.error('Error retrieving ticket by ID:', error);
@@ -285,10 +315,8 @@ const updateTicketStatus = async (req, res) => {
 
     if (normalizedStatus === 'Closed') {
       updateData.closedAt = now;
-      updateData.closedBy = req.userDetails?.name || 'Admin';
     } else {
       updateData.closedAt = null;
-      updateData.closedBy = null;
     }
 
     await updateToDatabase(dbPath, updateData);
@@ -319,7 +347,7 @@ const updateTicketStatus = async (req, res) => {
 const addMessageToThread = async (req, res) => {
   try {
     const { id } = req.params;
-    const { message, senderId, senderName, senderRole } = req.body;
+    const { message } = req.body;
 
     if (!id) {
       return res.status(400).json({ error: 'Ticket ID is required' });
@@ -354,8 +382,6 @@ const addMessageToThread = async (req, res) => {
     const newMessageObj = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       senderId: activeId,
-      senderName: activeName,
-      senderRole: activeRole,
       message: message.trim(),
       createdAt: now
     };
@@ -420,12 +446,11 @@ const closeTicket = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const closedBy = req.userDetails?.name || 'Admin';
+    const closedByName = req.userDetails?.name || 'Admin';
 
     await updateToDatabase(dbPath, {
       status: 'Closed',
       closedAt: now,
-      closedBy: closedBy,
       updatedAt: now
     });
 
@@ -437,7 +462,7 @@ const closeTicket = async (req, res) => {
         recipientUid: existingTicket.operatorId,
         recipientRole: 'operator',
         title: 'Ticket Closed',
-        message: `Your ticket "${existingTicket.title}" has been closed by ${closedBy}.`,
+        message: `Your ticket "${existingTicket.title}" has been closed by ${closedByName}.`,
         type: 'ticket',
         link: '/operator/tickets',
         metadata: { ticketId: id, status: 'Closed' }
@@ -446,14 +471,14 @@ const closeTicket = async (req, res) => {
       // If closed by operator, notify admins
       notifyAdmins({
         title: 'Ticket Closed by Operator',
-        message: `Ticket "${existingTicket.title}" was resolved and closed by ${closedBy}.`,
+        message: `Ticket "${existingTicket.title}" was resolved and closed by ${closedByName}.`,
         type: 'ticket',
         link: '/admin/tickets',
         metadata: { ticketId: id, status: 'Closed' }
       }).catch(e => console.warn('Ticket close admin notification warning:', e.message));
     }
 
-    return res.status(200).json({ message: 'Ticket thread has been closed', closedAt: now, closedBy });
+    return res.status(200).json({ message: 'Ticket thread has been closed', closedAt: now });
   } catch (error) {
     console.error('Error closing ticket thread:', error);
     return res.status(500).json({ error: 'Internal Server Error' });

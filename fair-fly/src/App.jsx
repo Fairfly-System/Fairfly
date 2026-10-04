@@ -21,6 +21,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
 import AdminServices from './pages/Admin/AdminServices/AdminServices';
 import AdminOperators from './pages/Admin/AdminOperators/AdminOperators';
 import AdminFranchiseApps from './pages/Admin/AdminFranchiseApps/AdminFranchiseApps';
+import AdminAppointments from './pages/Admin/AdminAppointments/AdminAppointments';
 import AdminTickets from './pages/Admin/AdminTickets/AdminTickets';
 import AdminInquiryHistory from './pages/Admin/AdminInquiryHistory/AdminInquiryHistory';
 import AdminQuickLinks from './pages/Admin/AdminQuickLinks/AdminQuickLinks';
@@ -120,6 +121,7 @@ function App() {
             <Route index element={<FranchiseContent />} />
             <Route path=":id" element={<FranchiseAppDetailPage />} />
           </Route>
+          <Route path="appointments" element={<AdminAppointments />} />
           <Route path="qualifications" element={<AdminQualifications />}>
             <Route index element={<QualificationsContent />} />
             <Route path=":id" element={<AdminQualificationDetailPage />} />

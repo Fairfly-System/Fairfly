@@ -21,14 +21,14 @@ const OperatorModal = forwardRef(({ isOpen, onClose, editingOperator: propEditin
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i
-            className={`fa-solid ${activeOperator ? 'fa-pen-to-square' : 'fa-user-plus'}`}
+            className={`fa-solid ${activeOperator?.id ? 'fa-pen-to-square' : 'fa-user-plus'}`}
             style={{ color: 'var(--purple)' }}
           />
-          <span>{activeOperator ? 'Edit Operator Account' : 'Create Operator Account'}</span>
+          <span>{activeOperator?.id ? 'Edit Operator Account' : 'Create Operator Account'}</span>
         </div>
       }
       subtitle={
-        activeOperator
+        activeOperator?.id
           ? 'Update operator branch details and information'
           : 'Add a new operator branch to the system'
       }

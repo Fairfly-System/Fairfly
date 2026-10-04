@@ -76,19 +76,9 @@ const CreateTicketModal = forwardRef(
         ? (defaultOperator?.operatorId || formData.operatorId)
         : (formData.operatorId || defaultOperator?.operatorId);
 
-      const finalOpName = isOperatorPortal
-        ? (defaultOperator?.operatorName || formData.operatorName)
-        : (formData.operatorName || defaultOperator?.operatorName || 'Branch Operator');
-
-      const finalOpEmail = isOperatorPortal
-        ? (defaultOperator?.operatorEmail || formData.operatorEmail)
-        : (formData.operatorEmail || defaultOperator?.operatorEmail || '');
-
       try {
         await onCreateTicket({
           operatorId: finalOpId,
-          operatorName: finalOpName,
-          operatorEmail: finalOpEmail,
           title: formData.title.trim(),
           category: formData.category,
           priority: formData.priority,

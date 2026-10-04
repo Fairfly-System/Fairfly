@@ -11,6 +11,11 @@ const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 const admin = require('firebase-admin');
 const COLLECTIONS = {
   USERS: 'users',
+  FRANCHISE_APPLICATIONS: 'franchiseApplications',
+  APPOINTMENTS: 'appointments'
+};
+const CACHE_KEYS = {
+  BRANCHES: 'branches-list'
 };
 
 /**
@@ -37,19 +42,48 @@ const createOperator = async (req, res) => {
     }
 
     try {
+      const { password: _plainPassword, ...cleanOperatorData } = operatorData;
       await addToDocumentWithId(COLLECTIONS.USERS, uid, {
-        ...operatorData,
+        ...cleanOperatorData,
         role: 'operator',
         isQualified: Boolean(operatorData.isQualified) || false,
         status: operatorData.status || 'Active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
+
+      // Post-consultation franchise approval linking
+      if (operatorData.franchiseApplicationId) {
+        const appDbPath = `${COLLECTIONS.FRANCHISE_APPLICATIONS}/${operatorData.franchiseApplicationId}`;
+        const existingApp = await getFromDatabase(appDbPath);
+        if (existingApp) {
+          await updateToDatabase(appDbPath, {
+            status: 'approved',
+            operatorId: uid,
+            updatedAt: new Date().toISOString()
+          });
+
+          // Also link consultation appointment if present
+          const apptId = operatorData.appointmentId || existingApp.consultationAppointmentId;
+          if (apptId) {
+            const apptDbPath = `${COLLECTIONS.APPOINTMENTS}/${apptId}`;
+            const existingAppt = await getFromDatabase(apptDbPath);
+            if (existingAppt) {
+              await updateToDatabase(apptDbPath, {
+                operatorId: uid,
+                status: 'Completed',
+                updatedAt: new Date().toISOString()
+              });
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error adding operator to database:', error);
       return res.status(500).json({ error: 'Failed to add operator to database: ' + error.message });
     }
     
+    staticDataCache.delete(CACHE_KEYS.BRANCHES);
     return res.status(201).json({ id: uid, message: 'Operator created successfully' });
 
   } catch (error) {
@@ -85,12 +119,26 @@ const updateOperator = async (req, res) => {
       sanitizedUpdates.isQualified = Boolean(updates.isQualified);
     }
 
+    if (updates.status !== undefined) {
+      sanitizedUpdates.status = updates.status;
+      const isDisabling = updates.status === 'Disabled' || updates.status === 'Deactivated' || updates.status === 'Inactive';
+      try {
+        await admin.auth().updateUser(id, { disabled: isDisabling });
+        if (isDisabling) {
+          await admin.auth().revokeRefreshTokens(id);
+        }
+      } catch (authErr) {
+        console.warn(`[Operator] Could not sync disabled state to Firebase Auth for operator ${id}:`, authErr.message);
+      }
+    }
+
     await updateToDatabase(dbPath, sanitizedUpdates);
 
-    // Invalidate userCache
+    // Invalidate userCache & branches cache
     if (userCache) {
       userCache.del(id);
     }
+    staticDataCache.delete(CACHE_KEYS.BRANCHES);
 
     return res.status(200).json({ message: 'Operator updated successfully' });
   } catch (error) {
@@ -124,6 +172,10 @@ const deleteOperator = async (req, res) => {
     }
 
     await deleteFromDatabase(dbPath);
+    if (userCache) {
+      userCache.del(id);
+    }
+    staticDataCache.delete(CACHE_KEYS.BRANCHES);
 
     return res.status(200).json({ message: 'Operator deleted successfully' });
   } catch (error) {
@@ -142,15 +194,29 @@ const bulkStatusOperators = async (req, res) => {
       return res.status(400).json({ error: 'ids array and status are required' });
     }
 
+    const isDisabling = status === 'Disabled' || status === 'Deactivated' || status === 'Inactive';
+
     await Promise.all(
-      ids.map((id) =>
-        updateToDatabase(`${COLLECTIONS.USERS}/${id}`, {
+      ids.map(async (id) => {
+        await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, {
           status,
           updatedAt: new Date().toISOString()
-        })
-      )
+        });
+        if (userCache) {
+          userCache.del(id);
+        }
+        try {
+          await admin.auth().updateUser(id, { disabled: isDisabling });
+          if (isDisabling) {
+            await admin.auth().revokeRefreshTokens(id);
+          }
+        } catch (authErr) {
+          console.warn(`[Operator] Could not sync disabled state in bulk to Firebase Auth for ${id}:`, authErr.message);
+        }
+      })
     );
 
+    staticDataCache.delete(CACHE_KEYS.BRANCHES);
     return res.status(200).json({ message: `${ids.length} operators updated successfully`, count: ids.length });
   } catch (error) {
     console.error('Error bulk updating operators:', error);
@@ -179,6 +245,7 @@ const bulkDeleteOperators = async (req, res) => {
       })
     );
 
+    staticDataCache.delete(CACHE_KEYS.BRANCHES);
     return res.status(200).json({ message: `${ids.length} operators deleted successfully`, count: ids.length });
   } catch (error) {
     console.error('Error bulk deleting operators:', error);
@@ -196,11 +263,14 @@ const getOperators = async (req, res) => {
       filters: [{ field: 'role', operator: '==', value: 'operator' }]
     });
 
-    const sorted = (operators || []).map((op) => ({
-      id: op.id,
-      uid: op.id,
-      ...op
-    })).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const sorted = (operators || []).map((op) => {
+      const { password: _pw, ...cleanOp } = op;
+      return {
+        id: op.id,
+        uid: op.id,
+        ...cleanOp
+      };
+    }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
     return res.status(200).json(sorted);
   } catch (error) {
@@ -223,11 +293,48 @@ const getOperatorById = async (req, res) => {
       return res.status(404).json({ error: 'Operator not found' });
     }
 
-    return res.status(200).json({ id, uid: id, ...operator });
+    const { password: _pw, ...cleanOperator } = operator;
+    return res.status(200).json({ id, uid: id, ...cleanOperator });
   } catch (error) {
     console.error('Error fetching operator by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
+};
+
+/**
+ * Helper to fetch active branches (cached for 5 minutes)
+ */
+const fetchActiveBranchesInternal = async () => {
+  const cached = staticDataCache.get(CACHE_KEYS.BRANCHES);
+  if (cached) {
+    return cached;
+  }
+
+  const { queryDatabaseAdvanced } = require('../services/firebaseService');
+  const operators = await queryDatabaseAdvanced(COLLECTIONS.USERS, {
+    filters: [{ field: 'role', operator: '==', value: 'operator' }]
+  });
+
+  const activeBranches = (operators || [])
+    .filter((op) => op.status !== 'Inactive' && op.status !== 'Disabled' && op.status !== 'Deactivated')
+    .map((op) => {
+      const branchTitle = op.branchName || op.name || 'Branch Operator';
+      const branchLocation = op.address || op.location || '';
+      return {
+        uid: op.id,
+        id: op.id,
+        branchName: branchTitle,
+        name: branchTitle,
+        address: branchLocation,
+        location: branchLocation,
+        email: op.email || '',
+        contactNumber: op.contactNumber || op.phone || '',
+        isQualified: op.isQualified === true
+      };
+    });
+
+  staticDataCache.set(CACHE_KEYS.BRANCHES, activeBranches, 300);
+  return activeBranches;
 };
 
 /**
@@ -236,28 +343,7 @@ const getOperatorById = async (req, res) => {
  */
 const getBranches = async (req, res) => {
   try {
-    const { queryDatabaseAdvanced } = require('../services/firebaseService');
-    const operators = await queryDatabaseAdvanced(COLLECTIONS.USERS, {
-      filters: [{ field: 'role', operator: '==', value: 'operator' }]
-    });
-
-    let activeBranches = operators
-      .filter((op) => op.status !== 'Inactive')
-      .map((op) => {
-        const branchTitle = op.branchName || op.name || 'Branch Operator';
-        const branchLocation = op.address || op.location || '';
-        return {
-          uid: op.id,
-          id: op.id,
-          branchName: branchTitle,
-          name: branchTitle,
-          address: branchLocation,
-          location: branchLocation,
-          email: op.email || '',
-          contactNumber: op.contactNumber || op.phone || '',
-          isQualified: op.isQualified === true
-        };
-      });
+    let activeBranches = await fetchActiveBranchesInternal();
 
     const search = (req.query.search || req.query.q || '').trim().toLowerCase();
     if (search) {
@@ -279,6 +365,7 @@ module.exports = {
   getOperators,
   getOperatorById,
   getBranches,
+  fetchActiveBranchesInternal,
   createOperator,
   updateOperator,
   deleteOperator,

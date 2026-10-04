@@ -1,8 +1,9 @@
-const { 
-  addToDatabase, 
-  getFromDatabase, 
-  queryDatabaseAdvanced, 
-  updateToDatabase 
+const {
+  addToDatabase,
+  addToDocumentWithId,
+  getFromDatabase,
+  queryDatabaseAdvanced,
+  updateToDatabase
 } = require('../services/firebaseService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
@@ -85,9 +86,19 @@ const submitApplication = async (req, res) => {
       return res.status(400).json({ error: 'Missing required field: preferredBranchLocation' });
     }
 
+    // Lean document: omit redundant derived fields (id, fullName, preferredMeetingTime)
+    // - id: document identifier is the Firestore document key itself
+    // - fullName: derived dynamically from firstName, middleInitial, lastName
+    // - preferredMeetingTime: derived dynamically from preferredMeetingStartTime & preferredMeetingEndTime
+    const {
+      id: _id,
+      fullName: _fn,
+      preferredMeetingTime: _pmt,
+      ...cleanFields
+    } = applicationData;
+
     const sanitizedData = {
-      ...applicationData,
-      fullName: derivedFullName, // always store canonical fullName for backward compatibility
+      ...cleanFields,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'pending',
@@ -95,12 +106,19 @@ const submitApplication = async (req, res) => {
       userId: req.user?.uid || 'anonymous'
     };
 
-    const docId = await addToDatabase(COLLECTIONS.FRANCHISE_APPLICATIONS, sanitizedData, ID_PREFIXES.FRANCHISE);
+    let docId;
+    if (applicationData.id && typeof applicationData.id === 'string' && applicationData.id.startsWith('FRA-')) {
+      const cleanId = applicationData.id.replace(/[^a-zA-Z0-9_-]/g, '');
+      await addToDocumentWithId(COLLECTIONS.FRANCHISE_APPLICATIONS, cleanId, sanitizedData);
+      docId = cleanId;
+    } else {
+      docId = await addToDatabase(COLLECTIONS.FRANCHISE_APPLICATIONS, sanitizedData, ID_PREFIXES.FRANCHISE);
+    }
 
     // Notify admins
     notifyAdmins({
       title: 'New Franchise Application',
-      message: `${sanitizedData.fullName} submitted an application for ${sanitizedData.preferredBranchLocation}`,
+      message: `${derivedFullName} submitted an application for ${sanitizedData.preferredBranchLocation}`,
       type: 'franchise',
       link: '/admin/franchise-apps',
       metadata: { applicationId: docId }
@@ -134,12 +152,16 @@ const getApplications = async (req, res) => {
     // In-memory text search if requested
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
-      applications = applications.filter(app => 
-        (app.fullName && app.fullName.toLowerCase().includes(q)) ||
-        (app.email && app.email.toLowerCase().includes(q)) ||
-        (app.preferredBranchLocation && app.preferredBranchLocation.toLowerCase().includes(q)) ||
-        (app.phoneNumber && app.phoneNumber.includes(q))
-      );
+      applications = applications.filter(app => {
+        const applicantName = app.fullName ||
+          [app.firstName, app.middleInitial, app.lastName].filter(Boolean).join(' ').trim();
+        return (
+          (applicantName && applicantName.toLowerCase().includes(q)) ||
+          (app.email && app.email.toLowerCase().includes(q)) ||
+          (app.preferredBranchLocation && app.preferredBranchLocation.toLowerCase().includes(q)) ||
+          (app.phoneNumber && app.phoneNumber.includes(q))
+        );
+      });
     }
 
     const total = applications.length;
@@ -151,9 +173,25 @@ const getApplications = async (req, res) => {
       ? applications.slice(parsedOffset, parsedOffset + parsedLimit)
       : applications;
 
+    const enriched = paginated.map(app => {
+      const derivedName = app.fullName ||
+        [app.firstName, app.middleInitial, app.lastName].filter(Boolean).join(' ').trim();
+      const derivedMeetingTime = app.preferredMeetingTime || (
+        app.preferredMeetingStartTime && app.preferredMeetingEndTime
+          ? `${app.preferredMeetingStartTime} - ${app.preferredMeetingEndTime}`
+          : (app.noPreferenceSchedule ? 'No preference / Admin to schedule' : 'Flexible')
+      );
+      return {
+        id: app.id,
+        ...app,
+        fullName: derivedName,
+        preferredMeetingTime: derivedMeetingTime
+      };
+    });
+
     return res.status(200).json({
       total,
-      applications: paginated
+      applications: enriched
     });
   } catch (error) {
     console.error('Error fetching franchise applications:', error);
@@ -183,7 +221,20 @@ const getApplicationById = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    return res.status(200).json(application);
+    const derivedName = application.fullName ||
+      [application.firstName, application.middleInitial, application.lastName].filter(Boolean).join(' ').trim();
+    const derivedMeetingTime = application.preferredMeetingTime || (
+      application.preferredMeetingStartTime && application.preferredMeetingEndTime
+        ? `${application.preferredMeetingStartTime} - ${application.preferredMeetingEndTime}`
+        : (application.noPreferenceSchedule ? 'No preference / Admin to schedule' : 'Flexible')
+    );
+
+    return res.status(200).json({
+      id,
+      ...application,
+      fullName: derivedName,
+      preferredMeetingTime: derivedMeetingTime
+    });
   } catch (error) {
     console.error('Error fetching application by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -198,7 +249,7 @@ const updateApplicationStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'approved', 'rejected'];
+    const validStatuses = ['pending', 'approved', 'rejected', 'appointment_scheduled'];
     if (!status || !validStatuses.includes(status.toLowerCase())) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }

@@ -19,6 +19,7 @@ const baseAdminLinks = [
   { to: '/admin/qualifications', icon: 'fa-solid fa-certificate', label: 'Qualifications' },
   { to: '/admin/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
   { to: '/admin/franchise-apps', icon: 'fa-solid fa-briefcase', label: 'Franchise Application' },
+  { to: '/admin/appointments', icon: 'fa-regular fa-calendar-check', label: 'Consultations' },
   { to: '/admin/inquiry-history', icon: 'fa-solid fa-clipboard-list', label: 'Inquiry History' },
   { to: '/admin/quick-links', icon: 'fa-solid fa-link', label: 'Quick Links' },
   { to: '/admin/chatbot', icon: 'fa-solid fa-robot', label: 'Chatbot' },
@@ -54,6 +55,9 @@ export default function AdminLayout() {
 
   // Tickets requiring action
   const [openTickets, setOpenTickets] = useState(0);
+
+  // Appointments requiring action
+  const [pendingAppointments, setPendingAppointments] = useState(0);
 
   useEffect(() => {
     // 1. Lightweight Server Aggregation for Total Counts (Zero document bodies streamed)
@@ -105,10 +109,33 @@ export default function AdminLayout() {
       }
     );
 
+    // NOTE: Querying only by 'type' (single-field index, auto-created by Firestore).
+    // Status is filtered client-side to avoid requiring a composite index
+    // (type + status) that doesn't yet exist.
+    const qAppointments = query(
+      collection(firestore, 'appointments'),
+      where('type', '==', 'franchise_consultation'),
+      limit(100)
+    );
+    const unsubAppointments = onSnapshot(
+      qAppointments,
+      (snapshot) => {
+        const pending = snapshot.docs.filter((doc) => {
+          const s = (doc.data().status || '').toLowerCase();
+          return s === 'pending';
+        });
+        setPendingAppointments(pending.length);
+      },
+      () => {
+        setPendingAppointments(0);
+      }
+    );
+
     return () => {
       clearInterval(interval);
       unsubFranchise();
       unsubTickets();
+      unsubAppointments();
     };
   }, []);
 
@@ -118,7 +145,8 @@ export default function AdminLayout() {
   const tabNotifications = useMemo(() => ({
     '/admin/franchise-apps': pendingApps,
     '/admin/tickets': openTickets,
-  }), [pendingApps, openTickets]);
+    '/admin/appointments': pendingAppointments,
+  }), [pendingApps, openTickets, pendingAppointments]);
 
   return (
     <AppLayout

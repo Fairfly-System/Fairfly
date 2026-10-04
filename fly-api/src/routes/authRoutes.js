@@ -7,7 +7,8 @@ const {
   initiateRegistration,
   verifyRegistrationCode,
   resendRegistrationCode,
-  reuploadId
+  reuploadId,
+  checkAccountStatusForLogin
 } = require('../controllers/authController');
 const { publicRateLimiter } = require('../middleware/rateLimiter');
 const { allowedFields } = require('../middleware/allowedFields');
@@ -102,6 +103,17 @@ router.post(
 router.post(
   '/operator-reset-request',
   performanceProfiler('POST /auth/operator-reset-request', publicRateLimiter, allowedFields(['email', 'branchName', 'reason']), requestOperatorPasswordReset)
+);
+
+// Public route for checking account status before completing login (rate-limited, protected fields)
+router.post(
+  '/login-check',
+  performanceProfiler(
+    'POST /auth/login-check',
+    publicRateLimiter,
+    allowedFields(['email']),
+    checkAccountStatusForLogin
+  )
 );
 
 module.exports = router;

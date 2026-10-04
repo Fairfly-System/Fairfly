@@ -135,8 +135,6 @@ export default function OperatorTicketsContent() {
     const payload = {
       ...ticketData,
       operatorId: ticketData.operatorId || currentOperatorId,
-      operatorName: ticketData.operatorName || currentOperatorName,
-      operatorEmail: ticketData.operatorEmail || currentOperatorEmail,
     };
 
     return createTicket(

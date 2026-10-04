@@ -38,7 +38,21 @@ const verifyFirebaseToken = async (req, res, next) => {
       console.log(`Cache hit for user details: ${uid}`);
     }
 
-    //Pass the decoded token and user details to the next middleware or route handler
+    // Block disabled, deactivated, or suspended accounts from accessing backend APIs
+    if (userDetails) {
+      const status = (userDetails.status || '').toLowerCase();
+      const isAccountDisabled = status === 'disabled' || 
+                                status === 'deactivated' || 
+                                status === 'suspended' || 
+                                status === 'inactive' ||
+                                userDetails.disabled === true;
+      if (isAccountDisabled) {
+        console.warn(`[Auth] Blocked API access attempt from disabled account: ${uid} (role: ${userDetails.role}, status: ${userDetails.status})`);
+        return res.status(403).json({ error: 'Forbidden: Account has been disabled or deactivated. Access denied.' });
+      }
+    }
+
+    // Pass the decoded token and user details to the next middleware or route handler
     req.user = decodedToken;
     req.userDetails = userDetails;
     next();

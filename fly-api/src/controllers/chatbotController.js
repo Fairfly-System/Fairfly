@@ -7,6 +7,9 @@ const {
   deleteFromDatabase,
 } = require('../services/firebaseService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
+const { fetchActiveBranchesInternal } = require('./operatorController');
+const { fetchActiveServicesInternal } = require('./serviceController');
+const { buildBackendSystemInstruction } = require('../utils/botPersona');
 
 const COLLECTIONS = {
   CONFIG: 'chatbotConfig',
@@ -187,6 +190,140 @@ const deleteFaq = async (req, res) => {
   }
 };
 
+/**
+ * Handle incoming visitor chat message, ground with cached services and branches,
+ * and proxy request safely to Gemini API without exposing credentials to client.
+ */
+const handleChatMessage = async (req, res) => {
+  try {
+    const rawMessage = req.body?.message;
+    if (typeof rawMessage !== 'string' || !rawMessage.trim()) {
+      return res.status(400).json({ error: 'Message is required and must be non-empty string' });
+    }
+
+    const cleanMessage = rawMessage.trim();
+    if (cleanMessage.length > 1000) {
+      return res.status(400).json({ error: 'Message must not exceed 1000 characters' });
+    }
+
+    const rawHistory = Array.isArray(req.body?.history) ? req.body.history : [];
+    const sanitizedHistory = rawHistory
+      .slice(-10) // Limit to last 10 messages for conversational context & token efficiency
+      .filter((m) => m && (m.role === 'user' || m.role === 'model') && typeof m.text === 'string' && m.text.trim())
+      .map((m) => ({
+        role: m.role,
+        text: m.text.trim().slice(0, 1000)
+      }));
+
+    // Fetch active services, active branches, and chatbot config (all with in-memory caching)
+    const [services, branches, configData] = await Promise.all([
+      fetchActiveServicesInternal().catch((err) => {
+        console.warn('[Chatbot] Failed to fetch active services for context:', err.message);
+        return [];
+      }),
+      fetchActiveBranchesInternal().catch((err) => {
+        console.warn('[Chatbot] Failed to fetch active branches for context:', err.message);
+        return [];
+      }),
+      getFromDatabase(`${COLLECTIONS.CONFIG}/${CONFIG_ID}`).catch((err) => {
+        console.warn('[Chatbot] Failed to fetch config from db:', err.message);
+        return null;
+      })
+    ]);
+
+    const activeConfig = configData || DEFAULT_CONFIG;
+    const systemInstruction = buildBackendSystemInstruction({
+      services,
+      branches,
+      config: activeConfig
+    });
+
+    // Format Gemini contents payload
+    const formattedContents = [];
+    for (const item of sanitizedHistory) {
+      if (formattedContents.length === 0 && item.role === 'model') {
+        continue; // First message in contents array must be from user in Gemini API
+      }
+      const last = formattedContents[formattedContents.length - 1];
+      if (last && last.role === item.role) {
+        last.parts[0].text += `\n${item.text}`;
+      } else {
+        formattedContents.push({
+          role: item.role,
+          parts: [{ text: item.text }]
+        });
+      }
+    }
+
+    // Append current user message
+    const lastContent = formattedContents[formattedContents.length - 1];
+    if (lastContent && lastContent.role === 'user') {
+      lastContent.parts[0].text += `\n${cleanMessage}`;
+    } else {
+      formattedContents.push({
+        role: 'user',
+        parts: [{ text: cleanMessage }]
+      });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('[Chatbot] GEMINI_API_KEY is not configured in server environment');
+      return res.status(500).json({ error: 'Chatbot service temporarily unavailable' });
+    }
+
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const fallbackModel = 'gemini-3.5-flash';
+
+    const callGeminiApi = async (modelName) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      const payload = {
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        contents: formattedContents,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 800
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
+        throw new Error(`Gemini API error (${modelName}) [${response.status}]: ${errorBody}`);
+      }
+
+      return response.json();
+    };
+
+    let geminiResponse;
+    try {
+      geminiResponse = await callGeminiApi(primaryModel);
+    } catch (primaryErr) {
+      console.warn(`[Chatbot] Primary model (${primaryModel}) failed:`, primaryErr.message);
+      if (primaryModel !== fallbackModel) {
+        geminiResponse = await callGeminiApi(fallbackModel);
+      } else {
+        throw primaryErr;
+      }
+    }
+
+    const reply = geminiResponse?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+      || "I'm here to help you learn more about Fairfly's services and branch locations! Feel free to ask about what we offer.";
+
+    return res.status(200).json({ reply });
+  } catch (error) {
+    console.error('[Chatbot] Error handling chat message:', error.message);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   getConfig,
   updateConfig,
@@ -195,4 +332,5 @@ module.exports = {
   createFaq,
   updateFaq,
   deleteFaq,
+  handleChatMessage
 };

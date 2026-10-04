@@ -41,7 +41,7 @@ const addToDocumentWithId = async (collectionName, docId, data) => {
 const getFromDatabase = async (path) => {
   try {
     const docSnap = await db.doc(path).get();
-    return docSnap.exists ? docSnap.data() : null;
+    return docSnap.exists ? { id: docSnap.id, ...docSnap.data() } : null;
   } catch (error) {
     console.error(`Firebase Admin SDK: Error getting doc from ${path}:`, error);
     throw error;

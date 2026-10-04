@@ -13,7 +13,13 @@ const { allowedFields } = require('../middleware/allowedFields');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
-const TICKET_ALLOWED_FIELDS = ['title', 'category', 'priority', 'initialMessage'];
+const TICKET_ALLOWED_FIELDS = [
+  'title',
+  'category',
+  'priority',
+  'initialMessage',
+  'operatorId'
+];
 
 // Create a new support ticket (Operator or Admin only)
 router.post(

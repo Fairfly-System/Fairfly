@@ -17,7 +17,7 @@ const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { allowedFields } = require('../middleware/allowedFields');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
 
-const WORKFLOW_TEMPLATE_FIELDS = ['title', 'name', 'description', 'steps', 'status', 'category'];
+const WORKFLOW_TEMPLATE_FIELDS = ['title', 'name', 'description', 'steps', 'status', 'category', 'type', 'serviceType', 'version'];
 const WORKFLOW_INSTANCE_FIELDS = ['templateId', 'clientId', 'clientName', 'clientEmail', 'serviceId', 'serviceType', 'branchUid', 'operatorId', 'steps', 'priority', 'notes'];
 const WORKFLOW_TRANSITION_FIELDS = ['stepIndex', 'status', 'notes', 'attachmentUrl', 'attachmentName'];
 

@@ -203,7 +203,18 @@ const updateClient = async (req, res) => {
       sanitizedUpdates.name = name; // maintain parity
     }
     if (updates.phone !== undefined) sanitizedUpdates.phone = updates.phone.trim();
-    if (updates.status !== undefined) sanitizedUpdates.status = updates.status;
+    if (updates.status !== undefined) {
+      sanitizedUpdates.status = updates.status;
+      const isDisabling = updates.status === 'Disabled' || updates.status === 'Deactivated' || updates.status === 'Suspended' || updates.status === 'Inactive';
+      try {
+        await admin.auth().updateUser(id, { disabled: isDisabling });
+        if (isDisabling) {
+          await admin.auth().revokeRefreshTokens(id);
+        }
+      } catch (authErr) {
+        console.warn(`[Client] Could not sync disabled state to Firebase Auth for client ${id}:`, authErr.message);
+      }
+    }
     if (updates.address !== undefined) sanitizedUpdates.address = typeof updates.address === 'string' ? updates.address.trim() : updates.address;
 
     await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, sanitizedUpdates);
@@ -288,6 +299,12 @@ const approveClient = async (req, res) => {
     await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, updates);
     userCache.delete(id);
 
+    try {
+      await admin.auth().updateUser(id, { disabled: false });
+    } catch (authErr) {
+      console.warn(`[Client] Could not sync active state to Firebase Auth for approved client ${id}:`, authErr.message);
+    }
+
     // Send congratulatory approval email with direct login link
     const clientName = clientData.fullName || clientData.name || 'Valued Traveler';
     const loginUrl = `${CLIENT_BASE_URL}/login`;
@@ -363,6 +380,13 @@ const rejectClient = async (req, res) => {
     await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, updates);
     userCache.delete(id);
 
+    try {
+      await admin.auth().updateUser(id, { disabled: true });
+      await admin.auth().revokeRefreshTokens(id);
+    } catch (authErr) {
+      console.warn(`[Client] Could not sync disabled state to Firebase Auth for rejected client ${id}:`, authErr.message);
+    }
+
     // Send rejection email with secure re-upload link
     const clientName = clientData.fullName || clientData.name || 'Valued Traveler';
     const reuploadUrl = `${CLIENT_BASE_URL}/reupload-id?email=${encodeURIComponent(clientData.email)}&token=${reuploadToken}`;
@@ -413,6 +437,7 @@ const bulkStatusClients = async (req, res) => {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
+    const isDisabling = status === 'Deactivated' || status === 'Disabled' || status === 'Inactive';
     await Promise.all(
       ids.map(async (id) => {
         await updateToDatabase(`${COLLECTIONS.USERS}/${id}`, {
@@ -420,6 +445,14 @@ const bulkStatusClients = async (req, res) => {
           updatedAt: new Date().toISOString()
         });
         userCache.delete(id);
+        try {
+          await admin.auth().updateUser(id, { disabled: isDisabling });
+          if (isDisabling) {
+            await admin.auth().revokeRefreshTokens(id);
+          }
+        } catch (authErr) {
+          console.warn(`[Client] Could not sync bulk disabled state to Firebase Auth for ${id}:`, authErr.message);
+        }
       })
     );
 

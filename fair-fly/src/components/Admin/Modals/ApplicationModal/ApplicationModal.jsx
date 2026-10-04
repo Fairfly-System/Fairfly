@@ -52,11 +52,15 @@ const ApplicationModal = forwardRef(({ handleApprove, handleReject, isLoading, s
                     </div>
                     <div className="modal-section-content">
                         <div className='section-header'>Full Name:</div>
-                        <div className='section-content'>{selectedApplication?.fullName || 'N/A'}</div>
+                        <div className='section-content'>
+                            {selectedApplication?.fullName ||
+                                [selectedApplication?.firstName, selectedApplication?.middleInitial, selectedApplication?.lastName].filter(Boolean).join(' ') ||
+                                'N/A'}
+                        </div>
                     </div>
                     <div className="modal-section-content">
                         <div className='section-header'>Phone Number:</div>
-                        <div className='section-content'>{selectedApplication?.phoneNumber || 'N/A'}</div>
+                        <div className='section-content'>{selectedApplication?.phoneNumber || selectedApplication?.phone || 'N/A'}</div>
                     </div> 
                     <div className="modal-section-content">
                         <div className='section-header'>Email Address:</div>
@@ -98,7 +102,11 @@ const ApplicationModal = forwardRef(({ handleApprove, handleReject, isLoading, s
                     </div>
                     <div className="modal-section-content">
                         <div className='section-header'>Preferred Meeting Time:</div>
-                        <div className='section-content'>{selectedApplication?.preferredMeetingTime || 'N/A'}</div>
+                        <div className='section-content'>
+                            {selectedApplication?.preferredMeetingStartTime && selectedApplication?.preferredMeetingEndTime
+                                ? `${selectedApplication.preferredMeetingStartTime} - ${selectedApplication.preferredMeetingEndTime}`
+                                : (selectedApplication?.preferredMeetingTime || 'Flexible')}
+                        </div>
                     </div>
                 </div>
 

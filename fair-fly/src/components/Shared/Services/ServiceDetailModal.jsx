@@ -95,16 +95,30 @@ export default function ServiceDetailModal({
         </button>
 
         <div className="service-modal-body">
-          {/* Hero Media Banner */}
-          <div className="service-modal-hero">
-            <img
-              src={service.coverImage || service.image || '/services/passport.jpg'}
-              alt={service.name}
-              className="service-modal-hero-img"
-              onError={(e) => {
-                e.currentTarget.src = service.fallbackImage || 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1200&auto=format&fit=crop';
-              }}
-            />
+          {/* Hero Media Banner with FairFly Brand Logo Fallback */}
+          <div className={`service-modal-hero ${!service.coverImage ? 'service-modal-hero-logo' : ''}`}>
+            {service.coverImage ? (
+              <img
+                src={service.coverImage}
+                alt={service.name}
+                className="service-modal-hero-img"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const logoEl = e.currentTarget.parentElement?.querySelector('.service-modal-logo-backdrop');
+                  if (logoEl) logoEl.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div
+              className="service-modal-logo-backdrop"
+              style={{ display: service.coverImage ? 'none' : 'flex' }}
+            >
+              <img
+                src="/FairflyLogo.png"
+                alt="FairFly"
+                className="service-modal-brand-logo"
+              />
+            </div>
             <div className="service-modal-hero-overlay">
               {service.category && (
                 <div className="service-modal-badges-row">

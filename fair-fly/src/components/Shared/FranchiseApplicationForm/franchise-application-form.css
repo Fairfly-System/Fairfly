@@ -272,3 +272,168 @@
     padding: 18px 14px;
   }
 }
+
+/* Consultation & Capability Proof Styling */
+.faf-checkbox-group {
+  margin: 6px 0 12px;
+}
+
+.faf-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.faf-checkbox-label input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: #ff843d;
+  cursor: pointer;
+}
+
+.faf-section-desc {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: -4px 0 12px;
+  line-height: 1.45;
+}
+
+/* Dropzone */
+.faf-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.faf-dropzone:hover {
+  border-color: #ff843d;
+  background-color: #fff9f5;
+}
+
+.faf-dropzone.is-uploading {
+  cursor: wait;
+  border-color: #fdba74;
+  background-color: #fffaf0;
+}
+
+.faf-upload-icon {
+  font-size: 28px;
+  color: #ff843d;
+  margin-bottom: 8px;
+}
+
+.faf-dropzone-text {
+  font-size: 13.5px;
+  color: #374151;
+  margin: 4px 0;
+}
+
+.faf-dropzone-sub {
+  font-size: 11.5px;
+  color: #9ca3af;
+}
+
+.faf-dropzone-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.faf-progress-bar-container {
+  width: 70%;
+  max-width: 260px;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.faf-progress-bar {
+  height: 100%;
+  background-color: #ff843d;
+  transition: width 0.3s ease;
+}
+
+/* Uploaded Proofs List */
+.faf-proofs-list {
+  margin-top: 14px;
+}
+
+.faf-proofs-count {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.faf-proofs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.faf-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #1f2937;
+  max-width: 100%;
+}
+
+.faf-chip-icon {
+  color: #ff843d;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.faf-chip-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.faf-chip-size {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.faf-chip-remove {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.faf-chip-remove:hover {
+  color: #dc2626;
+  background-color: #fee2e2;
+}

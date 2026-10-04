@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import '../modal.css'
 
 export default function OperatorForm({ onSubmit, isLoading, initialData }) {
-  const isEditMode = Boolean(initialData);
+  const isEditMode = Boolean(initialData && initialData.id);
 
   const [formData, setFormData] = useState({
     branchName: initialData?.branchName || '',
@@ -29,7 +29,12 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
       const { password, ...editPayload } = formData;
       onSubmit(editPayload);
     } else {
-      onSubmit(formData);
+      const payload = {
+        ...formData,
+        ...(initialData?.franchiseApplicationId ? { franchiseApplicationId: initialData.franchiseApplicationId } : {}),
+        ...(initialData?.appointmentId ? { appointmentId: initialData.appointmentId } : {})
+      };
+      onSubmit(payload);
     }
   };
 

@@ -1,5 +1,7 @@
-import React from 'react';
+import { useMemo } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
+import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
+import { useLightbox, isImageUrl } from '../../UI/ImageLightbox/ImageLightbox';
 import './history-detail-modal.css';
 
 function formatDate(val) {
@@ -16,13 +18,60 @@ function formatCurrency(val) {
 }
 
 export default function HistoryDetailModal({ isOpen, onClose, data, type = 'service' }) {
+  const { openLightbox } = useLightbox();
+
+  const isService = type === 'service' || Boolean(data?.serviceType && (data?.steps || data?.totalSteps || data?.price));
+  const isCancelled = (data?.status || '').toLowerCase() === 'cancelled';
+  const isCompleted = (data?.status || '').toLowerCase() === 'completed';
+
+  const reqRefId = isService ? data?.submittedRequirementsId : null;
+  const { requirements: submittedDocs, loading: reqsLoading } = useSubmittedRequirements(reqRefId);
+
+  const imageGallery = useMemo(() => {
+    if (!submittedDocs || submittedDocs.length === 0) return [];
+    const list = [];
+    submittedDocs.forEach((req, idx) => {
+      const fileMeta = typeof req === 'object' ? req.file : null;
+      const fileUrl = fileMeta?.url || req.fileUrl || req.url;
+      const fileName = fileMeta?.fileName || req.fileName || '';
+      const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${idx + 1}`;
+
+      const isImg = req.inputType === 'image' || isImageUrl(fileUrl, fileName);
+      if (fileUrl && isImg) {
+        list.push({
+          url: fileUrl,
+          title: fileName || reqName,
+          subtitle: `Client Requirement: ${reqName} · ${data?.serviceType || 'Service'}`,
+          name: reqName,
+          fileSize: fileMeta?.fileSize
+        });
+      }
+    });
+    return list;
+  }, [submittedDocs, data?.serviceType]);
+
+  const handleOpenLightbox = (targetUrl, title) => {
+    const galleryIdx = imageGallery.findIndex((item) => item.url === targetUrl);
+    if (imageGallery.length > 1 && galleryIdx !== -1) {
+      openLightbox({
+        images: imageGallery,
+        activeIndex: galleryIdx,
+        title: title || 'Client Requirement Attachment',
+        subtitle: `Service: ${data?.serviceType || 'History Record'}`
+      });
+    } else {
+      openLightbox({
+        url: targetUrl,
+        title: title || 'Client Requirement Attachment',
+        subtitle: `Service: ${data?.serviceType || 'History Record'}`
+      });
+    }
+  };
+
+  // Safe early return after all hooks are evaluated
   if (!isOpen || !data) return null;
 
-  const isService = type === 'service' || Boolean(data.serviceType && (data.steps || data.totalSteps || data.price));
-  const isCancelled = (data.status || '').toLowerCase() === 'cancelled';
-  const isCompleted = (data.status || '').toLowerCase() === 'completed';
-
-  const modalTitle = isService 
+  const modalTitle = isService
     ? (isCancelled ? 'Cancelled Service Record & Refund' : 'Completed Service Fulfillment')
     : 'Appointment History Details';
 
@@ -37,18 +86,17 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
       title={modalTitle}
       subtitle={modalSubtitle}
       size="large"
-      maxWidth="50rem"
+      maxWidth="54rem"
     >
       <div className="op-history-modal-body">
         {/* Top Banner */}
         <div className="op-history-top-banner">
           <div className="op-history-banner-left">
             <div className={`op-history-icon-bubble ${isCancelled ? 'cancelled' : isCompleted ? 'completed' : ''}`}>
-              <i className={`fa-solid ${
-                isService 
+              <i className={`fa-solid ${isService
                   ? (isCancelled ? 'fa-ban' : isCompleted ? 'fa-circle-check' : 'fa-list-check')
                   : 'fa-calendar-check'
-              }`}></i>
+                }`}></i>
             </div>
             <div>
               <h3 className="op-history-banner-title">
@@ -63,13 +111,12 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
 
           <div className="op-history-banner-badges">
             <span
-              className={`status-pill ${
-                isCompleted
+              className={`status-pill ${isCompleted
                   ? 'status-pill-completed'
                   : isCancelled
-                  ? 'status-pill-disabled'
-                  : 'status-pill-active'
-              }`}
+                    ? 'status-pill-disabled'
+                    : 'status-pill-active'
+                }`}
               style={{
                 background: isCancelled ? '#fee2e2' : undefined,
                 color: isCancelled ? '#b91c1c' : undefined,
@@ -274,6 +321,169 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
           </div>
         )}
 
+        {/* Client Submitted Requirements & Attachments (Only for Services) */}
+        {isService && (
+          <div className="op-history-reqs-section">
+            <div className="op-history-reqs-header">
+              <div className="op-history-reqs-header-title">
+                <i className="fa-solid fa-paperclip"></i>
+                <span>Client Requirements & Attachments</span>
+                {submittedDocs && submittedDocs.length > 0 && (
+                  <span className="op-history-reqs-count-badge">
+                    {submittedDocs.length} item{submittedDocs.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              {imageGallery.length > 1 && (
+                <button
+                  type="button"
+                  className="op-history-gallery-btn"
+                  onClick={() => openLightbox({
+                    images: imageGallery,
+                    activeIndex: 0,
+                    title: imageGallery[0]?.title || 'Client Requirements Gallery',
+                    subtitle: `Service: ${data?.serviceType || 'History Record'}`
+                  })}
+                >
+                  <i className="fa-regular fa-images"></i>
+                  <span>Browse All in Lightbox ({imageGallery.length})</span>
+                </button>
+              )}
+            </div>
+
+            {reqsLoading ? (
+              <div className="op-history-reqs-loading">
+                <i className="fa-solid fa-spinner fa-spin"></i> Loading submitted requirements...
+              </div>
+            ) : (!submittedDocs || submittedDocs.length === 0) ? (
+              <div className="op-history-reqs-empty">
+                <i className="fa-regular fa-folder-open"></i>
+                <p>No client requirements or attachments recorded for this service.</p>
+              </div>
+            ) : (
+              <div className="op-history-reqs-grid">
+                {submittedDocs.map((req, rIdx) => {
+                  const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${rIdx + 1}`;
+                  const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
+                  const fileMeta = typeof req === 'object' ? req.file : null;
+                  const fileUrl = fileMeta?.url || req.fileUrl || req.url;
+                  const fileName = fileMeta?.fileName || req.fileName || '';
+                  const fileSize = fileMeta?.fileSize || req.fileSize || 0;
+                  const valueStr = typeof req === 'object' ? req.value : '';
+
+                  const isImage = inputType === 'image' || isImageUrl(fileUrl, fileName);
+
+                  return (
+                    <div key={rIdx} className="op-history-req-card">
+                      <div className="op-history-req-top">
+                        <span className="op-history-req-name" title={reqName}>{reqName}</span>
+                        <span className="op-history-req-pill">
+                          {isImage ? (
+                            <span><i className="fa-regular fa-image"></i> Image</span>
+                          ) : fileUrl ? (
+                            <span><i className="fa-regular fa-file-pdf"></i> Document</span>
+                          ) : inputType === 'date' ? (
+                            <span><i className="fa-regular fa-calendar"></i> Date</span>
+                          ) : inputType === 'number' ? (
+                            <span><i className="fa-solid fa-hashtag"></i> Number</span>
+                          ) : (
+                            <span><i className="fa-solid fa-font"></i> Text</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Image Preview & Lightbox Trigger */}
+                      {fileUrl && isImage && (
+                        <div className="op-history-img-box">
+                          <div
+                            className="op-history-img-thumb-wrap"
+                            onClick={() => handleOpenLightbox(fileUrl, fileName || reqName)}
+                            title="Click to view full resolution in Lightbox"
+                          >
+                            <img
+                              src={fileUrl}
+                              alt={reqName}
+                              className="op-history-img-thumb"
+                              loading="lazy"
+                            />
+                            <div className="op-history-img-overlay">
+                              <i className="fa-solid fa-magnifying-glass-plus"></i>
+                              <span>Open Lightbox</span>
+                            </div>
+                          </div>
+                          <div className="op-history-file-meta">
+                            <span className="op-history-file-name" title={fileName || 'Attached Image'}>
+                              {fileName || 'Attached Image'}
+                            </span>
+                            {fileSize > 0 && (
+                              <span className="op-history-file-size">
+                                {(fileSize / 1024).toFixed(1)} KB
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="op-history-lightbox-action-btn"
+                            onClick={() => handleOpenLightbox(fileUrl, fileName || reqName)}
+                          >
+                            <i className="fa-solid fa-expand"></i>
+                            <span>View in Lightbox</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Document File Link */}
+                      {fileUrl && !isImage && (
+                        <div className="op-history-doc-box">
+                          <div className="op-history-doc-top">
+                            <div className="op-history-doc-icon-wrap">
+                              <i className="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div className="op-history-doc-info">
+                              <span className="op-history-file-name" title={fileName || 'Attached Document'}>
+                                {fileName || 'Attached Document'}
+                              </span>
+                              {fileSize > 0 && (
+                                <span className="op-history-file-size">
+                                  {(fileSize / 1024).toFixed(1)} KB
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="op-history-doc-download-btn"
+                            title="Open / Download Document"
+                          >
+                            <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span>View Document</span>
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Text / Date / Value response */}
+                      {!fileUrl && valueStr && (
+                        <div className="op-history-val-box">
+                          <span className="op-history-val-label">Submitted Value:</span>
+                          <span className="op-history-val-text">{valueStr}</span>
+                        </div>
+                      )}
+
+                      {!fileUrl && !valueStr && (
+                        <div className="op-history-val-empty">
+                          Standard requirement acknowledged by client
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Workflow Steps Audit Breakdown (Only for Services) */}
         {isService && Array.isArray(data.steps) && data.steps.length > 0 && (
           <div className="op-steps-section">
@@ -296,13 +506,12 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
                       <div className="op-step-title-row">
                         <span className="op-step-title">{st.title || `Step ${idx + 1}`}</span>
                         <span
-                          className={`status-pill ${
-                            isStepCompleted
+                          className={`status-pill ${isStepCompleted
                               ? 'status-pill-completed'
                               : isProcessing
-                              ? 'status-pill-active'
-                              : 'status-pill-disabled'
-                          }`}
+                                ? 'status-pill-active'
+                                : 'status-pill-disabled'
+                            }`}
                           style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
                         >
                           {st.status || 'Pending'}

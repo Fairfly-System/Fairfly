@@ -414,6 +414,110 @@ const reuploadIdController = async (req, res) => {
 };
 
 /**
+ * Pre-login status check: Validates if an account exists and is permitted to log in.
+ * Payload: { email }
+ *
+ * Security & Zero-Trust Verification:
+ * 1. Checks Firestore users collection by email.
+ * 2. If status is Disabled/Deactivated/Suspended/Pending/Rejected, returns 403 Forbidden.
+ * 3. Lazily syncs Firebase Auth disabled state to ensure token invalidation.
+ * 4. Anti-enumeration: If account does not exist in Firestore, returns allowed: true
+ *    so Firebase Auth handles credential validation without leaking account existence.
+ */
+const checkAccountStatusForLogin = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Please provide a valid email address.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Query Firestore users collection for account
+    let userSnapshot = await db.collection(COLLECTIONS.USERS)
+      .where('email', '==', normalizedEmail)
+      .limit(1)
+      .get();
+
+    if (userSnapshot.empty && normalizedEmail !== email.trim()) {
+      userSnapshot = await db.collection(COLLECTIONS.USERS)
+        .where('email', '==', email.trim())
+        .limit(1)
+        .get();
+    }
+
+    if (userSnapshot.empty) {
+      // Account not found in Firestore.
+      // Return allowed: true so Firebase Auth can handle invalid credentials (prevents enumeration).
+      return res.status(200).json({ allowed: true });
+    }
+
+    const userDoc = userSnapshot.docs[0];
+    const userData = userDoc.data();
+    const uid = userDoc.id;
+    const status = (userData.status || '').toLowerCase();
+    const approvalStatus = (userData.approvalStatus || '').toLowerCase();
+
+    // 1. Disabled Check (Applies to all roles: admin, operator, client)
+    if (status === 'disabled' || userData.disabled === true) {
+      // Lazily ensure Firebase Auth is also marked disabled
+      try {
+        await admin.auth().updateUser(uid, { disabled: true });
+        await admin.auth().revokeRefreshTokens(uid);
+      } catch (authErr) {
+        console.warn(`[AuthCheck] Could not sync disabled status to Auth for ${uid}:`, authErr.message);
+      }
+
+      return res.status(403).json({
+        error: 'Your account has been disabled. Please contact FairFly administration for assistance.',
+        code: 'ACCOUNT_DISABLED',
+        status: userData.status || 'Disabled'
+      });
+    }
+
+    // 2. Deactivated / Inactive / Suspended Check
+    if (status === 'deactivated' || status === 'inactive' || status === 'suspended') {
+      try {
+        await admin.auth().updateUser(uid, { disabled: true });
+        await admin.auth().revokeRefreshTokens(uid);
+      } catch (authErr) {
+        console.warn(`[AuthCheck] Could not sync deactivated status to Auth for ${uid}:`, authErr.message);
+      }
+
+      return res.status(403).json({
+        error: 'Your account has been deactivated. Please contact FairFly administration for assistance.',
+        code: 'ACCOUNT_DEACTIVATED',
+        status: userData.status
+      });
+    }
+
+    // 3. Client Pending Verification Check
+    if (userData.role === 'client' && (status === 'pending' || approvalStatus === 'pending')) {
+      return res.status(403).json({
+        error: 'Your account is currently pending administrator verification. You will be notified via email once approved.',
+        code: 'ACCOUNT_PENDING',
+        status: 'Pending'
+      });
+    }
+
+    // 4. Client Rejected Check
+    if (userData.role === 'client' && (status === 'rejected' || approvalStatus === 'rejected')) {
+      const reason = userData.rejectionReason ? ` Reason: ${userData.rejectionReason}` : '';
+      return res.status(403).json({
+        error: `Your registration was not approved.${reason} Please check your email to re-upload your valid ID.`,
+        code: 'ACCOUNT_REJECTED',
+        status: 'Rejected'
+      });
+    }
+
+    return res.status(200).json({ allowed: true, role: userData.role });
+  } catch (error) {
+    console.error('Error in checkAccountStatusForLogin:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
+/**
  * Legacy registerClient endpoint - delegates to initiateRegistration for secure verification flow
  */
 const registerClient = initiateRegistration;
@@ -425,7 +529,9 @@ module.exports = {
   initiateRegistration,
   verifyRegistrationCode: verifyRegistrationCodeController,
   resendRegistrationCode: resendRegistrationCodeController,
-  reuploadId: reuploadIdController
+  reuploadId: reuploadIdController,
+  checkAccountStatusForLogin
 };
+
 
 

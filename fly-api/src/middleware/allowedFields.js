@@ -3,20 +3,19 @@
  * @param {Array} allowedFields - An array of allowed field names.
  * @returns {Function} - A middleware function that checks the request body.
  */
-const allowedFields = (allowedFields) => {
-
+const allowedFields = (allowedFieldsList) => {
     return (req, res, next) => {
-
-        //Get the keys of the request body
-        const requestFields = Object.keys(req.body);
-        //Check if all request fields are allowed
-        if (!requestFields.every(field => allowedFields.includes(field))) {
-            return res.status(400).json({ error: 'Bad Request: Invalid fields in request body' });
+        const requestFields = Object.keys(req.body || {});
+        const invalidFields = requestFields.filter(field => !allowedFieldsList.includes(field));
+        if (invalidFields.length > 0) {
+            console.warn(`[allowedFields] Blocked request to ${req.originalUrl}. Unexpected fields: ${invalidFields.join(', ')}`);
+            return res.status(400).json({ 
+                error: `Bad Request: Invalid fields in request body (${invalidFields.join(', ')})`,
+                invalidFields
+            });
         }
-        //If all fields are allowed, proceed to the next middleware or route handler
         next();
-    }
-
-}
+    };
+};
 
 module.exports = { allowedFields };

@@ -23,7 +23,7 @@ router.post(
     'POST /admins',
     verifyFirebaseToken,
     requireSuperAdmin,
-    allowedFields(['email', 'password', 'username', 'fullName', 'phone', 'assignedOperators']),
+    allowedFields(['email', 'password', 'username', 'fullName', 'name', 'phone', 'status', 'assignedOperators']),
     apiRateLimiter,
     createAdmin
   )

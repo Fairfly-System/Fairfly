@@ -1,10 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { fetchServices } from "../../../services/serviceService";
-import { fetchChatbotConfig, fetchChatbotFaqs } from "../../../services/chatbotService";
-import { buildGeminiSystemInstruction } from "./botPersona";
-import "./chatbot.css"; 
+import { fetchChatbotFaqs, sendChatbotMessage } from "../../../services/chatbotService";
+import "./chatbot.css";
 
 export default function Chatbot() {
   const location = useLocation();
@@ -16,15 +13,11 @@ export default function Chatbot() {
   const [messages, setMessages] = useState([
     {
       role: "model",
-      text: "Hello! I'm Fairfly AI Assistant. How can I help you today? I can answer questions about our services, requirements, and processing times.",
+      text: "Hello! I'm Fairfly AI Assistant. How can I help you today? I can answer questions about our services, requirements, processing times, and branch locations.",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [catalogStatus, setCatalogStatus] = useState("loading");
-  const [configStatus, setConfigStatus] = useState("loading");
-  const [services, setServices] = useState([]);
-  const [chatbotConfig, setChatbotConfig] = useState(null);
   const [faqs, setFaqs] = useState([]);
   const chatEndRef = useRef(null);
 
@@ -33,45 +26,13 @@ export default function Chatbot() {
 
     let isMounted = true;
 
-    fetchServices(
-      (data) => {
-        if (!isMounted) return;
-
-        const activeServices = (Array.isArray(data) ? data : []).filter(
-          (service) => service.status !== "Disabled" && service.status !== "Inactive"
-        );
-        setServices(activeServices);
-        setCatalogStatus(activeServices.length > 0 ? "ready" : "unavailable");
-      },
-      (error) => {
-        if (!isMounted) return;
-
-        console.error("Service catalog Error:", error);
-        setCatalogStatus("unavailable");
-      }
-    );
-
-    fetchChatbotConfig(
-      (data) => {
-        if (!isMounted) return;
-        setChatbotConfig(data);
-        setConfigStatus(data?.systemInstruction ? "ready" : "unavailable");
-      },
-      (error) => {
-        if (!isMounted) return;
-        console.error("Chatbot config Error:", error);
-        setConfigStatus("unavailable");
-      }
-    );
-
     fetchChatbotFaqs(
       (data) => {
         if (!isMounted) return;
         setFaqs(Array.isArray(data) ? data : []);
       },
-      (error) => {
-        if (!isMounted) return;
-        console.error("Chatbot FAQ Error:", error);
+      () => {
+        // Fallback silently if offline or network error
       }
     );
 
@@ -84,10 +45,10 @@ export default function Chatbot() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const handleSend = async (e, selectedPrompt = "") => {
+  const handleSend = (e, selectedPrompt = "") => {
     e?.preventDefault();
     const messageToSend = selectedPrompt || input.trim();
-    if (!messageToSend || loading || catalogStatus !== "ready" || configStatus !== "ready") return;
+    if (!messageToSend || loading) return;
 
     const userMessage = messageToSend;
     setInput("");
@@ -96,46 +57,37 @@ export default function Chatbot() {
     const updatedMessages = [...messages, { role: "user", text: userMessage }];
     setMessages(updatedMessages);
 
-    try {
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-      
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-lite",
-        systemInstruction: buildGeminiSystemInstruction(services, chatbotConfig),
-      });
+    // Format conversational history (excluding default greeting)
+    const history = messages
+      .filter((_, index) => index > 0)
+      .map((msg) => ({
+        role: msg.role === "model" ? "model" : "user",
+        text: msg.text,
+      }));
 
-      
-      const history = messages
-        .filter((_, index) => index > 0)
-        .map((msg) => ({
-          role: msg.role,
-          parts: [{ text: msg.text }],
-        }));
+    sendChatbotMessage(
+      { message: userMessage, history },
+      (res) => {
+        const replyText = res?.reply || "I'm here to help you learn more about Fairfly's services and branch locations! Feel free to ask about what we offer.";
+        setMessages([...updatedMessages, { role: "model", text: replyText }]);
+        setLoading(false);
+      },
+      (error) => {
+        const errorString = error?.message || error?.toString() || "";
+        let fallbackText = "Oops, something went wrong. Please try again in a bit!";
 
-      const chat = model.startChat({ history });
-      const result = await chat.sendMessage(userMessage);
-      const responseText = result.response.text();
-
-      setMessages([...updatedMessages, { role: "model", text: responseText }]);
-    } catch (error) {
-      console.error("Gemini Error:", error);
-      
-      const errorString = error.toString();
-      
-      let fallbackText = "Oops, Something went wrong. Please try again in a bit!";
-      
-      if (errorString.includes("429") || errorString.includes("quota")) {
-        fallbackText = "Slow down a bit! You've hit Google's temporary limit. Please wait about a minute before sending your next message, thanks!";
-      }
-
-      setMessages([
-        ...updatedMessages,
-        { role: "model", text: fallbackText },
-      ]);
-    }finally {
-          setLoading(false);
+        if (errorString.includes("429") || errorString.includes("quota")) {
+          fallbackText = "Slow down a bit! You've hit a temporary limit. Please wait about a minute before sending your next message, thanks!";
         }
-      };
+
+        setMessages([
+          ...updatedMessages,
+          { role: "model", text: fallbackText },
+        ]);
+        setLoading(false);
+      }
+    );
+  };
 
   if (isHiddenRoute) {
     return null;
@@ -145,7 +97,11 @@ export default function Chatbot() {
     <>
       {/* FLOATING LAUNCHER BUTTON */}
       {!isOpen && (
-        <button onClick={() => setIsOpen(true)} className="chatbot-launcher">
+        <button
+          onClick={() => setIsOpen(true)}
+          className="chatbot-launcher"
+          aria-label="Open Fairfly AI chat"
+        >
           <i className="fa-solid fa-message"></i>
         </button>
       )}
@@ -156,16 +112,24 @@ export default function Chatbot() {
           {/* Header */}
           <div className="chatbot-header">
             <div className="chatbot-avatar-container">
-              <div className="chatbot-avatar-placeholder"><img src="FairflyLogo.png"></img></div>
+              <div className="chatbot-avatar-placeholder">
+                <img src="/FairflyLogo.png" alt="Fairfly Logo" />
+              </div>
               <div className="chatbot-header-info">
                 <span className="chatbot-bot-name">Chat with Fairfly</span>
                 <span className="chatbot-status">
                   <span className="chatbot-green-dot"></span>
-                  {configStatus !== "ready" || catalogStatus === "loading" ? " Loading chatbot..." : catalogStatus === "ready" ? " Online Now" : " Temporarily unavailable"}
+                  Online Now
                 </span>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="chatbot-close-button"><i className="fa-solid fa-circle-xmark"></i></button>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="chatbot-close-button"
+              aria-label="Close chat"
+            >
+              <i className="fa-solid fa-circle-xmark"></i>
+            </button>
           </div>
 
           {/* Messages Feed */}
@@ -185,6 +149,7 @@ export default function Chatbot() {
             <div ref={chatEndRef} />
           </div>
 
+          {/* Quick FAQ Suggestion Chips */}
           {faqs.length > 0 && (
             <div className="chatbot-quick-access" aria-label="Frequently asked questions">
               <span className="chatbot-quick-access-title">Quick questions</span>
@@ -192,10 +157,10 @@ export default function Chatbot() {
                 {faqs.map((faq) => (
                   <button
                     type="button"
-                    key={faq.id}
+                    key={faq.id || faq.label}
                     className="chatbot-quick-access-button"
                     onClick={() => handleSend(null, faq.prompt)}
-                    disabled={loading || catalogStatus !== "ready" || configStatus !== "ready"}
+                    disabled={loading}
                   >
                     {faq.label}
                   </button>
@@ -210,11 +175,18 @@ export default function Chatbot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={catalogStatus === "ready" ? "Ask me anything..." : "Service information is unavailable"}
+              placeholder="Ask about services, branches, requirements..."
               className="chatbot-input-field"
-              disabled={loading || catalogStatus !== "ready" || configStatus !== "ready"}
+              disabled={loading}
             />
-            <button type="submit" className="chatbot-send-button" disabled={loading || catalogStatus !== "ready" || configStatus !== "ready" || !input.trim()}><i className="fa-regular fa-paper-plane"></i></button>
+            <button
+              type="submit"
+              className="chatbot-send-button"
+              disabled={loading || !input.trim()}
+              aria-label="Send message"
+            >
+              <i className="fa-regular fa-paper-plane"></i>
+            </button>
           </form>
         </div>
       )}
