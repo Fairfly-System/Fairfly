@@ -90,7 +90,7 @@
 .op-avatar {
   width: 2.625rem;
   height: 2.625rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--purple);
   color: #FFFFFF;
   font-size: 1.0625rem;

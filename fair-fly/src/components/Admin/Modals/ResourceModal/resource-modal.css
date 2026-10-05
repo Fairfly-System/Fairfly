@@ -50,7 +50,7 @@
 .resource-dropzone-icon {
   width: 3rem;
   height: 3rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--purple-light-2);
   color: var(--purple);
   display: flex;

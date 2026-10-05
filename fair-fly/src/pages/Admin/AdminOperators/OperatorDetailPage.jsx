@@ -8,6 +8,7 @@ import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModa
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import OperatorActivityLogSection from '../../../components/Admin/OperatorActivityLogs/OperatorActivityLogSection';
 import {
   fetchOperatorById,
   updateOperator,
@@ -837,6 +838,13 @@ export default function OperatorDetailPage() {
                   )}
                 </div>
               </article>
+
+              {/* Recent Operator Actions Section */}
+              <OperatorActivityLogSection
+                operatorId={id}
+                operatorName={operator?.branchName || operator?.name || operator?.email || 'Branch Operator'}
+                userToken={userToken}
+              />
             </div>
           </div>
 

@@ -11,6 +11,7 @@ const {
   notifyAdmins 
 } = require('../services/notificationService');
 const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
+const { logFromRequest } = require('../services/operatorLoggerService');
 
 const COLLECTIONS = {
   PAYMENTS: 'payments',
@@ -168,12 +169,177 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
 };
 
 /**
+ * Record a direct cash payment for an accepted quotation (Walk-in Clients)
+ * POST /api/payments/cash
+ * 
+ * Security:
+ * - Operator / Admin authentication required
+ * - Branch ownership verified (or Admin)
+ * - Quotation status must be 'Accepted'
+ * - Payable amount derived authoritatively from database (Zero Client Trust)
+ * - Atomic transaction ensures exactly 1 payment record and 1 active service fulfillment
+ * - Strict Idempotency lock prevents double processing under retries
+ */
+const recordCashPayment = async (req, res) => {
+  try {
+    const { quotationId, remarks } = req.body;
+    if (!quotationId) {
+      return res.status(400).json({ error: 'quotationId is required' });
+    }
+
+    const quotationRef = db.collection(COLLECTIONS.QUOTATIONS).doc(quotationId);
+    const quotationSnap = await quotationRef.get();
+
+    if (!quotationSnap.exists) {
+      return res.status(404).json({ error: 'Quotation not found' });
+    }
+
+    const quotation = quotationSnap.data();
+
+    // 1. Object-level Authorization / IDOR Protection
+    const userRole = req.userDetails?.role;
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    if (isOperator) {
+      const isBranchMatch = (quotation.branchUid && quotation.branchUid === req.user.uid) ||
+        (quotation.operatorId && quotation.operatorId === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only record payments for quotations assigned to your branch.' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Only authorized branch operators and administrators can record cash payments.' });
+    }
+
+    // 2. Status validation
+    if (quotation.status !== 'Accepted') {
+      return res.status(400).json({
+        error: `Cannot record payment for quotation with status "${quotation.status}". The quotation must be accepted first.`
+      });
+    }
+
+    // 2.1 Requirements Approval Validation
+    if (quotation.requirementsStatus && quotation.requirementsStatus !== 'approved' && quotation.requirementsStatus !== 'not_required') {
+      return res.status(400).json({
+        error: `Cannot record payment: Quotation requirements must be approved prior to payment (Current requirements status: "${quotation.requirementsStatus}").`
+      });
+    }
+
+    // 3. Idempotency Guard: Quotation already finalized as PAID or fulfilled
+    if (quotation.paymentStatus === 'PAID' || quotation.activeServiceId) {
+      return res.status(200).json({
+        alreadyProcessed: true,
+        status: 'PAID',
+        paymentId: quotation.paymentId || null,
+        fulfillmentId: quotation.activeServiceId,
+        message: 'This quotation has already been paid and service fulfillment activated.'
+      });
+    }
+
+    // Check if a PAID payment record already exists for this quotation
+    const existingPaymentSnap = await db.collection(COLLECTIONS.PAYMENTS)
+      .where('quotationId', '==', quotationId)
+      .where('status', '==', 'PAID')
+      .limit(1)
+      .get();
+
+    if (!existingPaymentSnap.empty) {
+      const existingPay = existingPaymentSnap.docs[0].data();
+      return res.status(200).json({
+        alreadyProcessed: true,
+        status: 'PAID',
+        paymentId: existingPay.id,
+        fulfillmentId: existingPay.fulfillmentId || quotation.activeServiceId,
+        message: 'Payment for this quotation was already recorded.'
+      });
+    }
+
+    // 4. Server-Side Price Authority: Calculate payable amount strictly from database
+    const totalAmount = Number(quotation.totalAmount || quotation.rate || 0);
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+      return res.status(400).json({
+        error: 'Invalid quotation payable amount. Please contact the branch administrator to verify the quotation rate.'
+      });
+    }
+
+    // 5. Generate internal Payment record ID
+    const paymentId = generatePrefixedId(ID_PREFIXES.PAYMENT);
+    const now = new Date().toISOString();
+    const operatorName = req.userDetails?.name || req.userDetails?.fullName || 'Branch Operator';
+
+    const paymentDocData = {
+      id: paymentId,
+      quotationId,
+      quoteNo: quotation.quoteNo || '',
+      inquiryId: quotation.inquiryId || null,
+      clientUid: quotation.clientUid || null,
+      clientName: quotation.clientName || 'Walk-in Client',
+      clientEmail: quotation.clientEmail || '',
+      operatorId: req.user.uid,
+      receivedByOperatorId: req.user.uid,
+      receivedByOperatorName: operatorName,
+      branchName: quotation.branchName || req.userDetails?.branchName || 'Branch Office',
+      serviceTitle: quotation.serviceTitle || 'Custom Service',
+      serviceId: quotation.serviceId || null,
+      amount: totalAmount,
+      amountInCentavos: Math.round(totalAmount * 100),
+      currency: 'PHP',
+      provider: 'cash',
+      providerReferenceId: `CASH-${Date.now()}`,
+      providerPaymentIntentId: null,
+      providerPaymentId: `CASH-REC-${Date.now()}`,
+      paymentMethodType: 'Cash',
+      status: 'PAYMENT_PENDING',
+      checkoutUrl: null,
+      fulfillmentId: null,
+      webhookProcessedAt: null,
+      paidAt: null,
+      createdAt: now,
+      updatedAt: now,
+      isWalkInCash: true,
+      remarks: typeof remarks === 'string' && remarks.trim() ? remarks.trim() : 'Direct cash payment received at branch'
+    };
+
+    // Store payment doc in Firestore
+    await db.collection(COLLECTIONS.PAYMENTS).doc(paymentId).set(paymentDocData);
+
+    // Update quotation status to PAYMENT_PENDING before finalization
+    await quotationRef.update({
+      paymentStatus: 'PAYMENT_PENDING',
+      paymentId: paymentId,
+      updatedAt: now
+    });
+
+    // 6. Atomically finalize payment and activate exactly 1 service fulfillment
+    const finalResult = await finalizeSuccessfulPayment(paymentId, {
+      paymentId: paymentDocData.providerPaymentId,
+      paymentMethod: 'Cash'
+    });
+
+    console.log(`[Cash Payment] Recorded by ${operatorName} (${req.user.uid}) for Quotation ${quotation.quoteNo || quotationId}: ₱${totalAmount}`);
+
+    return res.status(200).json({
+      success: true,
+      status: 'PAID',
+      paymentId,
+      fulfillmentId: finalResult.fulfillmentId,
+      amount: totalAmount,
+      quoteNo: quotation.quoteNo,
+      message: 'Direct cash payment confirmed successfully. Service fulfillment has been activated.'
+    });
+  } catch (error) {
+    console.error('Error in recordCashPayment:', error);
+    return res.status(500).json({ error: 'Failed to record cash payment: ' + error.message });
+  }
+};
+
+/**
  * Create a PayMongo checkout session for an accepted quotation
  * POST /api/payments/checkout-session
  * 
  * Security:
- * - Client authentication required
- * - Server-side quotation verification: Client can only pay their own quotation
+ * - Client or Operator/Admin authentication required
+ * - Server-side quotation verification: Client can only pay their own quotation, Operator only branch quotations
  * - Amount is derived strictly from server-side quotation total (Zero Client Trust)
  */
 const createCheckoutSession = async (req, res) => {
@@ -195,14 +361,36 @@ const createCheckoutSession = async (req, res) => {
     const quotation = quotationSnap.data();
 
     // 2. Object-level Authorization / IDOR Protection
-    if (quotation.clientUid && quotation.clientUid !== req.user.uid) {
-      return res.status(403).json({ error: 'Forbidden: You cannot pay for a quotation issued to another client.' });
+    const userRole = req.userDetails?.role;
+    const isClient = userRole === 'client';
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    if (isClient) {
+      if (quotation.clientUid && quotation.clientUid !== req.user.uid) {
+        return res.status(403).json({ error: 'Forbidden: You cannot pay for a quotation issued to another client.' });
+      }
+    } else if (isOperator) {
+      const isBranchMatch = (quotation.branchUid && quotation.branchUid === req.user.uid) ||
+        (quotation.operatorId && quotation.operatorId === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only initiate payment for quotations assigned to your branch.' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges to initiate payment for this quotation.' });
     }
 
     // 3. Status validation
     if (quotation.status !== 'Accepted') {
       return res.status(400).json({
         error: `Cannot pay for quotation with status "${quotation.status}". The quotation must be accepted first.`
+      });
+    }
+
+    // 3.1 Requirements Approval Validation
+    if (quotation.requirementsStatus && quotation.requirementsStatus !== 'approved' && quotation.requirementsStatus !== 'not_required') {
+      return res.status(400).json({
+        error: `Cannot initiate payment: Quotation requirements must be approved prior to checkout (Current requirements status: "${quotation.requirementsStatus}").`
       });
     }
 
@@ -225,8 +413,12 @@ const createCheckoutSession = async (req, res) => {
     const now = new Date().toISOString();
 
     const frontendBaseUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
-    const successUrl = `${frontendBaseUrl}/client/tracking?payment_status=success&payment_id=${paymentId}&quotation_id=${quotationId}`;
-    const cancelUrl = `${frontendBaseUrl}/client/tracking?payment_status=cancelled&payment_id=${paymentId}&quotation_id=${quotationId}`;
+    const successUrl = isOperator
+      ? `${frontendBaseUrl}/operator/quotations/${quotationId}?payment_status=success&payment_id=${paymentId}`
+      : `${frontendBaseUrl}/client/tracking?payment_status=success&payment_id=${paymentId}&quotation_id=${quotationId}`;
+    const cancelUrl = isOperator
+      ? `${frontendBaseUrl}/operator/quotations/${quotationId}?payment_status=cancelled&payment_id=${paymentId}`
+      : `${frontendBaseUrl}/client/tracking?payment_status=cancelled&payment_id=${paymentId}&quotation_id=${quotationId}`;
 
     // 6. Call PayMongo Service to generate Checkout Session
     const checkoutSession = await createPaymongoCheckoutSession({
@@ -287,6 +479,14 @@ const createCheckoutSession = async (req, res) => {
 
     console.log(`[Payment] Created PayMongo checkout session ${checkoutSession.id} for payment ${paymentId} (₱${totalAmount})`);
 
+    await logFromRequest(req, {
+      action: 'INITIATE_PAYMENT',
+      entityType: 'payment',
+      entityId: paymentId,
+      description: `Generated Payment Link (₱${totalAmount.toLocaleString()}) for Quotation ${quotation.quoteNo || quotationId} for ${quotation.clientName || 'Client'}`,
+      metadata: { paymentId, quotationId, amount: totalAmount, quoteNo: quotation.quoteNo }
+    });
+
     return res.status(201).json({
       success: true,
       paymentId,
@@ -325,6 +525,13 @@ const verifyPayment = async (req, res) => {
     if (userRole === 'client' && payment.clientUid !== req.user.uid) {
       return res.status(403).json({ error: 'Forbidden: You cannot access payment records for another traveler.' });
     }
+    if ((userRole === 'operator' || userRole === 'branch_operator') && !req.userDetails?.isSuperAdmin) {
+      const isBranchMatch = (payment.operatorId && payment.operatorId === req.user.uid) ||
+        (payment.branchUid && payment.branchUid === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You cannot access payment records for another branch.' });
+      }
+    }
 
     // 1. If already PAID, return current status
     if (payment.status === 'PAID') {
@@ -353,10 +560,17 @@ const verifyPayment = async (req, res) => {
       const providerPaymentId = successfulPayment?.id || null;
       const paymentMethod = successfulPayment?.attributes?.source?.type || 'online';
 
-      // Execute atomic fulfillment processor
       const finalResult = await finalizeSuccessfulPayment(id, {
         paymentId: providerPaymentId,
         paymentMethod
+      });
+
+      await logFromRequest(req, {
+        action: 'VERIFY_PAYMENT',
+        entityType: 'payment',
+        entityId: id,
+        description: `Verified Payment of ₱${Number(payment.amount || 0).toLocaleString()} for ${payment.quoteNo ? 'Quotation ' + payment.quoteNo : 'Service Order'}`,
+        metadata: { paymentId: id, quoteNo: payment.quoteNo, amount: payment.amount, fulfillmentId: finalResult.fulfillmentId }
       });
 
       return res.status(200).json({
@@ -532,6 +746,7 @@ const getPayments = async (req, res) => {
 
 module.exports = {
   createCheckoutSession,
+  recordCashPayment,
   verifyPayment,
   handlePaymongoWebhook,
   getPaymentById,

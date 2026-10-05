@@ -248,5 +248,14 @@ service cloud.firestore {
         || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
       allow create, update, delete: if false;
     }
+
+    // ── Operator Activity Logs ────────────────────────────────────
+    // Strictly backend server-only mutations via Firebase Admin SDK.
+    // Admins can read all operator logs; Operators can only read their own logs.
+    match /operator-logs/{logId} {
+      allow read: if isAdmin() 
+        || (isOperator() && resource.data.operatorId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
   }
 }

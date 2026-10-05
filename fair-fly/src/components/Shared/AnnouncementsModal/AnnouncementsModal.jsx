@@ -62,7 +62,8 @@ export default function AnnouncementsModal({ isOpen, onClose }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="44rem"
+      maxWidth="60rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-bullhorn" style={{ color: 'var(--purple)' }}></i>

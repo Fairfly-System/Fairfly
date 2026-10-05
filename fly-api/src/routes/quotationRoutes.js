@@ -6,7 +6,9 @@ const {
   updateQuotationStatus, 
   acceptQuotation, 
   deleteQuotation,
-  updateQuotation
+  updateQuotation,
+  submitQuotationRequirements,
+  reviewQuotationRequirements
 } = require('../controllers/quotationController');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
@@ -24,6 +26,12 @@ const QUOTATION_ALLOWED_FIELDS = [
   'requirements',
   'submittedRequirements',
   'submittedRequirementsId',
+  'requirementsStatus',
+  'requirementsApprovedAt',
+  'requirementsApprovedBy',
+  'requirementsRejectionReason',
+  'requirementsSubmittedAt',
+  'requirementsRemarks',
   'tourDates',
   'inclusions',
   'exclusions',
@@ -43,6 +51,7 @@ const QUOTATION_ALLOWED_FIELDS = [
   'inquiryId',
   'quoteNo',
   'status',
+  'paymentStatus',
   'activeServiceId',
   'id',
   'createdAt',
@@ -64,6 +73,32 @@ router.post(
 
 // List quotations (Scoped in controller based on role: Client sees own, Operator sees branch, Admin sees all)
 router.get('/', performanceProfiler('GET /quotations', verifyFirebaseToken, apiRateLimiter, getQuotations));
+
+// Submit service requirements for quotation (Client online or Operator on-site)
+router.post(
+  '/:id/submit-requirements',
+  performanceProfiler(
+    'POST /quotations/:id/submit-requirements',
+    verifyFirebaseToken,
+    requireRole(['client', 'operator', 'branch_operator', 'admin']),
+    allowedFields(['requirements']),
+    apiRateLimiter,
+    submitQuotationRequirements
+  )
+);
+
+// Review submitted requirements (Operator or Admin: approve or request changes)
+router.post(
+  '/:id/review-requirements',
+  performanceProfiler(
+    'POST /quotations/:id/review-requirements',
+    verifyFirebaseToken,
+    requireRole(['admin', 'operator', 'branch_operator']),
+    allowedFields(['action', 'remarks', 'reason']),
+    apiRateLimiter,
+    reviewQuotationRequirements
+  )
+);
 
 // Accept quotation (Client or on-site Operator — verified in controller)
 router.post('/:id/accept', performanceProfiler('POST /quotations/:id/accept', verifyFirebaseToken, apiRateLimiter, acceptQuotation));

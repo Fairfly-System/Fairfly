@@ -86,7 +86,8 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
       title={modalTitle}
       subtitle={modalSubtitle}
       size="large"
-      maxWidth="54rem"
+      maxWidth="68rem"
+      width="95%"
     >
       <div className="op-history-modal-body">
         {/* Top Banner */}

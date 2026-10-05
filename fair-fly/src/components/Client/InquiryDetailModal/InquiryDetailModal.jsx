@@ -1,35 +1,6 @@
 import React from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
-import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
-import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './inquiry-detail-modal.css';
-
-function formatRequirementsText(specifiedRequirements, requirements) {
-  for (const value of [specifiedRequirements, requirements]) {
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-
-  if (!Array.isArray(requirements)) return '';
-
-  return requirements
-    .map((requirement) => {
-      if (typeof requirement === 'string') return requirement.trim();
-      if (!requirement || typeof requirement !== 'object') return '';
-
-      const label = [requirement.name, requirement.title]
-        .find((value) => typeof value === 'string' && value.trim())?.trim() || '';
-      const value = typeof requirement.value === 'string' ? requirement.value.trim() : '';
-      const fileName = typeof requirement.file?.fileName === 'string'
-        ? requirement.file.fileName.trim()
-        : '';
-      const details = [value, fileName ? `File: ${fileName}` : ''].filter(Boolean).join(' | ');
-
-      if (label && details) return `${label}: ${details}`;
-      return label || details;
-    })
-    .filter(Boolean)
-    .join(', ');
-}
 
 export default function InquiryDetailModal({
   isOpen,
@@ -37,19 +8,11 @@ export default function InquiryDetailModal({
   inquiry,
   onOpenPdf
 }) {
-  const { openLightbox } = useLightbox();
-
-  const submittedReqId = inquiry?.submittedRequirementsId || null;
-  const { requirements: dynamicReqs } = useSubmittedRequirements(submittedReqId, inquiry?.requirements);
-
   if (!inquiry) return null;
 
   const servicesList = Array.isArray(inquiry.servicesOffered)
     ? inquiry.servicesOffered
     : (inquiry.serviceType ? [inquiry.serviceType] : []);
-
-  const effectiveReqs = dynamicReqs && dynamicReqs.length > 0 ? dynamicReqs : (inquiry.requirements || []);
-  const requirementsText = formatRequirementsText(inquiry.specifiedRequirements, effectiveReqs);
 
   return (
     <BaseModal
@@ -141,86 +104,15 @@ export default function InquiryDetailModal({
           </div>
         </div>
 
-        {/* Specified Requirements */}
+        {/* Specified Requirements of Client (What the client needs from the agency) */}
         <div className="inq-modal-section">
           <div className="inq-section-heading">
-            <i className="fa-solid fa-list-check"></i>
-            Specified Requirements & Details
+            <i className="fa-solid fa-clipboard-list"></i>
+            Specified Requirements of Client (SAF-01-002 Section 2)
           </div>
-          {Array.isArray(effectiveReqs) && effectiveReqs.length > 0 && typeof effectiveReqs[0] === 'object' ? (
-            <div className="inq-reqs-grid">
-              {effectiveReqs.map((req, rIdx) => {
-                const reqName = req.name || req.title || `Requirement ${rIdx + 1}`;
-                const fileObj = req.file;
-                const fileUrl = fileObj?.url || (typeof fileObj === 'string' ? fileObj : null) || req.fileUrl || req.url;
-                const fileName = fileObj?.fileName || req.fileName || '';
-                const isImage = req.inputType === 'image' || (fileUrl && /\.(png|jpg|jpeg|webp|gif)/i.test(fileName || fileUrl));
-                const textVal = req.value || req.textValue || '';
-
-                return (
-                  <div key={rIdx} className="inq-req-item">
-                    <span className="inq-req-name">{reqName}</span>
-                    {fileUrl ? (
-                      <div className="inq-req-file-row">
-                        {isImage && (
-                          <button
-                            type="button"
-                            className="inq-img-thumb-link"
-                            title={`View in Lightbox: ${fileName || reqName}`}
-                            onClick={() =>
-                              openLightbox({
-                                imageUrl: fileUrl,
-                                title: fileName || reqName,
-                                subtitle: `Inquiry Requirement · ${inquiry.serviceType || 'Inquiry'}`
-                              })
-                            }
-                          >
-                            <img src={fileUrl} alt={fileName || reqName} className="inq-img-thumb" />
-                          </button>
-                        )}
-                        {isImage ? (
-                          <button
-                            type="button"
-                            className="inq-file-link"
-                            title={`View in Lightbox: ${fileName || reqName}`}
-                            onClick={() =>
-                              openLightbox({
-                                imageUrl: fileUrl,
-                                title: fileName || reqName,
-                                subtitle: `Inquiry Requirement · ${inquiry.serviceType || 'Inquiry'}`
-                              })
-                            }
-                          >
-                            <i className="fa-regular fa-image"></i>
-                            <span>{fileName || 'View Attached Image'}</span>
-                          </button>
-                        ) : (
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inq-file-link"
-                            title={fileName ? `Open ${fileName}` : 'View Attached File'}
-                          >
-                            <i className="fa-solid fa-file-arrow-down"></i>
-                            <span>{fileName || 'View Attached Document'}</span>
-                          </a>
-                        )}
-                      </div>
-                    ) : textVal ? (
-                      <span className="inq-req-val">{textVal}</span>
-                    ) : (
-                      <span className="inq-req-val" style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Provided / Acknowledged</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="inq-text-block">
-              {requirementsText || 'No custom requirements specified in the submission.'}
-            </div>
-          )}
+          <div className="inq-text-block">
+            {inquiry.specifiedRequirements || (typeof inquiry.notes === 'string' && inquiry.notes.trim()) || 'No specific requirements recorded in this inquiry.'}
+          </div>
         </div>
 
         {/* Operator Remarks / Notes */}

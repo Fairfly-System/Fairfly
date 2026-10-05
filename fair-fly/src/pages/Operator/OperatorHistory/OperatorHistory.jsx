@@ -5,6 +5,7 @@ import DataTable from '../../../components/UI/DataTable/DataTable';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import HistoryDetailModal from '../../../components/Operator/HistoryDetailModal/HistoryDetailModal';
+import OperatorActivityLogsTab from './OperatorActivityLogsTab';
 import { useAuthContext } from '../../../context/AuthContext';
 import { fetchAppointments } from '../../../services/appointmentService';
 import ApiCaller from '../../../utils/ApiCaller';
@@ -229,29 +230,44 @@ export default function OperatorHistory() {
           >
             Service History ({serviceHistory.length})
           </button>
+          <button
+            className={`op-tab ${tab === 'activity' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('activity');
+              setCurrentPage(1);
+            }}
+          >
+            My Activity History
+          </button>
         </div>
 
-        {/* Reusable DataTable */}
-        <DataTable
-          columns={columns}
-          data={paginatedData}
-          keyField="id"
-          selectable={false}
-          isLoading={activeLoading}
-          emptyState={{
-            icon: 'fa-regular fa-clock',
-            message: activeError || 'No history records found',
-          }}
-        />
+        {tab === 'activity' ? (
+          <OperatorActivityLogsTab userToken={userToken} />
+        ) : (
+          <>
+            {/* Reusable DataTable */}
+            <DataTable
+              columns={columns}
+              data={paginatedData}
+              keyField="id"
+              selectable={false}
+              isLoading={activeLoading}
+              emptyState={{
+                icon: 'fa-regular fa-clock',
+                message: activeError || 'No history records found',
+              }}
+            />
 
-        {/* Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalItems={activeData.length}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-        />
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={activeData.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </>
+        )}
       </section>
 
       {/* Detail Modal for View Action */}

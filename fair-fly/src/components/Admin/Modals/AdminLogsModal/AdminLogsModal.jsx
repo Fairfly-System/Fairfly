@@ -58,7 +58,8 @@ export default function AdminLogsModal({
     <BaseModal
       isOpen={isOpen}
       onClose={handleClose}
-      maxWidth="56rem"
+      maxWidth="72rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-clock-rotate-left" style={{ color: 'var(--purple)' }} />

@@ -7,86 +7,35 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import CreateQuotationModal from '../../../components/Operator/CreateQuotationModal/CreateQuotationModal';
-import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
-import { updateInquiry, deleteInquiry } from '../../../services/inquiryService';
-import { uploadFileToBackend } from '../../../utils/fileUploadApi';
-import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
-import { API_BASE_URL } from '../../../utils/config';
+import { updateInquiry, deleteInquiry, attachServiceToInquiry } from '../../../services/inquiryService';
+import { fetchServices } from '../../../services/serviceService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './inquiry-form-detail.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
 
-// Helper to safely parse requirements and remarks across all legacy and new inquiry formats
+// Helper to safely parse client requirements and remarks
 function parseInquiryData(inquiry) {
-  if (!inquiry) return { requirementsList: [], requirementsText: '', remarksText: '' };
+  if (!inquiry) return { requirementsText: '', remarksText: '' };
 
-  let requirementsList = [];
-  let requirementsText = inquiry.specifiedRequirements || '';
-  let remarksText = '';
+  let requirementsText = inquiry.specifiedRequirements || inquiry.notes || '';
+  let remarksText = inquiry.remarks || '';
 
-  // 1. Parse Requirements
-  if (Array.isArray(inquiry.requirements)) {
-    requirementsList = inquiry.requirements.map((req, idx) => {
-      if (typeof req === 'string') {
-        return { id: `req_${idx}`, name: req, required: true, file: null, value: '' };
-      }
-      if (typeof req === 'object' && req !== null) {
-        return {
-          id: req.id || `req_${idx}`,
-          name: req.name || req.title || `Requirement ${idx + 1}`,
-          required: req.required !== false,
-          file: req.file || null,
-          value: typeof req.value === 'object' ? JSON.stringify(req.value) : (req.value || '')
-        };
-      }
-      return { id: `req_${idx}`, name: String(req), required: true, file: null, value: '' };
-    });
-  } else if (!requirementsText && typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
-    requirementsText = inquiry.requirements.trim();
-  }
-
-  // 2. Parse Remarks / Notes
-  const rawRemarks = inquiry.remarks || inquiry.notes;
-  if (typeof rawRemarks === 'string' && rawRemarks.trim()) {
-    remarksText = rawRemarks.trim();
-  } else if (typeof rawRemarks === 'object' && rawRemarks !== null) {
-    remarksText = Object.entries(rawRemarks)
+  if (typeof remarksText === 'object' && remarksText !== null) {
+    remarksText = Object.entries(remarksText)
       .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
       .join('\n');
   }
 
-  // 3. Fallback to notes / details (Legacy format parser)
-  const legacyRaw = typeof inquiry.notes === 'string' ? inquiry.notes : typeof inquiry.details === 'string' ? inquiry.details : '';
-  if (legacyRaw) {
-    if (legacyRaw.includes(' | Remarks: ')) {
-      const [reqPart, remPart] = legacyRaw.split(' | Remarks: ');
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = reqPart.trim();
-      }
-      if (!remarksText && remPart) {
-        remarksText = remPart.trim();
-      }
-    } else if (legacyRaw.includes('Remarks: ')) {
-      const [reqPart, remPart] = legacyRaw.split('Remarks: ');
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = reqPart.trim();
-      }
-      if (!remarksText && remPart) {
-        remarksText = remPart.trim();
-      }
-    } else {
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = legacyRaw.trim();
-      }
-    }
-  }
-
   return {
-    requirementsList,
-    requirementsText: requirementsText || (requirementsList.length === 0 ? 'No specific client requirements provided.' : ''),
-    remarksText: remarksText || 'No additional remarks recorded.'
+    requirementsText: typeof requirementsText === 'string' && requirementsText.trim()
+      ? requirementsText.trim()
+      : 'No specific client requirements recorded.',
+    remarksText: typeof remarksText === 'string' && remarksText.trim()
+      ? remarksText.trim()
+      : 'No additional remarks recorded.'
   };
 }
 
@@ -102,8 +51,54 @@ export default function InquiryFormDetailPage() {
   const [showCreateQuoteModal, setShowCreateQuoteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
-  const [uploadingReqId, setUploadingReqId] = useState(null);
-  const { openLightbox } = useLightbox();
+  // Attach Service state
+  const [showAttachModal, setShowAttachModal] = useState(false);
+  const [activeServices, setActiveServices] = useState([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [isAttaching, setIsAttaching] = useState(false);
+
+  // Load catalog services when attach modal opens
+  useEffect(() => {
+    if (showAttachModal) {
+      fetchServices(
+        (services) => {
+          const activeList = Array.isArray(services)
+            ? services.filter(s => s.status === 'Active' && Array.isArray(s.workflowIds) && s.workflowIds.length > 0)
+            : [];
+          setActiveServices(activeList);
+          if (activeList.length > 0 && !selectedServiceId) {
+            setSelectedServiceId(activeList[0].id);
+          }
+        },
+        (err) => {
+          console.error('Error fetching catalog services:', err);
+        }
+      );
+    }
+  }, [showAttachModal, selectedServiceId]);
+
+  const handleAttachService = () => {
+    if (!selectedServiceId || !form?.id) {
+      addToast('Please select a service to attach', 'warning');
+      return;
+    }
+    setIsAttaching(true);
+    attachServiceToInquiry(
+      userToken,
+      form.id,
+      { serviceId: selectedServiceId, isWalkIn: Boolean(form.isWalkIn) },
+      () => {
+        setIsAttaching(false);
+        setShowAttachModal(false);
+        addToast('Catalog service attached. You can now prepare the quotation.', 'success');
+      },
+      (err) => {
+        setIsAttaching(false);
+        console.error('Error attaching service:', err);
+        addToast(err?.message || 'Failed to attach service', 'error');
+      }
+    );
+  };
 
   // Directly subscribe to the specific inquiry form document (1 document read instead of entire collection)
   useEffect(() => {
@@ -129,13 +124,9 @@ export default function InquiryFormDetailPage() {
     return () => unsub();
   }, [id]);
 
-  const submittedReqId = form?.submittedRequirementsId || null;
-  const { requirements: normalizedReqs } = useSubmittedRequirements(submittedReqId, form?.requirements);
-
   const parsedData = useMemo(() => {
-    const combinedForm = form ? { ...form, requirements: normalizedReqs.length > 0 ? normalizedReqs : form.requirements } : null;
-    return parseInquiryData(combinedForm);
-  }, [form, normalizedReqs]);
+    return parseInquiryData(form);
+  }, [form]);
 
   const handleDelete = async () => {
     if (!form) return;
@@ -152,65 +143,6 @@ export default function InquiryFormDetailPage() {
       },
       setIsDeleting
     );
-  };
-
-  const handleUploadRequirement = async (reqId, file) => {
-    if (!file || !form) return;
-    setUploadingReqId(reqId);
-
-    try {
-      const targetFolder = `service_requirements/${submittedReqId || form.id}`;
-      const uploadResult = await uploadFileToBackend(file, targetFolder, userToken);
-      const currentList = normalizedReqs.length > 0 ? normalizedReqs : (Array.isArray(form.requirements) ? form.requirements : parsedData.requirementsList);
-      const updatedReqs = currentList.map(r => {
-        if (r.id === reqId || r.name === reqId) {
-          return {
-            ...r,
-            file: {
-              url: uploadResult.url,
-              fileName: uploadResult.fileName,
-              fileSize: uploadResult.fileSize,
-              storagePath: uploadResult.storagePath
-            },
-            isUploaded: true
-          };
-        }
-        return r;
-      });
-
-      if (submittedReqId) {
-        try {
-          await fetch(`${API_BASE_URL}/api/submitted-requirements/${submittedReqId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(userToken ? { Authorization: `Bearer ${userToken}` } : {})
-            },
-            body: JSON.stringify({ requirements: updatedReqs })
-          });
-        } catch (subErr) {
-          console.warn('Could not sync to submitted-requirements endpoint:', subErr);
-        }
-      }
-
-      updateInquiry(
-        userToken,
-        form.id,
-        { requirements: updatedReqs },
-        () => {
-          addToast(`Uploaded "${file.name}" for requirement`, 'success');
-          setUploadingReqId(null);
-        },
-        (err) => {
-          setUploadingReqId(null);
-          addToast(toFriendlyMessage(err, 'Failed to save uploaded document reference'), 'error');
-        }
-      );
-    } catch (err) {
-      setUploadingReqId(null);
-      console.error('Error uploading requirement:', err);
-      addToast(toFriendlyMessage(err, 'Failed to upload document file'), 'error');
-    }
   };
 
   const breadcrumbs = [
@@ -243,9 +175,26 @@ export default function InquiryFormDetailPage() {
         }
       ] : [
         {
+          label: form.serviceId ? 'Change Attached Service' : 'Attach Catalog Service',
+          icon: 'fa-solid fa-link',
+          onClick: () => {
+            if (form.serviceId) setSelectedServiceId(form.serviceId);
+            setShowAttachModal(true);
+          },
+          className: 'btn-secondary',
+          disabled: isDeleting,
+        },
+        {
           label: 'Create Quotation',
           icon: 'fa-solid fa-file-invoice-dollar',
-          onClick: () => setShowCreateQuoteModal(true),
+          onClick: () => {
+            if (!form.serviceId) {
+              addToast('Please attach a catalog service to this inquiry before creating a quotation.', 'warning');
+              setShowAttachModal(true);
+              return;
+            }
+            setShowCreateQuoteModal(true);
+          },
           className: 'btn-primary',
           disabled: isDeleting,
           style: { background: 'var(--purple, #7c3aed)' }
@@ -289,6 +238,77 @@ export default function InquiryFormDetailPage() {
     >
       {form && (
         <div className="inquiry-detail-wrapper">
+          {/* Attached Service Status Banner */}
+          {form.serviceId && !hasQuotation && (
+            <div className="inquiry-confirmed-banner" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+              <div className="inquiry-confirmed-info">
+                <div className="inquiry-confirmed-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--brand-primary, #6366f1)' }}>
+                  <i className="fa-solid fa-link"></i>
+                </div>
+                <div>
+                  <h3 className="inquiry-confirmed-title" style={{ color: 'var(--brand-primary, #4338ca)' }}>
+                    Linked Service: {form.serviceType || 'Catalog Service'}
+                  </h3>
+                  <p className="inquiry-confirmed-sub" style={{ color: 'var(--text-muted, #64748b)' }}>
+                    Service linked and ready for quotation. You can change the service or proceed directly to creating the commercial quotation.
+                  </p>
+                </div>
+              </div>
+              <div className="inquiry-confirmed-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setSelectedServiceId(form.serviceId);
+                    setShowAttachModal(true);
+                  }}
+                >
+                  <i className="fa-solid fa-arrows-rotate"></i>
+                  <span>Change Service</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowCreateQuoteModal(true)}
+                  style={{ background: 'var(--purple, #7c3aed)', color: '#fff' }}
+                >
+                  <i className="fa-solid fa-file-invoice-dollar"></i>
+                  <span>Create Quotation</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Unattached Service Prompt Banner */}
+          {!form.serviceId && !hasQuotation && (
+            <div className="inquiry-confirmed-banner" style={{ background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+              <div className="inquiry-confirmed-info">
+                <div className="inquiry-confirmed-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--brand-primary, #6366f1)' }}>
+                  <i className="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                  <h3 className="inquiry-confirmed-title" style={{ color: 'var(--brand-primary, #4338ca)' }}>
+                    No Catalog Service Attached
+                  </h3>
+                  <p className="inquiry-confirmed-sub" style={{ color: 'var(--text-muted, #64748b)' }}>
+                    This inquiry has no linked service. Attach a catalog service to proceed to quotation creation.
+                  </p>
+                </div>
+              </div>
+              <div className="inquiry-confirmed-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowAttachModal(true)}
+                  style={{ background: 'var(--brand-primary, #6366f1)', color: '#fff' }}
+                >
+                  <i className="fa-solid fa-link"></i>
+                  <span>Attach Catalog Service</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Status / Cross-Reference Banner */}
           {(hasQuotation || hasActiveService) && (
             <div className="inquiry-confirmed-banner">
@@ -435,79 +455,6 @@ export default function InquiryFormDetailPage() {
               </p>
             </div>
 
-            {/* Optional Uploaded Document Attachments if present */}
-            {parsedData.requirementsList.length > 0 && (
-              <div className="inquiry-attachments-container">
-                <h4 className="inquiry-attachments-header">
-                  Document Attachments
-                </h4>
-                <div className="inquiry-reqs-list">
-                  {parsedData.requirementsList.map((req, idx) => {
-                    const reqKey = req.id || `req_${idx}`;
-                    const hasFile = Boolean(req.file?.url);
-                    const isComplete = hasFile;
-
-                    return (
-                      <div key={reqKey} className={`inquiry-req-card ${isComplete ? 'is-uploaded' : ''}`}>
-                        <div>
-                          <div className="inquiry-req-title">
-                            <span>{req.name || `Requirement ${idx + 1}`}</span>
-                          </div>
-                        </div>
-
-                        <div className="inquiry-attach-actions-row">
-                          {hasFile ? (
-                            isImageUrl(req.file.url, req.file.fileName) ? (
-                              <button
-                                type="button"
-                                className="inquiry-doc-badge valid inquiry-action-link"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                                title="View Image in Lightbox"
-                                onClick={() =>
-                                  openLightbox({
-                                    url: req.file.url,
-                                    title: req.file.fileName || req.name || 'Inquiry Document',
-                                    subtitle: `Inquiry Attachment · ${form.clientName || 'Client'}`
-                                  })
-                                }
-                              >
-                                <i className="fa-regular fa-image"></i>
-                                <span>{req.file.fileName || 'View Image'}</span>
-                              </button>
-                            ) : (
-                              <a
-                                href={req.file.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inquiry-doc-badge valid inquiry-action-link"
-                              >
-                                <i className="fa-solid fa-file-check"></i>
-                                <span>{req.file.fileName || 'View Document'}</span>
-                              </a>
-                            )
-                          ) : (
-                            <label className="btn btn-secondary inquiry-attach-label">
-                              <i className={uploadingReqId === reqKey ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-cloud-arrow-up'}></i>
-                              <span className="inquiry-attach-btn-label">Attach</span>
-                              <input
-                                type="file"
-                                className="inquiry-file-hidden"
-                                disabled={uploadingReqId === reqKey}
-                                onChange={(e) => {
-                                  if (e.target.files && e.target.files[0]) {
-                                    handleUploadRequirement(reqKey, e.target.files[0]);
-                                  }
-                                }}
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </article>
 
 
@@ -575,6 +522,71 @@ export default function InquiryFormDetailPage() {
             type="inquiry"
             data={form}
           />
+
+          {/* Attach / Change Catalog Service Modal */}
+          <BaseModal
+            isOpen={showAttachModal}
+            onClose={() => !isAttaching && setShowAttachModal(false)}
+            maxWidth="60rem"
+            width="95%"
+            title={form.serviceId ? 'Change Attached Catalog Service' : 'Attach Catalog Service to Inquiry'}
+            subtitle={`Inquiry ${form.controlNo || form.id.substring(0, 8)} · ${form.clientName || 'Client'}`}
+            isLoading={isAttaching}
+          >
+            <div className="attach-service-modal-body" style={{ padding: '0.5rem 0' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" style={{ fontWeight: '700', marginBottom: '0.4rem', display: 'block' }}>
+                  Select Catalog Service *
+                </label>
+                <select
+                  className="form-input"
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  disabled={isAttaching || activeServices.length === 0}
+                  style={{ width: '100%', padding: '0.65rem' }}
+                >
+                  {activeServices.length === 0 ? (
+                    <option value="">No active services available</option>
+                  ) : (
+                    activeServices.map((svc) => (
+                      <option key={svc.id} value={svc.id}>
+                        {svc.name} — {svc.price || (svc.baseFee ? `₱${svc.baseFee}` : 'Free')}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <small style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.75rem', marginTop: '0.35rem', display: 'block' }}>
+                  Attaching a service links standard pricing, inclusions, and allows you to create the quotation.
+                </small>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAttachModal(false)}
+                  disabled={isAttaching}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleAttachService}
+                  disabled={isAttaching || !selectedServiceId}
+                  style={{ background: 'var(--brand-primary, #6366f1)' }}
+                >
+                  {isAttaching ? (
+                    <><i className="fa-solid fa-spinner fa-spin"></i> Saving...</>
+                  ) : form.serviceId ? (
+                    <><i className="fa-solid fa-check"></i> Update Service</>
+                  ) : (
+                    <><i className="fa-solid fa-link"></i> Attach Service</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </BaseModal>
         </div>
       )}
     </RecordDetailLayout>

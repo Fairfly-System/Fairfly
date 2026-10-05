@@ -109,7 +109,8 @@ export default function ServiceRequirementsModal({ isOpen, onClose, initialRequi
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="56rem"
+      maxWidth="68rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-regular fa-clipboard" style={{ color: 'var(--purple)' }}></i>

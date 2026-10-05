@@ -88,7 +88,8 @@ export default function ServiceWorkflowModal({ serviceRecord, onClose }) {
     <BaseModal
       isOpen={true}
       onClose={onClose}
-      maxWidth="720px"
+      maxWidth="72rem"
+      width="95%"
       title="Service Workflow Procedures & Execution"
       subtitle={`Guided step-by-step fulfillment for ${serviceRecord.serviceType}`}
     >

@@ -346,12 +346,17 @@ export default function Services() {
 
   // Merge live database services with rich operator defaults
   const allServices = useMemo(() => {
-    if (dbServices.length === 0) {
+    // Only display services that have at least one operational workflow attached to clients
+    const validDbServices = dbServices.filter(
+      (s) => Array.isArray(s.workflowIds) && s.workflowIds.length > 0
+    );
+
+    if (validDbServices.length === 0) {
       return DEFAULT_OPERATOR_SERVICES;
     }
 
     // Use DB services, mapping missing UI fields with clean defaults (no placeholder images)
-    return dbServices.map((service) => {
+    return validDbServices.map((service) => {
       const visuals = getCategoryVisuals(service.category, service.name || service.title);
       const rawCover = service.coverImage || service.coverPhoto || service.coverPhotoUrl || service.image;
       const isValidImage =

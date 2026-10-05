@@ -47,6 +47,10 @@ const createService = async (req, res) => {
       : (serviceData.branchName || null);
     const isBranchExclusive = isOperator ? true : Boolean(serviceData.isBranchExclusive);
 
+    if (!Array.isArray(serviceData.workflowIds) || serviceData.workflowIds.length === 0) {
+      return res.status(400).json({ error: 'A service must be linked to at least one operational workflow before it can be created.' });
+    }
+
     const docId = await addToDatabase(COLLECTIONS.SERVICES, {
       ...serviceData,
       createdByOperatorId,
@@ -159,8 +163,18 @@ const updateService = async (req, res) => {
       sanitizedUpdates.requirements = updates.requirements;
     }
 
-    if (updates.workflowIds) {
+    if (updates.workflowIds !== undefined) {
+      if (!Array.isArray(updates.workflowIds) || updates.workflowIds.length === 0) {
+        return res.status(400).json({ error: 'A service must remain linked to at least one operational workflow.' });
+      }
       sanitizedUpdates.workflowIds = updates.workflowIds;
+    }
+
+    if (updates.status === 'Active') {
+      const resultingWorkflows = updates.workflowIds !== undefined ? updates.workflowIds : existing.workflowIds;
+      if (!Array.isArray(resultingWorkflows) || resultingWorkflows.length === 0) {
+        return res.status(400).json({ error: 'Cannot activate a service that does not have an assigned operational workflow.' });
+      }
     }
 
     if (updates.isBranchExclusive !== undefined && !isOperator) {

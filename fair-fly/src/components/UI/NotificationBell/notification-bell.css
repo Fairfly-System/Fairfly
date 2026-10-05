@@ -12,7 +12,7 @@
   position: relative;
   width: 2.375rem;
   height: 2.375rem;
-  border-radius: var(--radius-full);
+  border-radius: 50% !important;
   border: 1px solid var(--border-color);
   background: var(--bg);
   color: var(--text-mid);
@@ -43,7 +43,7 @@
   min-width: 1.125rem;
   height: 1.125rem;
   padding: 0 0.3rem;
-  border-radius: var(--radius-full);
+  border-radius: 9999px !important;
   background: var(--error-red);
   color: #FFFFFF;
   font-size: 0.6875rem;
@@ -114,7 +114,7 @@
   background: var(--purple-light-2);
   color: var(--purple-dark);
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
+  border-radius: 9999px !important;
 }
 
 .notification-mark-all-btn {
@@ -205,7 +205,7 @@
 .notification-icon-bubble {
   width: 2.125rem;
   height: 2.125rem;
-  border-radius: 50%;
+  border-radius: 50% !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -282,7 +282,7 @@
 .notification-unread-dot {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 50%;
+  border-radius: 50% !important;
   background: var(--purple);
   margin-top: 0.625rem;
   flex-shrink: 0;
@@ -316,7 +316,7 @@
 .notification-empty-icon {
   width: 3rem;
   height: 3rem;
-  border-radius: 50%;
+  border-radius: 50% !important;
   background: var(--bg);
   color: var(--text-light);
   display: flex;

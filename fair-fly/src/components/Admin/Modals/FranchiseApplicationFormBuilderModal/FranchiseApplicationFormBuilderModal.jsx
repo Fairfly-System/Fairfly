@@ -222,7 +222,8 @@ export default function FranchiseApplicationFormBuilderModal({ isOpen, onClose }
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="56rem"
+      maxWidth="76rem"
+      width="96%"
       title="Edit Franchise Application Form"
       subtitle="Customize the fields shown on the franchise application form"
       isLoading={isLoading || isSaving}

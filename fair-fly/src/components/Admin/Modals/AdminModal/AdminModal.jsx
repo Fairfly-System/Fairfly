@@ -9,7 +9,8 @@ const AdminModal = forwardRef(({ isOpen, onClose, editingAdmin, onSubmit, isLoad
       isOpen={isOpen}
       isLoading={isLoading}
       onClose={onClose}
-      maxWidth="48rem"
+      maxWidth="60rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i

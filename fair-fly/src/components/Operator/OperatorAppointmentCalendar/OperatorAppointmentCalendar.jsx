@@ -226,7 +226,8 @@ export default function OperatorAppointmentCalendar({ userToken, userUid, onStat
         onClose={() => setSelectedAppointment(null)}
         title="Appointment Consultation Details"
         subtitle="Review scheduled consult time, client details, and requirements"
-        maxWidth="38rem"
+        maxWidth="54rem"
+        width="95%"
       >
         {selectedAppointment && (
           <div className="cal-modal-content">

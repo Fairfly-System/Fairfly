@@ -696,7 +696,8 @@ export default function AdminQualificationDetailPage() {
             <BaseModal
               isOpen={Boolean(docToPreview)}
               onClose={() => setDocToPreview(null)}
-              maxWidth="52rem"
+              maxWidth="64rem"
+              width="95%"
               title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <i className="fa-solid fa-file-invoice" style={{ color: 'var(--purple)' }}></i>

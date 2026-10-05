@@ -131,7 +131,8 @@ export default function InquiryFormBuilderModal({ isOpen, onClose }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="56rem"
+      maxWidth="76rem"
+      width="96%"
       title="Dynamic Inquiry Form Builder"
       subtitle="Customize inquiry intake form fields and schema for all branches"
       isLoading={isLoading || isSaving}

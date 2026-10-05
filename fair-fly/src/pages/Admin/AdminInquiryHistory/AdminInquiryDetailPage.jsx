@@ -7,9 +7,7 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
-import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import { deleteInquiry } from '../../../services/inquiryService';
-import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './admin-inquiry-history.css';
 import '../../Operator/OperatorInquiryForms/inquiry-form-detail.css';
@@ -18,30 +16,13 @@ const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i
 
 // Helper to safely parse requirements and remarks across all legacy and new inquiry formats
 function parseInquiryData(inquiry) {
-  if (!inquiry) return { requirementsList: [], requirementsText: '', remarksText: '' };
+  if (!inquiry) return { requirementsText: '', remarksText: '' };
 
-  let requirementsList = [];
   let requirementsText = inquiry.specifiedRequirements || '';
   let remarksText = '';
 
-  // 1. Parse Requirements
-  if (Array.isArray(inquiry.requirements)) {
-    requirementsList = inquiry.requirements.map((req, idx) => {
-      if (typeof req === 'string') {
-        return { id: `req_${idx}`, name: req, required: true, file: null, value: '' };
-      }
-      if (typeof req === 'object' && req !== null) {
-        return {
-          id: req.id || `req_${idx}`,
-          name: req.name || req.title || `Requirement ${idx + 1}`,
-          required: req.required !== false,
-          file: req.file || null,
-          value: typeof req.value === 'object' ? JSON.stringify(req.value) : (req.value || '')
-        };
-      }
-      return { id: `req_${idx}`, name: String(req), required: true, file: null, value: '' };
-    });
-  } else if (!requirementsText && typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
+  // 1. Fallback to string requirements if not specifiedRequirements
+  if (!requirementsText && typeof inquiry.requirements === 'string' && inquiry.requirements.trim()) {
     requirementsText = inquiry.requirements.trim();
   }
 
@@ -60,30 +41,19 @@ function parseInquiryData(inquiry) {
   if (legacyRaw) {
     if (legacyRaw.includes(' | Remarks: ')) {
       const [reqPart, remPart] = legacyRaw.split(' | Remarks: ');
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = reqPart.trim();
-      }
-      if (!remarksText && remPart) {
-        remarksText = remPart.trim();
-      }
+      if (!requirementsText) requirementsText = reqPart.trim();
+      if (!remarksText && remPart) remarksText = remPart.trim();
     } else if (legacyRaw.includes('Remarks: ')) {
       const [reqPart, remPart] = legacyRaw.split('Remarks: ');
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = reqPart.trim();
-      }
-      if (!remarksText && remPart) {
-        remarksText = remPart.trim();
-      }
+      if (!requirementsText) requirementsText = reqPart.trim();
+      if (!remarksText && remPart) remarksText = remPart.trim();
     } else {
-      if (!requirementsText && requirementsList.length === 0) {
-        requirementsText = legacyRaw.trim();
-      }
+      if (!requirementsText) requirementsText = legacyRaw.trim();
     }
   }
 
   return {
-    requirementsList,
-    requirementsText: requirementsText || (requirementsList.length === 0 ? 'No specific client requirements provided.' : ''),
+    requirementsText: requirementsText || 'No specific client requirements provided.',
     remarksText: remarksText || 'No additional remarks recorded.'
   };
 }
@@ -99,7 +69,6 @@ export default function AdminInquiryDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
-  const { openLightbox } = useLightbox();
 
   // Directly subscribe to the specific inquiry document
   useEffect(() => {
@@ -125,13 +94,9 @@ export default function AdminInquiryDetailPage() {
     return () => unsub();
   }, [id]);
 
-  const submittedReqId = inquiry?.submittedRequirementsId || null;
-  const { requirements: normalizedReqs } = useSubmittedRequirements(submittedReqId, inquiry?.requirements);
-
   const parsedData = useMemo(() => {
-    const combinedInquiry = inquiry ? { ...inquiry, requirements: normalizedReqs.length > 0 ? normalizedReqs : inquiry.requirements } : null;
-    return parseInquiryData(combinedInquiry);
-  }, [inquiry, normalizedReqs]);
+    return parseInquiryData(inquiry);
+  }, [inquiry]);
 
   const handleDelete = async () => {
     if (!inquiry) return;
@@ -322,68 +287,6 @@ export default function AdminInquiryDetailPage() {
                 {inquiry.specifiedRequirements || parsedData.requirementsText}
               </p>
             </div>
-
-            {/* Optional Attachments if any */}
-            {parsedData.requirementsList.length > 0 && (
-              <div className="inquiry-attachments-container">
-                <h4 className="inquiry-attachments-header">
-                  Document Attachments
-                </h4>
-                <div className="inquiry-reqs-list">
-                  {parsedData.requirementsList.map((req, idx) => {
-                    const hasFile = Boolean(req.file?.url);
-                    const isComplete = hasFile;
-
-                    return (
-                      <div key={idx} className={`inquiry-req-card ${isComplete ? 'is-uploaded' : ''}`}>
-                        <div>
-                          <div className="inquiry-req-title">
-                            <span>{req.name || `Requirement ${idx + 1}`}</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          {hasFile ? (
-                            isImageUrl(req.file.url, req.file.fileName) ? (
-                              <button
-                                type="button"
-                                className="inquiry-doc-badge valid inquiry-action-link"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                                title="View Image in Lightbox"
-                                onClick={() =>
-                                  openLightbox({
-                                    url: req.file.url,
-                                    title: req.file.fileName || req.name || 'Client Document',
-                                    subtitle: `Inquiry Attachment · ${inquiry.clientName || 'Client'}`
-                                  })
-                                }
-                              >
-                                <i className="fa-regular fa-image"></i>
-                                <span>{req.file.fileName || 'View Client Image'}</span>
-                              </button>
-                            ) : (
-                              <a
-                                href={req.file.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inquiry-doc-badge valid inquiry-action-link"
-                              >
-                                <i className="fa-solid fa-file-check"></i>
-                                <span>{req.file.fileName || 'View Client Document'}</span>
-                              </a>
-                            )
-                          ) : (
-                            <span className="inquiry-doc-badge missing">
-                              <i className="fa-solid fa-triangle-exclamation"></i> Missing Document
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </article>
 
           {/* Remarks & Signatures Row */}
@@ -436,7 +339,7 @@ export default function AdminInquiryDetailPage() {
             isOpen={showPdfModal}
             onClose={() => setShowPdfModal(false)}
             type="inquiry"
-            data={inquiry}
+            data={combinedInquiry || inquiry}
           />
         </div>
       )}

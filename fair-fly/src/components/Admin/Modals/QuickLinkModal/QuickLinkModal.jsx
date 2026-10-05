@@ -17,7 +17,8 @@ const QuickLinkModal = forwardRef(({ isOpen, onClose, editingLink: propEditingLi
         if (onClose) onClose();
       }}
       onOpen={(link) => setInternalLink(link || null)}
-      maxWidth="56rem"
+      maxWidth="66rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i

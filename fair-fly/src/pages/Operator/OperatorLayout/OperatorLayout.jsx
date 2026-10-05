@@ -19,6 +19,7 @@ const baseOperatorLinks = [
   { to: '/operator/tickets', icon: 'fa-solid fa-ticket', label: 'Tickets' },
   { to: '/operator/quick-links', icon: 'fa-solid fa-globe', label: 'Quick Links' },
   { to: '/operator/history', icon: 'fa-solid fa-clock-rotate-left', label: 'History' },
+  { to: '/operator/logs', icon: 'fa-solid fa-list-check', label: 'Activity Logs' },
 ];
 
 export default function OperatorLayout() {

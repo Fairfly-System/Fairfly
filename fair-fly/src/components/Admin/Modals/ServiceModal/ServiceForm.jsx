@@ -197,7 +197,8 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
     formData.name.trim() &&
     (formData.category !== "Other" || formData.customCategory.trim()) &&
     formData.price.trim() &&
-    String(formData.processingTime?.min || '').trim() !== ""
+    String(formData.processingTime?.min || '').trim() !== "" &&
+    workflowIds.length > 0
   );
 
   const handleSubmit = (e) => {
@@ -770,15 +771,28 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
           <button
             type="button"
             className="modalSubmitBtn btnLightBlue"
-            style={{ flex: 1, margin: 0, justifyContent: 'center' }}
+            style={{
+              flex: 1,
+              margin: 0,
+              justifyContent: 'center',
+              border: workflowIds.length === 0 ? '1px solid #ef4444' : undefined,
+              backgroundColor: workflowIds.length === 0 ? 'rgba(239, 68, 68, 0.05)' : undefined
+            }}
             disabled={isLoading}
             onClick={() => setIsWorkflowsModalOpen(true)}>
-            <span style={{ color: "var(--orange)", fontWeight: 600 }}>
+            <span style={{ color: workflowIds.length === 0 ? '#ef4444' : 'var(--orange)', fontWeight: 600 }}>
               <i className="fa-solid fa-diagram-project" style={{ marginRight: "0.375rem" }}></i>
-              {workflowIds.length > 0 ? `Workflows (${workflowIds.length})` : "Attach Workflow"}
+              {workflowIds.length > 0 ? `Workflows (${workflowIds.length})` : "Attach Workflow *"}
             </span>
           </button>
         </div>
+
+        {workflowIds.length === 0 && (
+          <p style={{ margin: '-0.25rem 0 0 0', fontSize: '0.75rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <i className="fa-solid fa-circle-exclamation"></i>
+            A service cannot be published without at least one operational workflow attached.
+          </p>
+        )}
 
         {/* Submit Action */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>

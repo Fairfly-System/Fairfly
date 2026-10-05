@@ -17,7 +17,8 @@ const WorkflowModal = forwardRef(({ isOpen, onClose, editingTemplate: propEditin
         if (onClose) onClose();
       }}
       onOpen={(template) => setInternalTemplate(template || null)}
-      maxWidth="56rem"
+      maxWidth="72rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i

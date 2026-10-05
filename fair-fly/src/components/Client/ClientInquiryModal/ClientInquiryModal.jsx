@@ -144,9 +144,12 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       ? Boolean(companyName.trim() && contactPersonFirstName.trim() && contactPersonLastName.trim())
       : Boolean(firstName.trim() && lastName.trim());
 
+    const hasValidEmail = Boolean(email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()));
+
     return Boolean(
       hasValidName &&
-      (cellphone.trim() || email.trim()) &&
+      hasValidEmail &&
+      cellphone.trim() &&
       selectedServices.length > 0 &&
       specifiedRequirements.trim() &&
       (!branchesList.length || selectedBranchUid)
@@ -188,8 +191,12 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       }
     }
 
-    if (!cellphone.trim() && !email.trim()) {
-      addToast('Please provide at least a phone number or email address', 'warning');
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      addToast('Please provide a valid email address (mandatory)', 'warning');
+      return;
+    }
+    if (!cellphone.trim()) {
+      addToast('Please provide a cellphone number', 'warning');
       return;
     }
     if (selectedServices.length === 0) {
@@ -236,6 +243,8 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       specifiedRequirements: specifiedRequirements.trim(),
       remarks: remarks.trim(),
       formNo: 'SAF-01-002',
+      isWalkIn: false,
+      workflow: 'online',
       status: 'submitted'
     };
 
@@ -275,8 +284,8 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
         </div>
       }
       size="large"
-      maxWidth="54rem"
-      width="94%"
+      maxWidth="72rem"
+      width="95%"
     >
       <form onSubmit={handleSubmit} className="client-inquiry-modal-form">
         <div className="inquiry-intro-callout">
@@ -496,7 +505,9 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
             </div>
 
             <div className="inquiry-field-group col-span-2">
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="email">
+                Email Address <span className="req-star">*</span>
+              </label>
               <input
                 id="email"
                 type="email"
@@ -504,6 +515,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 

@@ -79,10 +79,15 @@ function normalizeQuotationPdfData(data) {
     requirementsText = data.requirements.trim();
   } else if (Array.isArray(data.requirements)) {
     requirementsText = data.requirements
+      .filter((r) => {
+        const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+        return name !== 'specified requirements of client' &&
+               name !== 'client specified requirements' &&
+               name !== 'specified requirements of the client' &&
+               name !== 'specified requirements';
+      })
       .map(r => typeof r === 'string' ? `• ${r}` : `• ${r.name || r.title || 'Requirement'}`)
       .join('\n');
-  } else if (data.specifiedRequirements) {
-    requirementsText = String(data.specifiedRequirements).trim();
   }
 
   return {

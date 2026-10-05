@@ -508,10 +508,17 @@ export default function ServiceItemPage() {
 
           {/* Primary Action Buttons Bar */}
           <div className="service-actions-cta-bar">
+            {(!Array.isArray(service?.workflowIds) || service.workflowIds.length === 0) && (
+              <div style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b', fontSize: '0.8125rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                <span>This service is currently undergoing operational workflow configuration and is not yet open for inquiries.</span>
+              </div>
+            )}
             <button
               type="button"
               className="btn-primary service-cta-primary-btn"
               onClick={() => setShowRequestModal(true)}
+              disabled={!Array.isArray(service?.workflowIds) || service.workflowIds.length === 0}
             >
               <i className="fa-solid fa-bag-shopping"></i>
               Request This Service Now

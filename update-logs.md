@@ -1,5 +1,601 @@
 # Update Logs
 
+## [2026-10-06] Operator Quotation Details: Hide "Request Corrections" and Actions Toolbar Once Requirements Verified
+
+### Overview
+Updated [`QuotationRequirementsReview.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx) so that the entire review and correction action toolbar (including the **"Request Corrections"** button) is hidden once the quotation's requirements have been verified and approved (`requirementsStatus === 'approved'` or `'not_required'`).
+
+### Changes
+- Wrapped the review and action toolbar in `reqStatus !== 'approved' && reqStatus !== 'not_required'`.
+- Ensured verified quotations present a clean, finalized document verification section with the official approval badge and operator timestamp metadata callout.
+
+---
+
+## [2026-10-06] Operator Quotations Table: Removed "Mark as Sent" Quick Action
+
+### Overview
+Removed the inline **"Mark as Sent"** quick action button from the operator's Quotations Table / card list ([`OperatorQuotations.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx)).
+
+### Rationale & Clean Architecture
+- Eliminates potential misclicks from list views and ensures that quotations are audited and sent strictly through the **Quotation Details Page** ([`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx)) after verifying all service details and requirements.
+- Cleaned up unused status handlers and imports in [`OperatorQuotations.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx), keeping the row actions clean (View link + Status Pill).
+
+---
+
+## [2026-10-05] Operator Quotations Table: Removed "Accept on Behalf" Button to Prevent Accidental Triggers
+
+### Overview
+Removed the inline **"Accept on Behalf"** button and its modal trigger from the operator's main Quotations list / Data Table ([`OperatorQuotations.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx)).
+
+### Rationale & Flow Safeguards
+- Prevent accidental clicks directly from list views before an operator properly audits client details and attached requirements.
+- Acceptance on behalf of walk-in clients remains strictly handled within the dedicated **Quotation Details Page** ([`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx)), where all requirements verification, service schemas, and authorization acknowledgments can be reviewed in context.
+
+---
+
+## [2026-10-05] Operator Quotation Details: Hide "Complete on Site (Walk-in)" Once Requirements Verified
+
+### Overview
+Updated [`QuotationRequirementsReview.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx) so that the **"Complete on Site (Walk-in)"** button in the review toolbar is conditionally hidden once the quotation's requirements have reached verified status (`requirementsStatus === 'approved'` or `'not_required'`).
+
+### Changes
+- Wrapped the "Complete on Site (Walk-in)" action button in `reqStatus !== 'approved' && reqStatus !== 'not_required'`.
+- Cleaned up the operator toolbar to only show relevant post-approval actions or indicators when all mandatory requirements have been verified.
+
+---
+
+## [2026-10-05] System-Wide Form Modal Widening & Responsive Breakpoint Optimization
+
+### Overview
+Addressed cramped and narrow layouts across all data-entry and form modals in the system. Reconfigured global `BaseModal` presets and explicit modal widths to modern desktop proportions (widening from 500px–720px / 36rem–54rem to 60rem–76rem), while reinforcing strict mobile breakpoint protection (`@media (max-width: 768px)` with `width: 95% !important; max-width: 100% !important`) to eliminate overflowing or horizontal scroll on mobile devices.
+
+### Detailed Changes
+1. **Core Modal Primitives ([`BaseModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/ModalBase/BaseModal.jsx) & [`base-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/ModalBase/base-modal.css))**:
+   - `size="large"`: Widened default max-width from `54rem` to `72rem` (`width: 95%`).
+   - `size="xl"`: Widened default max-width from `66rem` to `80rem` (`width: 96%`).
+   - `size="medium"`: Widened default max-width from `40rem` to `56rem` (`width: 94%`).
+   - Added responsive mobile override via `@media (max-width: 768px)` enforcing `width: 95% !important; max-width: 100% !important; max-height: 92vh;`.
+
+2. **Client Form Modals**:
+   - [`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx): Widened to `maxWidth="72rem"`, `width="95%"`.
+   - [`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx): Widened to `maxWidth="72rem"`, `width="95%"`.
+   - [`ClientAppointmentForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx): Widened to `maxWidth="54rem"`, `width="95%"`.
+   - [`QuotationAttachRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+
+3. **Operator Form & Builder Modals**:
+   - [`CreateInquiryFormModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx): Widened to `maxWidth="72rem"`, `width="95%"`.
+   - [`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx): Widened from `720px` to `maxWidth="76rem"`, `width="96%"`.
+   - [`AddServiceModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/AddServiceModal/AddServiceModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+   - [`ServiceWorkflowModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/ServiceWorkflowModal/ServiceWorkflowModal.jsx): Widened from `720px` to `maxWidth="72rem"`, `width="95%"`.
+   - [`QualificationApplicationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QualificationApplicationModal/QualificationApplicationModal.jsx): Widened from `42rem` to `maxWidth="60rem"`, `width="95%"`.
+   - [`HistoryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+   - [`AcceptOnBehalfModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/AcceptOnBehalfModal/AcceptOnBehalfModal.jsx): Widened to `maxWidth="48rem"`, `width="95%"`.
+   - [`OperatorAppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/OperatorAppointmentCalendar/OperatorAppointmentCalendar.jsx): Widened to `maxWidth="54rem"`, `width="95%"`.
+   - [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx): Attach service modal widened to `maxWidth="60rem"`, `width="95%"`.
+   - [`QuotationRequirementsReview.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx): On-site intake modal widened to `maxWidth="68rem"`, `width="95%"`.
+
+4. **Admin Configuration, Management & Builder Modals**:
+   - [`ServiceModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceModal/ServiceModal.jsx): Widened to `maxWidth="72rem"`, `width="95%"`.
+   - [`WorkflowModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowModal.jsx) & [`WorkflowForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowForm.jsx): Widened to `maxWidth="72rem"` and `maxWidth="68rem"`.
+   - [`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+   - [`ServiceRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceRequirementsModal/ServiceRequirementsModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+   - [`InquiryFormBuilderModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/InquiryFormBuilderModal/InquiryFormBuilderModal.jsx): Widened to `maxWidth="76rem"`, `width="96%"`.
+   - [`FranchiseApplicationFormBuilderModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/FranchiseApplicationFormBuilderModal/FranchiseApplicationFormBuilderModal.jsx): Widened to `maxWidth="76rem"`, `width="96%"`.
+   - [`ApplicationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ApplicationModal/ApplicationModal.jsx): Widened to `maxWidth="72rem"`, `width="95%"`.
+   - [`OperatorModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/OperatorModal/OperatorModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+   - [`AdminModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/AdminModal/AdminModal.jsx): Widened to `maxWidth="60rem"`, `width="95%"`.
+   - [`ClientEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ClientEditModal/ClientEditModal.jsx): Widened to `maxWidth="60rem"`, `width="95%"`.
+   - [`ResourceModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ResourceModal/ResourceModal.jsx): Widened to `maxWidth="54rem"`, `width="95%"`.
+   - [`QuickLinkModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/QuickLinkModal/QuickLinkModal.jsx): Widened to `maxWidth="66rem"`, `width="95%"`.
+   - [`AdminLogsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/AdminLogsModal/AdminLogsModal.jsx): Widened to `maxWidth="72rem"`, `width="95%"`.
+   - [`CreateTicketModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Tickets/CreateTicketModal.jsx): Widened to `maxWidth="68rem"`, `width="95%"`.
+   - [`AdminAppointments.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminAppointments/AdminAppointments.jsx): Widened to `maxWidth="62rem"`, `width="95%"`.
+   - [`FranchiseAppDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminFranchiseApps/FranchiseAppDetailPage.jsx): Consultation scheduling modal widened to `maxWidth="54rem"`, `width="95%"`.
+   - [`AdminQualificationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminQualifications/AdminQualificationDetailPage.jsx): Document preview dialog widened to `maxWidth="64rem"`, `width="95%"`.
+   - [`AnnouncementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AnnouncementsModal/AnnouncementsModal.jsx): Widened to `maxWidth="60rem"`, `width="95%"`.
+
+---
+
+## [2026-10-05] Service Workflow Enforcement, Inquiry Intake Upgrade & Mandatory Email
+
+### Overview
+1. **Mandatory Operational Workflow on Services (Defense-in-Depth)**:
+   - Evaluated and implemented the recommended best solution to guarantee that no service can be created, displayed to clients, or linked by operators without an assigned operational workflow.
+   - **Creation Guard**: Blocked creation and modification of services lacking `workflowIds` in [`ServiceForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceModal/ServiceForm.jsx) and backend [`serviceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/serviceController.js) (`createService`, `updateService`).
+   - **Client Store Guard**: Filtered [`Services.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/Services.jsx) and [`ServiceItemPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientServiceItem/ServiceItemPage.jsx) so services without assigned workflows are hidden or disabled from client inquiries.
+   - **Operator Attach Guard**: Filtered [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx) and [`CreateInquiryFormModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx), and added backend validation in [`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js) (`attachServiceToInquiry`).
+
+2. **Upgraded Service Store Inquiry Intake Modal ([`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx))**:
+   - Upgraded the "Inquire Now" modal on the service store to match the official SAF-01-002 intake fields from [`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx).
+   - Added:
+     - Client Type toggle (Individual vs. Company / Organization)
+     - Company Name & 3-field Contact Person (First Name, M.I., Last Name)
+     - Full Name (First Name, M.I., Last Name)
+     - Population / Pax Count
+     - Complete Address
+     - Cellphone No. & Telephone No.
+     - Contract No. & IS No.
+     - Debounced Franchise/Branch Search via [`BranchSelectSearch`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/BranchSelectSearch/BranchSelectSearch.jsx)
+     - Specified Requirements of Client & Remarks
+   - **Excluded Services Offered Checklist**: Preserved predetermined service context from the store and showcased a prominent Selected Service Details preview card and requirements informational notice.
+
+3. **Mandatory Email Address Enforced Across All Inquiry Forms**:
+   - Enforced mandatory valid email format across [`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx), [`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx), and [`CreateInquiryFormModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx).
+   - Enforced backend zero-trust validation in [`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js) (`createInquiry`), returning `400 Bad Request` if email is missing or not a valid email format.
+
+---
+
+## [2026-10-05] Operator Guard: Restrict "Send to Client" and "Accept on Behalf" Until Requirements Verified
+
+### Overview
+Enforced zero-trust validation and frontend guards so that the Operator cannot send a quotation to the client (`Sent`) or accept a quotation on the client's behalf (`Accepted`) until all service requirements are verified and approved (`requirementsStatus === 'approved'` or `'not_required'`).
+
+### Key Implementation Details
+1. **Frontend Detail Page ([`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx))**:
+   - **Send to Client Guard**: The "Send to Client" button is disabled with gray styling and tooltip when `!requirementsApproved`. Attempting to trigger `handleStatusChange('Sent')` shows a toast warning alerting the operator that requirements must be approved first.
+   - **Accept on Behalf Guard**: The "Accept on Behalf of Client (On-Site)" button is disabled with gray styling and tooltip when `!requirementsApproved`. Calling `handleOpenAcceptModal` displays a toast warning if clicked prematurely.
+   - **Requirements Verification Alert Banner**: Added a high-visibility warning callout banner informing operators that sending and acceptance actions are locked until mandatory requirements below are verified and approved.
+2. **Accept on Behalf Modal ([`AcceptOnBehalfModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/AcceptOnBehalfModal/AcceptOnBehalfModal.jsx))**:
+   - Strictly validates `requirementsStatus === 'approved' || requirementsStatus === 'not_required'`.
+   - Disables the "Confirm Acceptance & Continue" submission button with a warning alert box explaining that requirements verification is pending.
+3. **Operator Quotations Table ([`OperatorQuotations.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/OperatorQuotations.jsx))**:
+   - Both the "Accept on Behalf" and "Mark as Sent" row action buttons are disabled when requirements are not approved, displaying descriptive tooltips and toast notifications if triggered.
+4. **Backend Zero-Trust API Gates ([`quotationController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/quotationController.js))**:
+   - `PATCH /api/quotations/:id/status`: Rejects transitions to `'Sent'` or `'Accepted'` with `400 Bad Request` if `requirementsStatus !== 'approved' && requirementsStatus !== 'not_required'`.
+   - `POST /api/quotations/:id/accept`: Strictly verifies that `requirementsStatus === 'approved' || requirementsStatus === 'not_required'`, rejecting premature requests with `400 Bad Request`.
+
+---
+
+## [2026-10-05] Inquiry Page Attachment Removal & Default Online Client Portal Workflow
+
+### Overview
+1. **Removed Requirement Attachments from Inquiry Pages**: Completely removed the feature where operators or clients could view or upload document attachments on the Inquiry page. All requirement attachment, review, and verification workflows now reside strictly on the Quotation stage.
+2. **Removed "Submitted Requirements & Attachments" Container**: Removed the attachments container from [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx), [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx), and [`InquiryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx). Inquiries now strictly show the client profile, service attribution, and text specifications ("Specified Requirements of Client").
+3. **Default to Online Workflow**: Inquiries submitted through the client portal ([`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx) and [`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx)) now explicitly default to `isWalkIn: false` and `workflow: 'online'`, enforced server-side in [`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js).
+4. **Cleaned Up Client Tracking Page**: Removed the legacy "Submit Reqs" button on the Inquiry tab and decommissioned [`ClientSubmitRequirementsModal`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientSubmitRequirementsModal/ClientSubmitRequirementsModal.jsx) in favor of the quotation-level [`QuotationAttachRequirementsModal`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx).
+
+---
+
+## [2026-10-05] FairFly Workflow Remodel: Inquiry → Quotation → Requirements → Approval → Payment
+
+### Overview
+Remodeled the entire FairFly customer journey so that service legal and document requirements are **an attachment/verification step during quotation acceptance**, rather than an upfront barrier when initially creating an inquiry or commercial quotation.
+
+The new workflow establishes a unified architecture across Online and Walk-in clients:
+`Inquiry → Service Selection/Assignment → Quotation → Client Requirements → Operator Review → Final Quotation Approval → Client Acceptance → Payment → Fulfillment`
+
+### Key Architectural & Functional Improvements
+
+1. **Inquiry Decoupling from Legal/Document Requirements**:
+   - Clients creating an inquiry (whether with a pre-selected service or general inquiry) are no longer blocked by mandatory document uploads.
+   - When an operator attaches a catalog service to an inquiry, the inquiry stays in `submitted` status and is immediately ready for commercial quotation drafting.
+
+2. **Commercial Quotation Generation**:
+   - Operators can prepare and send commercial proposals (rates, tour dates, inclusions, exclusions, remarks) immediately without waiting for client documents.
+   - Quotations initialize with authoritative `requirementsStatus`: `'pending'` (if the service has mandatory requirements) or `'not_required'` (if zero mandatory requirements).
+
+3. **Client Attachment & Operator Review of Requirements**:
+   - **Client Experience**: On [`QuotationDetailModal`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx) and [`ClientTrackingPage`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx), client sees quotation details and a prominent status callout. If requirements are pending or changes requested, an "Attach Requirements" button opens [`QuotationAttachRequirementsModal`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx), dynamically loading the service's schema, validating mandatory items, uploading securely via backend, and submitting for operator review (`requirementsStatus: 'submitted'`).
+   - **Operator Review**: On [`QuotationDetailPage`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx), integrated [`QuotationRequirementsReview`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx) component displaying catalog schema merged with submitted documents, uploaded file links, lightbox preview, and actions:
+     - **Approve Requirements**: Moves quotation to `requirementsStatus: 'approved'`, notifying client they can now accept.
+     - **Request Corrections**: Sets `requirementsStatus: 'changes_requested'`, recording specific feedback.
+     - **Complete on Site (Walk-in)**: Allows the operator to assist walk-in clients by uploading documents or filling text inputs directly on the quotation.
+
+4. **Zero-Trust Backend Security Gates & Payment Integrity**:
+   - **Acceptance Gate**: `POST /api/quotations/:id/accept` rejects premature acceptance with `400 Bad Request` if `requirementsStatus !== 'approved'`.
+   - **Payment Gate**: `POST /api/payments/cash` and `POST /api/payments/checkout-session` verify `requirementsStatus === 'approved'` before accepting cash or creating PayMongo checkout sessions.
+   - **Service Change Re-evaluation**: In `PUT /api/quotations/:id`, if the operator changes `serviceId`, the backend re-evaluates the new service requirements schema, resetting `requirementsStatus` to `'pending'` and clearing previous approvals so incompatible requirements cannot be carried over.
+   - **Payment Idempotency**: `finalizeSuccessfulPayment` verifies transaction state to prevent duplicate fulfillments.
+
+5. **Walk-in Workflows (Direct Cash & PayMongo QR)**:
+   - Walk-in clients leverage the identical service requirements schema and verification pipeline.
+   - Operators can complete requirements on-site, approve them, accept the quotation on the client's behalf, and either record Direct Cash payment or generate a dynamic PayMongo QR code for on-the-spot checkout.
+
+6. **Automated Verification & Complete Database Clean-up**:
+   - Comprehensive test suite ([`fly-api/src/scripts/testWorkflowRemodel.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testWorkflowRemodel.js)) verified all 4 customer flows, zero-trust security blocks, and idempotency.
+   - Purged all records of `payments`, `inquiries`, `quotations`, and `submitted_requirements` in Firestore as requested.
+
+---
+
+
+
+## [2026-10-05] Inquiry Workflow Switching & Quotation Creation Mandatory Service / Requirement Enforcement
+
+### Overview
+1. **Inquiry Workflow Switching Fix**: Fixed an issue where switching the client workflow from Online to Walk-in on the Inquiry Form Detail page (`/operator/inquiry-forms/:id`) did not persist in Firestore. The backend now immediately updates `status: 'submitted'`, `isWalkIn: true`, and attaches the service requirements schema, updating the UI in real time.
+2. **Quotation Modal Streamlining**: Removed the redundant "Client Intake & Requirements Workflow *" radio options and the blue online client warning banner from [`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx), centralizing client intake workflow decisions on the Inquiry Form page.
+3. **Mandatory Service & Requirements Enforcement**: Blocked quotation creation unless a catalog service is linked to the inquiry/quotation and all mandatory service requirements are fulfilled, enforced both on the frontend UI and via zero-trust validation in the backend API.
+
+### Key Changes
+1. **Backend Inquiry Controller ([`fly-api/src/controllers/inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js))**:
+   - Fixed `attachServiceToInquiry`: `walkInClient: true` now persists `status: 'submitted'`, `isWalkIn: true`, and resolved requirements to Firestore.
+   - Preserves `status: 'pending_requirements'` and `isWalkIn: false` when explicitly configuring for Online workflow.
+   - Added operator audit logging (`ATTACH_SERVICE_INQUIRY`) for both walk-in and online workflow configurations.
+2. **Backend Quotation Controller ([`fly-api/src/controllers/quotationController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/quotationController.js))**:
+   - Enforced `effectiveServiceId = serviceId || linkedInquiry?.serviceId`. Returns `400 Bad Request` if no catalog service is linked.
+   - Returns `400 Bad Request` if the linked inquiry is in online `pending_requirements` workflow and has not been switched to Walk-in.
+   - Enforces zero-trust mandatory requirements verification against the catalog service schema, rejecting with `400 Bad Request` if any mandatory item is missing both a valid file attachment and text input.
+3. **Quotation Creation Modal ([`fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx))**:
+   - Removed `clientWorkflow` state and the entire "Client Intake & Requirements Workflow *" radio card section.
+   - Removed the blue notice banner with the "Switch to Walk-in" button.
+   - Marked `Link Catalog Service *` as required in `isFormValid` and `handleSubmit`.
+   - Updated modal submit button with dynamic states: displays `"Link Service Required"` if no service is chosen, `"Complete Mandatory Requirements"` if required items are missing, and enables `"Create Quotation"` once satisfied.
+4. **Inquiry Form Detail Page ([`fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx))**:
+   - Added `handleQuickSwitchToWalkIn` action on the yellow "Awaiting Client Requirements" banner for 1-click conversion to Walk-in workflow.
+   - Guarded the "Create Quotation" action to warn the operator and open the configuration modal if no catalog service is attached or if the inquiry is currently in online pending requirements.
+   - Dynamic BaseModal title (`Configure Service & Client Workflow` vs `Attach Catalog Service`) and submit button label (`Update Workflow & Service` vs `Attach Service`).
+
+---
+
+## [2026-10-05] Inquiry Requirements: Support Text Input Submissions in Operator and Admin Portals
+
+### Overview
+Resolved an issue where text requirements submitted by online clients (e.g. for custom inquiries or service schemas with text/date/number input requirements) displayed an "Attach" file upload button and were labeled as missing documents on the Operator and Admin sides instead of displaying the client's submitted text.
+
+### Key Changes
+1. **Operator Inquiry Detail Page ([`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx))**:
+   - Updated `parseInquiryData` to preserve `inputType`, `value`, `textValue`, and `file` metadata across legacy and dynamic requirement schemas.
+   - Refactored `combinedForm` memo to guarantee that `normalizedReqs` from `submitted_requirements` are unified with the inquiry document.
+   - Updated section heading from "Document Attachments" to "Submitted Requirements & Attachments".
+   - Requirement card rendering:
+     - Distinguishes file requirements (`hasFile`) from text inputs (`hasText`).
+     - Renders client's submitted text in `.inquiry-req-text-box` with a `Text Provided` status badge.
+     - Prevents display of the "Attach" file upload button when a text requirement is already satisfied.
+     - Passes `combinedForm` to [`CreateQuotationModal`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx) and [`PdfDocumentView`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx) to preserve full requirement values during quotation and official PDF generation.
+2. **Admin Inquiry Detail Page ([`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx))**:
+   - Updated `parseInquiryData` and `combinedInquiry` to preserve requirement `inputType` and `value`.
+   - Updated requirement cards to render submitted text values with `Text Provided` badges instead of showing false "Missing Document" warnings.
+3. **Quotation Generation Modal ([`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx))**:
+   - Enhanced requirement state initialization to read `existing?.value` or `existing?.textValue`.
+   - Updated `isRequirementsComplete` validation to recognize requirements as satisfied when valid text is present, preventing false mandatory requirement submission blocks.
+4. **CSS Enhancements ([`inquiry-form-detail.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/inquiry-form-detail.css))**:
+   - Added styles for `.inquiry-req-info-col`, `.inquiry-req-badge-required`, `.inquiry-req-badge-optional`, `.inquiry-req-text-box`, and `.inquiry-req-text-val`.
+   - Adheres to the sharp architectural grid standard (0px border radius).
+
+---
+
+## [2026-10-05] Operator Activity Logging & Auditable History System
+
+### Overview
+Implemented comprehensive, verbose activity logging for Branch Operators across the FairFly system using a top-level `operator-logs` Firestore collection. Integrated human-readable action records into both the **Admin Operator Detail View** (`/admin/operators/:id`) and the **Operator Portal** (Operator Dashboard `/operator`, dedicated Activity Logs page `/operator/logs`, and Operator History `/operator/history`). Features a strict 90-day retention flag (`isArchived: false`, `retentionExpiresAt`) and true Firestore cursor pagination (`limit` & `startAfter`) to guarantee minimal document read costs and zero unbounded queries.
+
+### Key Changes
+1. **Top-Level Firestore Architecture (`operator-logs`)**:
+   - Registered `ID_PREFIXES.OPERATOR_LOG = 'OPL'` in [`fly-api/src/utils/idGenerator.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/utils/idGenerator.js).
+   - Created [`fly-api/src/services/operatorLoggerService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/operatorLoggerService.js) implementing:
+     - `logOperatorAction(...)`: writes to `operator-logs` with `operatorId`, `operatorEmail`, `branchName`, `action`, `entityType`, `entityId`, `description`, `timestamp`, `isArchived: false`, `retentionExpiresAt` (90 days), and `metadata`.
+     - `logFromRequest(req, ...)`: derives authenticated operator identity safely from cryptographically verified JWT (`req.user.uid`).
+     - `getOperatorLogs(...)`: retrieves paginated operator logs using sequential document cursor (`startAfter`) and active retention filter (`isArchived == false`).
+2. **Backend Controller Integration**:
+   - **Quotations** ([`quotationController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/quotationController.js)): Logs quotation creation, status updates, detail revisions, customer acceptance, and deletion with formatted quote numbers and amounts.
+   - **Inquiries** ([`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js)): Logs intake recordings, confirmation and quotation generation, service attachment, and deletion with form/control numbers.
+   - **Active Services** ([`activeServiceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/activeServiceController.js)): Logs step completion progress, full service fulfillment completions, and service order cancellations with refund details.
+   - **Appointments** ([`appointmentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/appointmentController.js)): Logs confirmation and status changes.
+   - **Payments** ([`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js)): Logs checkout link generation and on-site payment verifications.
+3. **API & Route Guarding**:
+   - Added `GET /api/operators/:id/logs` to [`operatorRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/operatorRoutes.js) guarded by `verifyFirebaseToken` and `requireRole(['admin', 'operator'])`.
+   - Supports `:id === 'me'` alias for authenticated operators to view their own activity history.
+4. **Security Rules & Composite Indexes**:
+   - [`firestore.rules`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/firestore.rules): Added rule for `/operator-logs/{logId}` granting read to admins and owner operators (`resource.data.operatorId == request.auth.uid`), while disallowing all direct client writes (`allow write: if false`).
+   - [`firestore.indexes.json`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/firestore.indexes.json): Added composite indexes on `operatorId`, `isArchived`, and `timestamp` (DESC).
+5. **Frontend UI Components**:
+   - Created [`OperatorActivityLogSection.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/OperatorActivityLogs/OperatorActivityLogSection.jsx) and [`operator-activity-logs.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/OperatorActivityLogs/operator-activity-logs.css) displaying the top 5 recent actions with 90d retention badge and "View More" button.
+   - Created [`OperatorLogsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/OperatorActivityLogs/OperatorLogsModal.jsx) with sequential cursor-based Next/Previous pagination.
+   - Created dedicated [`OperatorLogsPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorLogs/OperatorLogsPage.jsx) (`/operator/logs`) with search and category filtering (Quotations, Inquiries, Services, Payments, Appointments).
+   - Integrated into:
+     - Admin Operator Detail ([`OperatorDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminOperators/OperatorDetailPage.jsx))
+     - Operator Dashboard ([`OperatorDashboard.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx))
+     - Operator Sidebar ([`OperatorLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx))
+     - Operator History Tabs ([`OperatorHistory.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx))
+
+---
+
+## [2026-10-05] UI Styling: Round Chatbot Quick Action & Launcher Buttons
+
+### Overview
+Updated the Chatbot Quick Action suggestion buttons (`.chatbot-quick-access-button`) and floating trigger launcher button (`.chatbot-launcher`) to have round borders, restoring comfortable pill and circular touch targets for AI chat interaction while preserving the sharp architectural layout across the rest of the application.
+
+### Key Changes
+1. **Global CSS Rules ([`src/index.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/index.css))**:
+   - Added `.chatbot-launcher` to the circular 50% exception list alongside the notification bell button.
+   - Added `.chatbot-quick-access-button` to the pill 9999px exception list alongside notification badges.
+2. **Chatbot Component ([`src/components/Shared/Chatbot/chatbot.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Chatbot/chatbot.css))**:
+   - `.chatbot-launcher`: Configured with `border-radius: 50% !important;` for a smooth circular floating button profile.
+   - `.chatbot-quick-access-button`: Configured with `border-radius: 9999px !important;` for rounded FAQ suggestion pills.
+
+---
+
+## [2026-10-05] UI Styling: Round Notification Bell and Notification Badges
+
+### Overview
+Updated the notification bell button and all notification badges across the system to be round (circular trigger button and rounded badge capsules/dots), preserving the sharp architectural grid on cards, inputs, and modals while providing smooth, recognizable circular affordances for notification alerts and unread counters.
+
+### Key Changes
+1. **Global CSS Rules ([`src/index.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/index.css))**:
+   - Added explicit universal exceptions for `.notification-bell-btn`, `.notification-icon-bubble`, `.notification-empty-icon`, and `.notification-unread-dot` with `border-radius: 50% !important`.
+   - Added explicit pill exceptions for `.notification-badge`, `.notification-count-pill`, `.sidebar-tab-badge`, and `.client-nav-badge` with `border-radius: 9999px !important`.
+   - Removed notification badges and icons from the bottom 0px reset selector list to prevent cascade flattening.
+2. **Notification Bell Component ([`src/components/UI/NotificationBell/notification-bell.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/NotificationBell/notification-bell.css))**:
+   - `.notification-bell-btn`: Restored circular button profile with `border-radius: 50% !important`.
+   - `.notification-badge`: Restored rounded unread badge pill with `border-radius: 9999px !important`.
+   - `.notification-count-pill`: Restored rounded header count chip with `border-radius: 9999px !important`.
+   - `.notification-icon-bubble`: Restored circular icon bubble with `border-radius: 50% !important`.
+   - `.notification-unread-dot`: Restored circular unread indicator dot with `border-radius: 50% !important`.
+   - `.notification-empty-icon`: Restored circular empty state icon bubble with `border-radius: 50% !important`.
+3. **App Shell Navigation Badges ([`AppSidebar`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/app-sidebar.css) & [`AppNavbar`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/app-navbar.css))**:
+   - `.sidebar-tab-badge`: Restored rounded count pill with `border-radius: 9999px !important`.
+   - `.client-nav-badge`: Restored rounded count pill with `border-radius: 9999px !important`.
+
+---
+
+## [2026-10-05] Design System: System-Wide UI Remodeling to Pure Razor-Sharp Architecture (0px Border Radius)
+
+### Overview
+Successfully remodeled the entire FairFly design system across all modules (Landing Page, Client Portal, Operator Portal, Admin Portal, Shared Components, and Auth Shell) to eliminate the overly "roundy" aesthetic. In alignment with the user's preference for **Pure Razor-Sharp Architectural Grid** and **Crisp Rectangular Tags**, all cards, buttons, inputs, selects, textareas, modals, chips, pills, and containers now feature clean, modern 0px border-radii while preserving radial rotation for animated loading spinners.
+
+### Key Architectural & Component Changes
+1. **Design Tokens & Global CSS Engine (`src/index.css`)**:
+   - Set all design token radii to zero: `--radius-xs: 0;`, `--radius-sm: 0;`, `--radius-md: 0;`, `--radius-lg: 0;`, `--radius-full: 0;`.
+   - Enforced universal 0px border-radius reset on `*, *::before, *::after` with explicit exception for `.loader-spinner` (`border-radius: 50% !important`) to maintain circular rotation.
+   - Refactored `.status-pill` from rounded capsule into a sharp rectangular tag with square color-coded indicator dot (`border-radius: 0;`).
+   - Flattened `.card`, `.skeleton-card`, `.skeleton-circle`, `.skeleton-avatar`, `.skeleton-badge`, `.skeleton-btn`, and scrollbars.
+
+2. **Core System Primitives (`src/components/UI`)**:
+   - `DataTable`: Flattened bulk action bar, bulk badges, and action buttons.
+   - `KpiCard`: Flattened card surface, replaced circular icon bubble with sharp architectural square box, and updated KPI badges to crisp rectangular tags.
+   - `BaseModal`: Flattened modal container, close button, and header/footer layouts.
+   - `SearchBar` & `FilterChipGroup`: Flattened search wrapper and converted filter pills into rectangular chips with accent borders.
+   - `NotificationBell`: Flattened trigger button, unread count tag, floating dropdown panel, empty state icon, and notification item icon boxes.
+   - `Pagination`: Flattened wrapper, size selector dropdown, and pagination page buttons.
+   - `BranchSelectSearch` & `QuickLinkSelectSearch`: Flattened input triggers, dropdown menus, clear buttons, and category badges.
+   - `Toast`: Flattened notification alert cards and close buttons.
+   - `ServiceCarouselGallery` & `ServiceCard`: Flattened gallery stage, navigation arrow buttons, thumbnails, category badges, and cards.
+   - `ImageLightbox`: Flattened viewport image, counter tag, navigation controls, and action buttons.
+
+3. **App Shell & Auth Pages (`src/pages/Index`)**:
+   - `AppSidebar` & `AppNavbar`: Flattened active tab indicator bar, square profile avatar with initials, navigation links, and notification counter tags.
+   - `Login`, `Register`, `ResetPassword`, `VerifyEmail`, `ReuploadId`: Flattened hero badges, form inputs, segment OTP boxes, submit CTA buttons, role selector tabs, and notice cards.
+   - `Chatbot`: Flattened floating launcher button, chat window container, message bubbles, quick access chips, and send button.
+
+4. **Client & Operator Module Components (`src/components/Shared`, `src/components/Client`, `src/pages/Operator`)**:
+   - `ValidIdUpload` & `ValidIdInfoModal`: Flattened upload dropzones, file preview cards, and ID requirement cards.
+   - `TeamChatModal`: Flattened chat modal container and message bubbles.
+   - `ServiceDetailModal`: Flattened Airbnb-style modal container, hero badge, requirements list, and booking widget.
+   - `AppointmentCalendar`: Flattened status legend indicators, month/week grid day cells, and appointment chips.
+   - `ClientServicesMarketplace` & `ClientTracking`: Flattened aside filter drawer, search boxes, service cards, quotation cards, and inquiry cards.
+   - Operator Dashboard, Quotation Detail, Inquiry Form Detail, and Appointments: Flattened KPI boxes, action buttons, status badges, and procedure headers.
+
+5. **Admin Module Components & Modals (`src/components/Admin`, `src/pages/Admin`)**:
+   - `StatCards`: Normalized stat card icon bubbles and trend badges to crisp 0px square containers.
+   - `modal.css`: Flattened all admin modal inputs, selects, action buttons (`.modalSubmitBtn`), steps container, step cards, and step number badges (`.stepBadge`).
+   - `ApplicationModal`: Flattened modal container, close button, application status tag, and approval/rejection button groups.
+   - `ResourceModal`: Flattened upload dropzone, icon bubble, and file preview card.
+   - `FranchiseeApplication`: Flattened franchisee card, avatar container, status tag, action buttons, and footer.
+   - `Skeleton`: Normalized `.skeleton-primitive--circle` to 0px to match architectural square layout.
+
+---
+
+## [2026-10-05] Feature: Alternating Section Travel Backgrounds (bg-nobg-bg-nobg) with Opacity 0.12
+
+### Overview
+Implemented the requested alternating background rhythm (`bg` - `nobg` - `bg` - `nobg` - `bg` - `nobg`) across all landing page sections beyond Business System. Generated custom AI travel assets matching each section's subject matter and applied them at `opacity: 0.12` with smooth multi-stop gradient overlays, ensuring optimal text readability and elegant visual rhythm.
+
+### Alternating Section Rhythm & Assets
+1. **`BusinessSystem` (BG)**:
+   - Asset: `public/business_system_bg.jpg` (Modern luxury airport terminal lounge overlooking the runway).
+   - Image Opacity: `0.12`.
+2. **`ServiceGuidelines` (NO BG)**:
+   - Clean solid off-white background (`var(--bg, #F8FAFC)`).
+3. **`BusinessModel` (BG)**:
+   - Asset: `public/business_model_bg.jpg` (Overhead luxury business travel desk with route-planning tablet, passport, boarding passes, and runway view).
+   - Image Opacity: `0.12`.
+   - Updated `BusinessModel.jsx` and `business-model.css`.
+4. **`TrainingComparison` (NO BG)**:
+   - Clean solid off-white background (`var(--bg, #F8FAFC)`).
+5. **`Explore` (BG)**:
+   - Asset: `public/explore_bg.jpg` (Atmospheric high-altitude curved Earth horizon with turquoise coral islands and global aviation flight routes).
+   - Image Opacity: `0.12`.
+   - Updated `Explore.jsx` and `explore.css`.
+6. **`FranchiseSection` (NO BG)**:
+   - Clean solid background (`#FFFFFF`).
+
+---
+
+## [2026-10-05] Polish: Business System Background Visibility Boost & Frosted Editorial Header
+
+### Overview
+Addressed visibility feedback on the `#business-system` section background image. Drastically reduced heavy multi-layer white washes, increased image opacity to 82%, and placed the section header in an architectural frosted glass container (`rgba(255, 255, 255, 0.88)` with `backdrop-filter: blur(12px)`) so the luxury airport terminal, floor-to-ceiling glass, and tarmac airliner are immediately vivid and recognizable while ensuring 100% effortless text readability.
+
+### Key Changes
+1. **Background Visibility Optimization (`business-system.css`)**:
+   - Boosted `.bs-bg-img` opacity from 0.28 to 0.82 with saturation and contrast enhancement.
+   - Replaced heavy 94% white wash overlay with a light, transparent gradient (`rgba(248, 250, 252, 0.18)`–`0.4`) that only dissolves into solid background at the extreme section borders.
+2. **Text Legibility Enhancement (`business-system.css`)**:
+   - Styled `.bs-header` as a sleek frosted glass editorial box (`background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(12px)`) with a 4px purple accent border, giving the ISO 9001 title and subtitle absolute clarity and contrast.
+   - Upgraded `.bs-grid` and `.bs-card` with semi-translucent frosted white surfaces (`rgba(255, 255, 255, 0.94)`) and subtle elevation shadows.
+
+---
+
+## [2026-10-05] Feature: Scoped Hero Text Background with Fading Opacity Gradient
+
+### Overview
+Scoped the travel airplane background image (`photo-1436491865332-7a61a109cc05`) exclusively to the Hero text column (`.hero-text-col`), removing global hero background coverage. Implemented a dual-directional fading opacity gradient mask and overlay that smoothly dissolves the image into the clean off-white canvas backdrop towards the 3D Puzzle House and towards the metric trust strip, ensuring maximum typography legibility.
+
+### Key Changes
+1. **Hero Text Column Background (`Landing.jsx`)**:
+   - Added `.hero-text-bg-container` inside `.hero-text-col` with the requested Unsplash airplane wing image (`photo-1436491865332-7a61a109cc05`) and `.hero-text-bg-overlay`.
+2. **Dual-Directional Fading Opacity Gradient (`landing.css`)**:
+   - Applied CSS `mask-image` (and `-webkit-mask-image`) with `destination-in` composite to gently fade the image from left-to-right (towards the 3D house) and top-to-bottom.
+   - Combined with multi-stop linear gradients on `.hero-text-bg-overlay` (`rgba(248, 250, 252, 0.52)` transitioning to `var(--bg, #F8FAFC)` at 100%) so the image blends cleanly into the solid background.
+   - Scoped `z-index: 1` and `position: relative` to all direct text column children so the eyebrow, heading, paragraph, and buttons remain distinct, crisp, and high-contrast.
+
+---
+
+## [2026-10-05] Polish: Hero 45/55 Layout Split & Fluid Single-Row Button Resizing
+
+### Overview
+Adjusted the hero section grid divide to 45% (Text Column) and 55% (3D Building Blocks House) and resized the three hero action buttons (`BROWSE SERVICES`, `BUSINESS SYSTEM`, `FRANCHISE INQUIRIES`) so they fit comfortably on a single row without wrapping, overlapping, or text truncation, even when zooming in across viewports down to the 640px mobile breakpoint.
+
+### Key Changes
+1. **Hero Layout Ratio (`landing.css`)**:
+   - Configured `.hero-main-container` with `grid-template-columns: 45% 55%`.
+   - Updated `.hero-text-col` padding to use fluid horizontal gutters (`padding: 0 clamp(1rem, 2vw, 2.25rem) 0 clamp(1.25rem, 2.5vw, 3rem)`) to recover ~30-40px of available space for action buttons.
+2. **Action Buttons Single-Row Fitting (`landing.css`)**:
+   - Enforced `flex-wrap: nowrap` and `gap: clamp(0.3rem, 0.5vw, 0.55rem)` on `.hero-actions`.
+   - Balanced `.btn-hero-*` font size (`clamp(0.7rem, 0.85vw, 0.95rem)`), padding (`clamp(0.65rem, 0.8vw, 0.85rem) clamp(0.35rem, 0.6vw, 0.95rem)`), and icon sizing (`clamp(0.68rem, 0.75vw, 0.85rem)`) with `letter-spacing: 0.025em`.
+   - Guaranteed all 3 buttons stay on a single row through zooming in and viewport resizing down to the 640px mobile breakpoint (where it stacks cleanly for mobile devices).
+
+---
+
+## [2026-10-05] Polish: Hero Grid Column Divide Adjustment (40% / 60%)
+
+### Overview
+Adjusted the two-column grid division in the Hero section (`.hero-main-container`) so that the left text section occupies 40% and the right 3D Puzzle House section occupies 60% of the available width.
+
+### Key Changes
+1. **Hero Layout Ratio (`landing.css`)**:
+   - Updated `.hero-main-container` from `1.12fr 0.88fr` to `grid-template-columns: 40% 60%`.
+
+---
+
+## [2026-10-05] Polish: Hero Headline Text Capitalization
+
+### Overview
+Capitalized the hero heading text to uppercase ("START YOUR JOURNEY AS A FRANCHISE PARTNER, BUILD YOUR TRAVEL BUSINESS WITH") while specifically preserving the signature lowercase `fairfly` brand wordmark with its original `Fredoka` font and colors.
+
+### Key Changes
+1. **Headline Content (`Landing.jsx`)**:
+   - Updated headline to:
+     `START YOUR JOURNEY AS A FRANCHISE PARTNER, <br />BUILD YOUR TRAVEL BUSINESS WITH <span className="hero-heading-brand"><span className="brand-fair">fair</span><span className="brand-fly">fly</span></span>`.
+
+---
+
+## [2026-10-05] Polish: Layout Shift Prevention on 3D Pillar Description Swapping
+
+### Overview
+Eliminated Cumulative Layout Shift (CLS) in the hero section caused by height variance when toggling or hovering between different 3D franchise pillars. Applied fixed vertical minimum heights on the callout card, header, and description blocks so that swapping between shorter and longer descriptions maintains a completely stable layout without moving the metric trust strip or subsequent sections.
+
+### Key Changes
+1. **Pillar Callout Height Stability (`puzzle-house.css`)**:
+   - Set `.puzzle-piece-callout` to `min-height: 9.5rem` on desktop (and `min-height: 11.25rem` on mobile) with flex column alignment.
+   - Assigned `.callout-header` a reserved `min-height: 3.25rem` to absorb single vs multi-line title wrapping.
+   - Set `.callout-desc` to `min-height: 3.85rem` (and `5.25rem` on mobile) to guarantee that all 6 pillar descriptions occupy the identical reserved vertical footprint.
+2. **Hero CSS Cleanup (`landing.css`)**:
+   - Removed unintentional `min-height: rem;` typo from `.hero`.
+
+---
+
+## [2026-10-05] Polish: Hero Brand Font Restoration and 3D Canvas Badge Removal
+
+### Overview
+Restored the original signature `Fredoka` font (`--font-logo`) specifically for the "fairfly" brand text within the hero heading, preserving its distinctive character and dual-color branding (`fair` in purple and `fly` in orange) alongside the sharp condensed headline. Also cleanly removed the "Interactive 3D System Architecture" floating badge overlay from the 3D WebGL stage to keep the canvas presentation clean and unobtrusive.
+
+### Key Changes
+1. **Hero Brand Font (`Landing.jsx`, `landing.css`)**:
+   - Explicitly assigned `.hero-heading-brand` to `var(--font-logo)` (`Fredoka`), preventing uppercase inheritance and restoring original letter spacing.
+   - Rendered `fair` in `--purple` (`#5558E3`) and `fly` in `--orange` (`#F97316`).
+2. **3D Canvas Badge (`PuzzleHouse.jsx`, `puzzle-house.css`)**:
+   - Removed `<div className="canvas-interaction-badge">...</div>` overlay and its corresponding CSS rules.
+
+---
+
+## [2026-10-05] Feature: Complete Landing Page Revamp — Razor-Sharp Architectural Editorial Design & 3D Three.js Building Blocks House
+
+### Overview
+Executed a comprehensive architectural overhaul of the FairFly public landing page. Eliminated all rounded buttons, rounded cards, and pill badges in favor of a razor-sharp (0px border-radius) Swiss editorial grid aesthetic inspired by high-fashion/architectural typography (`Barlow Condensed` and `Syne`). Replaced the flat 2D SVG puzzle illustration with an interactive WebGL Three.js 3D building blocks house featuring realistic directional lighting, specular highlights, mouse tilt parallax, raycasting hover elevation, accessible pillar selection chips, and sharp editorial information callout cards.
+
+### Key Changes
+1. **Interactive Three.js 3D Building Blocks House (`PuzzleHouse.jsx`, `puzzle-house.css`)**:
+   - Replaced flat SVG with real-time Three.js WebGL canvas stage.
+   - Built 6 modular 3D geometric architectural blocks matching FairFly's turnkey pillars: Yellow Roof (ISO 9001-2000), Red Chimney (HQ Brand Power), Blue Upper Wall (100% Cloud Virtual Office), Purple Wall (2-Month Fast-Track Academy), Green Base (Zero Inventory), and Orange Plinth Base (Cash-Basis Profit).
+   - Added directional lighting, ambient occlusion contact shadow, and smooth mouse tilt parallax.
+   - Implemented pointer raycasting: hovered blocks smoothly elevate with emissive highlights, synchronized with real-time editorial callout cards.
+   - Added accessible 6-pillar toggle chips with 0px border-radius and instant highlight capability for touch/desktop users.
+
+2. **Sharp Editorial Hero & Global Typography (`index.html`, `index.css`, `landing.css`, `Landing.jsx`)**:
+   - Preloaded `Barlow Condensed` and `Syne` in `index.html` and configured `--font-editorial` / `--font-display-sharp` in `index.css`.
+   - Removed rounded pill badges (`.hero-badge`) on top of the hero text, replacing with a sharp architectural eyebrow with hairline accent bar (`STANDARDIZED TRAVEL MANAGEMENT SYSTEM · ISO 9001:2000 ARCHITECTURE`).
+   - Implemented tall condensed uppercase display headline with period accent (`BUILD YOUR TRAVEL FRANCHISE NETWORK WITH FAIRFLY.`).
+   - Converted all CTA action buttons (`BROWSE SERVICES`, `BUSINESS SYSTEM`, `FRANCHISE INQUIRIES`) into razor-sharp rectangular buttons with 0px border-radius, clean icons, and inverted hover contrast.
+   - Replaced floating metric strip with a 4-column connected hairline grid trust strip with index codes (`[ 01 ]` to `[ 04 ]`).
+
+3. **Complete Section Revamp Across Entire Landing Page**:
+   - **Core Services Teaser Strip (`Landing.jsx`, `landing.css`)**: Converted into a sharp architectural block with crisp rectangular tags (`[ PASSPORT FILING ]`, `[ PSA CERTIFICATES ]`, etc.) and a sharp CTA.
+   - **Business System (`BusinessSystem.jsx`, `business-system.css`)**: Revamped from rounded floating cards to a 4-column connected hairline grid with SOP codes (`[ SOP-01 ]` to `[ DATA-04 ]`) and a 4-cell highlights bar.
+   - **Service Guidelines (`ServiceGuidelines.jsx`, `service-guidelines.css`)**: Built razor-sharp category tabs, a 3-column financial economics strip, and sequential step cards (`[ STEP 01 ]` to `[ STEP 04 ]`).
+   - **Business Model (`BusinessModel.jsx`, `business-model.css`)**: Redesigned Paper-to-Plane insight banner and comparison grid into a sharp two-column layout with 0px border-radius.
+   - **Training Academy (`TrainingComparison.jsx`, `training-comparison.css`)**: Built high-contrast comparison table comparing the 2-Month Academy vs Traditional unguided trial-and-error with hairline borders.
+   - **Explore Gallery (`Explore.jsx`, `explore.css`)**: Converted masonry tiles to sharp 0px border-radius with uppercase condensed destination tags.
+   - **Franchise Section (`FranchiseSection.jsx`, `franchise-section.css`)**: Revamped with architectural eyebrow, 4-cell stats grid, and onboarding step pipeline (`[ 01 ]` to `[ 05 ]`).
+   - **Footer Card (`FooterCard.jsx`, `footer-card.css`)**: Converted to sharp editorial banner with dual action buttons.
+   - **Navbar (`navbar.css`)**: Aligned navigation links, login button, and franchise CTA button with 0px border-radius and uppercase tracking.
+
+4. **Component Catalog & Documentation (`component-list.md`)**:
+   - Documented the new `PuzzleHouse` Three.js 3D component with props, interactive behaviors, and design system integration.
+   - Verified clean frontend production compilation with Vite (`npm run build`: 0 errors).
+
+---
+
+## [2026-10-05] Feature: Operator-Assisted Quotations, Service Requirements Collection, and Walk-in Direct Cash & PayMongo Payments
+
+### Overview
+Implemented complete end-to-end support for operator-assisted quotations, walk-in cash payments, PayMongo QR online checkout on the operator side, and dynamic service requirements collection for both walk-in and online clients. All mutations follow the zero-trust architecture ("Never Trust the Client"), with authoritative server-side validation, rate limiting, branch authorization guards, IDOR/BOLA protection, and atomic payment fulfillment.
+
+### Key Changes
+1. **Operator-Side Direct Cash Payment & PayMongo QR Checkout**:
+   - Backend `POST /api/payments/cash`: Validates quotation ownership (`branchUid`), checks quotation `Accepted` status, derives payment amount authoritatively from the database, enforces idempotency against existing paid records, creates payment document in `payments` (`provider: 'cash'`, `paymentMethodType: 'Cash'`, `receivedByOperatorId`, `receivedByOperatorName`), and atomically triggers `finalizeSuccessfulPayment` to activate service fulfillment.
+   - Backend `POST /api/payments/checkout-session`: Expanded RBAC to allow operators to initiate PayMongo QR checkout for accepted quotations, setting dynamic success/cancel redirect URLs back to `/operator/quotations/:id`.
+   - Backend `POST /api/payments/:id/verify`: Added branch operator authorization checks to allow operators to verify PayMongo QR checkout sessions.
+   - Frontend `AcceptOnBehalfModal.jsx`: Created dedicated operator acceptance modal replacing native `window.confirm`. Displays quotation contract summary, client details, authorization disclaimer, client verification checkbox, and next-step workflow selection (immediate payment processing vs save acceptance).
+   - Frontend `OperatorPaymentModal.jsx`: Created dual-payment modal with explicit Cash confirmation (audit disclaimer, receipt confirmation checkbox, remarks) and PayMongo QR generation (dynamic QR link, auto-refresh polling, live status indicator).
+   - Frontend `QuotationDetailPage.jsx`: Integrated `AcceptOnBehalfModal` and `OperatorPaymentModal`, auto-opened upon quotation acceptance on behalf of client, added "Process Payment (Cash / PayMongo)" action button, added automatic URL redirect verification (`?payment_status=success`), and rendered a "Payment & Fulfillment Settlement" card upon successful payment.
+   - Frontend `OperatorQuotations.jsx`: Added direct "Accept on Behalf" action trigger and `AcceptOnBehalfModal` integration on the operator quotations list.
+
+2. **Operator-Assisted Requirements for Walk-in Clients**:
+   - Backend `quotationController.js`: Supported `submittedRequirements` in `createQuotation`, enforcing server-side validation that all mandatory requirements (`required !== false`) have uploaded files or text values. Atomically creates `submitted_requirements` and links `submittedRequirementsId` on both the quotation and linked inquiry.
+   - Frontend `CreateQuotationModal.jsx`: Integrated dynamic requirement schema verification. Added high-visibility **Client Intake & Requirements Workflow** radio card selector (`Walk-in Client (Assist On-Site)` vs `Online Registered Client`). In walk-in mode, operators can directly upload files (`uploadFileToBackend`) and enter required information on-site before issuing the quotation. In online mode, dynamic badges and helper banners indicate requirement status with direct options to assist walk-in clients.
+   - Frontend `OperatorPaymentModal.jsx`: Added explicit, high-visibility **Payment Method Radio Cards** (`Direct Cash Payment (Walk-in Clients)` vs `PayMongo Online Payment (Dynamic QR Ph Code)`) with styled circular radio selectors, clear subtitles, and full accessibility support.
+
+3. **Online Client Inquiry Workflow for Attached Services**:
+   - Backend `POST /api/inquiries/:id/attach-service`: Allows branch operators to attach a catalog service to an inquiry. For online clients, transitions inquiry to `pending_requirements`, copies requirement schema, and creates a high-priority notification for the client. For walk-in clients (`isWalkIn: true`), attaches service and keeps inquiry ready for operator on-site completion.
+   - Backend `POST /api/inquiries/:id/submit-requirements`: Allows authenticated clients to submit required documents for inquiries in `pending_requirements`. Validates mandatory fields, creates document in `submitted_requirements`, transitions inquiry back to `submitted`, and notifies the branch operator.
+   - Frontend `InquiryFormDetailPage.jsx`: Added prominent "Attach Catalog Service" / "Re-configure Service / Workflow" action modal with high-visibility radio selection ("Online Client (Await Requirements)" vs "Walk-in Client (Assist On-Site)"), styled radio circles, and active banner action buttons to ensure the modal and radio options are accessible regardless of existing service attachment status.
+   - Frontend `ClientSubmitRequirementsModal.jsx`: Created client modal to complete and upload pending service requirements with drag-and-drop file uploaders, validation indicators, and upload feedback.
+   - Frontend `ClientTrackingPage.jsx` & `InquiryDetailModal.jsx`: Displayed `status-pending_requirements` badges and "Submit Requirements" action buttons to give clients direct access to upload required documents.
+
+---
+
+## [2026-10-04] Fix: Disassociated Client's Service Intake Specifications from Agency Document Requirements
+
+### Overview
+Addressed architectural misconception where "Specified Requirements of Client" (captured in Section 2 of Form `SAF-01-002`) was mistakenly added as a pseudo document requirement in the `submitted_requirements` collection. Clarified that "Specified Requirements of the Client" represents what the client needs/wants from the agency's service, not an agency-required document. Ensured that client inquiry submissions never instantiate document requirement records for client specifications, separated client request specifications from document attachments in all inquiry detail views, and updated the quotation creator (`CreateQuotationModal.jsx`) and quotation PDF exporter (`PdfDocumentView.jsx`) to prevent client request text from leaking into the agency's document requirements column.
+
+### Key Changes
+1. **Backend Inquiry Controller (`inquiryController.js`)**:
+   - `createInquiry`: Removed the fallback that added `[{ name: 'Specified Requirements of Client', value: resolvedSpecReqs }]` to `rawReqsArray`. Ensured `createSubmittedRequirementsRecord` is only called when actual document files or checklist items are provided.
+   - Filtered out any pseudo-requirement names (`Specified Requirements of Client`, `Client Specified Requirements`) from `rawReqsArray` and `confirmInquiry`.
+   - Stored the client's service request specifications strictly as a string in `specifiedRequirements`.
+   - `confirmInquiry`: Formatted quotation requirements using actual service requirements or standard document defaults, avoiding leaking client specifications into the quotation document checklist.
+
+2. **Backend Quotation Controller (`quotationController.js`)**:
+   - `createQuotation`: Filtered pseudo-requirements from `effectiveSubmittedReqs` to guarantee quotations never inherit or create document requirement records for client specifications.
+
+3. **Frontend Inquiry & Quotation Modals (`InquiryDetailModal.jsx`, `InquiryFormDetailPage.jsx`, `AdminInquiryDetailPage.jsx`, `QuotationDetailModal.jsx`)**:
+   - `InquiryDetailModal.jsx`: Rendered `inquiry.specifiedRequirements` as a dedicated text block for client service specifications, and rendered actual uploaded files in a separate "Attached Documents & Files" section.
+   - `InquiryFormDetailPage.jsx` & `AdminInquiryDetailPage.jsx`: Filtered pseudo-requirements out of `requirementsList` so that "Specified Requirements of Client" never renders under "Document Attachments".
+   - `QuotationDetailModal.jsx`: Filtered pseudo-requirements out of `displayRequirements`.
+
+4. **Operator Quotation Builder & PDF Exporter (`CreateQuotationModal.jsx`, `PdfDocumentView.jsx`)**:
+   - `CreateQuotationModal.jsx`: Removed `inquiry.specifiedRequirements` as the prefill for quotation document requirements. Relabeled the field to `Document Requirements (Needed by Agency from Client) *` and added a prominent callout displaying the client's intake specifications for operator reference.
+   - `PdfDocumentView.jsx`: Removed the fallback in `normalizeQuotationPdfData` that placed `specifiedRequirements` into the quotation requirements column.
+
+5. **Database Maintenance & Automated Verification (`cleanPseudoRequirements.js`, `testSubmittedRequirements.js`)**:
+   - Executed `cleanPseudoRequirements.js` live: Purged 11 orphaned/empty pseudo-requirement documents from `submitted_requirements` and unlinked them from parent inquiries.
+   - Verified with `testSubmittedRequirements.js`: **13/13 Passed, 0 Failed**.
+   - Validated production frontend compilation: `npm run build` in `fair-fly` completed cleanly with **0 errors**.
+
+---
+
 ## [2026-10-04] Services Page: Comprehensive Category & Multi-Field Search Filtering Fix
 
 ### Overview

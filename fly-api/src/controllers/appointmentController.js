@@ -10,6 +10,7 @@ const {
   notifyBranchOperators 
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
+const { logFromRequest } = require('../services/operatorLoggerService');
 
 const COLLECTIONS = {
   APPOINTMENTS: 'appointments',
@@ -276,6 +277,14 @@ const updateAppointmentStatus = async (req, res) => {
         metadata: { appointmentId: id, status: normalizedStatus }
       }).catch(e => console.warn('Appointment status notification warning:', e.message));
     }
+
+    await logFromRequest(req, {
+      action: 'UPDATE_APPOINTMENT_STATUS',
+      entityType: 'appointment',
+      entityId: id,
+      description: `Marked Appointment (${id}) for ${existing.clientName || 'Client'} as "${normalizedStatus}"`,
+      metadata: { appointmentId: id, status: normalizedStatus, clientName: existing.clientName, serviceType: existing.serviceType }
+    });
 
     return res.status(200).json({ message: `Appointment status updated to ${normalizedStatus}` });
   } catch (error) {

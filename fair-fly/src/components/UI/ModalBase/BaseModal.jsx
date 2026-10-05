@@ -56,16 +56,16 @@ const BaseModal = forwardRef(({
   let defaultMaxWidth = undefined;
   let defaultWidth = undefined;
   if (size === 'large') {
-    defaultMaxWidth = '54rem';
-    defaultWidth = '94%';
+    defaultMaxWidth = '72rem';
+    defaultWidth = '95%';
   } else if (size === 'xl') {
-    defaultMaxWidth = '66rem';
+    defaultMaxWidth = '80rem';
     defaultWidth = '96%';
   } else if (size === 'medium') {
-    defaultMaxWidth = '40rem';
-    defaultWidth = '92%';
+    defaultMaxWidth = '56rem';
+    defaultWidth = '94%';
   } else if (size === 'small') {
-    defaultMaxWidth = '28.125rem';
+    defaultMaxWidth = '32rem';
     defaultWidth = '90%';
   }
 

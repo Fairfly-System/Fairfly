@@ -14,6 +14,7 @@ const {
 const { createPaymongoRefund } = require('../services/paymongoService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
 const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
+const { logFromRequest } = require('../services/operatorLoggerService');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
@@ -484,6 +485,24 @@ const updateStepStatus = async (req, res) => {
         }
       }
 
+      if (allCompleted) {
+        await logFromRequest(req, {
+          action: 'COMPLETE_ACTIVE_SERVICE',
+          entityType: 'activeService',
+          entityId: id,
+          description: `Completed all workflow steps and fulfilled Active Service "${serviceRecord.serviceType || 'Service'}" (${id}) for ${serviceRecord.clientName || 'Client'}`,
+          metadata: { serviceId: id, serviceType: serviceRecord.serviceType, clientName: serviceRecord.clientName }
+        });
+      } else {
+        await logFromRequest(req, {
+          action: 'UPDATE_STEP_STATUS',
+          entityType: 'activeService',
+          entityId: id,
+          description: `Completed Step ${targetIdx + 1} ("${steps[targetIdx]?.title || 'Step'}") on Active Service "${serviceRecord.serviceType || 'Service'}" (${id}) for ${serviceRecord.clientName || 'Client'}`,
+          metadata: { serviceId: id, stepIndex: targetIdx, stepTitle: steps[targetIdx]?.title, serviceType: serviceRecord.serviceType, clientName: serviceRecord.clientName }
+        });
+      }
+
       return res.status(200).json({ 
         message: `Step ${targetIdx + 1} marked as Completed.`,
         allCompleted,
@@ -727,6 +746,14 @@ const cancelActiveService = async (req, res) => {
     } catch (adminNotifErr) {
       console.warn('Error notifying admins of cancellation:', adminNotifErr.message);
     }
+
+    await logFromRequest(req, {
+      action: 'CANCEL_ACTIVE_SERVICE',
+      entityType: 'activeService',
+      entityId: id,
+      description: `Cancelled Active Service "${serviceRecord.serviceType || 'Service'}" (${id}) for ${serviceRecord.clientName || 'Client'} (Reason: ${cancellationReason})`,
+      metadata: { serviceId: id, serviceType: serviceRecord.serviceType, clientName: serviceRecord.clientName, reason: cancellationReason, refundAmount }
+    });
 
     return res.status(200).json({
       message: `Service "${serviceRecord.serviceType}" fulfillment has been cancelled.${refundAmount > 0 ? ` A full refund of ₱${Number(refundAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} has been processed.` : ''}`,

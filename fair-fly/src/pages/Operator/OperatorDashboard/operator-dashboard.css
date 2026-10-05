@@ -330,7 +330,7 @@
 .status-dot-online {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: #22c55e;
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }

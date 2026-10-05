@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
-import { uploadFileToBackend } from '../../../utils/fileUploadApi';
-import { generateRequirementId } from '../../../utils/idGenerator';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { createInquiry } from '../../../services/inquiryService';
+import BranchSelectSearch from '../../UI/BranchSelectSearch/BranchSelectSearch';
+import '../ClientInquiryModal/client-inquiry-modal.css';
 import './client-service-request-modal.css';
 
 export default function ClientServiceRequestModal({
@@ -26,50 +26,70 @@ export default function ClientServiceRequestModal({
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
+  // Form State corresponding to SAF-01-002 (matching ClientInquiryModal)
+  const [clientType, setClientType] = useState('individual'); // 'individual' | 'company'
+  const [companyName, setCompanyName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleInitial, setMiddleInitial] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [contactPersonFirstName, setContactPersonFirstName] = useState('');
+  const [contactPersonMiddleInitial, setContactPersonMiddleInitial] = useState('');
+  const [contactPersonLastName, setContactPersonLastName] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [population, setPopulation] = useState('');
+  const [address, setAddress] = useState('');
+  const [telNo, setTelNo] = useState('');
+  const [cellphone, setCellphone] = useState('');
+  const [email, setEmail] = useState('');
+  const [contractNo, setContractNo] = useState('');
+  const [isNo, setIsNo] = useState('');
   const [selectedBranchUid, setSelectedBranchUid] = useState('');
-  const [clientName, setClientName] = useState(
-    userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || ''
-  );
-  const [clientEmail, setClientEmail] = useState(userDetails?.email || user?.email || '');
-  const [clientPhone, setClientPhone] = useState(
-    userDetails?.phone ||
-    userDetails?.phoneNumber ||
-    userDetails?.contactNumber ||
-    userDetails?.cellphone ||
-    user?.phoneNumber ||
-    ''
-  );
-  const [additionalNotes, setAdditionalNotes] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
+  const [specifiedRequirements, setSpecifiedRequirements] = useState('');
+  const [remarks, setRemarks] = useState('');
 
-  // Requirement Inputs State: { [index]: { textValue: '', file: File|null, previewUrl: '' } }
-  const [requirementInputs, setRequirementInputs] = useState({});
-
-  // When initialServiceId or isOpen changes, sync selectedServiceId
+  // When initialServiceId changes, sync selectedServiceId
   useEffect(() => {
     if (initialServiceId) {
       setSelectedServiceId(initialServiceId);
-      setRequirementInputs({});
     }
   }, [initialServiceId, isOpen]);
 
   // Prefill client information if user is logged in
   useEffect(() => {
     if (isOpen && (userDetails || user)) {
-      setClientName(userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '');
-      setClientEmail(userDetails?.email || user?.email || '');
-      setClientPhone(
-        userDetails?.phone ||
-        userDetails?.phoneNumber ||
-        userDetails?.contactNumber ||
-        userDetails?.cellphone ||
-        user?.phoneNumber ||
-        ''
-      );
+      const rawFullName = (userDetails?.fullName || userDetails?.name || userDetails?.displayName || user?.displayName || '').trim();
+      const nameParts = rawFullName ? rawFullName.split(/\s+/) : [];
+      const initialFirst = userDetails?.firstName || nameParts[0] || '';
+      const initialLast = userDetails?.lastName || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : '');
+      const initialMiddle = userDetails?.middleInitial || (nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '');
+
+      const resolvedPhone = userDetails?.phone || userDetails?.phoneNumber || userDetails?.contactNumber || userDetails?.cellphone || user?.phoneNumber || '';
+      const resolvedEmail = userDetails?.email || user?.email || '';
+      const resolvedAddress = userDetails?.address || '';
+      const resolvedTel = userDetails?.telNo || userDetails?.telephoneNumber || '';
+
+      if (initialFirst) {
+        setFirstName((prev) => prev || initialFirst);
+        setContactPersonFirstName((prev) => prev || initialFirst);
+      }
+      if (initialMiddle) {
+        setMiddleInitial((prev) => prev || initialMiddle);
+        setContactPersonMiddleInitial((prev) => prev || initialMiddle);
+      }
+      if (initialLast) {
+        setLastName((prev) => prev || initialLast);
+        setContactPersonLastName((prev) => prev || initialLast);
+      }
+      if (rawFullName) setContactPerson((prev) => prev || rawFullName);
+      if (resolvedPhone) setCellphone(resolvedPhone);
+      if (resolvedEmail) setEmail(resolvedEmail);
+      if (resolvedAddress) setAddress(resolvedAddress);
+      if (resolvedTel) setTelNo(resolvedTel);
     }
   }, [user, userDetails, isOpen]);
 
-  // Fetch services and branch options for form dropdowns
+  // Fetch services (filtered to only services with workflows) and branch options
   useEffect(() => {
     if (!isOpen) return;
 
@@ -77,7 +97,7 @@ export default function ClientServiceRequestModal({
 
     const loadOptions = async () => {
       try {
-        // 1. Fetch Services options for dropdown
+        // 1. Fetch Services options for dropdown (only active with workflows)
         ApiCaller(
           `${API_BASE_URL}/api/services`,
           'GET',
@@ -85,7 +105,9 @@ export default function ClientServiceRequestModal({
           userToken ? { Authorization: `Bearer ${userToken}` } : {},
           (data) => {
             const list = Array.isArray(data) ? data : [];
-            const activeOnly = list.filter((s) => s.status !== 'Inactive' && s.status !== 'Disabled');
+            const activeOnly = list.filter(
+              (s) => s.status !== 'Inactive' && s.status !== 'Disabled' && Array.isArray(s.workflowIds) && s.workflowIds.length > 0
+            );
             if (activeOnly.length > 0) {
               setServicesList(activeOnly);
               const defaultSel = initialServiceId && activeOnly.some((s) => s.id === initialServiceId)
@@ -109,7 +131,9 @@ export default function ClientServiceRequestModal({
             const branches = Array.isArray(data) ? data : [];
             if (branches.length > 0) {
               setBranchesList(branches);
-              setSelectedBranchUid(branches[0].uid);
+              if (!selectedBranchUid && !lockedBranchUid) {
+                setSelectedBranchUid(branches[0].uid || branches[0].id);
+              }
             } else {
               fetchBranchesFromFirestore();
             }
@@ -130,7 +154,9 @@ export default function ClientServiceRequestModal({
         const snap = await getDocs(collection(db, 'services'));
         const list = snap.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((s) => s.status !== 'Inactive' && s.status !== 'Disabled');
+          .filter(
+            (s) => s.status !== 'Inactive' && s.status !== 'Disabled' && Array.isArray(s.workflowIds) && s.workflowIds.length > 0
+          );
         if (list.length > 0) {
           setServicesList(list);
           const defaultSel = initialServiceId && list.some((s) => s.id === initialServiceId)
@@ -154,15 +180,21 @@ export default function ClientServiceRequestModal({
             const data = doc.data();
             return {
               uid: doc.id,
+              id: doc.id,
               branchName: data.branchName || data.name || 'Branch Operator',
-              address: data.address || '',
+              name: data.branchName || data.name || 'Branch Operator',
+              address: data.address || data.location || '',
+              location: data.location || data.address || '',
+              email: data.email || '',
               status: data.status || 'Active'
             };
           })
           .filter((b) => b.status !== 'Inactive');
         if (list.length > 0) {
           setBranchesList(list);
-          setSelectedBranchUid(list[0].uid);
+          if (!selectedBranchUid && !lockedBranchUid) {
+            setSelectedBranchUid(list[0].uid);
+          }
         }
       } catch (err) {
         console.error('Firestore branches fallback error:', err);
@@ -187,60 +219,35 @@ export default function ClientServiceRequestModal({
     }
   }, [effectiveLockedBranchUid]);
 
-  // Handle Requirement Text/Value change
-  const handleReqTextChange = (index, value) => {
-    setRequirementInputs((prev) => ({
-      ...prev,
-      [index]: {
-        ...(prev[index] || {}),
-        textValue: value
-      }
-    }));
-  };
-
-  // Handle Requirement File/Image Selection
-  const handleReqFileChange = (index, file) => {
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      addToast('File size exceeds 10MB limit', 'warning');
-      return;
-    }
-
-    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
-
-    setRequirementInputs((prev) => ({
-      ...prev,
-      [index]: {
-        ...(prev[index] || {}),
-        file,
-        previewUrl
-      }
-    }));
-  };
-
+  // Form validity check (requires valid name, mandatory email, cellphone, requirements, and selected branch/service)
   const isFormValid = useMemo(() => {
-    if (!selectedServiceId || !selectedBranchUid || !clientName.trim()) {
-      return false;
-    }
+    const hasValidName = clientType === 'company'
+      ? Boolean(companyName.trim() && contactPersonFirstName.trim() && contactPersonLastName.trim())
+      : Boolean(firstName.trim() && lastName.trim());
 
-    for (let i = 0; i < serviceRequirements.length; i++) {
-      const req = serviceRequirements[i];
-      const isReq = typeof req === 'object' ? req.required !== false : true;
-      const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
+    const hasValidEmail = Boolean(email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()));
 
-      if (isReq) {
-        const state = requirementInputs[i] || {};
-        if (inputType === 'image' || inputType === 'file') {
-          if (!state.file) return false;
-        } else {
-          if (!state.textValue || !state.textValue.trim()) return false;
-        }
-      }
-    }
-
-    return true;
-  }, [selectedServiceId, selectedBranchUid, clientName, serviceRequirements, requirementInputs]);
+    return Boolean(
+      selectedServiceId &&
+      selectedBranchUid &&
+      hasValidName &&
+      hasValidEmail &&
+      cellphone.trim() &&
+      specifiedRequirements.trim()
+    );
+  }, [
+    selectedServiceId,
+    selectedBranchUid,
+    clientType,
+    companyName,
+    contactPersonFirstName,
+    contactPersonLastName,
+    firstName,
+    lastName,
+    email,
+    cellphone,
+    specifiedRequirements
+  ]);
 
   if (!isOpen) return null;
 
@@ -252,102 +259,92 @@ export default function ClientServiceRequestModal({
       return;
     }
     if (!selectedBranchUid) {
-      addToast('Please select a branch operator', 'warning');
-      return;
-    }
-    if (!clientName.trim()) {
-      addToast('Please enter your full name', 'warning');
-      return;
-    }
-    if (!clientPhone.trim() && !clientEmail.trim()) {
-      addToast('Please provide a phone number or email address', 'warning');
+      addToast('Please select a preferred processing branch', 'warning');
       return;
     }
 
-    // Validate required service fields
-    for (let i = 0; i < serviceRequirements.length; i++) {
-      const req = serviceRequirements[i];
-      const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${i + 1}`;
-      const isReq = typeof req === 'object' ? req.required !== false : true;
-      const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
-
-      if (isReq) {
-        const state = requirementInputs[i] || {};
-        if (inputType === 'image' || inputType === 'file') {
-          if (!state.file) {
-            addToast(`Please upload required document: "${reqName}"`, 'warning');
-            return;
-          }
-        } else {
-          if (!state.textValue || !state.textValue.trim()) {
-            addToast(`Please enter required detail: "${reqName}"`, 'warning');
-            return;
-          }
-        }
+    if (clientType === 'company') {
+      if (!companyName.trim()) {
+        addToast('Please enter the company name', 'warning');
+        return;
       }
+      if (!contactPersonFirstName.trim()) {
+        addToast('Please enter the contact person first name', 'warning');
+        return;
+      }
+      if (!contactPersonLastName.trim()) {
+        addToast('Please enter the contact person last name', 'warning');
+        return;
+      }
+    } else {
+      if (!firstName.trim()) {
+        addToast('Please enter your first name', 'warning');
+        return;
+      }
+      if (!lastName.trim()) {
+        addToast('Please enter your last name', 'warning');
+        return;
+      }
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      addToast('A valid Email Address is mandatory for all inquiries', 'warning');
+      return;
+    }
+
+    if (!cellphone.trim()) {
+      addToast('Please provide a cellphone number', 'warning');
+      return;
+    }
+
+    if (!specifiedRequirements.trim()) {
+      addToast('Please enter your specified requirements or service details', 'warning');
+      return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Pre-generate requirement reference ID so storage files match the Firestore record ID
-      const serviceRequirementId = generateRequirementId();
+      const matchedBranch = branchesList.find((b) => (b.uid || b.id) === selectedBranchUid);
 
-      // Process File Uploads to Firebase Storage
-      const submittedRequirements = await Promise.all(
-        serviceRequirements.map(async (req, i) => {
-          const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${i + 1}`;
-          const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
-          const isReq = typeof req === 'object' ? req.required !== false : true;
-          const userState = requirementInputs[i] || {};
+      const resolvedClientName = clientType === 'company'
+        ? companyName.trim()
+        : [firstName.trim(), middleInitial.trim(), lastName.trim()].filter(Boolean).join(' ');
 
-          let uploadedFileMeta = null;
-
-          if (userState.file) {
-            try {
-              const targetFolder = `service_requirements/${serviceRequirementId}`;
-              const uploadJson = await uploadFileToBackend(userState.file, targetFolder, userToken);
-              if (uploadJson && uploadJson.url) {
-                uploadedFileMeta = {
-                  url: uploadJson.url,
-                  fileName: uploadJson.fileName || userState.file.name,
-                  fileSize: uploadJson.fileSize || userState.file.size,
-                  storagePath: uploadJson.storagePath || ''
-                };
-              }
-            } catch (uploadErr) {
-              console.error(`Failed to upload file for requirement ${reqName}:`, uploadErr);
-            }
-          }
-
-          return {
-            name: reqName,
-            inputType,
-            required: isReq,
-            value: userState.textValue ? userState.textValue.trim() : '',
-            file: uploadedFileMeta
-          };
-        })
-      );
-
-      const matchedBranch = branchesList.find((b) => b.uid === selectedBranchUid);
+      const resolvedContactPerson = clientType === 'company'
+        ? [contactPersonFirstName.trim(), contactPersonMiddleInitial.trim(), contactPersonLastName.trim()].filter(Boolean).join(' ')
+        : (contactPerson.trim() || resolvedClientName);
 
       const payload = {
+        formNo: 'SAF-01-002',
+        controlNo: `23-${Math.floor(100 + Math.random() * 900)}`,
+        clientType,
+        companyName: clientType === 'company' ? companyName.trim() : '',
+        clientName: resolvedClientName,
+        firstName: (clientType === 'company' ? contactPersonFirstName : firstName).trim(),
+        middleInitial: (clientType === 'company' ? contactPersonMiddleInitial : middleInitial).trim(),
+        lastName: (clientType === 'company' ? contactPersonLastName : lastName).trim(),
+        contactPerson: resolvedContactPerson,
+        population: population.trim(),
+        address: address.trim(),
+        cellphone: cellphone.trim(),
+        phoneNumber: cellphone.trim(),
+        telNo: telNo.trim(),
+        email: email.trim().toLowerCase(),
+        contractNo: contractNo.trim(),
+        isNo: isNo.trim(),
         serviceId: selectedServiceId,
         serviceType: selectedService?.name || 'Requested Service',
         servicesOffered: [selectedService?.name || 'Requested Service'],
-        branchUid: selectedBranchUid,
-        branchName: matchedBranch ? matchedBranch.branchName : 'Branch Operator',
-        clientUid: user?.uid || null,
-        clientName: clientName.trim(),
-        email: clientEmail.trim(),
-        clientPhone: clientPhone.trim(),
-        cellphone: clientPhone.trim(),
-        specifiedRequirements: additionalNotes.trim(),
-        notes: additionalNotes.trim(),
         servicePrice: selectedService?.price || '',
-        submittedRequirementsId: serviceRequirementId,
-        requirements: submittedRequirements,
+        specifiedRequirements: specifiedRequirements.trim(),
+        notes: remarks.trim(),
+        remarks: remarks.trim(),
+        branchUid: selectedBranchUid,
+        branchName: matchedBranch ? (matchedBranch.branchName || matchedBranch.name) : 'Branch Operator',
+        clientUid: user?.uid || null,
+        isWalkIn: false,
+        workflow: 'online',
         status: 'submitted'
       };
 
@@ -355,19 +352,22 @@ export default function ClientServiceRequestModal({
         userToken,
         payload,
         (res) => {
-          addToast(`Inquiry for "${payload.serviceType}" submitted to ${payload.branchName}. The branch will prepare a quotation for your review.`, 'success');
+          addToast(
+            `Inquiry for "${payload.serviceType}" submitted to ${payload.branchName}. The branch operator will review and prepare your quotation.`,
+            'success'
+          );
           if (onRequestSuccess) onRequestSuccess(res);
           setIsSubmitting(false);
           onClose();
         },
         (error) => {
-          addToast(toFriendlyMessage(error, 'Unable to submit your service request. Please try again.'), 'error');
+          addToast(toFriendlyMessage(error, 'Unable to submit your service inquiry. Please try again.'), 'error');
           setIsSubmitting(false);
         }
       );
     } catch (err) {
-      console.error('Error submitting requirement uploads:', err);
-      addToast(toFriendlyMessage(err, 'An error occurred while uploading your requirements. Please try again.'), 'error');
+      console.error('Error submitting inquiry:', err);
+      addToast(toFriendlyMessage(err, 'An error occurred while submitting your inquiry. Please try again.'), 'error');
       setIsSubmitting(false);
     }
   };
@@ -376,329 +376,502 @@ export default function ClientServiceRequestModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="56rem"
-      title="Submit a Service Inquiry"
-      subtitle="Send your service details to the selected branch. Fulfillment begins after you accept its quotation."
+      maxWidth="72rem"
+      width="95%"
+      title="Submit Service Inquiry (SAF-01-002)"
+      subtitle="Intake client specifications and requirements for your selected service"
       isLoading={isSubmitting}
     >
       {loadingOptions ? (
         <div className="client-request-form form-column client-req-form-spaced" aria-busy="true" style={{ gap: '1.25rem' }}>
-          <div className="form-grid-2">
-            <div className="form-column">
-              <div className="skeleton skeleton-text" style={{ width: '45%', height: '0.85rem', marginBottom: '0.4rem' }} />
-              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
-            </div>
-            <div className="form-column">
-              <div className="skeleton skeleton-text" style={{ width: '40%', height: '0.85rem', marginBottom: '0.4rem' }} />
-              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
-            </div>
-          </div>
-          <div className="form-grid-2">
-            <div className="form-column">
-              <div className="skeleton skeleton-text" style={{ width: '50%', height: '0.85rem', marginBottom: '0.4rem' }} />
-              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
-            </div>
-            <div className="form-column">
-              <div className="skeleton skeleton-text" style={{ width: '45%', height: '0.85rem', marginBottom: '0.4rem' }} />
-              <div className="skeleton skeleton-input" style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)' }} />
-            </div>
-          </div>
-          <div className="form-column">
-            <div className="skeleton skeleton-text" style={{ width: '30%', height: '0.85rem', marginBottom: '0.4rem' }} />
-            <div className="skeleton skeleton-input" style={{ width: '100%', height: '5rem', borderRadius: 'var(--radius-md)' }} />
-          </div>
+          <div className="skeleton skeleton-text" style={{ width: '40%', height: '1.2rem', marginBottom: '0.5rem' }} />
+          <div className="skeleton skeleton-input" style={{ width: '100%', height: '3rem', borderRadius: '0px' }} />
+          <div className="skeleton skeleton-input" style={{ width: '100%', height: '12rem', borderRadius: '0px' }} />
         </div>
       ) : (
-        <form className="client-request-form form-column client-req-form-spaced" onSubmit={handleSubmit}>
-          <div className="form-grid-2">
-            {/* Select Service */}
-            <div className="form-column">
-              <label htmlFor="serviceSelect" className="form-label">
-                <i className="fa-solid fa-concierge-bell client-req-purple-icon"></i>
-                Requested Service <span className="req-star">*</span>
-              </label>
-              <select
-                id="serviceSelect"
-                value={selectedServiceId}
-                onChange={(e) => {
-                  setSelectedServiceId(e.target.value);
-                  setRequirementInputs({});
-                }}
-                required
-                className="form-select"
-              >
-                {servicesList.length === 0 ? (
-                  <option value="">No active services available</option>
-                ) : (
-                  servicesList.map((s) => (
+        <form className="client-inquiry-modal-form" onSubmit={handleSubmit}>
+          {/* Header Callout Banner */}
+          <div className="inquiry-intro-callout">
+            <i className="fa-solid fa-circle-info"></i>
+            <div>
+              <strong>FairFly Service Inquiry Intake:</strong> Fill out your specifications below. Once submitted, your preferred branch operator will review your requirements and provide an official commercial quotation.
+            </div>
+          </div>
+
+          {/* Section 1: Client Information */}
+          <div className="inquiry-section">
+            <h3 className="inquiry-section-title">
+              <i className="fa-solid fa-user"></i> 1. Client Information
+            </h3>
+
+            <div className="inquiry-form-grid">
+              {/* Client Type Selector */}
+              <div className="client-type-selector">
+                <span className="client-type-label">
+                  <i className="fa-solid fa-sliders"></i> Client Type:
+                </span>
+                <div className="client-type-options">
+                  <button
+                    type="button"
+                    className={`client-type-btn ${clientType === 'individual' ? 'active' : ''}`}
+                    onClick={() => setClientType('individual')}
+                  >
+                    <i className="fa-solid fa-user"></i>
+                    <span>Individual</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`client-type-btn ${clientType === 'company' ? 'active' : ''}`}
+                    onClick={() => setClientType('company')}
+                  >
+                    <i className="fa-solid fa-building"></i>
+                    <span>Company / Organization</span>
+                  </button>
+                </div>
+              </div>
+
+              {clientType === 'company' ? (
+                <>
+                  {/* Company Name */}
+                  <div className="inquiry-field-group col-span-2">
+                    <label htmlFor="req-companyName">
+                      Company / Organization Name <span className="req-star">*</span>
+                    </label>
+                    <input
+                      id="req-companyName"
+                      type="text"
+                      className="input-base"
+                      placeholder="e.g. Acme Travel & Tours Corp."
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  {/* Contact Person Name */}
+                  <div className="inquiry-field-group col-span-2" style={{ marginTop: '0.25rem' }}>
+                    <label style={{ fontWeight: 700, color: 'var(--text-dark, #0f172a)' }}>
+                      Contact Person Name (Representative) <span className="req-star">*</span>
+                    </label>
+                  </div>
+
+                  <div className="inquiry-name-row">
+                    <div className="inquiry-field-group">
+                      <label htmlFor="req-cpFirstName">
+                        First Name <span className="req-star">*</span>
+                      </label>
+                      <input
+                        id="req-cpFirstName"
+                        type="text"
+                        className="input-base"
+                        placeholder="Juan"
+                        value={contactPersonFirstName}
+                        onChange={(e) => setContactPersonFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="inquiry-field-group mi-input">
+                      <label htmlFor="req-cpMiddleInitial">M.I.</label>
+                      <input
+                        id="req-cpMiddleInitial"
+                        type="text"
+                        className="input-base"
+                        placeholder="D."
+                        maxLength={3}
+                        value={contactPersonMiddleInitial}
+                        onChange={(e) => setContactPersonMiddleInitial(e.target.value.toUpperCase())}
+                      />
+                    </div>
+
+                    <div className="inquiry-field-group">
+                      <label htmlFor="req-cpLastName">
+                        Last Name <span className="req-star">*</span>
+                      </label>
+                      <input
+                        id="req-cpLastName"
+                        type="text"
+                        className="input-base"
+                        placeholder="Dela Cruz"
+                        value={contactPersonLastName}
+                        onChange={(e) => setContactPersonLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Individual Name Row */}
+                  <div className="inquiry-field-group col-span-2">
+                    <label style={{ fontWeight: 700, color: 'var(--text-dark, #0f172a)' }}>
+                      Full Name <span className="req-star">*</span>
+                    </label>
+                  </div>
+                  <div className="inquiry-name-row">
+                    <div className="inquiry-field-group">
+                      <label htmlFor="req-firstName">
+                        First Name <span className="req-star">*</span>
+                      </label>
+                      <input
+                        id="req-firstName"
+                        type="text"
+                        className="input-base"
+                        placeholder="Juan"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="inquiry-field-group mi-input">
+                      <label htmlFor="req-middleInitial">M.I.</label>
+                      <input
+                        id="req-middleInitial"
+                        type="text"
+                        className="input-base"
+                        placeholder="D."
+                        maxLength={3}
+                        value={middleInitial}
+                        onChange={(e) => setMiddleInitial(e.target.value.toUpperCase())}
+                      />
+                    </div>
+
+                    <div className="inquiry-field-group">
+                      <label htmlFor="req-lastName">
+                        Last Name <span className="req-star">*</span>
+                      </label>
+                      <input
+                        id="req-lastName"
+                        type="text"
+                        className="input-base"
+                        placeholder="Dela Cruz"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="inquiry-field-group col-span-2">
+                <label htmlFor="req-population">Population / Pax Count</label>
+                <input
+                  id="req-population"
+                  type="text"
+                  className="input-base"
+                  placeholder="e.g. 45 pax, 1 family, 2 adults"
+                  value={population}
+                  onChange={(e) => setPopulation(e.target.value)}
+                />
+              </div>
+
+              <div className="inquiry-field-group col-span-2">
+                <label htmlFor="req-address">Complete Address</label>
+                <input
+                  id="req-address"
+                  type="text"
+                  className="input-base"
+                  placeholder="Complete street, city, province"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+
+              <div className="inquiry-field-group">
+                <label htmlFor="req-cellphone">
+                  Cellphone No. <span className="req-star">*</span>
+                </label>
+                <input
+                  id="req-cellphone"
+                  type="tel"
+                  className="input-base"
+                  placeholder="0912 345 6789"
+                  value={cellphone}
+                  onChange={(e) => setCellphone(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="inquiry-field-group">
+                <label htmlFor="req-telNo">Telephone No.</label>
+                <input
+                  id="req-telNo"
+                  type="tel"
+                  className="input-base"
+                  placeholder="(044) 123 4567"
+                  value={telNo}
+                  onChange={(e) => setTelNo(e.target.value)}
+                />
+              </div>
+
+              <div className="inquiry-field-group col-span-2">
+                <label htmlFor="req-email">
+                  Email Address <span className="req-star">*</span>
+                </label>
+                <input
+                  id="req-email"
+                  type="email"
+                  className="input-base"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="inquiry-field-group">
+                <label htmlFor="req-contractNo">Contract No.</label>
+                <input
+                  id="req-contractNo"
+                  type="text"
+                  className="input-base"
+                  placeholder="Contract number if applicable"
+                  value={contractNo}
+                  onChange={(e) => setContractNo(e.target.value)}
+                />
+              </div>
+
+              <div className="inquiry-field-group">
+                <label htmlFor="req-isNo">IS No.</label>
+                <input
+                  id="req-isNo"
+                  type="text"
+                  className="input-base"
+                  placeholder="IS number if applicable"
+                  value={isNo}
+                  onChange={(e) => setIsNo(e.target.value)}
+                />
+              </div>
+
+              {/* Debounced Franchise Search */}
+              <div className="inquiry-field-group col-span-2">
+                <BranchSelectSearch
+                  branches={branchesList}
+                  selectedBranchUid={selectedBranchUid}
+                  onSelectBranch={(uid) => setSelectedBranchUid(uid)}
+                  isLoading={loadingOptions}
+                  label="Preferred Processing Branch *"
+                  placeholder="Search branch by name, city or location..."
+                  disabled={Boolean(effectiveLockedBranchUid)}
+                  required
+                />
+                {effectiveLockedBranchUid && (
+                  <span className="client-req-branch-hint" style={{ marginTop: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--purple-dark, #4338ca)' }}>
+                    <i className="fa-solid fa-lock"></i> Exclusively serviced by {effectiveLockedBranchName}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Selected Service Details */}
+          <div className="inquiry-section">
+            <h3 className="inquiry-section-title">
+              <i className="fa-solid fa-concierge-bell"></i> 2. Selected Service
+            </h3>
+
+            {/* If there are multiple active services and none pre-locked, allow dropdown selection */}
+            {servicesList.length > 1 && !initialServiceId && (
+              <div className="inquiry-field-group" style={{ marginBottom: '0.75rem' }}>
+                <label htmlFor="req-serviceSelect" style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                  Change Service:
+                </label>
+                <select
+                  id="req-serviceSelect"
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  className="input-base"
+                >
+                  {servicesList.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.price || 'Standard Fee'})
                     </option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {/* Select Branch Operator */}
-            <div className="form-column">
-              <label htmlFor="branchSelect" className="form-label">
-                <i className="fa-solid fa-building client-req-purple-icon"></i>
-                Select Processing Branch <span className="req-star">*</span>
-              </label>
-              <select
-                id="branchSelect"
-                value={selectedBranchUid}
-                onChange={(e) => setSelectedBranchUid(e.target.value)}
-                required
-                disabled={Boolean(effectiveLockedBranchUid)}
-                className={`form-select ${effectiveLockedBranchUid ? 'locked-branch-select' : ''}`}
-              >
-                {branchesList.length === 0 ? (
-                  <option value="">No active branches available</option>
-                ) : (
-                  branchesList.map((b) => (
-                    <option key={b.uid} value={b.uid}>
-                      {b.branchName} {b.address ? `(${b.address})` : ''}
-                    </option>
-                  ))
-                )}
-              </select>
-              {effectiveLockedBranchUid && (
-                <span className="client-req-branch-hint">
-                  <i className="fa-solid fa-lock"></i> Exclusively serviced by {effectiveLockedBranchName}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Selected Service Preview Summary Card */}
-          {selectedService && (
-            <div className="client-req-service-details-box">
-              {selectedService.coverImage || selectedService.coverPhoto ? (
-                <img
-                  src={selectedService.coverImage || selectedService.coverPhoto}
-                  alt={selectedService.name}
-                  className="client-req-service-details-img"
-                />
-              ) : (
-                <div className="client-req-service-details-placeholder">
-                  <i className="fa-solid fa-passport"></i>
-                </div>
-              )}
-
-              <div className="client-req-service-meta-col">
-                <div className="client-req-service-header-row">
-                  <strong className="client-req-service-name">{selectedService.name}</strong>
-                  <span className="client-req-service-price">
-                    {selectedService.price ? (selectedService.price.startsWith('₱') || selectedService.price.startsWith('PHP') ? selectedService.price : `₱${Number(selectedService.price).toLocaleString('en-US')}`) : 'Standard Fee'}
-                  </span>
-                </div>
-
-                <div className="client-req-tags-row">
-                  <span className="client-req-category-tag">
-                    {selectedService.category || 'General Services'}
-                  </span>
-                  {Array.isArray(selectedService.tags) && selectedService.tags.map((t, idx) => (
-                    <span
-                      key={idx}
-                      className="client-req-type-pill"
-                    >
-                      #{t}
-                    </span>
                   ))}
+                </select>
+              </div>
+            )}
+
+            {/* Selected Service Card Preview */}
+            {selectedService ? (
+              <div className="client-req-service-details-box" style={{ borderRadius: '0px', marginTop: '0.25rem' }}>
+                {selectedService.coverImage || selectedService.coverPhoto ? (
+                  <img
+                    src={selectedService.coverImage || selectedService.coverPhoto}
+                    alt={selectedService.name}
+                    className="client-req-service-details-img"
+                  />
+                ) : (
+                  <div className="client-req-service-details-placeholder">
+                    <i className="fa-solid fa-passport"></i>
+                  </div>
+                )}
+
+                <div className="client-req-service-meta-col">
+                  <div className="client-req-service-header-row">
+                    <strong className="client-req-service-name">{selectedService.name}</strong>
+                    <span className="client-req-service-price">
+                      {selectedService.price
+                        ? (selectedService.price.startsWith('₱') || selectedService.price.startsWith('PHP')
+                            ? selectedService.price
+                            : `₱${Number(selectedService.price).toLocaleString('en-US')}`)
+                        : 'Standard Fee'}
+                    </span>
+                  </div>
+
+                  <div className="client-req-tags-row">
+                    <span className="client-req-category-tag">
+                      {selectedService.category || 'General Services'}
+                    </span>
+                    {Array.isArray(selectedService.tags) && selectedService.tags.map((t, idx) => (
+                      <span key={idx} className="client-req-type-pill">
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+
+                  {selectedService.description && (
+                    <p style={{ margin: '0.45rem 0 0 0', fontSize: '0.8125rem', color: 'var(--text-mid, #475569)', lineHeight: 1.45 }}>
+                      {selectedService.description}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div style={{ padding: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.875rem' }}>
+                No active service selected.
+              </div>
+            )}
 
-            {/* Dynamic Service Requirements Inputs Section */}
+            {/* Informational Service Requirements Notice */}
             {serviceRequirements.length > 0 && (
-              <div className="client-req-section">
-                <h3 className="client-req-title">
-                  <i className="fa-solid fa-clipboard-check client-req-purple-icon"></i>
-                  Service Requirements ({serviceRequirements.length})
-                </h3>
-
-                <div className="client-req-list">
+              <div
+                className="client-req-notice-box"
+                style={{
+                  background: 'var(--color-bg-secondary, #f8fafc)',
+                  border: '1px solid var(--color-border, #e2e8f0)',
+                  borderRadius: '0px',
+                  padding: '1rem 1.15rem',
+                  marginTop: '0.75rem'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '0.35rem',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    color: 'var(--color-text, #0f172a)'
+                  }}
+                >
+                  <i className="fa-solid fa-clipboard-list" style={{ color: 'var(--purple, #5558E3)' }}></i>
+                  <span>Documents & Requirements for this Service ({serviceRequirements.length})</span>
+                </div>
+                <p
+                  style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--color-text-muted, #64748b)',
+                    margin: '0 0 0.65rem 0',
+                    lineHeight: 1.45
+                  }}
+                >
+                  No document uploads are required at this stage. Once the branch operator reviews your inquiry and sends your official commercial quotation, you will be invited to attach and verify these requirements prior to accepting the quotation.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {serviceRequirements.map((req, idx) => {
                     const reqName = typeof req === 'string' ? req : req.name || req.title || `Requirement ${idx + 1}`;
-                    const inputType = typeof req === 'object' ? req.inputType || 'text' : 'text';
                     const isReq = typeof req === 'object' ? req.required !== false : true;
-                    const userState = requirementInputs[idx] || {};
-
                     return (
-                      <div key={idx} className="client-req-card">
-                        <div className="client-req-card-header">
-                          <span className="client-req-name">
-                            {reqName} {isReq && <span className="req-star">*</span>}
-                          </span>
-                          <span className="client-req-type-tag">
-                            {inputType === 'image' && <><i className="fa-regular fa-image client-req-icon-margin"></i> Image Upload</>}
-                            {inputType === 'file' && <><i className="fa-regular fa-file-lines client-req-icon-margin"></i> Document File</>}
-                            {inputType === 'text' && <><i className="fa-solid fa-pen-to-square client-req-icon-margin"></i> Text Input</>}
-                            {inputType === 'date' && <><i className="fa-regular fa-calendar client-req-icon-margin"></i> Date Input</>}
-                            {inputType === 'number' && <><i className="fa-solid fa-hashtag client-req-icon-margin"></i> Number Input</>}
-                          </span>
-                        </div>
-
-                        {/* Image / File Upload Input */}
-                        {(inputType === 'image' || inputType === 'file') && (
-                          <div className="client-upload-box">
-                            <input
-                              type="file"
-                              id={`req-file-${idx}`}
-                              accept={inputType === 'image' ? 'image/*' : '.pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx'}
-                              className="client-req-hidden-input"
-                              onChange={(e) => handleReqFileChange(idx, e.target.files[0])}
-                            />
-
-                            {!userState.file ? (
-                              <label htmlFor={`req-file-${idx}`} className="client-upload-label">
-                                <i className={inputType === 'image' ? 'fa-solid fa-camera' : 'fa-solid fa-cloud-arrow-up'}></i>
-                                <span>Click to select {inputType === 'image' ? 'Image photo' : 'Document file'}</span>
-                                <span className="client-req-format-hint">
-                                  {inputType === 'image' ? 'PNG, JPG, JPEG (Max 10MB)' : 'PDF, DOCX, XLSX, PNG (Max 10MB)'}
-                                </span>
-                              </label>
-                            ) : (
-                              <div className="client-upload-preview">
-                                {userState.previewUrl ? (
-                                  <img src={userState.previewUrl} alt="Preview" className="client-img-thumbnail" />
-                                ) : (
-                                  <i className="fa-solid fa-file-lines client-req-file-preview-icon"></i>
-                                )}
-                                <div className="client-file-details">
-                                  <span className="client-file-name">{userState.file.name}</span>
-                                  <span className="client-file-size">({(userState.file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  className="client-remove-file-btn"
-                                  onClick={() => setRequirementInputs((prev) => ({ ...prev, [idx]: { ...prev[idx], file: null, previewUrl: '' } }))}
-                                >
-                                  <i className="fa-solid fa-xmark"></i>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Text Input */}
-                        {inputType === 'text' && (
-                          <input
-                            type="text"
-                            className="client-req-input form-input"
-                            placeholder={`Enter ${reqName}...`}
-                            value={userState.textValue || ''}
-                            onChange={(e) => handleReqTextChange(idx, e.target.value)}
-                            required={isReq}
-                          />
-                        )}
-
-                        {/* Date Input */}
-                        {inputType === 'date' && (
-                          <input
-                            type="date"
-                            className="client-req-input form-input"
-                            value={userState.textValue || ''}
-                            onChange={(e) => handleReqTextChange(idx, e.target.value)}
-                            required={isReq}
-                          />
-                        )}
-
-                        {/* Number Input */}
-                        {inputType === 'number' && (
-                          <input
-                            type="number"
-                            className="client-req-input form-input"
-                            placeholder={`Enter ${reqName} number...`}
-                            value={userState.textValue || ''}
-                            onChange={(e) => handleReqTextChange(idx, e.target.value)}
-                            required={isReq}
-                          />
-                        )}
-                      </div>
+                      <span
+                        key={idx}
+                        style={{
+                          fontSize: '0.775rem',
+                          padding: '0.25rem 0.55rem',
+                          background: 'var(--color-surface, #ffffff)',
+                          border: '1px solid var(--color-border, #e2e8f0)',
+                          borderRadius: '0px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          color: 'var(--color-text, #334155)'
+                        }}
+                      >
+                        <i className="fa-regular fa-file" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                        <span>{reqName}</span>
+                        {isReq && <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>}
+                      </span>
                     );
                   })}
                 </div>
               </div>
             )}
+          </div>
 
-            <div className="form-grid-2">
-              {/* Client Name */}
-              <div className="form-column">
-                <label htmlFor="clientNameInput" className="form-label">Full Name <span className="req-star">*</span></label>
-                <input
-                  id="clientNameInput"
-                  type="text"
-                  placeholder="e.g. Juan dela Cruz"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  required
-                  className="form-input"
-                />
-              </div>
+          {/* Section 3: Specified Requirements of Client */}
+          <div className="inquiry-section">
+            <h3 className="inquiry-section-title">
+              <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span className="req-star">*</span>
+            </h3>
+            <p className="inquiry-field-hint" style={{ fontSize: '0.8125rem', color: 'var(--text-light, #64748b)', margin: 0 }}>
+              Specify your itinerary, target travel dates, destinations, number of passengers, passport expediting specifics, or special requests.
+            </p>
+            <textarea
+              className="input-base textarea-requirements"
+              rows="4"
+              placeholder={`• Target dates or departure month\n• Special accommodation or vehicle preference\n• Specific document assistance needed`}
+              value={specifiedRequirements}
+              onChange={(e) => setSpecifiedRequirements(e.target.value)}
+              required
+            ></textarea>
+          </div>
 
-              {/* Email Address */}
-              <div className="form-column">
-                <label htmlFor="clientEmailInput" className="form-label">Email Address</label>
-                <input
-                  id="clientEmailInput"
-                  type="email"
-                  placeholder="example@email.com"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-            </div>
+          {/* Section 4: Remarks & Special Instructions */}
+          <div className="inquiry-section">
+            <h3 className="inquiry-section-title">
+              <i className="fa-solid fa-comment-dots"></i> 4. Remarks & Special Instructions
+            </h3>
+            <textarea
+              className="input-base"
+              rows="3"
+              placeholder="Any additional reminders, payment preference, or urgent inquiries..."
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+            ></textarea>
+          </div>
 
-            <div className="form-grid-2">
-              {/* Phone Number */}
-              <div className="form-column">
-                <label htmlFor="clientPhoneInput" className="form-label">Contact Phone Number</label>
-                <input
-                  id="clientPhoneInput"
-                  type="text"
-                  placeholder="0917-000-0000"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-            </div>
-
-            {/* Additional Notes */}
-            <div className="form-column">
-              <label htmlFor="additionalNotesInput" className="form-label">Additional Instructions / Notes</label>
-              <textarea
-                id="additionalNotesInput"
-                rows="3"
-                placeholder="Specify any special requests or notes for the branch operator..."
-                value={additionalNotes}
-                onChange={(e) => setAdditionalNotes(e.target.value)}
-                className="form-textarea"
-              />
-            </div>
-
-            <div className="client-request-actions client-req-actions-bar">
-              <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
-                Cancel
-              </button>
-              <button type="submit" className="btn-primary" disabled={isSubmitting || servicesList.length === 0 || !isFormValid}>
-                {isSubmitting ? (
-                  <>
-                    <i className="fa-solid fa-spinner fa-spin"></i> Submitting & Uploading...
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-regular fa-paper-plane"></i> Submit Service Request
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+          {/* Action Buttons */}
+          <div className="inquiry-modal-footer">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary inquiry-modal-submit-btn"
+              disabled={isSubmitting || !isFormValid || servicesList.length === 0}
+            >
+              {isSubmitting ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  <span>Submitting Inquiry...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-paper-plane"></i>
+                  <span>Submit Inquiry</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
     </BaseModal>
   );
 }

@@ -103,6 +103,22 @@ export function fetchOperatorById(token, id, successCallback, errorCallback, set
   );
 }
 
+export function fetchOperatorActivityLogs(token, id, params = {}, successCallback, errorCallback, setIsLoading) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  ).toString();
+
+  return ApiCaller(
+    `${API_BASE_URL}/api/operators/${id}/logs${query ? `?${query}` : ''}`,
+    'GET',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
 export function fetchBranches(successCallback, errorCallback, setIsLoading) {
   return ApiCaller(
     `${API_BASE_URL}/api/operators/branches`,

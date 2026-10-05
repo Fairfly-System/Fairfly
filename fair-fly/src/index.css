@@ -1,9 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Fredoka:wght@600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&display=swap');
 
 *, *::before, *::after { 
   box-sizing: border-box; 
   margin: 0; 
   padding: 0; 
+  border-radius: 0 !important;
+}
+
+/* Maintain circular/round shape for radial spinner and notification elements */
+.loader-spinner {
+  border-radius: 50% !important;
+}
+
+.notification-bell-btn,
+.notification-icon-bubble,
+.notification-empty-icon,
+.notification-unread-dot,
+.chatbot-launcher {
+  border-radius: 50% !important;
+}
+
+.notification-badge,
+.notification-count-pill,
+.sidebar-tab-badge,
+.client-nav-badge,
+.chatbot-quick-access-button {
+  border-radius: 9999px !important;
 }
 
 html {
@@ -19,6 +41,9 @@ html {
   --font-serif: 'Instrument Serif', Georgia, serif;
   --font-logo: 'Fredoka', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-editorial: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display-sharp: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-accent: 'Syne', system-ui, sans-serif;
 
   /* Primary Brand Palette */
   --purple: #5558E3;
@@ -65,12 +90,12 @@ html {
   --glass-border: rgba(226, 232, 240, 0.8);
   --backdrop-blur: none;
 
-  /* Rem-based Border Radii */
-  --radius-xs: 0.25rem;  /* 4px */
-  --radius-sm: 0.5rem;   /* 8px */
-  --radius-md: 0.75rem;  /* 12px */
-  --radius-lg: 1rem;     /* 16px */
-  --radius-full: 9999rem;
+  /* Pure Razor-Sharp Architecture (0px border radius system-wide) */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-full: 0;
 
   /* Smooth Transitions */
   --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -212,7 +237,7 @@ a {
 .skeleton-circle,
 .skeleton-avatar {
   display: inline-block;
-  border-radius: var(--radius-full) !important;
+  border-radius: 0 !important;
   flex-shrink: 0;
 }
 
@@ -220,20 +245,20 @@ a {
   display: inline-block;
   height: 1.25rem;
   width: 4.5rem;
-  border-radius: var(--radius-full);
+  border-radius: 0;
 }
 
 .skeleton-btn {
   display: inline-block;
   height: 2.125rem;
   width: 5.5rem;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
 }
 
 .skeleton-card {
   background: var(--card-bg);
   border: 0.0625rem solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   padding: 1.5rem;
   box-shadow: var(--shadow-xs);
 }
@@ -242,7 +267,7 @@ a {
 /* Card Primitive */
 .card {
   background: var(--card-bg);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   padding: 1.5rem;
   box-shadow: var(--shadow-xs);
   border: 0.0625rem solid var(--border-color);
@@ -304,22 +329,25 @@ tbody tr.selected:hover td {
   background-color: var(--selection-bg-hover) !important;
 }
 
-/* Standard Status Badge Pills */
+/* Standard Status Badge Tags (Crisp Rectangular Tags) */
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-full);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
 }
 
 .status-pill::before {
   content: '';
-  width: 0.4375rem;
-  height: 0.4375rem;
-  border-radius: 50%;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 0;
   background-color: currentColor;
 }
 
@@ -605,7 +633,7 @@ tbody tr.selected:hover td {
 
 ::-webkit-scrollbar-thumb {
   background: var(--purple-light);
-  border-radius: 0.25rem;
+  border-radius: 0;
   border: 0.0625rem solid #ffffff;
 }
 
@@ -632,4 +660,65 @@ tbody tr.selected:hover td {
 .kpi-grid-4 > * {
   flex: 1 1 18rem;
   min-width: 15rem;
+}
+
+/* ==========================================================================
+   Crisp Architectural Tags & System Component Overrides
+   ========================================================================== */
+.status-pill,
+.badge,
+.tag,
+.pill,
+.chip,
+.badge-pill,
+.tab-pill-badge,
+.shopping-category-tag,
+.shopping-featured-badge,
+.service-modal-badge,
+.service-card-category-pill,
+.quote-status-pill,
+.inquiry-status-pill,
+.appointment-status-pill,
+.appointment-ref-tag,
+.filter-chip,
+.kpi-badge,
+.kpi-icon-bubble {
+  border-radius: 0 !important;
+}
+
+/* Ensure button, input, select, textarea, modals, and cards are sharp */
+button,
+input,
+select,
+textarea,
+.btn,
+.card,
+.modal-container,
+.base-modal-container,
+.dropdown-menu,
+.avatar,
+.avatar-img,
+.user-avatar,
+.profile-avatar,
+.sidebar-profile-avatar {
+  border-radius: 0 !important;
+}
+
+/* ==========================================================================
+   Round Notification Bell, Badges & Chatbot Action Buttons (Explicit Override)
+   ========================================================================== */
+.notification-bell-btn,
+.notification-icon-bubble,
+.notification-empty-icon,
+.notification-unread-dot,
+.chatbot-launcher {
+  border-radius: 50% !important;
+}
+
+.notification-badge,
+.notification-count-pill,
+.sidebar-tab-badge,
+.client-nav-badge,
+.chatbot-quick-access-button {
+  border-radius: 9999px !important;
 }

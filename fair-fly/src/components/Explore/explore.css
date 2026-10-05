@@ -1,44 +1,119 @@
+/* ==========================================================================
+   Explore Destination Section (Sharp Editorial Revamp)
+   ========================================================================== */
+
 .explore-section {
-  padding: 5rem 1.5rem;
-  background-color: var(--bg);
+  padding: 5.5rem 2rem;
+  background-color: var(--bg, #F8FAFC);
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--border-color, #E2E8F0);
+}
+
+/* Background image with travelly vibes and opacity 0.12 */
+.explore-bg-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.explore-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+  opacity: 0.12;
+  filter: saturate(1.2) contrast(110%);
+}
+
+.explore-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(248, 250, 252, 0.4) 0%,
+      rgba(248, 250, 252, 0.18) 25%,
+      rgba(248, 250, 252, 0.35) 65%,
+      rgba(248, 250, 252, 0.85) 90%,
+      var(--bg, #F8FAFC) 100%),
+    linear-gradient(to right,
+      rgba(248, 250, 252, 0.4) 0%,
+      transparent 25%,
+      transparent 75%,
+      rgba(248, 250, 252, 0.4) 100%);
+  pointer-events: none;
+}
+
+.explore-container {
+  position: relative;
+  z-index: 1;
+  max-width: 82rem;
+  margin: 0 auto;
 }
 
 .explore-header {
-  text-align: center;
-  margin-bottom: 2.5rem;
+  text-align: left;
+  max-width: 52rem;
+  margin-bottom: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.explore-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple, #5558E3);
+}
+
+.explore-eyebrow-accent {
+  width: 1.5rem;
+  height: 2px;
+  background: var(--purple, #5558E3);
+  display: inline-block;
 }
 
 .explore-title {
-  font-size: clamp(1.875rem, 3.5vw, 2.5rem);
-  font-weight: 800;
-  color: var(--text-dark);
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.02em;
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  font-weight: 900;
+  color: var(--text-dark, #0F172A);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 .explore-title-accent {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  color: var(--purple);
+  color: var(--purple, #5558E3);
 }
 
 .explore-sub {
   font-size: 1.0625rem;
-  color: var(--text-mid);
-  font-weight: 400;
-  max-width: 38rem;
-  margin: 0 auto;
-  line-height: 1.6;
+  color: var(--text-mid, #475569);
+  line-height: 1.65;
+  max-width: 44rem;
+  margin: 0;
 }
 
+/* Sharp Architectural Masonry Grid (0px Border Radius) */
 .explore-grid {
-  max-width: 75rem;
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
-  grid-template-rows: repeat(2, 190px) 190px;
-  gap: 1rem;
+  grid-template-rows: repeat(2, 210px) 210px;
+  gap: 1.25rem;
   grid-template-areas:
     "tropical flights europe"
     "tropical window  city"
@@ -47,11 +122,10 @@
 
 .explore-tile {
   position: relative;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   overflow: hidden;
-  isolation: isolate;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color, #E2E8F0);
+  background: #0F172A;
 }
 
 .explore-img {
@@ -59,44 +133,63 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.5s ease;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  opacity: 0.9;
 }
 
 .explore-tile:hover .explore-img {
-  transform: scale(1.06);
+  transform: scale(1.05);
+  opacity: 1;
 }
 
 .explore-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(15, 15, 35, 0) 45%, rgba(15, 15, 35, 0.78) 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 35%, rgba(15, 23, 42, 0.88) 100%);
+  pointer-events: none;
 }
 
 .explore-caption {
   position: absolute;
-  left: 1rem;
-  bottom: 0.85rem;
-  right: 1rem;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  right: 1.25rem;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.explore-tile-tag {
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--orange-light, #FB923C);
+  text-transform: uppercase;
 }
 
 .explore-tileTitle {
-  color: #fff;
-  font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  color: #FFFFFF;
+  font-weight: 900;
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.15;
 }
 
 .explore-tileSub {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.78rem;
-  margin-top: 0.15rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.8125rem;
+  margin: 0;
 }
 
 @media (max-width: 900px) {
   .explore-grid {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 170px 170px 170px 170px;
+    grid-template-rows: 180px 180px 180px 180px;
     grid-template-areas:
       "tropical tropical"
       "flights europe"
@@ -106,11 +199,13 @@
 }
 
 @media (max-width: 560px) {
-  .explore-section { padding: 3rem 1rem; }
+  .explore-section {
+    padding: 3.5rem 1.25rem;
+  }
+
   .explore-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(7, 180px);
-    gap: 0.875rem;
+    grid-template-rows: repeat(7, 190px);
     grid-template-areas:
       "tropical"
       "flights"

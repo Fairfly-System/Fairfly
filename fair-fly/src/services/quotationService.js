@@ -85,3 +85,27 @@ export function acceptQuotation(token, id, successCallback, errorCallback, setIs
   );
 }
 
+export function submitQuotationRequirements(token, id, requirements, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/quotations/${id}/submit-requirements`,
+    'POST',
+    { requirements },
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function reviewQuotationRequirements(token, id, payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/quotations/${id}/review-requirements`,
+    'POST',
+    payload, // { action: 'approve' | 'request_changes', remarks, reason }
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+

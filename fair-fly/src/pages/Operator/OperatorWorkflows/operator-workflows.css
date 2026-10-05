@@ -73,7 +73,7 @@
 .op-step-num {
   width: 2rem;
   height: 2rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--purple-light-2);
   color: var(--purple-dark);
   font-size: 0.84375rem;

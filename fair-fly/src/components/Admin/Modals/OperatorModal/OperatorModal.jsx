@@ -17,7 +17,8 @@ const OperatorModal = forwardRef(({ isOpen, onClose, editingOperator: propEditin
         if (onClose) onClose();
       }}
       onOpen={(op) => setInternalOperator(op || null)}
-      maxWidth="56rem"
+      maxWidth="68rem"
+      width="95%"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i

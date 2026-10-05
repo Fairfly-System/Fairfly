@@ -42,7 +42,8 @@ const ID_PREFIXES = {
 
   // System & logs
   FAQ: 'FAQ',
-  ADMIN_LOG: 'LOG'
+  ADMIN_LOG: 'LOG',
+  OPERATOR_LOG: 'OPL'
 };
 
 /**

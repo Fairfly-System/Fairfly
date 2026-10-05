@@ -120,7 +120,7 @@
   background: var(--purple);
   color: #FFFFFF;
   padding: 0.625rem 0.875rem;
-  border-radius: 1rem 1rem 0.25rem 1rem;
+  border-radius: 0;
   box-shadow: var(--shadow-sm);
 }
 
@@ -130,7 +130,7 @@
   color: var(--text-dark);
   border: 0.0625rem solid var(--border-color);
   padding: 0.625rem 0.875rem;
-  border-radius: 1rem 1rem 1rem 0.25rem;
+  border-radius: 0;
   box-shadow: var(--shadow-sm);
 }
 

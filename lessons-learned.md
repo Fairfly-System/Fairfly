@@ -1,6 +1,11 @@
 # Lessons Learned
 # A File for Agents to write their mistakes so that next runs can prevent doing the same thing (Automatic Improvement)
 
+## [2026-10-04] Misclassifying Client's Service Intake Specifications as Agency Document Requirements
+- **Problem**: When a client submitted a service inquiry (`SAF-01-002`), the backend synthesized a fake document requirement `{ name: 'Specified Requirements of Client', value: specifiedRequirements }` in the `submitted_requirements` collection. This caused the client's desired service description to be rendered in document attachment grids and quotation requirement checklists as an unfulfilled file requirement rather than the client's service specifications.
+- **Root Cause**: In `fly-api/src/controllers/inquiryController.js`, `createInquiry` contained a fallback: `resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []`. This conflated "Specified Requirements of Client" (what the client needs/wants from the agency's service) with agency document requirements (documents/files the agency needs from the client, such as Valid ID or Birth Certificate).
+- **Prevention**: Never store client-facing service specifications or intake notes as entries in document requirement collections (`submitted_requirements`). Keep `specifiedRequirements` strictly as an intake specification string on the inquiry document. Only instantiate `submitted_requirements` records when actual document checklist items or uploaded files are provided. Always filter out pseudo-requirement names across controllers, modals, and PDF generators.
+
 ## [2026-10-02] Undeclared 'now' Timestamp Variable Causing 500 Internal Server Error in Appointment Creation
 - **Problem**: When a client or operator attempted to schedule a branch appointment via `POST /api/appointments`, the request failed with HTTP `500 (Internal Server Error)`.
 - **Root Cause**: In `fly-api/src/controllers/appointmentController.js`, `createAppointment` constructed the `newAppointment` payload with `createdAt: now` and `updatedAt: now`, but `const now = new Date().toISOString();` had not been declared in the function scope. This triggered an unhandled `ReferenceError: now is not defined`, throwing into the catch block and returning a 500 response.

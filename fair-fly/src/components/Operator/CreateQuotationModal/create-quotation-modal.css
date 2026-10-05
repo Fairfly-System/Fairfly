@@ -59,3 +59,65 @@
   min-width: 160px;
 }
 
+/* Client Workflow Radio Cards */
+.quote-workflow-radios {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .quote-workflow-radios {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quote-radio-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface, #ffffff);
+  border: 2px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.quote-radio-card:hover {
+  border-color: var(--purple, #7c3aed);
+  background: var(--surface-hover, #f8fafc);
+}
+
+.quote-radio-card.active {
+  border-color: var(--purple, #7c3aed);
+  background: rgba(124, 58, 237, 0.05);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12);
+}
+
+.quote-radio-input {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  margin-top: 0.15rem;
+  accent-color: var(--purple, #7c3aed);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.quote-radio-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-dark, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.quote-radio-desc {
+  font-size: 0.78rem;
+  color: var(--text-light, #64748b);
+  margin-top: 0.2rem;
+  line-height: 1.4;
+}
+

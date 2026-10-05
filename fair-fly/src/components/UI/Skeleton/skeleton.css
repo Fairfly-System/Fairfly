@@ -19,7 +19,7 @@
 }
 
 .skeleton-primitive--circle {
-  border-radius: 50% !important;
+  border-radius: 0 !important;
   flex-shrink: 0;
 }
 

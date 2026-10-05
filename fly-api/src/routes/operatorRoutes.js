@@ -9,7 +9,8 @@ const {
   updateOperator, 
   deleteOperator,
   bulkStatusOperators,
-  bulkDeleteOperators
+  bulkDeleteOperators,
+  getOperatorActivityLogs
 } = require('../controllers/operatorController');
 const { verifyFirebaseToken, requireRole, requireSuperAdmin } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
@@ -17,6 +18,7 @@ const { allowedFields } = require('../middleware/allowedFields');
 
 router.get('/', performanceProfiler('GET /operators', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, getOperators));
 router.get('/branches', performanceProfiler('GET /operators/branches', apiRateLimiter, getBranches));
+router.get('/:id/logs', performanceProfiler('GET /operators/:id/logs', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, getOperatorActivityLogs));
 router.get('/:id', performanceProfiler('GET /operators/:id', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, getOperatorById));
 router.post('/', performanceProfiler('POST /operators', verifyFirebaseToken, requireSuperAdmin, allowedFields(['branchName', 'email', 'password', 'address', 'contactNumber', 'isQualified', 'franchiseApplicationId', 'appointmentId']), apiRateLimiter, createOperator));
 router.post('/bulk-status', performanceProfiler('POST /operators/bulk-status', verifyFirebaseToken, requireSuperAdmin, apiRateLimiter, bulkStatusOperators));

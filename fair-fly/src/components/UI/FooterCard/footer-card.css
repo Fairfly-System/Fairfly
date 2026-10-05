@@ -1,73 +1,130 @@
+/* ==========================================================================
+   Footer Callout Card (Sharp Editorial Revamp)
+   ========================================================================== */
+
 .footer-section {
-  padding: 4.5rem 1.5rem 5.5rem;
-  background-color: var(--bg);
+  padding: 4.5rem 2rem 5.5rem;
+  background-color: var(--bg, #F8FAFC);
+  border-top: 1px solid var(--border-color, #E2E8F0);
 }
 
 .footer-card {
-  max-width: 75rem;
+  max-width: 82rem;
   margin: 0 auto;
-  background: var(--purple-light-2);
-  border: 1px solid var(--purple-light);
-  border-radius: var(--radius-lg);
-  padding: 4rem 2rem;
-  text-align: center;
-  box-shadow: var(--shadow-xs);
-  position: relative;
-  overflow: hidden;
+  background: #FFFFFF;
+  border: 1px solid var(--border-color, #E2E8F0);
+  border-left: 4px solid var(--purple, #5558E3);
+  border-radius: 0;
+  padding: 4rem 3rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.footer-card-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple, #5558E3);
+}
+
+.footer-eyebrow-accent {
+  width: 1.5rem;
+  height: 2px;
+  background: var(--purple, #5558E3);
+  display: inline-block;
 }
 
 .footer-title {
-  font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
-  font-size: clamp(2rem, 3.5vw, 2.75rem);
-  font-weight: 800;
-  color: var(--text-dark);
-  margin-bottom: 1rem;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  font-weight: 900;
+  color: var(--text-dark, #0F172A);
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 .footer-title-accent {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  color: var(--purple);
+  color: var(--purple, #5558E3);
 }
 
 .footer-sub {
   font-size: 1.0625rem;
-  color: var(--text-mid);
-  margin-bottom: 2rem;
-  font-weight: 400;
-  max-width: 38rem;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
+  color: var(--text-mid, #475569);
+  max-width: 44rem;
+  line-height: 1.65;
+  margin: 0 0 1rem 0;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
 }
 
 .footer-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 0.65rem;
   text-decoration: none;
-  background: var(--purple);
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.85rem;
+  border-radius: 0;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.footer-btn.primary {
+  background: var(--purple, #5558E3);
   color: #FFFFFF;
-  padding: 0.8125rem 2rem;
-  border-radius: var(--radius-md);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  border: 1px solid var(--purple);
-  transition: var(--transition-fast);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--purple, #5558E3);
 }
 
-.footer-btn:hover {
-  background: var(--purple-dark);
-  border-color: var(--purple-dark);
-  box-shadow: var(--shadow-sm);
+.footer-btn.primary:hover {
+  background: var(--purple-dark, #4338CA);
+  border-color: var(--purple-dark, #4338CA);
+  transform: translateY(-1px);
 }
 
-@media (max-width: 48rem) {
+.footer-btn.secondary {
+  background: transparent;
+  color: var(--text-dark, #0F172A);
+  border: 1px solid var(--border-color, #CBD5E1);
+}
+
+.footer-btn.secondary:hover {
+  background: #0F172A;
+  color: #FFFFFF;
+  border-color: #0F172A;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
   .footer-card {
-    padding: 2.75rem 1.25rem;
+    padding: 2.5rem 1.5rem;
+  }
+
+  .footer-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .footer-btn {
+    width: 100%;
   }
 }

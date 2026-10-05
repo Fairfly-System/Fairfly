@@ -13,14 +13,16 @@ const {
   notifyAdmins
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
-const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
+const { createSubmittedRequirementsRecord, sanitizeRequirementsArray } = require('./submittedRequirementsController');
+const { logFromRequest } = require('../services/operatorLoggerService');
 
 const COLLECTIONS = {
   QUOTATIONS: 'quotations',
   INQUIRIES: 'inquiries',
   ACTIVE_SERVICES: 'activeServices',
   USERS: 'users',
-  SUBMITTED_REQUIREMENTS: 'submitted_requirements'
+  SUBMITTED_REQUIREMENTS: 'submitted_requirements',
+  SERVICES: 'services'
 };
 
 /**
@@ -88,6 +90,14 @@ const createQuotation = async (req, res) => {
       }
     }
 
+    // A catalog service is strictly required for creating a quotation
+    const effectiveServiceId = serviceId || linkedInquiry?.serviceId || null;
+    if (!effectiveServiceId) {
+      return res.status(400).json({
+        error: 'Cannot create quotation: A catalog service must be linked to the inquiry before creating a quotation.'
+      });
+    }
+
     if (!effectiveBranchUid && isOperatorUser) {
       effectiveBranchUid = req.user?.uid;
     }
@@ -131,14 +141,87 @@ const createQuotation = async (req, res) => {
       }
     }
 
-    const effectiveSubmittedReqs = Array.isArray(submittedRequirements) && submittedRequirements.length > 0
+    let effectiveSubmittedReqs = Array.isArray(submittedRequirements) && submittedRequirements.length > 0
       ? submittedRequirements
       : (Array.isArray(linkedInquiry?.requirements) && linkedInquiry.requirements.length > 0
         ? linkedInquiry.requirements
         : (Array.isArray(linkedInquiry?.submittedRequirements) ? linkedInquiry.submittedRequirements : []));
 
-    let effectiveSubmittedReqId = req.body.submittedRequirementsId || linkedInquiry?.submittedRequirementsId || null;
-    if (effectiveSubmittedReqs.length > 0 && !linkedInquiry?.submittedRequirementsId) {
+    // Filter out any pseudo-requirements ("Specified Requirements of Client" is what client wants, not an agency doc requirement)
+    effectiveSubmittedReqs = effectiveSubmittedReqs.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
+
+    let effectiveSubmittedReqId = req.body.submittedRequirementsId || null;
+    if (linkedInquiry?.submittedRequirementsId && !effectiveSubmittedReqId && effectiveSubmittedReqs.length > 0) {
+      effectiveSubmittedReqId = linkedInquiry.submittedRequirementsId;
+    }
+
+    // Inspect catalog service to check whether legal/document requirements apply
+    let serviceHasMandatoryReqs = false;
+    let cleanServiceReqs = [];
+    try {
+      const serviceDoc = await getFromDatabase(`${COLLECTIONS.SERVICES}/${effectiveServiceId}`);
+      if (serviceDoc) {
+        const serviceReqs = Array.isArray(serviceDoc.requirements)
+          ? serviceDoc.requirements
+          : (Array.isArray(serviceDoc.actions) ? serviceDoc.actions : []);
+
+        cleanServiceReqs = serviceReqs.filter((r) => {
+          const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+          return name !== 'specified requirements of client' &&
+                 name !== 'client specified requirements' &&
+                 name !== 'specified requirements of the client' &&
+                 name !== 'specified requirements';
+        });
+
+        const mandatory = cleanServiceReqs.filter(r => (typeof r === 'object' ? r.required !== false : true));
+        serviceHasMandatoryReqs = mandatory.length > 0;
+      }
+    } catch (svcErr) {
+      console.warn('[Quotation] Warning checking catalog service requirements:', svcErr.message);
+    }
+
+    // Determine initial requirement workflow status:
+    // If the service has mandatory requirements, it requires client submission ('pending').
+    // If requirements are provided on-site (e.g. walk-in assisted by operator) and satisfy mandatory items, mark 'submitted'.
+    // If the service has 0 mandatory requirements, requirements are 'not_required'.
+    let initialRequirementsStatus = serviceHasMandatoryReqs ? 'pending' : 'not_required';
+
+    if (serviceHasMandatoryReqs && effectiveSubmittedReqs.length > 0) {
+      // If effectiveSubmittedReqs is empty but we have an ID, load from database
+      if (effectiveSubmittedReqs.length === 0 && effectiveSubmittedReqId) {
+        try {
+          const reqDoc = await getFromDatabase(`${COLLECTIONS.SUBMITTED_REQUIREMENTS}/${effectiveSubmittedReqId}`);
+          if (reqDoc && Array.isArray(reqDoc.requirements)) {
+            effectiveSubmittedReqs = reqDoc.requirements;
+          }
+        } catch (e) {}
+      }
+
+      const mandatoryServiceReqs = cleanServiceReqs.filter(r => (typeof r === 'object' ? r.required !== false : true));
+      const allProvided = mandatoryServiceReqs.every(mReq => {
+        const mName = (typeof mReq === 'string' ? mReq : (mReq.name || mReq.title || '')).trim().toLowerCase();
+        const provided = effectiveSubmittedReqs.find(pReq => {
+          const pName = (typeof pReq === 'string' ? pReq : (pReq.name || pReq.title || '')).trim().toLowerCase();
+          return pName === mName;
+        });
+        if (!provided) return false;
+        const hasFile = provided.file && (provided.file.url || provided.file.storagePath);
+        const hasVal = typeof provided.value === 'string' && provided.value.trim().length > 0;
+        return hasFile || hasVal;
+      });
+
+      if (allProvided) {
+        initialRequirementsStatus = 'submitted';
+      }
+    }
+
+    if (effectiveSubmittedReqs.length > 0 && !effectiveSubmittedReqId) {
       try {
         effectiveSubmittedReqId = await createSubmittedRequirementsRecord({
           submittedBy: effectiveClientUid || req.user?.uid,
@@ -155,9 +238,15 @@ const createQuotation = async (req, res) => {
       contactPerson: (contactPerson || '').trim(),
       clientEmail: clientEmail ? clientEmail.trim() : '',
       clientPhone: clientPhone ? clientPhone.trim() : '',
-      serviceId: serviceId || null,
-      serviceTitle: (serviceTitle || 'General Service').trim(),
+      serviceId: effectiveServiceId,
+      serviceTitle: (serviceTitle || linkedInquiry?.serviceType || 'General Service').trim(),
       submittedRequirementsId: effectiveSubmittedReqId,
+      requirementsStatus: initialRequirementsStatus,
+      requirementsApprovedAt: null,
+      requirementsApprovedBy: null,
+      requirementsRejectionReason: null,
+      requirementsSubmittedAt: (effectiveSubmittedReqId && initialRequirementsStatus === 'submitted') ? now : null,
+      paymentStatus: 'UNPAID',
       tourDates: tourDates || '',
       inclusions: inclusions || '',
       exclusions: exclusions || '',
@@ -192,6 +281,9 @@ const createQuotation = async (req, res) => {
           confirmedQuotationId: docId,
           updatedAt: now
         };
+        if (effectiveSubmittedReqId) {
+          inquiryUpdates.submittedRequirementsId = effectiveSubmittedReqId;
+        }
         // Heal linked inquiry clientUid if it was missing or mistakenly set to operator UID
         if (effectiveClientUid && (!linkedInquiry?.clientUid || linkedInquiry.clientUid === req.user?.uid || linkedInquiry.clientUid === effectiveBranchUid)) {
           inquiryUpdates.clientUid = effectiveClientUid;
@@ -214,6 +306,15 @@ const createQuotation = async (req, res) => {
         metadata: { quotationId: docId, quoteNo: newQuotation.quoteNo }
       }).catch(err => console.warn('Client quotation notification warning:', err.message));
     }
+
+    // Log operator activity
+    await logFromRequest(req, {
+      action: 'CREATE_QUOTATION',
+      entityType: 'quotation',
+      entityId: docId,
+      description: `Created Quotation ${newQuotation.quoteNo} for Client ${newQuotation.clientName} (${newQuotation.serviceTitle} - ₱${Number(newQuotation.totalAmount).toLocaleString()})`,
+      metadata: { quoteNo: newQuotation.quoteNo, clientName: newQuotation.clientName, serviceTitle: newQuotation.serviceTitle, totalAmount: newQuotation.totalAmount }
+    });
 
     return res.status(201).json({ id: docId, ...newQuotation, message: 'Quotation created successfully' });
   } catch (error) {
@@ -280,6 +381,18 @@ const updateQuotationStatus = async (req, res) => {
 
     if (existing.status === 'PAID' || existing.paymentStatus === 'PAID') {
       return res.status(400).json({ error: 'Cannot change status of a quotation that has already been paid and activated.' });
+    }
+
+    // Zero-Trust Verification: Prevent sending to client or accepting if requirements are not approved
+    if (status === 'Sent' || status === 'Accepted') {
+      const reqStatus = (existing.requirementsStatus || '').toLowerCase();
+      if (reqStatus !== 'approved' && reqStatus !== 'not_required') {
+        const actionVerb = status === 'Sent' ? 'send quotation to client' : 'mark quotation as accepted';
+        return res.status(400).json({
+          error: `Cannot ${actionVerb}: Service requirements must be verified and approved first by the branch operator.`,
+          requirementsStatus: existing.requirementsStatus || 'pending'
+        });
+      }
     }
 
     const userRole = req.userDetails?.role;
@@ -371,6 +484,14 @@ const updateQuotationStatus = async (req, res) => {
       }).catch(err => console.warn('Quotation status operator notification warning:', err.message));
     }
 
+    await logFromRequest(req, {
+      action: 'UPDATE_QUOTATION_STATUS',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Updated Quotation ${existing.quoteNo || id} status to "${status}" for ${existing.clientName || 'Client'}`,
+      metadata: { quoteNo: existing.quoteNo, status, clientName: existing.clientName }
+    });
+
     return res.status(200).json({ message: `Quotation status updated to ${status}` });
   } catch (error) {
     console.error('Error updating quotation status:', error);
@@ -461,6 +582,303 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
   };
 };
 
+/**
+ * Submit service requirements for a quotation (Client online or Operator on-site)
+ * POST /api/quotations/:id/submit-requirements
+ * 
+ * Rules:
+ * - Client (owner) or Branch Operator/Admin (on behalf of client)
+ * - Quotation must not be in 'PAID' status
+ * - Validates mandatory requirements against catalog service schema
+ * - Creates/updates document in submitted_requirements
+ * - Updates quotation: submittedRequirementsId, requirementsStatus: 'submitted', requirementsSubmittedAt
+ * - Notifies branch operator if submitted by client
+ * - Syncs submittedRequirementsId to linked inquiry if present
+ */
+const submitQuotationRequirements = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { requirements } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+    if (!Array.isArray(requirements) || requirements.length === 0) {
+      return res.status(400).json({ error: 'requirements array is required' });
+    }
+
+    const quotationPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const quotation = await getFromDatabase(quotationPath);
+    if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
+
+    if (quotation.status === 'PAID' || quotation.paymentStatus === 'PAID') {
+      return res.status(400).json({ error: 'Cannot submit requirements for a paid quotation.' });
+    }
+
+    // Role & Ownership Verification (BOLA / IDOR Defense)
+    const userRole = req.userDetails?.role;
+    const isClient = userRole === 'client';
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    if (isClient) {
+      if (quotation.clientUid && quotation.clientUid !== req.user.uid) {
+        return res.status(403).json({ error: 'Forbidden: You cannot submit requirements for another client\'s quotation.' });
+      }
+    } else if (isOperator) {
+      const isBranchMatch = (quotation.branchUid && quotation.branchUid === req.user.uid) ||
+        (quotation.operatorId && quotation.operatorId === req.user.uid);
+      if (!isBranchMatch && !isAdmin) {
+        return res.status(403).json({ error: 'Forbidden: You can only submit requirements for quotations assigned to your branch.' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges.' });
+    }
+
+    // Clean out any pseudo-requirements
+    const cleanReqs = requirements.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
+
+    // Validate against catalog service schema if serviceId is present
+    if (quotation.serviceId) {
+      try {
+        const serviceDoc = await getFromDatabase(`${COLLECTIONS.SERVICES}/${quotation.serviceId}`);
+        if (serviceDoc) {
+          const serviceReqs = Array.isArray(serviceDoc.requirements)
+            ? serviceDoc.requirements
+            : (Array.isArray(serviceDoc.actions) ? serviceDoc.actions : []);
+
+          const mandatoryServiceReqs = serviceReqs.filter(r => (typeof r === 'object' ? r.required !== false : true));
+
+          const missing = mandatoryServiceReqs.filter(mReq => {
+            const mName = (typeof mReq === 'string' ? mReq : (mReq.name || mReq.title || '')).trim().toLowerCase();
+            const provided = cleanReqs.find(pReq => {
+              const pName = (typeof pReq === 'string' ? pReq : (pReq.name || pReq.title || '')).trim().toLowerCase();
+              return pName === mName;
+            });
+
+            if (!provided) return true;
+            const hasFile = provided.file && (provided.file.url || provided.file.storagePath);
+            const hasVal = typeof provided.value === 'string' && provided.value.trim().length > 0;
+            return !hasFile && !hasVal;
+          });
+
+          if (missing.length > 0) {
+            const missingNames = missing.map(m => typeof m === 'string' ? m : (m.name || m.title || 'Required Document')).join(', ');
+            return res.status(400).json({
+              error: `Missing mandatory requirement(s): ${missingNames}`
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[Quotation] Error validating service schema:', err.message);
+      }
+    }
+
+    const now = new Date().toISOString();
+    let effectiveSubmittedReqId = quotation.submittedRequirementsId || null;
+
+    if (effectiveSubmittedReqId) {
+      // Update existing record
+      await updateToDatabase(`${COLLECTIONS.SUBMITTED_REQUIREMENTS}/${effectiveSubmittedReqId}`, {
+        requirements: sanitizeRequirementsArray(cleanReqs),
+        updatedAt: now
+      });
+    } else {
+      // Create new record
+      effectiveSubmittedReqId = await createSubmittedRequirementsRecord({
+        submittedBy: isClient ? req.user.uid : (quotation.clientUid || req.user.uid),
+        requirements: cleanReqs
+      });
+    }
+
+    const quotationUpdates = {
+      submittedRequirementsId: effectiveSubmittedReqId,
+      requirementsStatus: 'submitted',
+      requirementsSubmittedAt: now,
+      requirementsRejectionReason: null,
+      updatedAt: now
+    };
+
+    await updateToDatabase(quotationPath, quotationUpdates);
+
+    // Sync to linked inquiry if applicable
+    if (quotation.inquiryId) {
+      try {
+        await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`, {
+          submittedRequirementsId: effectiveSubmittedReqId,
+          requirementsSubmittedAt: now,
+          updatedAt: now
+        });
+      } catch (e) {
+        console.warn('[Quotation] Could not sync submittedRequirementsId to inquiry:', e.message);
+      }
+    }
+
+    // If client submitted, notify branch operator
+    if (isClient) {
+      notifyBranch({
+        branchUid: quotation.branchUid || quotation.operatorId,
+        branchName: quotation.branchName,
+        title: 'Requirements Submitted for Review',
+        message: `${quotation.clientName || 'Client'} submitted requirements for Quotation ${quotation.quoteNo || id}. Please inspect and verify.`,
+        type: 'quotation',
+        link: `/operator/quotations/${id}`,
+        metadata: { quotationId: id, quoteNo: quotation.quoteNo }
+      }).catch(err => console.warn('Operator notification warning:', err.message));
+    } else {
+      // Operator uploaded on client's behalf
+      await logFromRequest(req, {
+        action: 'SUBMIT_CLIENT_REQUIREMENTS',
+        entityType: 'quotation',
+        entityId: id,
+        description: `Completed requirements for Quotation ${quotation.quoteNo || id} on behalf of ${quotation.clientName}`,
+        metadata: { quotationId: id, quoteNo: quotation.quoteNo }
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Service requirements submitted successfully. Awaiting operator review.',
+      submittedRequirementsId: effectiveSubmittedReqId,
+      requirementsStatus: 'submitted'
+    });
+  } catch (error) {
+    console.error('Error submitting quotation requirements:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Review submitted requirements for a quotation (Operator / Admin)
+ * POST /api/quotations/:id/review-requirements
+ * 
+ * Body: { action: 'approve' | 'request_changes', remarks?: string, reason?: string }
+ */
+const reviewQuotationRequirements = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, remarks, reason } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+    if (!['approve', 'request_changes'].includes(action)) {
+      return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'request_changes'." });
+    }
+
+    const quotationPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const quotation = await getFromDatabase(quotationPath);
+    if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
+
+    // Operator branch authorization check
+    const userRole = req.userDetails?.role;
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    if (isOperator) {
+      const isBranchMatch = (quotation.branchUid && quotation.branchUid === req.user.uid) ||
+        (quotation.operatorId && quotation.operatorId === req.user.uid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only review quotations for your branch.' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges.' });
+    }
+
+    if (quotation.status === 'PAID' || quotation.paymentStatus === 'PAID') {
+      return res.status(400).json({ error: 'Cannot modify requirements for a paid quotation.' });
+    }
+
+    const now = new Date().toISOString();
+
+    if (action === 'approve') {
+      const quotationUpdates = {
+        requirementsStatus: 'approved',
+        requirementsApprovedAt: now,
+        requirementsApprovedBy: req.user.uid,
+        requirementsRemarks: remarks || '',
+        requirementsRejectionReason: null,
+        updatedAt: now
+      };
+
+      await updateToDatabase(quotationPath, quotationUpdates);
+
+      // Notify client
+      if (quotation.clientUid) {
+        createNotification({
+          recipientUid: quotation.clientUid,
+          recipientRole: 'client',
+          title: 'Requirements Approved · Ready to Accept',
+          message: `Your submitted requirements for Quotation ${quotation.quoteNo || id} have been approved! You can now accept the quotation and proceed to payment.`,
+          type: 'quotation',
+          link: '/client/tracking',
+          metadata: { quotationId: id, quoteNo: quotation.quoteNo }
+        }).catch(err => console.warn('Client notification warning:', err.message));
+      }
+
+      await logFromRequest(req, {
+        action: 'APPROVE_REQUIREMENTS',
+        entityType: 'quotation',
+        entityId: id,
+        description: `Approved requirements for Quotation ${quotation.quoteNo || id} (${quotation.clientName})`,
+        metadata: { quotationId: id, quoteNo: quotation.quoteNo }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Requirements approved successfully. Client can now accept the quotation.',
+        requirementsStatus: 'approved'
+      });
+    } else {
+      // request_changes
+      const rejectionNote = (remarks || reason || '').trim();
+      if (!rejectionNote) {
+        return res.status(400).json({ error: 'Please provide remarks or details for the requested changes.' });
+      }
+
+      const quotationUpdates = {
+        requirementsStatus: 'changes_requested',
+        requirementsRejectionReason: rejectionNote,
+        requirementsRejectedAt: now,
+        updatedAt: now
+      };
+
+      await updateToDatabase(quotationPath, quotationUpdates);
+
+      // Notify client
+      if (quotation.clientUid) {
+        createNotification({
+          recipientUid: quotation.clientUid,
+          recipientRole: 'client',
+          title: 'Action Needed: Requirements Correction Requested',
+          message: `The operator requested corrections for Quotation ${quotation.quoteNo || id}: "${rejectionNote}". Please update your requirements.`,
+          type: 'quotation',
+          link: '/client/tracking',
+          metadata: { quotationId: id, quoteNo: quotation.quoteNo, reason: rejectionNote }
+        }).catch(err => console.warn('Client notification warning:', err.message));
+      }
+
+      await logFromRequest(req, {
+        action: 'REJECT_REQUIREMENTS',
+        entityType: 'quotation',
+        entityId: id,
+        description: `Requested requirements corrections for Quotation ${quotation.quoteNo || id} (${quotation.clientName}): "${rejectionNote}"`,
+        metadata: { quotationId: id, quoteNo: quotation.quoteNo, remarks: rejectionNote }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Changes requested. Client notified to correct requirements.',
+        requirementsStatus: 'changes_requested'
+      });
+    }
+  } catch (error) {
+    console.error('Error reviewing quotation requirements:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
 
 /**
  * Accept a quotation (called by Client online or Operator on-site)
@@ -513,6 +931,15 @@ const acceptQuotation = async (req, res) => {
       });
     }
 
+    // Zero-Trust Check: Service Requirements must be approved prior to acceptance
+    const reqStatus = (quotation.requirementsStatus || '').toLowerCase();
+    if (reqStatus !== 'approved' && reqStatus !== 'not_required') {
+      return res.status(400).json({
+        error: 'Cannot accept quotation: Service requirements must be verified and approved by the branch operator before acceptance.',
+        requirementsStatus: quotation.requirementsStatus || 'pending'
+      });
+    }
+
     const now = new Date().toISOString();
 
     // Update Quotation record to Accepted and UNPAID (fulfillment is created only upon confirmed payment)
@@ -557,6 +984,14 @@ const acceptQuotation = async (req, res) => {
       metadata: { quotationId: id, branchName: quotation.branchName }
     }).catch(err => console.warn('Admin quotation accepted notification warning:', err.message));
 
+    await logFromRequest(req, {
+      action: 'ACCEPT_QUOTATION',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Accepted Quotation ${quotation.quoteNo || id} on behalf of Client ${quotation.clientName || 'Client'}`,
+      metadata: { quoteNo: quotation.quoteNo, clientName: quotation.clientName, totalAmount: quotation.totalAmount }
+    });
+
     return res.status(200).json({
       message: 'Quotation accepted successfully. Please complete payment to activate your service fulfillment.',
       quotationId: id,
@@ -594,6 +1029,14 @@ const deleteQuotation = async (req, res) => {
         return res.status(403).json({ error: 'Forbidden: You can only delete quotations for your branch.' });
       }
     }
+
+    await logFromRequest(req, {
+      action: 'DELETE_QUOTATION',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Deleted Quotation ${existing.quoteNo || id} for ${existing.clientName || 'Client'}`,
+      metadata: { quoteNo: existing.quoteNo, clientName: existing.clientName }
+    });
 
     await deleteFromDatabase(dbPath);
     return res.status(200).json({ message: 'Quotation deleted successfully' });
@@ -637,9 +1080,40 @@ const updateQuotation = async (req, res) => {
     if (updates.taxAmount !== undefined) updates.taxAmount = Number(updates.taxAmount) || 0;
     if (updates.totalAmount !== undefined) updates.totalAmount = Number(updates.totalAmount) || 0;
 
+    // Edge Case: If serviceId changes, reset requirements approval state and re-evaluate
+    if (updates.serviceId && updates.serviceId !== existing.serviceId) {
+      try {
+        const newServiceDoc = await getFromDatabase(`${COLLECTIONS.SERVICES}/${updates.serviceId}`);
+        if (newServiceDoc) {
+          const serviceReqs = Array.isArray(newServiceDoc.requirements)
+            ? newServiceDoc.requirements
+            : (Array.isArray(newServiceDoc.actions) ? newServiceDoc.actions : []);
+          const mandatory = serviceReqs.filter(r => (typeof r === 'object' ? r.required !== false : true));
+          if (mandatory.length > 0) {
+            updates.requirementsStatus = 'pending';
+            updates.requirementsApprovedAt = null;
+            updates.requirementsApprovedBy = null;
+            updates.requirementsRejectionReason = null;
+          } else {
+            updates.requirementsStatus = 'not_required';
+          }
+        }
+      } catch (e) {
+        console.warn('[Quotation] Error re-evaluating service change in updateQuotation:', e.message);
+      }
+    }
+
     await updateToDatabase(dbPath, {
       ...updates,
       updatedAt: new Date().toISOString()
+    });
+
+    await logFromRequest(req, {
+      action: 'UPDATE_QUOTATION',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Modified details/pricing on Quotation ${existing.quoteNo || id} for ${existing.clientName || 'Client'}`,
+      metadata: { quoteNo: existing.quoteNo, clientName: existing.clientName }
     });
 
     return res.status(200).json({ message: 'Quotation updated successfully' });
@@ -656,6 +1130,8 @@ module.exports = {
   acceptQuotation,
   deleteQuotation,
   updateQuotation,
+  submitQuotationRequirements,
+  reviewQuotationRequirements,
   buildFulfillmentPayload
 };
 

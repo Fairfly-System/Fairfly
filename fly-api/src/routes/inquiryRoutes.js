@@ -8,7 +8,9 @@ const {
   deleteInquiry,
   confirmInquiry,
   getInquirySchema,
-  saveInquirySchema
+  saveInquirySchema,
+  attachServiceToInquiry,
+  submitInquiryRequirements
 } = require('../controllers/inquiryController');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
@@ -51,6 +53,11 @@ const INQUIRY_ALLOWED_FIELDS = [
   'submittedRequirementsId',
   'confirmedQuotationId',
   'confirmedActiveServiceId',
+  'isWalkIn',
+  'workflow',
+  'serviceAttachedAt',
+  'serviceAttachedBy',
+  'requirementsSubmittedAt',
   'id',
   'createdAt',
   'updatedAt'
@@ -68,6 +75,33 @@ router.post('/', publicRateLimiter, (req, res, next) => {
 
 router.get('/', performanceProfiler('GET /inquiries', verifyFirebaseToken, apiRateLimiter, getInquiries));
 router.get('/:id', performanceProfiler('GET /inquiries/:id', verifyFirebaseToken, apiRateLimiter, getInquiryById));
+
+// Attach Service to Inquiry (Operator / Admin)
+router.post(
+  '/:id/attach-service',
+  performanceProfiler(
+    'POST /inquiries/:id/attach-service',
+    verifyFirebaseToken,
+    requireRole(['admin', 'operator', 'branch_operator']),
+    allowedFields(['serviceId', 'isWalkIn']),
+    apiRateLimiter,
+    attachServiceToInquiry
+  )
+);
+
+// Client Submits Required Documents for Inquiry in pending_requirements
+router.post(
+  '/:id/submit-requirements',
+  performanceProfiler(
+    'POST /inquiries/:id/submit-requirements',
+    verifyFirebaseToken,
+    requireRole('client'),
+    allowedFields(['requirements']),
+    apiRateLimiter,
+    submitInquiryRequirements
+  )
+);
+
 router.patch('/:id', performanceProfiler('PATCH /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
 router.put('/:id', performanceProfiler('PUT /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
 router.delete('/:id', performanceProfiler('DELETE /inquiries/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, deleteInquiry));

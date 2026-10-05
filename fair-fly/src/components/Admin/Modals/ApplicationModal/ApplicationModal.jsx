@@ -20,7 +20,8 @@ const ApplicationModal = forwardRef(({ handleApprove, handleReject, isLoading, s
     return (
         <BaseModal
             ref={baseModalRef}
-            maxWidth="56rem"
+            maxWidth="72rem"
+            width="95%"
             isLoading={isLoading}
             title={
                 <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>

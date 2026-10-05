@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router';
 import { doc, onSnapshot, collection, query, where, limit } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -7,9 +7,13 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import OperatorPaymentModal from '../../../components/Operator/OperatorPaymentModal/OperatorPaymentModal';
+import AcceptOnBehalfModal from '../../../components/Operator/AcceptOnBehalfModal/AcceptOnBehalfModal';
+import QuotationRequirementsReview from '../../../components/Operator/QuotationRequirementsReview/QuotationRequirementsReview';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { acceptQuotation } from '../../../services/quotationService';
+import { verifyPayment } from '../../../services/paymentService';
 import './quotation-detail.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -28,6 +32,33 @@ export default function QuotationDetailPage() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Listen for PayMongo redirect query params on operator quotation page
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment_status');
+    const paymentId = searchParams.get('payment_id');
+    if (paymentStatus === 'success' && paymentId && userToken) {
+      verifyPayment(
+        userToken,
+        paymentId,
+        (res) => {
+          if (res?.paid) {
+            addToast('PayMongo payment successfully verified! Service fulfillment is active.', 'success');
+          } else {
+            addToast('Payment checkout returned. Please check status.', 'info');
+          }
+          setSearchParams({}, { replace: true });
+        },
+        (err) => {
+          console.error('[QuotationDetailPage] PayMongo auto-verify error:', err);
+          addToast(err?.message || 'Failed to verify PayMongo payment', 'error');
+        }
+      );
+    }
+  }, [searchParams, userToken, setSearchParams, addToast]);
 
   // Directly subscribe to the specific quotation document (1 document read instead of entire collection)
   useEffect(() => {
@@ -245,6 +276,14 @@ export default function QuotationDetailPage() {
       return;
     }
 
+    if (newStatus === 'Sent' && !requirementsApproved) {
+      addToast(
+        `Cannot send quotation to client: Service requirements must be verified and approved first (Current requirements status: "${(quotation.requirementsStatus || 'pending').replace('_', ' ')}").`,
+        'warning'
+      );
+      return;
+    }
+
     ApiCaller(
       `${API_BASE_URL}/api/quotations/${quotation.id}/status`,
       'PATCH',
@@ -259,31 +298,30 @@ export default function QuotationDetailPage() {
     );
   };
 
-  const handleAcceptOnBehalf = () => {
+  const requirementsApproved = quotation?.requirementsStatus === 'approved' ||
+    quotation?.requirementsStatus === 'not_required';
+
+  const handleOpenAcceptModal = () => {
     if (!quotation?.id) return;
     if (isFinalized) {
       addToast('This quotation has already been accepted or paid.', 'warning');
       return;
     }
-
-    if (!window.confirm(`Accept this quotation on behalf of ${quotation.clientName}? This will register client acceptance.`)) {
+    if (!requirementsApproved) {
+      addToast(
+        `Cannot accept quotation: Service requirements must be verified and approved first (Current requirements status: "${(quotation.requirementsStatus || 'pending').replace('_', ' ')}").`,
+        'warning'
+      );
       return;
     }
+    setShowAcceptModal(true);
+  };
 
-    setIsAccepting(true);
-    acceptQuotation(
-      userToken,
-      quotation.id,
-      () => {
-        setIsAccepting(false);
-        addToast('Quotation accepted on behalf of client!', 'success');
-      },
-      (err) => {
-        setIsAccepting(false);
-        console.error('Error accepting quotation on behalf:', err);
-        addToast(err?.message || 'Failed to accept quotation', 'danger');
-      }
-    );
+  const handleAcceptSuccess = (result) => {
+    setShowAcceptModal(false);
+    if (result?.proceedToPayment !== false) {
+      setShowPaymentModal(true);
+    }
   };
 
   const breadcrumbs = [
@@ -336,17 +374,30 @@ export default function QuotationDetailPage() {
           icon: 'fa-solid fa-paper-plane',
           onClick: () => handleStatusChange('Sent'),
           className: 'btn-primary',
-          disabled: isSaving || isDeleting || isAccepting,
+          disabled: isSaving || isDeleting || isAccepting || !requirementsApproved,
+          style: { background: requirementsApproved ? 'var(--purple, #7c3aed)' : '#94a3b8' },
+          title: !requirementsApproved ? 'Service requirements must be verified and approved first' : 'Send quotation to client'
         }
       ] : []),
       ...(!isFinalized ? [
         {
-          label: isAccepting ? 'Accepting...' : 'Accept on Behalf of Client (On-Site)',
-          icon: isAccepting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-handshake',
-          onClick: handleAcceptOnBehalf,
+          label: 'Accept on Behalf of Client (On-Site)',
+          icon: 'fa-solid fa-handshake',
+          onClick: handleOpenAcceptModal,
+          className: 'btn-primary',
+          disabled: isSaving || isDeleting || !requirementsApproved,
+          style: { background: requirementsApproved ? 'var(--green, #16a34a)' : '#94a3b8' },
+          title: !requirementsApproved ? 'Service requirements must be verified and approved first' : 'Accept on behalf of client'
+        }
+      ] : []),
+      ...(quotation.status === 'Accepted' && !isPaid ? [
+        {
+          label: 'Process Payment (Cash / PayMongo)',
+          icon: 'fa-solid fa-cash-register',
+          onClick: () => setShowPaymentModal(true),
           className: 'btn-primary',
           disabled: isSaving || isDeleting || isAccepting,
-          style: { background: 'var(--green, #16a34a)' }
+          style: { background: 'var(--brand-primary, #6366f1)' }
         }
       ] : []),
       ...(!isPaid ? [
@@ -359,7 +410,7 @@ export default function QuotationDetailPage() {
         }
       ] : []),
     ];
-  }, [quotation, isEditing, isSaving, isDeleting, isAccepting, isFinalized, isPaid, formData]);
+  }, [quotation, isEditing, isSaving, isDeleting, isAccepting, isFinalized, isPaid, formData, requirementsApproved]);
 
   const getStatusType = () => {
     if (!quotation) return 'neutral';
@@ -421,6 +472,17 @@ export default function QuotationDetailPage() {
 
               {!isFulfilled && (
                 <div className="quote-accepted-actions">
+                  {!isPaid && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm quote-link-btn"
+                      onClick={() => setShowPaymentModal(true)}
+                      style={{ background: 'var(--brand-primary, #6366f1)', color: '#fff' }}
+                    >
+                      <i className="fa-solid fa-cash-register"></i>
+                      <span>Collect Payment (Cash / QR)</span>
+                    </button>
+                  )}
                   {quotation.activeServiceId && (
                     <Link
                       to={`/operator/services/${quotation.activeServiceId}/procedure`}
@@ -457,6 +519,30 @@ export default function QuotationDetailPage() {
               >
                 View Inquiry Form (SAF-01-002) →
               </Link>
+            </div>
+          )}
+
+          {/* Requirements Verification Pending Warning Callout */}
+          {!isFinalized && !requirementsApproved && (
+            <div style={{
+              background: '#fffbeb',
+              border: '1.5px solid #fde68a',
+              borderRadius: '0px',
+              padding: '0.85rem 1.25rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem'
+            }}>
+              <i className="fa-solid fa-triangle-exclamation" style={{ color: '#d97706', fontSize: '1.25rem' }}></i>
+              <div>
+                <div style={{ fontWeight: 700, color: '#92400e', fontSize: '0.875rem' }}>
+                  Requirements Verification Pending (Status: {(quotation.requirementsStatus || 'pending').replace('_', ' ').toUpperCase()})
+                </div>
+                <div style={{ color: '#b45309', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                  Sending quotation to client and accepting on client's behalf are locked until all mandatory service requirements below are verified and approved by the branch operator.
+                </div>
+              </div>
             </div>
           )}
 
@@ -647,6 +733,13 @@ export default function QuotationDetailPage() {
             </article>
           </div>
 
+          {/* Service Requirements Verification Section */}
+          <QuotationRequirementsReview
+            quotation={quotation}
+            isFinalized={isFinalized}
+            onReviewUpdated={() => {}}
+          />
+
           {/* Requirements & Tour Dates */}
           <div className="details-grid-2">
             <article className="card detail-panel">
@@ -806,6 +899,69 @@ export default function QuotationDetailPage() {
             </article>
           </div>
 
+          {/* Payment & Settlement Summary Card */}
+          {isPaid && (
+            <article className="card detail-panel" style={{ marginTop: '1.25rem', borderLeft: '4px solid var(--green, #16a34a)' }}>
+              <h2 className="panel-title" style={{ color: 'var(--green, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>
+                  <i className="fa-solid fa-receipt"></i> Payment & Fulfillment Settlement
+                </span>
+                <span className="quote-payment-badge paid" style={{ fontSize: '0.8rem', padding: '0.2rem 0.6rem' }}>
+                  <i className="fa-solid fa-circle-check"></i> AUTHORITATIVELY PAID
+                </span>
+              </h2>
+
+              <div className="panel-details-list">
+                <div className="detail-item">
+                  <span className="detail-label">Payment Method</span>
+                  <span className="detail-value font-bold" style={{ textTransform: 'capitalize' }}>
+                    {quotation.paymentMethod === 'Cash' || quotation.paymentMethod === 'cash' ? (
+                      <span><i className="fa-solid fa-money-bill-wave" style={{ color: '#16a34a', marginRight: '0.4rem' }}></i> Direct Cash (Walk-in Receipt)</span>
+                    ) : (
+                      <span><i className="fa-solid fa-qrcode" style={{ color: '#6366f1', marginRight: '0.4rem' }}></i> PayMongo QR / Online Gateway</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Total Amount Settled</span>
+                  <span className="detail-value font-bold text-green" style={{ fontSize: '1.05rem' }}>
+                    ₱{Number(quotation.totalAmount || quotation.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {quotation.paidAt && (
+                  <div className="detail-item">
+                    <span className="detail-label">Settlement Timestamp</span>
+                    <span className="detail-value">
+                      {new Date(quotation.paidAt).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                {quotation.paymentId && (
+                  <div className="detail-item">
+                    <span className="detail-label">System Payment Reference</span>
+                    <span className="detail-value text-mono text-purple">{quotation.paymentId}</span>
+                  </div>
+                )}
+
+                {activeService?.id && (
+                  <div className="detail-item">
+                    <span className="detail-label">Linked Active Service</span>
+                    <Link
+                      to={`/operator/services/${activeService.id}/procedure`}
+                      className="detail-value font-bold text-purple"
+                      style={{ textDecoration: 'underline' }}
+                    >
+                      View Live Service Fulfillment ({activeService.id.substring(0, 10)}...) →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </article>
+          )}
+
           {/* Delete confirmation */}
           <ConfirmationModal
             isOpen={showDeleteConfirm}
@@ -825,6 +981,25 @@ export default function QuotationDetailPage() {
             onClose={() => setShowPdfModal(false)}
             type="quotation"
             data={quotation}
+          />
+
+          {/* Accept on Behalf of Client Modal */}
+          <AcceptOnBehalfModal
+            isOpen={showAcceptModal}
+            onClose={() => setShowAcceptModal(false)}
+            quotation={quotation}
+            onAcceptSuccess={handleAcceptSuccess}
+          />
+
+          {/* Operator Payment Modal (Direct Cash & PayMongo QR) */}
+          <OperatorPaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            quotation={quotation}
+            onPaymentSuccess={() => {
+              setShowPaymentModal(false);
+              addToast('Payment verified and recorded successfully!', 'success');
+            }}
           />
         </div>
       )}

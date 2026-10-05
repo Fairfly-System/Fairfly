@@ -141,7 +141,8 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
       <BaseModal
         isOpen={isOpen}
         onClose={onClose}
-        maxWidth="56rem"
+        maxWidth="68rem"
+        width="95%"
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <i className="fa-solid fa-diagram-project" style={{ color: 'var(--purple)' }}></i>

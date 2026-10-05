@@ -16,7 +16,8 @@ const ResourceModal = forwardRef(function ResourceModal(
     <BaseModal
       ref={ref}
       title={isEdit ? 'Edit Resource Material' : 'Upload Resource Material'}
-      maxWidth="38rem"
+      maxWidth="54rem"
+      width="95%"
     >
       <ResourceForm
         onSubmit={async (data) => {

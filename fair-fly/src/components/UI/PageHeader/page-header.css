@@ -8,7 +8,7 @@
   max-height: 20rem;
   min-height: 15rem;
   background-color: var(--card-bg);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   overflow: hidden;
 }
 

@@ -13,6 +13,7 @@ const {
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
 const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
+const { logFromRequest } = require('../services/operatorLoggerService');
 
 const COLLECTIONS = {
   INQUIRIES: 'inquiries',
@@ -128,10 +129,18 @@ const createInquiry = async (req, res) => {
     }
 
     const resolvedPhone = (phoneNumber || cellphone || '').trim();
-    const resolvedEmail = (email || '').trim();
+    const resolvedEmail = (email || '').trim().toLowerCase();
 
-    if (!resolvedName || (!resolvedPhone && !resolvedEmail)) {
-      return res.status(400).json({ error: (isCompany ? 'Company name' : 'Client name') + ' and at least one contact method are required' });
+    if (!resolvedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resolvedEmail)) {
+      return res.status(400).json({ error: 'A valid email address is mandatory for all inquiries.' });
+    }
+
+    if (!resolvedName) {
+      return res.status(400).json({ error: (isCompany ? 'Company name' : 'Client name') + ' is required.' });
+    }
+
+    if (!resolvedPhone) {
+      return res.status(400).json({ error: 'Cellphone / contact number is required.' });
     }
 
     const now = new Date().toISOString();
@@ -209,16 +218,28 @@ const createInquiry = async (req, res) => {
       resolvedServices = ['General Inquiry'];
     }
 
-    // Resolve client's specified requirements (What does the client want?)
+    // Resolve client's specified requirements (What does the client want from the service?)
     const resolvedSpecReqs = typeof specifiedRequirements === 'string'
       ? specifiedRequirements.trim()
       : (typeof requirements === 'string' ? requirements.trim() : (notes || ''));
 
-    const rawReqsArray = Array.isArray(requirements) && requirements.length > 0
-      ? requirements
-      : (Array.isArray(req.body.submittedRequirements) && req.body.submittedRequirements.length > 0
-        ? req.body.submittedRequirements
-        : (resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []));
+    // Resolve actual document requirements submitted by client (e.g. file attachments or required checklist items)
+    // Note: "Specified Requirements of Client" is what the client wants from the agency, NOT an agency document requirement.
+    let rawReqsArray = [];
+    if (Array.isArray(requirements) && requirements.length > 0) {
+      rawReqsArray = requirements;
+    } else if (Array.isArray(req.body.submittedRequirements) && req.body.submittedRequirements.length > 0) {
+      rawReqsArray = req.body.submittedRequirements;
+    }
+
+    // Never add or treat "Specified Requirements of Client" as a document requirement
+    rawReqsArray = rawReqsArray.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
 
     let effectiveSubmittedReqId = req.body.submittedRequirementsId || null;
     if (rawReqsArray.length > 0) {
@@ -232,8 +253,16 @@ const createInquiry = async (req, res) => {
       }
     }
 
+    // Workflow determination:
+    // When submitted through client portal (or !isStaff), it strictly defaults to online workflow.
+    // Staff/operator can record a walk-in intake with isWalkIn === true.
+    const isWalkIn = isStaff ? (req.body.isWalkIn === true) : false;
+    const workflow = isWalkIn ? 'walk_in' : 'online';
+
     const newInquiry = {
       clientUid: effectiveClientUid,
+      isWalkIn: isWalkIn,
+      workflow: workflow,
       clientType: isCompany ? 'company' : 'individual',
       companyName: isCompany ? (companyName || resolvedName).trim() : '',
       clientName: resolvedName.trim(),
@@ -314,6 +343,14 @@ const createInquiry = async (req, res) => {
         metadata: { inquiryId: docId, controlNo: newInquiry.controlNo }
       }).catch(err => console.warn('Client inquiry receipt notification warning:', err.message));
     }
+
+    await logFromRequest(req, {
+      action: 'CREATE_INQUIRY',
+      entityType: 'inquiry',
+      entityId: docId,
+      description: `Recorded Walk-in Inquiry (${newInquiry.controlNo || newInquiry.formNo}) for ${resolvedName} (${newInquiry.serviceType})`,
+      metadata: { controlNo: newInquiry.controlNo, clientName: resolvedName, serviceType: newInquiry.serviceType }
+    });
 
     return res.status(201).json({ id: docId, ...newInquiry, message: 'Inquiry form created successfully' });
   } catch (error) {
@@ -477,6 +514,14 @@ const deleteInquiry = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Only administrators and the assigned branch operator can delete inquiries.' });
     }
 
+    await logFromRequest(req, {
+      action: 'DELETE_INQUIRY',
+      entityType: 'inquiry',
+      entityId: id,
+      description: `Deleted Inquiry (${existing.controlNo || existing.formNo || id}) for ${existing.clientName || 'Client'}`,
+      metadata: { inquiryId: id, controlNo: existing.controlNo, clientName: existing.clientName }
+    });
+
     await deleteFromDatabase(dbPath);
     return res.status(200).json({ message: 'Inquiry deleted successfully' });
   } catch (error) {
@@ -521,6 +566,15 @@ const confirmInquiry = async (req, res) => {
       }
     }
 
+    // Filter out any pseudo-requirement entries ("Specified Requirements of Client" is what client wants, not an agency doc requirement)
+    requirements = requirements.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
+
     const missingReqs = requirements.filter((r) => {
       if (r.required !== false) {
         // Must have uploaded file URL or filled value
@@ -551,19 +605,25 @@ const confirmInquiry = async (req, res) => {
     const serviceTitle = inquiry.serviceType || adminService?.name || 'General Service';
     const serviceFeeNum = Number(String(inquiry.servicePrice || adminService?.price || '0').replace(/[^0-9.]/g, '')) || 0;
 
-    // 3. Format Requirements as clean bullet points for Quotation
+    // 3. Format Requirements as clean bullet points for Quotation (Agency document requirements needed from client)
     const formattedReqsList = requirements.length > 0
       ? requirements.map(r => `• ${r.name || r.title || 'Requirement'}${r.file?.fileName ? ` (${r.file.fileName})` : ''}`).join('\n')
-      : inquiry.notes || 'Standard Client Requirements';
+      : (adminService?.requirements
+          ? (Array.isArray(adminService.requirements)
+              ? adminService.requirements.map(r => `• ${typeof r === 'string' ? r : (r.name || r.title || 'Requirement')}`).join('\n')
+              : String(adminService.requirements))
+          : '- Valid Government Issued ID\n- Completed Application Form');
 
-    if (!resolvedReqId && requirements.length > 0) {
+    const effectiveQuoteReqId = requirements.length > 0 ? resolvedReqId : null;
+
+    if (!effectiveQuoteReqId && requirements.length > 0) {
       try {
-        resolvedReqId = await createSubmittedRequirementsRecord({
+        const createdReqId = await createSubmittedRequirementsRecord({
           submittedBy: inquiry.clientUid || req.user?.uid,
           requirements: requirements
         });
         await updateToDatabase(dbPath, {
-          submittedRequirementsId: resolvedReqId
+          submittedRequirementsId: createdReqId
         });
       } catch (err) {
         console.warn('[Inquiry] Could not auto-create submitted_requirements in confirm:', err.message);
@@ -580,7 +640,7 @@ const confirmInquiry = async (req, res) => {
       clientPhone: inquiry.phoneNumber || inquiry.cellphone || '',
       serviceId: inquiry.serviceId || null,
       serviceTitle: serviceTitle,
-      submittedRequirementsId: resolvedReqId,
+      submittedRequirementsId: effectiveQuoteReqId,
       tourDates: inquiry.dateInquired || now.split('T')[0],
       inclusions: adminService?.description ? `- Standard ${serviceTitle} inclusions` : '- Standard package inclusions',
       exclusions: '- Toll fees, personal expenses, and incidental items',
@@ -637,6 +697,14 @@ const confirmInquiry = async (req, res) => {
       metadata: { inquiryId: id, quotationId: quotationDocId, branchName }
     }).catch(err => console.warn('Admin inquiry confirm notification warning:', err.message));
 
+    await logFromRequest(req, {
+      action: 'CONFIRM_INQUIRY',
+      entityType: 'inquiry',
+      entityId: id,
+      description: `Confirmed Inquiry (${inquiry.controlNo || inquiry.formNo || id}) for ${inquiry.clientName || inquiry.fullName || 'Client'} and generated Quotation ${quoteNo}`,
+      metadata: { inquiryId: id, controlNo: inquiry.controlNo, quotationId: quotationDocId, quoteNo }
+    });
+
     return res.status(200).json({
       message: 'Inquiry confirmed successfully. Quotation created and ready for client approval.',
       quotationId: quotationDocId
@@ -689,6 +757,230 @@ const saveInquirySchema = async (req, res) => {
   }
 };
 
+/**
+ * Attach a catalog service to an inquiry
+ * POST /api/inquiries/:id/attach-service
+ * 
+ * Rules:
+ * - Operator / Admin only
+ * - Operator can only modify inquiries belonging to their branch
+ * - If isWalkIn === true:
+ *   Service is attached for walk-in client; operator completes requirements on site during quotation creation.
+ * - If online client (isWalkIn === false):
+ *   Inquiry transitions to 'pending_requirements', requirements schema is attached, and client is notified to submit.
+ */
+const attachServiceToInquiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { serviceId, isWalkIn: bodyIsWalkIn } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Inquiry ID is required' });
+    if (!serviceId) return res.status(400).json({ error: 'serviceId is required' });
+
+    const dbPath = `${COLLECTIONS.INQUIRIES}/${id}`;
+    const inquiry = await getFromDatabase(dbPath);
+    if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
+
+    // Authorization: Assigned operator or Admin
+    const userRole = req.userDetails?.role;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((inquiry.branchUid && inquiry.branchUid === req.user?.uid) || (inquiry.operatorId && inquiry.operatorId === req.user?.uid));
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to attach a service to this inquiry.' });
+    }
+
+    if (inquiry.confirmedQuotationId || inquiry.status === 'confirmed' || inquiry.status === 'paid') {
+      return res.status(400).json({ error: 'Cannot attach service: Quotation or service order has already been finalized.' });
+    }
+
+    // Fetch the target service from catalog
+    const serviceDoc = await getFromDatabase(`${COLLECTIONS.SERVICES}/${serviceId}`);
+    if (!serviceDoc) {
+      return res.status(404).json({ error: 'Service catalog item not found.' });
+    }
+
+    if (!Array.isArray(serviceDoc.workflowIds) || serviceDoc.workflowIds.length === 0) {
+      return res.status(400).json({ error: 'Cannot attach service: This service has no operational workflow configured.' });
+    }
+
+    // Extract requirements schema from the service
+    let serviceReqs = Array.isArray(serviceDoc.requirements)
+      ? serviceDoc.requirements
+      : (Array.isArray(serviceDoc.actions) ? serviceDoc.actions : []);
+
+    // Filter out pseudo-requirements
+    serviceReqs = serviceReqs.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
+
+    const now = new Date().toISOString();
+    const servicePrice = serviceDoc.price || (serviceDoc.baseFee ? String(serviceDoc.baseFee) : '');
+    const serviceTitle = serviceDoc.name || 'Custom Service';
+    const isWalkIn = req.body.isWalkIn !== undefined ? Boolean(req.body.isWalkIn) : Boolean(inquiry.isWalkIn);
+
+    const updates = {
+      serviceId: serviceDoc.id,
+      serviceType: serviceTitle,
+      servicesOffered: [serviceTitle],
+      servicePrice: servicePrice,
+      status: 'submitted',
+      isWalkIn: isWalkIn,
+      workflow: isWalkIn ? 'walk_in' : 'online',
+      serviceAttachedAt: now,
+      serviceAttachedBy: req.user.uid,
+      updatedAt: now
+    };
+
+    await updateToDatabase(dbPath, updates);
+
+    if (!isWalkIn && inquiry.clientUid) {
+      createNotification({
+        recipientUid: inquiry.clientUid,
+        recipientRole: 'client',
+        title: 'Service Selected for Your Inquiry',
+        message: `The branch operator has assigned "${serviceTitle}" to your inquiry (${inquiry.controlNo || inquiry.formNo || id}). We are now preparing your official quotation.`,
+        type: 'inquiry',
+        link: '/client/tracking',
+        metadata: { inquiryId: id, serviceId: serviceDoc.id, status: 'submitted' }
+      }).catch(err => console.warn('[Inquiry] Notification error for service attached:', err.message));
+    }
+
+    await logFromRequest(req, {
+      action: 'ATTACH_SERVICE_INQUIRY',
+      entityType: 'inquiry',
+      entityId: id,
+      description: `Configured Service "${serviceTitle}" (${isWalkIn ? 'Walk-in' : 'Online'} Workflow) for Inquiry (${inquiry.controlNo || inquiry.formNo || id}) - ${inquiry.clientName || inquiry.fullName || 'Client'}`,
+      metadata: { inquiryId: id, serviceId: serviceDoc.id, serviceTitle, isWalkIn: Boolean(isWalkIn), status: 'submitted' }
+    });
+
+    return res.status(200).json({
+      success: true,
+      isWalkIn: Boolean(isWalkIn),
+      workflow: isWalkIn ? 'walk_in' : 'online',
+      status: 'submitted',
+      message: `Service "${serviceTitle}" attached. Inquiry ready for quotation preparation.`,
+      service: {
+        id: serviceDoc.id,
+        name: serviceTitle,
+        price: servicePrice
+      }
+    });
+  } catch (error) {
+    console.error('Error attaching service to inquiry:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Client submits service requirements for an inquiry in pending_requirements status
+ * POST /api/inquiries/:id/submit-requirements
+ * 
+ * Rules:
+ * - Client authentication required
+ * - Client must own the inquiry (IDOR protection)
+ * - Inquiry must be in 'pending_requirements' (or 'submitted')
+ * - Mandatory requirements must be satisfied (file uploaded or text entered)
+ * - Atomically stores requirements in submitted_requirements collection and transitions inquiry back to operator queue ('submitted')
+ */
+const submitInquiryRequirements = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { requirements } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Inquiry ID is required' });
+    if (!Array.isArray(requirements) || requirements.length === 0) {
+      return res.status(400).json({ error: 'requirements array is required' });
+    }
+
+    const dbPath = `${COLLECTIONS.INQUIRIES}/${id}`;
+    const inquiry = await getFromDatabase(dbPath);
+    if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
+
+    // IDOR verification: Client must own this inquiry
+    if (inquiry.clientUid && inquiry.clientUid !== req.user.uid) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to submit requirements for this inquiry.' });
+    }
+
+    if (inquiry.confirmedQuotationId || inquiry.status === 'confirmed' || inquiry.status === 'paid') {
+      return res.status(400).json({ error: 'Cannot modify requirements for an inquiry that already has a quotation or active service.' });
+    }
+
+    // Filter out pseudo-requirements
+    const cleanReqs = requirements.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
+
+    // Validate mandatory requirements
+    const missingReqs = cleanReqs.filter((r) => {
+      if (r.required !== false) {
+        const hasFile = r.file && r.file.url;
+        const hasVal = typeof r.value === 'string' && r.value.trim().length > 0;
+        return !hasFile && !hasVal;
+      }
+      return false;
+    });
+
+    if (missingReqs.length > 0) {
+      const missingNames = missingReqs.map(r => r.name || r.title || 'Required Document').join(', ');
+      return res.status(400).json({
+        error: `Incomplete submission: Mandatory requirement(s) missing uploads or values: ${missingNames}`
+      });
+    }
+
+    const now = new Date().toISOString();
+
+    // Persist in submitted_requirements collection
+    const createdReqId = await createSubmittedRequirementsRecord({
+      submittedBy: req.user.uid,
+      requirements: cleanReqs
+    });
+
+    // Transition inquiry back to operator processing queue ('submitted')
+    const inquiryUpdates = {
+      status: 'submitted',
+      submittedRequirementsId: createdReqId,
+      requirements: cleanReqs,
+      requirementsSubmittedAt: now,
+      updatedAt: now
+    };
+
+    await updateToDatabase(dbPath, inquiryUpdates);
+
+    // Notify Branch Operator that requirements have been submitted
+    if (inquiry.branchUid || inquiry.operatorId) {
+      notifyBranch({
+        branchUid: inquiry.branchUid || inquiry.operatorId,
+        branchName: inquiry.branchName || 'Branch Office',
+        title: 'Requirements Submitted by Client',
+        message: `${inquiry.clientName || 'Client'} has submitted the required documents for inquiry ${inquiry.controlNo || inquiry.formNo || id} (${inquiry.serviceType || 'Custom Service'}). Ready for quotation preparation.`,
+        type: 'inquiry',
+        link: '/operator/inquiry-forms',
+        metadata: { inquiryId: id, controlNo: inquiry.controlNo, status: 'submitted' }
+      }).catch(err => console.warn('[Inquiry] Operator notification error for submitted requirements:', err.message));
+    }
+
+    return res.status(200).json({
+      success: true,
+      status: 'submitted',
+      submittedRequirementsId: createdReqId,
+      message: 'Requirements submitted successfully! Your inquiry is now with our operators for quotation preparation.'
+    });
+  } catch (error) {
+    console.error('Error in submitInquiryRequirements:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   createInquiry,
   getInquiries,
@@ -697,5 +989,7 @@ module.exports = {
   deleteInquiry,
   confirmInquiry,
   getInquirySchema,
-  saveInquirySchema
+  saveInquirySchema,
+  attachServiceToInquiry,
+  submitInquiryRequirements
 };

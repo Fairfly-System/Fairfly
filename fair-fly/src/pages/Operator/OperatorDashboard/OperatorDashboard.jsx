@@ -10,10 +10,11 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import WelcomeHero from '../../../components/UI/WelcomeHero/WelcomeHero';
 import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
+import OperatorActivityLogSection from '../../../components/Admin/OperatorActivityLogs/OperatorActivityLogSection';
 import './operator-dashboard.css';
 
 function DashboardContent() {
-  const { user, userDetails } = useAuthContext();
+  const { user, userDetails, userToken } = useAuthContext();
   const navigate = useNavigate();
   const [showAddService, setShowAddService] = useState(false);
   const [showQualModal, setShowQualModal] = useState(false);
@@ -385,6 +386,13 @@ function DashboardContent() {
           onPageSizeChange={setPageSize}
         />
       </section>
+
+      {/* My Recent Operational Actions */}
+      <OperatorActivityLogSection
+        operatorId="me"
+        operatorName="My Activity History"
+        userToken={userToken}
+      />
 
       {/* Qualification Application Modal */}
       <QualificationApplicationModal

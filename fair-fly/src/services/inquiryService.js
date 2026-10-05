@@ -108,3 +108,50 @@ export function saveInquirySchema(token, schemaData, successCallback, errorCallb
     setIsLoading
   );
 }
+
+/**
+ * Attach a catalog service to an inquiry.
+ * For online clients, transitions inquiry to pending_requirements and notifies client.
+ * For walk-in clients, attaches service for operator to complete requirements on site.
+ * 
+ * @param {string} token - Firebase ID token of operator
+ * @param {string} id - Inquiry document ID
+ * @param {object} payload - { serviceId, isWalkIn }
+ * @param {function} successCallback - (data) => void
+ * @param {function} errorCallback - (err) => void
+ * @param {function} [setIsLoading] - (bool) => void
+ */
+export function attachServiceToInquiry(token, id, payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/inquiries/${id}/attach-service`,
+    'POST',
+    payload,
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+/**
+ * Submit service requirements for an inquiry in pending_requirements.
+ * 
+ * @param {string} token - Firebase ID token of client
+ * @param {string} id - Inquiry document ID
+ * @param {Array} requirements - Requirements array with values and file attachments
+ * @param {function} successCallback - (data) => void
+ * @param {function} errorCallback - (err) => void
+ * @param {function} [setIsLoading] - (bool) => void
+ */
+export function submitInquiryRequirements(token, id, requirements, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/inquiries/${id}/submit-requirements`,
+    'POST',
+    { requirements },
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+

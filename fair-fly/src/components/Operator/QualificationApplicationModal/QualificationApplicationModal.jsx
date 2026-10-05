@@ -194,7 +194,8 @@ export default function QualificationApplicationModal({
     <BaseModal
       isOpen={isOpen}
       onClose={handleModalClose}
-      maxWidth="42rem"
+      maxWidth="60rem"
+      width="95%"
       title={
         <div className="qualification-modal-title">
           <i className="fa-solid fa-certificate"></i>

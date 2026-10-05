@@ -67,7 +67,9 @@ export default function CreateInquiryFormModal({ onClose }) {
     fetchServices(
       branchUid,
       (services) => {
-        const activeOnly = Array.isArray(services) ? services.filter(s => s.status === 'Active') : [];
+        const activeOnly = Array.isArray(services)
+          ? services.filter(s => s.status === 'Active' && Array.isArray(s.workflowIds) && s.workflowIds.length > 0)
+          : [];
         setActiveServices(activeOnly);
         setLoadingServices(false);
       },
@@ -153,8 +155,12 @@ export default function CreateInquiryFormModal({ onClose }) {
       }
     }
 
-    if (!form.cellphone.trim() && !form.email.trim()) {
-      addToast('Please provide at least a cellphone number or email', 'error');
+    if (!form.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      addToast('A valid E-mail Address is mandatory for all inquiries', 'error');
+      return;
+    }
+    if (!form.cellphone?.trim()) {
+      addToast('Please provide a cellphone number', 'error');
       return;
     }
     if ((form.servicesOffered || []).length === 0) {
@@ -214,7 +220,8 @@ export default function CreateInquiryFormModal({ onClose }) {
     <BaseModal
       isOpen={true}
       onClose={onClose}
-      maxWidth="58rem"
+      maxWidth="72rem"
+      width="95%"
       title="Official Service Inquiry Intake Form (SAF-01-002)"
       subtitle="Intake client specifications and requirements for custom travel or document services"
       isLoading={isSubmitting}
@@ -378,8 +385,8 @@ export default function CreateInquiryFormModal({ onClose }) {
 
         <div className="cif-row2">
           <div className="cif-field">
-            <label>E-mail Address</label>
-            <input name="email" type="email" placeholder="client@example.com" value={form.email} onChange={handleChange} disabled={isSubmitting} />
+            <label>E-mail Address <span>*</span></label>
+            <input name="email" type="email" placeholder="client@example.com" value={form.email} onChange={handleChange} disabled={isSubmitting} required />
             <small style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '0.25rem', display: 'block' }}>
               If client has a FairFly account, this inquiry will automatically link to their portal.
             </small>

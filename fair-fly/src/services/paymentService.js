@@ -88,3 +88,26 @@ export function fetchPayments(token, params = {}, successCallback, errorCallback
     setIsLoading
   );
 }
+
+/**
+ * Record a direct cash payment for an accepted quotation (Walk-in Clients).
+ * Strictly verified, audited, and fulfilled on the backend.
+ * 
+ * @param {string} token - Firebase ID token of the operator
+ * @param {object} payload - { quotationId, remarks }
+ * @param {function} successCallback - (data) => void with { status, paymentId, fulfillmentId }
+ * @param {function} errorCallback - (err) => void
+ * @param {function} [setIsLoading] - (bool) => void
+ */
+export function recordCashPayment(token, payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/payments/cash`,
+    'POST',
+    payload,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+

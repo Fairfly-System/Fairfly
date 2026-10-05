@@ -277,6 +277,20 @@ export default function ClientTrackingPage() {
   // Accept Quotation modal triggers (replaces native window.confirm/alert with ConfirmationModal)
   const handleInitiateAcceptQuotation = (quotation) => {
     if (!quotation?.id) return;
+
+    const reqStatus = quotation.requirementsStatus;
+    if (reqStatus && reqStatus !== 'approved' && reqStatus !== 'not_required') {
+      if (reqStatus === 'submitted') {
+        addToast('Your service requirements have been submitted and are awaiting operator review before acceptance.', 'info');
+      } else if (reqStatus === 'changes_requested') {
+        addToast('The branch operator has requested corrections to your requirements. Please update them first.', 'warning');
+      } else {
+        addToast('Please attach mandatory service requirements before accepting this quotation.', 'warning');
+      }
+      setViewingQuotation(quotation);
+      return;
+    }
+
     setQuotationToAccept(quotation);
   };
 
@@ -497,11 +511,25 @@ export default function ClientTrackingPage() {
       header: 'Status',
       render: (quote) => {
         const isAccepted = quote.status === 'Accepted';
+        const reqStatus = quote.requirementsStatus;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
             <span className={`quote-status-pill status-${(quote.status || 'draft').toLowerCase()}`}>
               {quote.status}
             </span>
+            {reqStatus && reqStatus !== 'not_required' && !isAccepted && (
+              <span style={{
+                fontSize: '0.7rem',
+                padding: '0.15rem 0.4rem',
+                background: reqStatus === 'approved' ? '#f0fdf4' : reqStatus === 'submitted' ? '#eff6ff' : reqStatus === 'changes_requested' ? '#fef2f2' : '#fffbeb',
+                color: reqStatus === 'approved' ? '#166534' : reqStatus === 'submitted' ? '#1e40af' : reqStatus === 'changes_requested' ? '#b91c1c' : '#b45309',
+                border: `1px solid ${reqStatus === 'approved' ? '#bbf7d0' : reqStatus === 'submitted' ? '#bfdbfe' : reqStatus === 'changes_requested' ? '#fecaca' : '#fde68a'}`,
+                fontWeight: 600,
+                borderRadius: '0px'
+              }}>
+                {reqStatus === 'approved' ? '✓ Reqs Approved' : reqStatus === 'submitted' ? 'Reqs In Review' : reqStatus === 'changes_requested' ? 'Reqs Correction' : 'Reqs Required'}
+              </span>
+            )}
             {isAccepted && (
               <span className={`quote-payment-badge ${(quote.paymentStatus || 'unpaid').toLowerCase()}`}>
                 <i className={`fa-solid ${quote.paymentStatus === 'PAID' ? 'fa-check' : quote.paymentStatus === 'PAYMENT_PENDING' ? 'fa-clock' : 'fa-circle-exclamation'}`}></i>
@@ -521,6 +549,7 @@ export default function ClientTrackingPage() {
         const isPaid = quote.paymentStatus === 'PAID';
         const isPaymentPending = quote.paymentStatus === 'PAYMENT_PENDING';
         const totalAmt = Number(quote.totalAmount || quote.rate || 0);
+        const canAccept = !quote.requirementsStatus || quote.requirementsStatus === 'approved' || quote.requirementsStatus === 'not_required';
 
         return (
           <div className="client-row-actions">
@@ -546,24 +575,36 @@ export default function ClientTrackingPage() {
               <i className="fa-solid fa-file-pdf"></i>
             </button>
 
-            {/* Accept & Pay Action */}
+            {/* Accept & Pay Action or Attach Docs */}
             {isSent && (
-              <button
-                type="button"
-                className="btn btn-primary btn-xs"
-                onClick={() => handleInitiateAcceptQuotation(quote)}
-                disabled={acceptingQuoteId === quote.id}
-                title="Accept Quotation & Proceed to Pay"
-              >
-                {acceptingQuoteId === quote.id ? (
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-circle-check"></i>
-                    <span>Accept</span>
-                  </>
-                )}
-              </button>
+              canAccept ? (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-xs"
+                  onClick={() => handleInitiateAcceptQuotation(quote)}
+                  disabled={acceptingQuoteId === quote.id}
+                  title="Accept Quotation & Proceed to Pay"
+                >
+                  {acceptingQuoteId === quote.id ? (
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-circle-check"></i>
+                      <span>Accept</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-xs"
+                  onClick={() => setViewingQuotation(quote)}
+                  title="Review & Attach Service Documents"
+                >
+                  <i className="fa-solid fa-file-arrow-up"></i>
+                  <span>{quote.requirementsStatus === 'changes_requested' ? 'Update Docs' : quote.requirementsStatus === 'submitted' ? 'In Review' : 'Attach Docs'}</span>
+                </button>
+              )
             )}
 
             {isAccepted && isPaymentPending && (
@@ -654,31 +695,33 @@ export default function ClientTrackingPage() {
     {
       key: 'actions',
       header: 'Actions',
-      render: (inq) => (
-        <div className="client-row-actions">
-          {/* View Details Button */}
-          <button
-            type="button"
-            className="icon-btn view-action"
-            title="View Complete Inquiry Details"
-            aria-label="View Complete Inquiry Details"
-            onClick={() => setViewingInquiry(inq)}
-          >
-            <i className="fa-solid fa-eye"></i>
-          </button>
+      render: (inq) => {
+        return (
+          <div className="client-row-actions">
+            {/* View Details Button */}
+            <button
+              type="button"
+              className="icon-btn view-action"
+              title="View Complete Inquiry Details"
+              aria-label="View Complete Inquiry Details"
+              onClick={() => setViewingInquiry(inq)}
+            >
+              <i className="fa-solid fa-eye"></i>
+            </button>
 
-          {/* View PDF Button */}
-          <button
-            type="button"
-            className="icon-btn pdf-action"
-            title="View Official SAF-01-002 PDF"
-            aria-label="View Official SAF-01-002 PDF"
-            onClick={() => handleOpenPdf('inquiry', inq)}
-          >
-            <i className="fa-solid fa-file-pdf"></i>
-          </button>
-        </div>
-      )
+            {/* View PDF Button */}
+            <button
+              type="button"
+              className="icon-btn pdf-action"
+              title="View Official SAF-01-002 PDF"
+              aria-label="View Official SAF-01-002 PDF"
+              onClick={() => handleOpenPdf('inquiry', inq)}
+            >
+              <i className="fa-solid fa-file-pdf"></i>
+            </button>
+          </div>
+        );
+      }
     }
   ], []);
 

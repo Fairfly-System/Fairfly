@@ -15,10 +15,10 @@
 
 .base-modal-container {
   background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  width: 90%;
-  max-width: 28.125rem; /* 450px default compact width for confirmation / prompt / logout modals */
-  max-height: 85vh;
+  border-radius: 0;
+  width: 94%;
+  max-width: 32rem; /* default compact width for confirmation / prompt / logout modals */
+  max-height: 88vh;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -62,7 +62,7 @@
   border: none;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,5 +112,23 @@
   to {
     transform: scale(1) translateY(0);
     opacity: 1;
+  }
+}
+
+/* Mobile Breakpoint Guard */
+@media (max-width: 768px) {
+  .base-modal-container {
+    width: 95% !important;
+    max-width: 100% !important;
+    max-height: 92vh;
+    margin: 0 auto;
+  }
+
+  .base-modal-header {
+    padding: 1rem 1.15rem;
+  }
+
+  .base-modal-body {
+    padding: 1rem;
   }
 }

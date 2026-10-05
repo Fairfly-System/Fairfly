@@ -92,7 +92,8 @@ export default function AddServiceModal({ onClose }) {
     <BaseModal
       isOpen={true}
       onClose={onClose}
-      maxWidth="56rem"
+      maxWidth="68rem"
+      width="95%"
       title="Initialize Active Service Record"
       subtitle="Select a Service configured by Admin to load its attached workflows and procedure steps"
       isLoading={isSubmitting}

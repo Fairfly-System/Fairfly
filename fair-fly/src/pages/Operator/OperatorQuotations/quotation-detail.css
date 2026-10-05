@@ -45,7 +45,7 @@
 .quote-accepted-banner {
   background: #f0fdf4;
   border: 1px solid #86efac;
-  border-radius: var(--radius-lg, 0.75rem);
+  border-radius: 0;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
   display: flex;
@@ -64,7 +64,7 @@
 .quote-accepted-icon {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: #dcfce7;
   color: #15803d;
   display: flex;
@@ -107,7 +107,7 @@
 .quote-inquiry-bar {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
+  border-radius: 0;
   padding: 0.65rem 1rem;
   margin-bottom: 1rem;
   display: flex;

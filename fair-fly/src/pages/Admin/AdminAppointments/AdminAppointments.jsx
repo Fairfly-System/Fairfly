@@ -479,7 +479,8 @@ export default function AdminAppointments() {
       <BaseModal
         isOpen={isDetailOpen}
         onClose={handleCloseDetails}
-        maxWidth="48rem"
+        maxWidth="62rem"
+        width="95%"
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <i className="fa-regular fa-calendar-check" style={{ color: 'var(--purple, #7c3aed)' }}></i>

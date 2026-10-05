@@ -204,7 +204,8 @@ export default function ClientAppointmentForm({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      maxWidth="38rem"
+      maxWidth="54rem"
+      width="95%"
       title="Schedule Branch Appointment"
       subtitle="Book a face-to-face consultation or document turnover at your preferred branch"
       isLoading={isSubmitting}

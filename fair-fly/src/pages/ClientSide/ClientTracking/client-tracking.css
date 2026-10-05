@@ -672,6 +672,13 @@
   color: #b45309;
 }
 
+.inquiry-status-pill.status-pending_requirements {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-weight: 700;
+}
+
 .inquiry-status-pill.status-accepted {
   background: #dcfce7;
   color: #15803d;

@@ -816,7 +816,19 @@
   | `initialViewMode` | `'month' \| 'week'` | `'month'` | No | Starting calendar view mode |
   | `showStatusFilter` | `boolean` | `true` | No | Whether to show internal status filter pills |
   | `statusFilter` | `string` | `undefined` | No | Controlled status filter value |
-  | `onStatusFilterChange` | `Function` | `undefined` | No | Callback for status filter change |
+---
 
-
-
+### `PuzzleHouse` (3D WebGL Building Blocks House)
+- **Location:** [`src/components/Landing/FranchisePuzzleBanner/PuzzleHouse.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/FranchisePuzzleBanner/PuzzleHouse.jsx)
+- **Style File:** [`src/components/Landing/FranchisePuzzleBanner/puzzle-house.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/FranchisePuzzleBanner/puzzle-house.css)
+- **Functionality:** Real-time Three.js WebGL 3D building blocks house representing FairFly's 6 modular turnkey franchise business pillars. Features:
+  - 6 modular 3D geometric architectural blocks with realistic materials, specular highlights, and directional lighting.
+  - Interactive mouse tilt parallax and raycasting hover elevation.
+  - Razor-sharp 0px border-radius pillar selection chips and editorial information callout card.
+  - 100% accessible via keyboard and touchscreen with real-time synchronized pillar inspection.
+- **Appropriate Use:** Hero section on the landing page to communicate FairFly's modular franchise business pillars with interactive 3D visual depth.
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `onPieceClick` | `Function` | `undefined` | No | Callback invoked when a 3D block or pillar chip is clicked `(pillarId) => void` |
+  | `activePillar` | `string` | `undefined` | No | Controlled active pillar id to highlight (`roof`, `chimney`, `blueWall`, `purpleWall`, `greenBase`, `orangeBase`) |

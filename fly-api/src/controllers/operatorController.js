@@ -361,6 +361,50 @@ const getBranches = async (req, res) => {
   }
 };
 
+const { getOperatorLogs } = require('../services/operatorLoggerService');
+
+/**
+ * Get paginated activity logs for an operator
+ * Accessible by Admins (for any operator) or the specific Operator (for their own logs).
+ * GET /api/operators/:id/logs?limit=5&startAfterId=...&onlyActive=true
+ */
+const getOperatorActivityLogs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.userDetails?.role || req.user?.role;
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    // Target operator UID resolution: 'me' resolves to current user
+    const targetOperatorId = (id === 'me') ? req.user.uid : id;
+
+    // RBAC: Operators can only read their own logs
+    if (isOperator && targetOperatorId !== req.user.uid) {
+      return res.status(403).json({ error: 'Forbidden: You can only view your own activity history.' });
+    }
+
+    if (!isAdmin && !isOperator) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient permissions.' });
+    }
+
+    const limitCount = parseInt(req.query.limit, 10) || 5;
+    const startAfterId = req.query.startAfterId || null;
+    const onlyActive = req.query.onlyActive !== 'false';
+
+    const result = await getOperatorLogs({
+      operatorId: targetOperatorId,
+      limitCount,
+      startAfterId,
+      onlyActive
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching operator activity logs:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
 module.exports = {
   getOperators,
   getOperatorById,
@@ -370,5 +414,7 @@ module.exports = {
   updateOperator,
   deleteOperator,
   bulkStatusOperators,
-  bulkDeleteOperators
+  bulkDeleteOperators,
+  getOperatorActivityLogs
 };
+

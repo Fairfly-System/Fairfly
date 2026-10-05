@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Outlet, Link } from 'react-router';
+import { Outlet, Link, useNavigate } from 'react-router';
 import { where } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -8,10 +8,9 @@ import Pagination from '../../../components/UI/Pagination/Pagination';
 import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
-import { createQuotation, updateQuotationStatus } from '../../../services/quotationService';
+import { createQuotation } from '../../../services/quotationService';
 import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
-import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './operator-quotations.css';
 
 import CreateQuotationModal from '../../../components/Operator/CreateQuotationModal/CreateQuotationModal';
@@ -25,6 +24,7 @@ function getQuotationStatusClass(status) {
 }
 
 export function QuotationsContent() {
+  const navigate = useNavigate();
   const { userToken, user, userDetails } = useAuthContext();
   const { addToast } = useToast();
   const [showModal, setShowModal] = useState(false);
@@ -75,20 +75,6 @@ export function QuotationsContent() {
     searchFilterFn,
     enabled: Boolean(user?.uid)
   });
-
-  const handleStatusChange = (id, newStatus) => {
-    updateQuotationStatus(
-      userToken,
-      id,
-      newStatus,
-      () => {
-        addToast(`Quotation marked as ${newStatus}`, 'success');
-      },
-      (error) => {
-        addToast(toFriendlyMessage(error, 'Could not update quotation status. Please try again.'), 'error');
-      }
-    );
-  };
 
   const breadcrumbItems = [
     { label: 'Dashboard', to: '/operator' },
@@ -192,15 +178,6 @@ export function QuotationsContent() {
                       <i className="fa-solid fa-eye"></i> View
                     </Link>
                     <span className={`status-pill ${getQuotationStatusClass(q.status)}`}>{q.status || 'Draft'}</span>
-                    {q.status === 'Draft' && (
-                      <button
-                        className="ticket-action-btn view-thread-btn"
-                        style={{ padding: '0.3rem 0.65rem', fontSize: '0.775rem' }}
-                        onClick={() => handleStatusChange(q.id, 'Sent')}
-                      >
-                        Mark as Sent
-                      </button>
-                    )}
                   </div>
                 </div>
 

@@ -6,7 +6,7 @@
   /* Stretch children to have equal height */
   padding: 2rem;
   background-color: var(--card-bg);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   overflow: hidden;
 }
 

@@ -62,6 +62,7 @@ import InquiryFormDetailPage from './pages/Operator/OperatorInquiryForms/Inquiry
 import OperatorServices from './pages/Operator/OperatorServices/OperatorServices';
 import OperatorServicesContent from './pages/Operator/OperatorServices/OperatorServicesContent';
 import OperatorServiceDetailPage from './pages/Operator/OperatorServices/OperatorServiceDetailPage';
+import OperatorLogsPage from './pages/Operator/OperatorLogs/OperatorLogsPage';
 
 import AdminQualifications from './pages/Admin/AdminQualifications/AdminQualifications';
 import QualificationsContent from './pages/Admin/AdminQualifications/QualificationsContent';
@@ -168,6 +169,7 @@ function App() {
             <Route path=":id" element={<QuotationDetailPage />} />
           </Route>
           <Route path="history" element={<OperatorHistory />} />
+          <Route path="logs" element={<OperatorLogsPage />} />
           <Route path="quick-links" element={<OperatorQuickLinks />} />
           <Route path="inquiry-forms" element={<OperatorInquiryForms />}>
             <Route index element={<InquiryContent />} />

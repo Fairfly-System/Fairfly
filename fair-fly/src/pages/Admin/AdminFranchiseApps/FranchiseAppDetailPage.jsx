@@ -370,7 +370,8 @@ export default function FranchiseAppDetailPage({ isHistoryMode = false }) {
             onClose={() => !isScheduling && setShowScheduleModal(false)}
             title="Schedule Franchise Consultation"
             subtitle={`Select an appointment time for ${application.fullName}. Collisions with other admin appointments are checked automatically.`}
-            maxWidth="36rem"
+            maxWidth="54rem"
+            width="95%"
           >
             <form onSubmit={handleScheduleAppointment} className="schedule-consultation-form">
               <div className="formGroup">

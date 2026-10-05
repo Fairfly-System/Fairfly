@@ -96,7 +96,8 @@ const CreateTicketModal = forwardRef(
     return (
       <BaseModal
         ref={baseModalRef}
-        maxWidth="56rem"
+        maxWidth="68rem"
+        width="95%"
         title={isOperatorPortal ? 'Submit Support Ticket' : 'Create New Support Ticket'}
         subtitle={
           isOperatorPortal
