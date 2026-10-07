@@ -8,8 +8,7 @@ const {
 const { db } = require('../config/firebase');
 const {
   createNotification,
-  notifyBranch,
-  notifyAdmins
+  notifyBranch
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
 const { createSubmittedRequirementsRecord } = require('./submittedRequirementsController');
@@ -328,16 +327,7 @@ const createInquiry = async (req, res) => {
       metadata: { inquiryId: docId, controlNo: newInquiry.controlNo, clientName: resolvedName }
     }).catch(err => console.warn('Branch operator inquiry notification warning:', err.message));
 
-    // 2. Notify Admins
-    notifyAdmins({
-      title: 'New Client Inquiry Intake',
-      message: `${resolvedName} submitted inquiry for branch "${effectiveBranchName}" (${newInquiry.serviceType})`,
-      type: 'inquiry',
-      link: '/admin/inquiry-history',
-      metadata: { inquiryId: docId, branchName: effectiveBranchName }
-    }).catch(err => console.warn('Admin inquiry notification warning:', err.message));
-
-    // 3. Receipt notification for Client (if registered)
+    // 2. Receipt notification for Client (if registered)
     if (effectiveClientUid) {
       createNotification({
         recipientUid: effectiveClientUid,
@@ -911,15 +901,6 @@ const confirmInquiry = async (req, res) => {
         metadata: { inquiryId: id, quotationId: quotationDocId }
       }).catch(err => console.warn('Client inquiry confirmation notification warning:', err.message));
     }
-
-    // Notify Admins of confirmation
-    notifyAdmins({
-      title: 'Inquiry Confirmed by Branch',
-      message: `${branchName} reviewed the inquiry for ${inquiry.clientName || inquiry.fullName} and generated Quotation ${quoteNo}.`,
-      type: 'inquiry',
-      link: '/admin/inquiry-history',
-      metadata: { inquiryId: id, quotationId: quotationDocId, branchName }
-    }).catch(err => console.warn('Admin inquiry confirm notification warning:', err.message));
 
     await logFromRequest(req, {
       action: 'CONFIRM_INQUIRY',

@@ -31,39 +31,8 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 5.5rem;
-  /* Baseline default root font size */
-  font-size: 16px;
-}
-
-/* ==========================================================================
-   !PRIO — Resolution-Proportional REM Scaling Across All Breakpoints
-   Formula: Root Font Size = 16px * (Current Viewport Width / Reference Viewport Width)
-   ========================================================================== */
-
-/* A. Standard Desktop -> Just Before Tablet (1024px to 1440px+, reference: 1280px) */
-@media screen and (min-width: 1024.02px) {
-  html {
-    font-size: clamp(12.8px, calc(16px * 100vw / 1280), 18px);
-  }
-}
-
-/* B. Tablet -> Just Before Mobile (640.02px to 1024px, reference: 768px) */
-@media screen and (min-width: 640.02px) and (max-width: 1024px) {
-  html {
-    font-size: clamp(13.33px, calc(16px * 100vw / 768), 21.33px);
-  }
-}
-
-/* C. Mobile -> Smallest Supported Screen (320px to 640px, reference: 480px) */
-@media screen and (max-width: 640px) {
-  html {
-    font-size: clamp(10.67px, calc(16px * 100vw / 480), 21.33px);
-  }
-}
-
-/* Preserve fixed standard root baseline for Admin and Operator portals */
-html:has(.app-layout-container) {
-  font-size: 16px !important;
+  /* Baseline accessible root font size (1rem = 16px at 100% browser zoom) */
+  font-size: 100%;
 }
 
 :root {

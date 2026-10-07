@@ -8,8 +8,7 @@ const { db } = require('../config/firebase');
 const admin = require('firebase-admin');
 const {
   createNotification,
-  notifyBranch,
-  notifyAdmins
+  notifyBranch
 } = require('../services/notificationService');
 const { createPaymongoRefund } = require('../services/paymongoService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
@@ -302,16 +301,7 @@ const createActiveService = async (req, res) => {
       metadata: { activeServiceId: docId, serviceType: newService.serviceType }
     }).catch(err => console.warn('Active service operator notification warning:', err.message));
 
-    // 2. Notify Admins
-    notifyAdmins({
-      title: 'New Service Request',
-      message: `${newService.clientName} requested "${newService.serviceType}" at ${newService.branchName}.`,
-      type: 'service',
-      link: '/admin/services',
-      metadata: { activeServiceId: docId, branchName: newService.branchName }
-    }).catch(err => console.warn('Admin service notification warning:', err.message));
-
-    // 3. Receipt notification for Client (if registered)
+    // 2. Receipt notification for Client (if registered)
     if (newService.clientUid) {
       createNotification({
         recipientUid: newService.clientUid,
@@ -733,18 +723,6 @@ const cancelActiveService = async (req, res) => {
       } catch (notifErr) {
         console.error('Error sending cancellation notification to client:', notifErr);
       }
-    }
-
-    // 9. Notify Admins
-    try {
-      notifyAdmins({
-        title: 'Service Fulfillment Cancelled & Full Refund Issued',
-        message: `Service "${serviceRecord.serviceType}" (${id}) for client ${serviceRecord.clientName || 'Client'} was cancelled by ${req.userDetails?.role || 'operator'}. ${refundAmount > 0 ? `Full refund of ₱${Number(refundAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} processed.` : ''}`,
-        type: 'service',
-        link: '/admin/inquiry-history'
-      });
-    } catch (adminNotifErr) {
-      console.warn('Error notifying admins of cancellation:', adminNotifErr.message);
     }
 
     await logFromRequest(req, {

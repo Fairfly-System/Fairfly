@@ -1,6 +1,36 @@
 # Update Logs
 
-## [2026-10-07] UI Polish: Client Portal Navbar Branding, 500px–320px Modal Optimizations & Zoom Hardening
+## [2026-10-07] Backend Architecture: Scoped Admin Notifications Strictly to Admin-Domain Operations
+
+### Overview
+Scoped administrator in-app notifications strictly to administrative domain concerns (e.g. pending ID verification reviews, franchise applications, support tickets, custom service qualification requests). Removed all notification dispatching to administrators when clients submit service inquiries to branch operators, when operators confirm inquiries, or when clients accept/reject quotations, ensuring admin inboxes remain dedicated exclusively to admin tasks.
+
+### Key Changes
+1. **Client Inquiries ([`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js))**:
+   - Removed `notifyAdmins` from `createInquiry` (`POST /api/inquiries`) and `confirmInquiry` (`POST /api/inquiries/:id/confirm`).
+   - Inquiries placed by clients are routed exclusively to the assigned Branch Operator (`notifyBranch`) and the client receipt record (`createNotification`).
+2. **Quotation Workflow ([`quotationController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/quotationController.js))**:
+   - Removed `notifyAdmins` from `acceptQuotation` (`POST /api/quotations/:id/accept`) and `rejectQuotation` (`POST /api/quotations/:id/reject`).
+   - Operator and client remain the sole recipients of quotation status updates.
+3. **Active Services ([`activeServiceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/activeServiceController.js))**:
+   - Removed `notifyAdmins` from `createActiveService` and `cancelActiveService`.
+4. **Verification**:
+   - Automated test suites (`testSecurityFixes.js` and `testWorkflowRemodel.js`) executed with 100% pass rate (26/26 security tests passed, all workflow remodel steps passed).
+   - Node syntax checks (`node --check`) passed cleanly on all modified controllers.
+
+
+
+### Overview
+Restored standard accessible root font size (`font-size: 100%`) in [`index.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/index.css). Removed the inverse `calc(16px * 100vw / ...)` formula which previously cancelled out visual browser zoom on physical screens. Under standard root font sizing, browser zoom (Ctrl+/Ctrl- or pinch zoom) functions naturally while the layout automatically navigates through responsive breakpoint ranges (Desktop → Tablet at `<= 1024px`, Tablet → Mobile at `<= 640px`) without layout breakage or element distortion.
+
+### Key Changes
+1. **Root Font Scaling Sizing ([`index.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/index.css))**:
+   - Set `html { font-size: 100%; }` so that browser zoom magnifies UI elements naturally while shrinking the effective CSS viewport (`window.innerWidth`).
+   - Enabled natural breakpoint transitions: as effective viewport shrinks under zoom, Desktop transforms cleanly into Tablet (`<= 1024px`) and Tablet transforms cleanly into Mobile (`<= 640px`).
+2. **Verification**:
+   - Production bundle compiled cleanly with `npm run build` in 7.18s with 0 errors.
+
+
 
 ### Overview
 Refined the Client Portal UI by removing the text "Fairfly Client" and its subheading from the top navbar ([`AppNavbar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx)), displaying exclusively the clean Fairfly brand logo. In addition, hardened all Client Portal modals, forms, and page tabs against narrow mobile viewports down to 320px and aggressive browser zoom levels.

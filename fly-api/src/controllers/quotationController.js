@@ -9,8 +9,7 @@ const { db } = require('../config/firebase');
 const { compileWorkflowStepsForService } = require('./activeServiceController');
 const {
   createNotification,
-  notifyBranch,
-  notifyAdmins
+  notifyBranch
 } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
 const { createSubmittedRequirementsRecord, sanitizeRequirementsArray } = require('./submittedRequirementsController');
@@ -1009,15 +1008,6 @@ const acceptQuotation = async (req, res) => {
       metadata: { quotationId: id, quoteNo: quotation.quoteNo, status: 'Accepted' }
     }).catch(err => console.warn('Operator quotation accepted notification warning:', err.message));
 
-    // 2. Notify Admins
-    notifyAdmins({
-      title: 'Quotation Accepted',
-      message: `${quotation.clientName} accepted Quotation ${quotation.quoteNo} at ${quotation.branchName || 'Branch'}. Awaiting payment.`,
-      type: 'quotation',
-      link: '/admin/inquiry-history',
-      metadata: { quotationId: id, branchName: quotation.branchName }
-    }).catch(err => console.warn('Admin quotation accepted notification warning:', err.message));
-
     await logFromRequest(req, {
       action: 'ACCEPT_QUOTATION',
       entityType: 'quotation',
@@ -1249,15 +1239,6 @@ const rejectQuotation = async (req, res) => {
         metadata: { quotationId: id, quoteNo: quotation.quoteNo, status: 'Rejected', reason }
       }).catch(err => console.warn('Operator notification error on quotation reject:', err.message));
     }
-
-    // 2. Notify Admins
-    notifyAdmins({
-      title: 'Quotation Rejected',
-      message: `Quotation ${quotation.quoteNo || id} for ${quotation.clientName || 'Client'} at ${quotation.branchName || 'Branch'} was rejected by the client.`,
-      type: 'quotation',
-      link: '/admin/inquiry-history',
-      metadata: { quotationId: id, branchName: quotation.branchName, status: 'Rejected', reason }
-    }).catch(err => console.warn('Admin notification error on quotation reject:', err.message));
 
     await logFromRequest(req, {
       action: 'REJECT_QUOTATION',
