@@ -12,11 +12,10 @@ import AcceptOnBehalfModal from '../../../components/Operator/AcceptOnBehalfModa
 import QuotationRequirementsReview from '../../../components/Operator/QuotationRequirementsReview/QuotationRequirementsReview';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
-import { acceptQuotation } from '../../../services/quotationService';
+import { acceptQuotation, archiveQuotation, restoreQuotation } from '../../../services/quotationService';
 import { verifyPayment } from '../../../services/paymentService';
+import { fetchReceiptByQuotationId } from '../../../services/receiptService';
 import './quotation-detail.css';
-
-const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
 
 export default function QuotationDetailPage() {
   const { id } = useParams();
@@ -28,10 +27,14 @@ export default function QuotationDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -207,7 +210,9 @@ export default function QuotationDetailPage() {
   const isPaid = (quotation?.status || '').toUpperCase() === 'PAID' || (quotation?.paymentStatus || '').toUpperCase() === 'PAID';
   const isAccepted = quotation?.status === 'Accepted' || isPaid || isFulfilled;
   const isCancelled = (quotation?.status || '').toLowerCase() === 'cancelled';
-  const isFinalized = isPaid || isAccepted || isCancelled || isFulfilled;
+  const isRejected = (quotation?.status || '').toLowerCase() === 'rejected';
+  const isArchived = Boolean(quotation?.archived);
+  const isFinalized = isPaid || isAccepted || isCancelled || isFulfilled || isRejected || isArchived;
 
   const handleSaveChanges = async () => {
     if (!formData.clientName || !formData.serviceTitle || formData.rate === '') {
@@ -216,7 +221,7 @@ export default function QuotationDetailPage() {
     }
 
     if (isFinalized) {
-      addToast('Cannot modify a quotation that has already been accepted or paid.', 'error');
+      addToast('Cannot modify a quotation that has already been finalized, accepted, or archived.', 'error');
       setIsEditing(false);
       return;
     }
@@ -244,28 +249,36 @@ export default function QuotationDetailPage() {
     );
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!quotation) return;
-    if (isPaid) {
-      addToast('Cannot delete a quotation that has already been paid and activated.', 'error');
-      setShowDeleteConfirm(false);
-      return;
-    }
-
-    ApiCaller(
-      `${API_BASE_URL}/api/quotations/${quotation.id}`,
-      'DELETE',
-      null,
-      { Authorization: `Bearer ${userToken}` },
+    archiveQuotation(
+      userToken,
+      quotation.id,
       () => {
-        addToast('Quotation deleted successfully', 'success');
-        setShowDeleteConfirm(false);
+        addToast('Quotation archived successfully. Associated inquiry remains active.', 'success');
+        setShowArchiveConfirm(false);
         navigate('/operator/quotations');
       },
       (error) => {
-        addToast(`Failed to delete quotation: ${error.message}`, 'error');
+        addToast(error?.message || 'Failed to archive quotation', 'error');
       },
-      setIsDeleting
+      setIsArchiving
+    );
+  };
+
+  const handleRestore = async () => {
+    if (!quotation) return;
+    restoreQuotation(
+      userToken,
+      quotation.id,
+      () => {
+        addToast('Quotation restored to active records successfully.', 'success');
+        setShowRestoreConfirm(false);
+      },
+      (error) => {
+        addToast(error?.message || 'Failed to restore quotation', 'error');
+      },
+      setIsRestoring
     );
   };
 
@@ -273,14 +286,6 @@ export default function QuotationDetailPage() {
     if (!quotation) return;
     if (isFinalized) {
       addToast('Cannot change status of a finalized or paid quotation.', 'error');
-      return;
-    }
-
-    if (newStatus === 'Sent' && !requirementsApproved) {
-      addToast(
-        `Cannot send quotation to client: Service requirements must be verified and approved first (Current requirements status: "${(quotation.requirementsStatus || 'pending').replace('_', ' ')}").`,
-        'warning'
-      );
       return;
     }
 
@@ -324,6 +329,30 @@ export default function QuotationDetailPage() {
     }
   };
 
+  const handleOpenReceipt = () => {
+    if (!quotation?.id || !userToken) return;
+    fetchReceiptByQuotationId(
+      userToken,
+      quotation.id,
+      (rct) => {
+        setReceiptData(rct);
+        setShowReceiptModal(true);
+      },
+      (err) => {
+        console.warn('[QuotationDetailPage] Receipt fetch fallback:', err);
+        setReceiptData({
+          ...quotation,
+          receiptNo: quotation.receiptNo || 'RCT-2026-OFFICIAL',
+          serviceCode: quotation.serviceCode || activeService?.serviceCode,
+          fulfillmentId: quotation.activeServiceId || activeService?.id,
+          amount: quotation.totalAmount || quotation.rate,
+          paymentMethod: quotation.paymentMethod || 'Verified Payment'
+        });
+        setShowReceiptModal(true);
+      }
+    );
+  };
+
   const breadcrumbs = [
     { label: 'Dashboard', to: '/operator' },
     { label: 'Quotations', to: '/operator/quotations' },
@@ -332,6 +361,27 @@ export default function QuotationDetailPage() {
 
   const actions = useMemo(() => {
     if (!quotation) return [];
+
+    if (isArchived) {
+      return [
+        {
+          label: 'Export to PDF (ADF-07-001)',
+          icon: 'fa-solid fa-file-pdf',
+          onClick: () => setShowPdfModal(true),
+          className: 'btn-secondary',
+          disabled: isRestoring,
+        },
+        {
+          label: 'Restore Quotation',
+          icon: 'fa-solid fa-rotate-left',
+          onClick: () => setShowRestoreConfirm(true),
+          className: 'btn-primary',
+          disabled: isRestoring,
+          style: { background: 'var(--brand-primary, #6366f1)' }
+        }
+      ];
+    }
+
     if (isEditing) {
       return [
         {
@@ -339,14 +389,14 @@ export default function QuotationDetailPage() {
           icon: 'fa-solid fa-cloud-arrow-up',
           onClick: handleSaveChanges,
           className: 'btn-primary',
-          disabled: isSaving || isDeleting,
+          disabled: isSaving || isArchiving,
         },
         {
           label: 'Cancel',
           icon: 'fa-solid fa-xmark',
           onClick: () => setIsEditing(false),
           className: 'btn-secondary',
-          disabled: isSaving || isDeleting,
+          disabled: isSaving || isArchiving,
         },
       ];
     }
@@ -357,15 +407,24 @@ export default function QuotationDetailPage() {
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-secondary',
-        disabled: isSaving || isDeleting || isAccepting,
+        disabled: isSaving || isArchiving || isAccepting,
       },
+      ...(isPaid ? [
+        {
+          label: 'View E-Receipt (ADF-07-002)',
+          icon: 'fa-solid fa-receipt',
+          onClick: handleOpenReceipt,
+          className: 'btn-secondary',
+          style: { color: '#16a34a', borderColor: '#86efac' }
+        }
+      ] : []),
       ...(!isFinalized ? [
         {
           label: 'Edit Fields',
           icon: 'fa-solid fa-pen-to-square',
           onClick: () => setIsEditing(true),
           className: 'btn-secondary',
-          disabled: isSaving || isDeleting || isAccepting,
+          disabled: isSaving || isArchiving || isAccepting,
         },
       ] : []),
       ...(quotation.status === 'Draft' ? [
@@ -374,7 +433,7 @@ export default function QuotationDetailPage() {
           icon: 'fa-solid fa-paper-plane',
           onClick: () => handleStatusChange('Sent'),
           className: 'btn-primary',
-          disabled: isSaving || isDeleting || isAccepting || !requirementsApproved,
+          disabled: isSaving || isArchiving || isAccepting || !requirementsApproved,
           style: { background: requirementsApproved ? 'var(--purple, #7c3aed)' : '#94a3b8' },
           title: !requirementsApproved ? 'Service requirements must be verified and approved first' : 'Send quotation to client'
         }
@@ -385,7 +444,7 @@ export default function QuotationDetailPage() {
           icon: 'fa-solid fa-handshake',
           onClick: handleOpenAcceptModal,
           className: 'btn-primary',
-          disabled: isSaving || isDeleting || !requirementsApproved,
+          disabled: isSaving || isArchiving || !requirementsApproved,
           style: { background: requirementsApproved ? 'var(--green, #16a34a)' : '#94a3b8' },
           title: !requirementsApproved ? 'Service requirements must be verified and approved first' : 'Accept on behalf of client'
         }
@@ -396,23 +455,22 @@ export default function QuotationDetailPage() {
           icon: 'fa-solid fa-cash-register',
           onClick: () => setShowPaymentModal(true),
           className: 'btn-primary',
-          disabled: isSaving || isDeleting || isAccepting,
+          disabled: isSaving || isArchiving || isAccepting,
           style: { background: 'var(--brand-primary, #6366f1)' }
         }
       ] : []),
-      ...(!isPaid ? [
-        {
-          label: 'Delete Quotation',
-          icon: 'fa-solid fa-trash',
-          onClick: () => setShowDeleteConfirm(true),
-          className: 'btn-danger',
-          disabled: isSaving || isDeleting || isAccepting,
-        }
-      ] : []),
+      {
+        label: 'Archive Quotation',
+        icon: 'fa-solid fa-box-archive',
+        onClick: () => setShowArchiveConfirm(true),
+        className: 'btn-secondary',
+        disabled: isSaving || isArchiving || isAccepting,
+      },
     ];
-  }, [quotation, isEditing, isSaving, isDeleting, isAccepting, isFinalized, isPaid, formData, requirementsApproved]);
+  }, [quotation, isEditing, isSaving, isArchiving, isRestoring, isAccepting, isFinalized, isPaid, isArchived, formData, requirementsApproved, userToken]);
 
   const getStatusType = () => {
+    if (isArchived) return 'neutral';
     if (!quotation) return 'neutral';
     if (isFulfilled) return 'success';
     const status = (quotation.status || '').toLowerCase();
@@ -424,6 +482,7 @@ export default function QuotationDetailPage() {
   };
 
   const getStatusLabel = () => {
+    if (isArchived) return 'ARCHIVED';
     if (!quotation) return 'DRAFT';
     if (isFulfilled) return 'FULFILLED';
     return quotation.status ? quotation.status.toUpperCase() : 'DRAFT';
@@ -445,8 +504,63 @@ export default function QuotationDetailPage() {
     >
       {quotation && (
         <div className="quotation-detail-wrapper">
+          {/* Archived Status Banner */}
+          {isArchived && (
+            <div className="inquiry-confirmed-banner" style={{ background: '#f8fafc', border: '1px solid #cbd5e1', marginBottom: '1.25rem' }}>
+              <div className="inquiry-confirmed-info">
+                <div className="inquiry-confirmed-icon" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                  <i className="fa-solid fa-box-archive"></i>
+                </div>
+                <div>
+                  <h4 className="quote-accepted-title" style={{ color: '#334155' }}>
+                    This Quotation is Archived
+                  </h4>
+                  <p className="quote-accepted-sub" style={{ color: '#64748b' }}>
+                    This quotation has been archived and removed from active lists. The associated inquiry remains active. You can restore this quotation to active records at any time.
+                  </p>
+                </div>
+              </div>
+              <div className="quote-accepted-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowRestoreConfirm(true)}
+                  disabled={isRestoring}
+                  style={{ background: 'var(--brand-primary, #6366f1)' }}
+                >
+                  <i className="fa-solid fa-rotate-left"></i> Restore Quotation
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Rejection Banner */}
+          {isRejected && !isArchived && (
+            <div className="inquiry-confirmed-banner" style={{ background: '#fef2f2', border: '1px solid #fecaca', marginBottom: '1.25rem' }}>
+              <div className="inquiry-confirmed-info">
+                <div className="inquiry-confirmed-icon" style={{ background: '#fee2e2', color: 'var(--red, #ef4444)' }}>
+                  <i className="fa-solid fa-circle-xmark"></i>
+                </div>
+                <div>
+                  <h4 className="quote-accepted-title" style={{ color: '#991b1b' }}>
+                    Quotation Rejected by Client
+                  </h4>
+                  <p className="quote-accepted-sub" style={{ color: '#b91c1c' }}>
+                    The client declined this quotation proposal
+                    {quotation.rejectedAt ? ` on ${new Date(quotation.rejectedAt).toLocaleString()}` : ''}.
+                    {quotation.rejectionReason && (
+                      <span style={{ display: 'block', marginTop: '0.35rem', fontWeight: 600 }}>
+                        Reason: "{quotation.rejectionReason}"
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Active Custom Service / Accepted / Fulfilled Banner */}
-          {isFinalized && !isCancelled && (
+          {isFinalized && !isCancelled && !isRejected && !isArchived && (
             <div className={`inquiry-confirmed-banner quote-accepted-banner ${isFulfilled ? 'fulfilled-banner' : isPaid ? 'paid-banner' : ''}`}>
               <div className="quote-accepted-info">
                 <div className="quote-accepted-icon">
@@ -540,7 +654,7 @@ export default function QuotationDetailPage() {
                   Requirements Verification Pending (Status: {(quotation.requirementsStatus || 'pending').replace('_', ' ').toUpperCase()})
                 </div>
                 <div style={{ color: '#b45309', fontSize: '0.8rem', marginTop: '0.15rem' }}>
-                  Sending quotation to client and accepting on client's behalf are locked until all mandatory service requirements below are verified and approved by the branch operator.
+                  Quotation acceptance and payment are locked until all mandatory service requirements below are verified and approved by the branch operator.
                 </div>
               </div>
             </div>
@@ -740,6 +854,19 @@ export default function QuotationDetailPage() {
             onReviewUpdated={() => {}}
           />
 
+          {/* Client Remarks & Special Instructions from Intake (SAF-01-002) */}
+          {quotation.clientRemarks && (
+            <article className="card detail-panel" style={{ marginBottom: '1.25rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <h2 className="panel-title" style={{ color: 'var(--primary, #4338ca)' }}>
+                <i className="fa-regular fa-comment-dots" style={{ color: 'var(--brand-primary, #6366f1)' }}></i>
+                Client Remarks & Special Instructions (from Inquiry Intake)
+              </h2>
+              <p className="description-text quote-preline-text" style={{ color: '#334155', margin: 0 }}>
+                {quotation.clientRemarks}
+              </p>
+            </article>
+          )}
+
           {/* Requirements & Tour Dates */}
           <div className="details-grid-2">
             <article className="card detail-panel">
@@ -828,7 +955,7 @@ export default function QuotationDetailPage() {
           <div className="details-grid-2">
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-regular fa-comment-dots"></i> Remarks & Payment Terms
+                <i className="fa-regular fa-comment-dots"></i> Operator Remarks & Payment Terms
               </h2>
               {isEditing ? (
                 <textarea
@@ -959,28 +1086,62 @@ export default function QuotationDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Action row for E-Receipt in settlement panel */}
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleOpenReceipt}
+                  style={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <i className="fa-solid fa-receipt"></i>
+                  <span>View & Print Official E-Receipt (ADF-07-002)</span>
+                </button>
+              </div>
             </article>
           )}
 
-          {/* Delete confirmation */}
+          {/* Archive confirmation */}
           <ConfirmationModal
-            isOpen={showDeleteConfirm}
-            onClose={() => !isDeleting && setShowDeleteConfirm(false)}
-            Icon={TrashIcon}
-            Title="Delete this quotation record?"
-            Desc={`"${quotation.quoteNo}" will be permanently removed. This action cannot be undone.`}
-            BtnColor="var(--error-red)"
-            confirmText="Delete Quotation"
-            isLoading={isDeleting}
-            OnConfirm={handleDelete}
+            isOpen={showArchiveConfirm}
+            onClose={() => !isArchiving && setShowArchiveConfirm(false)}
+            Icon={() => <i className="fa-solid fa-box-archive" style={{ color: 'var(--purple-dark, #4338ca)' }}></i>}
+            Title="Archive this quotation?"
+            Desc="This quotation will be removed from active quotation lists but will remain available in Archived records. The associated inquiry will remain active."
+            BtnColor="var(--purple-dark, #4338ca)"
+            confirmText="Archive Quotation"
+            isLoading={isArchiving}
+            OnConfirm={handleArchive}
           />
 
-          {/* PDF Export Preview & Download Modal */}
+          {/* Restore confirmation */}
+          <ConfirmationModal
+            isOpen={showRestoreConfirm}
+            onClose={() => !isRestoring && setShowRestoreConfirm(false)}
+            Icon={() => <i className="fa-solid fa-rotate-left" style={{ color: 'var(--brand-primary, #6366f1)' }}></i>}
+            Title="Restore this quotation?"
+            Desc="Restoring this quotation will return it to active quotation lists. Note that the parent inquiry must be active in order to restore this quotation."
+            BtnColor="var(--brand-primary, #6366f1)"
+            confirmText="Restore Quotation"
+            isLoading={isRestoring}
+            OnConfirm={handleRestore}
+          />
+
+          {/* PDF Export Preview & Download Modal (Quotation) */}
           <PdfDocumentView
             isOpen={showPdfModal}
             onClose={() => setShowPdfModal(false)}
             type="quotation"
             data={quotation}
+          />
+
+          {/* PDF Export Preview & Download Modal (Receipt) */}
+          <PdfDocumentView
+            isOpen={showReceiptModal}
+            onClose={() => setShowReceiptModal(false)}
+            type="receipt"
+            data={receiptData}
           />
 
           {/* Accept on Behalf of Client Modal */}

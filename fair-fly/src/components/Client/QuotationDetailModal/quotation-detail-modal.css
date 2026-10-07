@@ -285,3 +285,80 @@ button.quote-file-link {
   font-size: 0.75rem;
   color: var(--text-mid, #334155);
 }
+
+@media (max-width: 500px) {
+  .quote-modal-header-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.875rem 0.75rem;
+  }
+
+  .quote-modal-title {
+    font-size: 1.15rem;
+    word-break: break-word;
+  }
+
+  .quote-modal-status-col {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .quote-modal-financial-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .quote-modal-price-box {
+    padding: 0.875rem 0.75rem;
+  }
+
+  .quote-modal-section {
+    padding: 0.875rem 0.75rem;
+  }
+
+  .quote-modal-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 0.625rem;
+  }
+
+  .quote-reqs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .quote-modal-footer-left,
+  .quote-modal-footer-right {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .quote-modal-footer button,
+  .quote-modal-footer .btn-warning {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .quote-modal-header-card {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .quote-modal-title {
+    font-size: 1rem;
+  }
+
+  .quote-modal-price-val {
+    font-size: 1.35rem;
+  }
+
+  .quote-modal-section {
+    padding: 0.75rem 0.5rem;
+  }
+}
+

@@ -47,7 +47,7 @@ export default function Navbar() {
       }
     }
 
-    const sectionIds = ['services', 'business-system', 'service-guidelines', 'business-model'];
+    const sectionIds = ['business-system', 'service-guidelines', 'business-model'];
     const sections = sectionIds.map((id) => document.getElementById(id)).filter(Boolean);
 
     if (sections.length === 0) return;
@@ -120,13 +120,6 @@ export default function Navbar() {
 
           {/* Center: Navigation buttons between Services and About */}
           <div className="nav-center nav-desktop-links">
-            <NavLink
-              to="/services"
-              className={({ isActive }) => `linkNav ${isActive ? 'active' : ''}`}
-              onClick={closeMobileMenu}
-            >
-              Services
-            </NavLink>
 
             <a
               href="/home#business-system"
@@ -151,6 +144,22 @@ export default function Navbar() {
             >
               Model
             </a>
+
+            <NavLink
+              to="/services"
+              className={({ isActive }) => `linkNav ${isActive ? 'active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              Services
+            </NavLink>
+
+            <NavLink
+              to="/track"
+              className={({ isActive }) => `linkNav ${isActive ? 'active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              Track Request
+            </NavLink>
 
             <NavLink
               to="/about"
@@ -215,6 +224,15 @@ export default function Navbar() {
             >
               <i className="fa-solid fa-plane-up"></i>
               <span>Services</span>
+            </NavLink>
+
+            <NavLink
+              to="/track"
+              className={({ isActive }) => `nav-mobile-item ${isActive ? 'active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              <i className="fa-solid fa-magnifying-glass-location"></i>
+              <span>Track Request</span>
             </NavLink>
 
             <a

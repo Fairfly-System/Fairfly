@@ -6,6 +6,8 @@ const {
   getInquiryById,
   updateInquiry, 
   deleteInquiry,
+  archiveInquiry,
+  restoreInquiry,
   confirmInquiry,
   getInquirySchema,
   saveInquirySchema,
@@ -38,6 +40,7 @@ const INQUIRY_ALLOWED_FIELDS = [
   'requirements',
   'notes',
   'remarks',
+  'clientRemarks',
   'agentName',
   'agentSignature',
   'agentContact',
@@ -58,6 +61,12 @@ const INQUIRY_ALLOWED_FIELDS = [
   'serviceAttachedAt',
   'serviceAttachedBy',
   'requirementsSubmittedAt',
+  'archived',
+  'archivedAt',
+  'archivedBy',
+  'archivedReason',
+  'restoredAt',
+  'restoredBy',
   'id',
   'createdAt',
   'updatedAt'
@@ -67,7 +76,7 @@ const INQUIRY_ALLOWED_FIELDS = [
 router.get('/schema', performanceProfiler('GET /inquiries/schema', publicRateLimiter, getInquirySchema));
 router.put('/schema', performanceProfiler('PUT /inquiries/schema', verifyFirebaseToken, requireRole('admin'), apiRateLimiter, saveInquirySchema));
 
-// Inquiries CRUD & Confirmation routes
+// Inquiries CRUD, Archive & Confirmation routes
 router.post('/', publicRateLimiter, (req, res, next) => {
   if (req.headers.authorization) return verifyFirebaseToken(req, res, next);
   next();
@@ -104,7 +113,13 @@ router.post(
 
 router.patch('/:id', performanceProfiler('PATCH /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
 router.put('/:id', performanceProfiler('PUT /inquiries/:id', verifyFirebaseToken, allowedFields(INQUIRY_ALLOWED_FIELDS), apiRateLimiter, updateInquiry));
-router.delete('/:id', performanceProfiler('DELETE /inquiries/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, deleteInquiry));
+
+// Archive and Restore routes (replacing permanent deletion)
+router.post('/:id/archive', performanceProfiler('POST /inquiries/:id/archive', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, archiveInquiry));
+router.post('/:id/restore', performanceProfiler('POST /inquiries/:id/restore', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, restoreInquiry));
+
+// Permanent delete endpoint is disabled; returns 400 explaining archiving policy
+router.delete('/:id', performanceProfiler('DELETE /inquiries/:id', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, deleteInquiry));
 
 // Confirm Inquiry -> creates a quotation; fulfillment begins when the quotation is accepted
 router.post('/:id/confirm', performanceProfiler('POST /inquiries/:id/confirm', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, confirmInquiry));

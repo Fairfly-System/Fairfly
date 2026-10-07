@@ -31,19 +31,22 @@ export function QuotationsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [archiveView, setArchiveView] = useState('active'); // 'active' | 'archived'
 
-  // Query-level Firestore filters: strictly scoped to this operator
+  // Query-level Firestore filters: strictly scoped to this operator and archive state
   const firestoreFilters = useMemo(() => {
     const list = [];
     if (user?.uid) {
       list.push(where('branchUid', '==', user.uid));
     }
+    list.push(where('archived', '==', archiveView === 'archived'));
+
     if (statusFilter && statusFilter !== 'all') {
       const capStatus = statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1);
       list.push(where('status', '==', capStatus));
     }
     return list;
-  }, [user?.uid, statusFilter]);
+  }, [user?.uid, archiveView, statusFilter]);
 
   // Client search predicate for bounded candidate pool
   const searchFilterFn = useCallback((q) => {
@@ -67,7 +70,7 @@ export function QuotationsContent() {
   } = useFirestorePagination({
     collectionName: 'quotations',
     filters: firestoreFilters,
-    filterKey: `${user?.uid || ''}-${statusFilter}`,
+    filterKey: `${user?.uid || ''}-${archiveView}-${statusFilter}`,
     orderByField: 'createdAt',
     orderDirection: 'desc',
     initialPageSize: 5,
@@ -119,10 +122,23 @@ export function QuotationsContent() {
 
           <FilterChipGroup
             chips={[
+              { value: 'active', label: 'Active Records' },
+              { value: 'archived', label: 'Archived' },
+            ]}
+            activeChip={archiveView}
+            onChipChange={(val) => {
+              setArchiveView(val);
+              setCurrentPage(1);
+            }}
+          />
+
+          <FilterChipGroup
+            chips={[
               { value: 'all', label: `All (${totalItems})` },
               { value: 'draft', label: 'Draft' },
               { value: 'sent', label: 'Sent' },
               { value: 'confirmed', label: 'Confirmed' },
+              { value: 'rejected', label: 'Rejected' },
             ]}
             activeChip={statusFilter}
             onChipChange={(val) => {
@@ -158,8 +174,8 @@ export function QuotationsContent() {
             ))
           ) : quotations.length === 0 ? (
             <div className="empty-state-box">
-              <i className="fa-regular fa-folder-open empty-icon"></i>
-              <p>No quotation forms match your criteria</p>
+              <i className={`fa-regular ${archiveView === 'archived' ? 'fa-box-archive' : 'fa-folder-open'} empty-icon`}></i>
+              <p>{archiveView === 'archived' ? 'No archived quotation forms found' : 'No quotation forms match your criteria'}</p>
             </div>
           ) : (
             quotations.map((q) => (
@@ -177,7 +193,13 @@ export function QuotationsContent() {
                     >
                       <i className="fa-solid fa-eye"></i> View
                     </Link>
-                    <span className={`status-pill ${getQuotationStatusClass(q.status)}`}>{q.status || 'Draft'}</span>
+                    {q.archived ? (
+                      <span className="status-pill status-pill-disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                        <i className="fa-solid fa-box-archive" style={{ marginRight: '0.3rem' }}></i>Archived
+                      </span>
+                    ) : (
+                      <span className={`status-pill ${getQuotationStatusClass(q.status)}`}>{q.status || 'Draft'}</span>
+                    )}
                   </div>
                 </div>
 

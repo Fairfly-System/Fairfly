@@ -9,19 +9,21 @@ import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModa
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import CreateQuotationModal from '../../../components/Operator/CreateQuotationModal/CreateQuotationModal';
-import { updateInquiry, deleteInquiry, attachServiceToInquiry } from '../../../services/inquiryService';
+import { updateInquiry, archiveInquiry, restoreInquiry, attachServiceToInquiry } from '../../../services/inquiryService';
 import { fetchServices } from '../../../services/serviceService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './inquiry-form-detail.css';
 
-const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
-
-// Helper to safely parse client requirements and remarks
+// Helper to safely parse client requirements and client remarks
 function parseInquiryData(inquiry) {
   if (!inquiry) return { requirementsText: '', remarksText: '' };
 
   let requirementsText = inquiry.specifiedRequirements || inquiry.notes || '';
-  let remarksText = inquiry.remarks || '';
+  let remarksText = inquiry.clientRemarks || inquiry.remarks || '';
+
+  if (!remarksText && typeof inquiry.notes === 'string' && inquiry.notes.trim() && inquiry.notes !== inquiry.specifiedRequirements) {
+    remarksText = inquiry.notes.trim();
+  }
 
   if (typeof remarksText === 'object' && remarksText !== null) {
     remarksText = Object.entries(remarksText)
@@ -35,7 +37,7 @@ function parseInquiryData(inquiry) {
       : 'No specific client requirements recorded.',
     remarksText: typeof remarksText === 'string' && remarksText.trim()
       ? remarksText.trim()
-      : 'No additional remarks recorded.'
+      : 'No additional client remarks recorded.'
   };
 }
 
@@ -47,9 +49,11 @@ export default function InquiryFormDetailPage() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [showCreateQuoteModal, setShowCreateQuoteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   // Attach Service state
   const [showAttachModal, setShowAttachModal] = useState(false);
@@ -128,20 +132,38 @@ export default function InquiryFormDetailPage() {
     return parseInquiryData(form);
   }, [form]);
 
-  const handleDelete = async () => {
+  const isArchived = Boolean(form?.archived);
+
+  const handleArchive = async () => {
     if (!form) return;
-    deleteInquiry(
+    archiveInquiry(
       userToken,
       form.id,
       () => {
-        addToast('Inquiry form deleted successfully', 'success');
-        setShowDeleteConfirm(false);
+        addToast('Inquiry form and associated quotations archived successfully', 'success');
+        setShowArchiveConfirm(false);
         navigate('/operator/inquiry-forms');
       },
       (error) => {
-        addToast(toFriendlyMessage(error, 'Failed to delete inquiry form'), 'error');
+        addToast(toFriendlyMessage(error, 'Failed to archive inquiry form'), 'error');
       },
-      setIsDeleting
+      setIsArchiving
+    );
+  };
+
+  const handleRestore = async () => {
+    if (!form) return;
+    restoreInquiry(
+      userToken,
+      form.id,
+      () => {
+        addToast('Inquiry form and associated quotations restored to active records', 'success');
+        setShowRestoreConfirm(false);
+      },
+      (error) => {
+        addToast(toFriendlyMessage(error, 'Failed to restore inquiry form'), 'error');
+      },
+      setIsRestoring
     );
   };
 
@@ -156,13 +178,34 @@ export default function InquiryFormDetailPage() {
 
   const actions = useMemo(() => {
     if (!form) return [];
+
+    if (isArchived) {
+      return [
+        {
+          label: 'Export to PDF (SAF-01-002)',
+          icon: 'fa-solid fa-file-pdf',
+          onClick: () => setShowPdfModal(true),
+          className: 'btn-secondary',
+          disabled: isRestoring,
+        },
+        {
+          label: 'Restore Inquiry',
+          icon: 'fa-solid fa-rotate-left',
+          onClick: () => setShowRestoreConfirm(true),
+          className: 'btn-primary',
+          disabled: isRestoring,
+          style: { background: 'var(--brand-primary, #6366f1)' }
+        }
+      ];
+    }
+
     return [
       {
         label: 'Export to PDF (SAF-01-002)',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-secondary',
-        disabled: isDeleting,
+        disabled: isArchiving,
       },
       ...(hasQuotation ? [
         {
@@ -170,7 +213,7 @@ export default function InquiryFormDetailPage() {
           icon: 'fa-solid fa-file-invoice-dollar',
           onClick: () => navigate(`/operator/quotations/${form.confirmedQuotationId}`),
           className: 'btn-primary',
-          disabled: isDeleting,
+          disabled: isArchiving,
           style: { background: 'var(--purple, #7c3aed)' }
         }
       ] : [
@@ -182,7 +225,7 @@ export default function InquiryFormDetailPage() {
             setShowAttachModal(true);
           },
           className: 'btn-secondary',
-          disabled: isDeleting,
+          disabled: isArchiving,
         },
         {
           label: 'Create Quotation',
@@ -196,19 +239,19 @@ export default function InquiryFormDetailPage() {
             setShowCreateQuoteModal(true);
           },
           className: 'btn-primary',
-          disabled: isDeleting,
+          disabled: isArchiving,
           style: { background: 'var(--purple, #7c3aed)' }
         }
       ]),
       {
-        label: 'Delete Inquiry',
-        icon: 'fa-solid fa-trash',
-        onClick: () => setShowDeleteConfirm(true),
-        className: 'btn-danger',
-        disabled: isDeleting,
+        label: 'Archive Inquiry',
+        icon: 'fa-solid fa-box-archive',
+        onClick: () => setShowArchiveConfirm(true),
+        className: 'btn-secondary',
+        disabled: isArchiving,
       },
     ];
-  }, [form, isDeleting, hasQuotation, navigate]);
+  }, [form, isArchived, isArchiving, isRestoring, hasQuotation, navigate]);
 
   const getStatusBadgeType = () => {
     const st = (form?.status || '').toLowerCase();
@@ -226,8 +269,8 @@ export default function InquiryFormDetailPage() {
     <RecordDetailLayout
       title={form?.fullName || form?.clientName || 'Client Inquiry Intake'}
       subtitle={form?.serviceType || 'Service Inquiry'}
-      status={(form?.status || 'PENDING').toUpperCase()}
-      statusType={getStatusBadgeType()}
+      status={isArchived ? 'ARCHIVED' : (form?.status || 'PENDING').toUpperCase()}
+      statusType={isArchived ? 'neutral' : getStatusBadgeType()}
       breadcrumbs={breadcrumbs}
       backTo="/operator/inquiry-forms"
       backLabel="Back to Inquiry Forms"
@@ -238,6 +281,36 @@ export default function InquiryFormDetailPage() {
     >
       {form && (
         <div className="inquiry-detail-wrapper">
+          {/* Archived Status Banner */}
+          {isArchived && (
+            <div className="inquiry-confirmed-banner" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+              <div className="inquiry-confirmed-info">
+                <div className="inquiry-confirmed-icon" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                  <i className="fa-solid fa-box-archive"></i>
+                </div>
+                <div>
+                  <h3 className="inquiry-confirmed-title" style={{ color: '#334155' }}>
+                    This Inquiry is Archived
+                  </h3>
+                  <p className="inquiry-confirmed-sub" style={{ color: '#64748b' }}>
+                    Archived records are hidden from active lists. Associated quotations are also archived. You can restore this inquiry at any time.
+                  </p>
+                </div>
+              </div>
+              <div className="inquiry-confirmed-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowRestoreConfirm(true)}
+                  disabled={isRestoring}
+                  style={{ background: 'var(--brand-primary, #6366f1)' }}
+                >
+                  <i className="fa-solid fa-rotate-left"></i> Restore Inquiry
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Attached Service Status Banner */}
           {form.serviceId && !hasQuotation && (
             <div className="inquiry-confirmed-banner" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
@@ -462,7 +535,7 @@ export default function InquiryFormDetailPage() {
           <div className="details-grid-2">
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-regular fa-comment-dots"></i> Inquiry Remarks & Notes
+                <i className="fa-regular fa-comment-dots"></i> Client Remarks & Notes (SAF-01-002 Col 3)
               </h2>
               <p className="inquiry-text inquiry-preline-text">
                 {parsedData.remarksText}
@@ -490,17 +563,30 @@ export default function InquiryFormDetailPage() {
             </article>
           </div>
 
-          {/* Delete Confirmation Modal */}
+          {/* Archive Confirmation Modal */}
           <ConfirmationModal
-            isOpen={showDeleteConfirm}
-            onClose={() => !isDeleting && setShowDeleteConfirm(false)}
-            Icon={TrashIcon}
-            Title="Delete this inquiry form?"
-            Desc={`"${form.formNo || 'Inquiry Form'}" will be permanently deleted. This action cannot be undone.`}
-            BtnColor="var(--error-red)"
-            confirmText="Delete Inquiry"
-            isLoading={isDeleting}
-            OnConfirm={handleDelete}
+            isOpen={showArchiveConfirm}
+            onClose={() => !isArchiving && setShowArchiveConfirm(false)}
+            Icon={() => <i className="fa-solid fa-box-archive" style={{ color: 'var(--purple-dark, #4338ca)' }}></i>}
+            Title="Archive this inquiry?"
+            Desc="Archiving this inquiry will also archive its associated quotations. The records will remain available from the Archived view."
+            BtnColor="var(--purple-dark, #4338ca)"
+            confirmText="Archive Inquiry"
+            isLoading={isArchiving}
+            OnConfirm={handleArchive}
+          />
+
+          {/* Restore Confirmation Modal */}
+          <ConfirmationModal
+            isOpen={showRestoreConfirm}
+            onClose={() => !isRestoring && setShowRestoreConfirm(false)}
+            Icon={() => <i className="fa-solid fa-rotate-left" style={{ color: 'var(--brand-primary, #6366f1)' }}></i>}
+            Title="Restore this inquiry?"
+            Desc="Restoring this inquiry will return it to active records and restore quotations that were archived with it."
+            BtnColor="var(--brand-primary, #6366f1)"
+            confirmText="Restore Inquiry"
+            isLoading={isRestoring}
+            OnConfirm={handleRestore}
           />
 
           {/* Create Quotation Modal */}

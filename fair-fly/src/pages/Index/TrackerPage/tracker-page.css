@@ -1,0 +1,214 @@
+/* TrackerPage Dedicated View Styles */
+.tracker-page-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-body, #f8fafc);
+}
+
+.tracker-page-hero {
+  background-image: url('/explore_bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: #ffffff;
+  padding: 3.5rem 1.5rem 3rem;
+  border-bottom: 0.0625rem solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.tracker-page-hero::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backdrop-filter: blur(8px) brightness(0.5);
+  pointer-events: none;
+}
+
+.tracker-page-hero-container {
+  max-width: 58rem;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.tracker-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  background: rgba(165, 180, 252, 0.1);
+  border: 0.0625rem solid rgba(165, 180, 252, 0.2);
+  padding: 0.35rem 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.tracker-eyebrow-accent {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: #38bdf8;
+}
+
+.tracker-page-title {
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 2.75rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 0 0 1rem;
+}
+
+.title-brand-fair {
+  color: #38bdf8;
+}
+
+.title-brand-fly {
+  color: #a855f7;
+}
+
+.tracker-page-subtitle {
+  font-family: var(--font-primary, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.tracker-page-content-wrapper {
+  max-width: 80rem;
+  width: 100%;
+  margin: -1.5rem auto 2rem;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.tracker-info-section {
+  background: #ffffff;
+  border-top: 0.0625rem solid #e2e8f0;
+  padding: 3.5rem 1.5rem 4rem;
+  margin-top: auto;
+}
+
+.tracker-info-container {
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.tracker-info-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.info-header-tag {
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--purple, #7c3aed);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.info-header-title {
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.tracker-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+}
+
+.tracker-guide-card {
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.tracker-guide-card:hover {
+  background: #ffffff;
+  border-color: #c7d2fe;
+  box-shadow: 0 0.5rem 1.25rem rgba(99, 102, 241, 0.08);
+}
+
+.guide-card-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  background: #ede9fe;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.tracker-guide-card h4 {
+  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.tracker-guide-card p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #475569;
+  margin: 0;
+}
+
+.tracker-guide-card code {
+  background: #e2e8f0;
+  padding: 0.15rem 0.4rem;
+  font-family: monospace;
+  font-size: 0.8125rem;
+  color: #1e1b4b;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .tracker-page-hero {
+    padding: 2.5rem 1rem 2rem;
+  }
+
+  .tracker-page-title {
+    font-size: 2rem;
+  }
+
+  .tracker-page-subtitle {
+    font-size: 0.9375rem;
+  }
+
+  .tracker-page-content-wrapper {
+    margin-top: -1rem;
+    padding: 0 0.5rem;
+  }
+
+  .tracker-info-section {
+    padding: 2.5rem 1rem 3rem;
+  }
+}

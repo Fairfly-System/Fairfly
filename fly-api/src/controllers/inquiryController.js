@@ -92,6 +92,7 @@ const createInquiry = async (req, res) => {
       requirements,
       notes, 
       remarks,
+      clientRemarks,
       agentName,
       agentSignature,
       acknowledgedBy,
@@ -287,8 +288,9 @@ const createInquiry = async (req, res) => {
       servicePrice: servicePrice || '',
       specifiedRequirements: resolvedSpecReqs,
       submittedRequirementsId: effectiveSubmittedReqId,
-      notes: notes || remarks || resolvedSpecReqs || '',
-      remarks: remarks || '',
+      notes: notes || remarks || clientRemarks || resolvedSpecReqs || '',
+      remarks: remarks || clientRemarks || '',
+      clientRemarks: clientRemarks || remarks || '',
       agentName: agentName || (isOperatorUser ? req.userDetails?.name : 'Online Intake'),
       agentSignature: agentSignature || '',
       agentContact: req.userDetails?.phone || req.userDetails?.phoneNumber || '',
@@ -300,6 +302,10 @@ const createInquiry = async (req, res) => {
       controlNo: controlNo || `23-${Math.floor(100 + Math.random() * 900)}`,
       customFields: customFields || {},
       status: status || 'submitted',
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+      archivedReason: null,
       createdAt: now,
       updatedAt: now,
       operatorId: effectiveBranchUid || (isOperatorUser ? req.user?.uid : 'system_intake'),
@@ -364,7 +370,7 @@ const createInquiry = async (req, res) => {
  */
 const getInquiries = async (req, res) => {
   try {
-    const { status, branchUid, clientUid, limit } = req.query;
+    const { status, branchUid, clientUid, limit, archived } = req.query;
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
@@ -379,9 +385,16 @@ const getInquiries = async (req, res) => {
 
     // If operator user is calling, restrict to their branch inquiries
     if (req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') {
-      options.filters.push({ field: 'branchUid', operator: '==', value: req.user.uid });
+      options.filters.push({ field: 'branchUid', operator: '==', value: req.userDetails?.branchUid || req.user.uid });
     } else if (branchUid && branchUid !== 'all') {
       options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
+    }
+
+    // Archive visibility filtering
+    if (archived === 'true') {
+      options.filters.push({ field: 'archived', operator: '==', value: true });
+    } else if (archived !== 'all') {
+      options.filters.push({ field: 'archived', operator: '==', value: false });
     }
 
     if (status && status !== 'all') {
@@ -400,7 +413,11 @@ const getInquiries = async (req, res) => {
         clientName,
         phoneNumber,
         fullName: clientName,
-        cellphone: phoneNumber
+        cellphone: phoneNumber,
+        archived: inq.archived === true,
+        archivedAt: inq.archivedAt || null,
+        archivedBy: inq.archivedBy || null,
+        archivedReason: inq.archivedReason || null
       };
     });
     return res.status(200).json(normalizedResults);
@@ -494,7 +511,208 @@ const updateInquiry = async (req, res) => {
 };
 
 /**
- * Delete an inquiry
+ * Archive an inquiry and cascadingly archive all associated quotations
+ */
+const archiveInquiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Inquiry ID is required' });
+
+    const dbPath = `${COLLECTIONS.INQUIRIES}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Inquiry not found' });
+
+    const userRole = req.userDetails?.role;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((existing.branchUid && existing.branchUid === req.user?.uid) ||
+       (existing.operatorId && existing.operatorId === req.user?.uid) ||
+       (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid));
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp) {
+      return res.status(403).json({ error: 'Forbidden: Only administrators and the assigned branch operator can archive inquiries.' });
+    }
+
+    const now = new Date().toISOString();
+    await updateToDatabase(dbPath, {
+      archived: true,
+      archivedAt: now,
+      archivedBy: req.user.uid,
+      archivedReason: 'user_action',
+      updatedAt: now
+    });
+
+    // Asymmetric cascading archive: archive all associated quotations with reason 'inquiry_archived'
+    let associatedQuotations = [];
+    try {
+      const quotesSnap = await db.collection(COLLECTIONS.QUOTATIONS)
+        .where('inquiryId', '==', id)
+        .get();
+
+      const batch = db.batch();
+      quotesSnap.docs.forEach(qDoc => {
+        const qData = qDoc.data();
+        if (!qData.archived) {
+          batch.update(qDoc.ref, {
+            archived: true,
+            archivedAt: now,
+            archivedBy: req.user.uid,
+            archivedReason: 'inquiry_archived',
+            updatedAt: now
+          });
+          associatedQuotations.push(qDoc.id);
+        }
+      });
+
+      if (existing.confirmedQuotationId && !associatedQuotations.includes(existing.confirmedQuotationId)) {
+        const confRef = db.collection(COLLECTIONS.QUOTATIONS).doc(existing.confirmedQuotationId);
+        const confSnap = await confRef.get();
+        if (confSnap.exists && !confSnap.data().archived) {
+          batch.update(confRef, {
+            archived: true,
+            archivedAt: now,
+            archivedBy: req.user.uid,
+            archivedReason: 'inquiry_archived',
+            updatedAt: now
+          });
+          associatedQuotations.push(existing.confirmedQuotationId);
+        }
+      }
+
+      if (associatedQuotations.length > 0) {
+        await batch.commit();
+      }
+    } catch (quoteArchiveErr) {
+      console.warn('[Inquiry] Error cascading archive to quotations:', quoteArchiveErr.message);
+    }
+
+    await logFromRequest(req, {
+      action: 'ARCHIVE_INQUIRY',
+      entityType: 'inquiry',
+      entityId: id,
+      description: `Archived Inquiry (${existing.controlNo || existing.formNo || id}) and cascaded to ${associatedQuotations.length} quotation(s)`,
+      metadata: { inquiryId: id, controlNo: existing.controlNo, clientName: existing.clientName, cascadedQuotations: associatedQuotations }
+    });
+
+    return res.status(200).json({
+      message: 'Inquiry and associated quotations archived successfully',
+      id,
+      archived: true,
+      cascadedQuotationsCount: associatedQuotations.length
+    });
+  } catch (error) {
+    console.error('Error archiving inquiry:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Restore an inquiry and cascadingly restore ONLY quotations archived because of the inquiry
+ */
+const restoreInquiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Inquiry ID is required' });
+
+    const dbPath = `${COLLECTIONS.INQUIRIES}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Inquiry not found' });
+
+    const userRole = req.userDetails?.role;
+    const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
+      ((existing.branchUid && existing.branchUid === req.user?.uid) ||
+       (existing.operatorId && existing.operatorId === req.user?.uid) ||
+       (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid));
+    const isAdmin = userRole === 'admin';
+
+    if (!isAdmin && !isAssignedOp) {
+      return res.status(403).json({ error: 'Forbidden: Only administrators and the assigned branch operator can restore inquiries.' });
+    }
+
+    const now = new Date().toISOString();
+    await updateToDatabase(dbPath, {
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+      archivedReason: null,
+      restoredAt: now,
+      restoredBy: req.user.uid,
+      updatedAt: now
+    });
+
+    // Cascading restore: ONLY restore quotations where archivedReason === 'inquiry_archived'
+    let restoredQuotations = [];
+    try {
+      const quotesSnap = await db.collection(COLLECTIONS.QUOTATIONS)
+        .where('inquiryId', '==', id)
+        .get();
+
+      const batch = db.batch();
+      quotesSnap.docs.forEach(qDoc => {
+        const qData = qDoc.data();
+        if (qData.archived === true && qData.archivedReason === 'inquiry_archived') {
+          batch.update(qDoc.ref, {
+            archived: false,
+            archivedAt: null,
+            archivedBy: null,
+            archivedReason: null,
+            restoredAt: now,
+            restoredBy: req.user.uid,
+            updatedAt: now
+          });
+          restoredQuotations.push(qDoc.id);
+        }
+      });
+
+      if (existing.confirmedQuotationId && !restoredQuotations.includes(existing.confirmedQuotationId)) {
+        const confRef = db.collection(COLLECTIONS.QUOTATIONS).doc(existing.confirmedQuotationId);
+        const confSnap = await confRef.get();
+        if (confSnap.exists) {
+          const confData = confSnap.data();
+          if (confData.archived === true && confData.archivedReason === 'inquiry_archived') {
+            batch.update(confRef, {
+              archived: false,
+              archivedAt: null,
+              archivedBy: null,
+              archivedReason: null,
+              restoredAt: now,
+              restoredBy: req.user.uid,
+              updatedAt: now
+            });
+            restoredQuotations.push(existing.confirmedQuotationId);
+          }
+        }
+      }
+
+      if (restoredQuotations.length > 0) {
+        await batch.commit();
+      }
+    } catch (quoteRestoreErr) {
+      console.warn('[Inquiry] Error restoring cascaded quotations:', quoteRestoreErr.message);
+    }
+
+    await logFromRequest(req, {
+      action: 'RESTORE_INQUIRY',
+      entityType: 'inquiry',
+      entityId: id,
+      description: `Restored Inquiry (${existing.controlNo || existing.formNo || id}) and ${restoredQuotations.length} cascadingly archived quotation(s)`,
+      metadata: { inquiryId: id, controlNo: existing.controlNo, clientName: existing.clientName, restoredQuotations }
+    });
+
+    return res.status(200).json({
+      message: 'Inquiry restored successfully',
+      id,
+      archived: false,
+      restoredQuotationsCount: restoredQuotations.length
+    });
+  } catch (error) {
+    console.error('Error restoring inquiry:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Permanent deletion is disabled in favor of the archival system
  */
 const deleteInquiry = async (req, res) => {
   try {
@@ -507,25 +725,22 @@ const deleteInquiry = async (req, res) => {
 
     const userRole = req.userDetails?.role;
     const isAssignedOp = (userRole === 'operator' || userRole === 'branch_operator') &&
-      ((existing.branchUid && existing.branchUid === req.user?.uid) || (existing.operatorId && existing.operatorId === req.user?.uid));
+      ((existing.branchUid && existing.branchUid === req.user?.uid) ||
+       (existing.operatorId && existing.operatorId === req.user?.uid) ||
+       (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid));
     const isAdmin = userRole === 'admin';
 
     if (!isAdmin && !isAssignedOp) {
-      return res.status(403).json({ error: 'Forbidden: Only administrators and the assigned branch operator can delete inquiries.' });
+      return res.status(403).json({ error: 'Forbidden: Only administrators and the assigned branch operator can manage inquiries.' });
     }
 
-    await logFromRequest(req, {
-      action: 'DELETE_INQUIRY',
-      entityType: 'inquiry',
-      entityId: id,
-      description: `Deleted Inquiry (${existing.controlNo || existing.formNo || id}) for ${existing.clientName || 'Client'}`,
-      metadata: { inquiryId: id, controlNo: existing.controlNo, clientName: existing.clientName }
+    // Permanent delete is strictly disabled
+    return res.status(400).json({
+      error: 'Permanent deletion of inquiries has been disabled to preserve historical business records. Please use the archive feature instead.',
+      archivalRecommended: true
     });
-
-    await deleteFromDatabase(dbPath);
-    return res.status(200).json({ message: 'Inquiry deleted successfully' });
   } catch (error) {
-    console.error('Error deleting inquiry:', error);
+    console.error('Error in deleteInquiry:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -653,12 +868,21 @@ const confirmInquiry = async (req, res) => {
       preparedByContact: inquiry.agentContact || req.userDetails?.phone || '0997 4763844',
       preparedBy: inquiry.agentName || req.userDetails?.name || 'Operator',
       remarks: `- Initial payment upon confirmation\n- Reference Inquiry Form No: ${inquiry.formNo || 'N/A'}`,
+      operatorRemarks: `- Initial payment upon confirmation\n- Reference Inquiry Form No: ${inquiry.formNo || 'N/A'}`,
+      clientRemarks: inquiry.remarks || inquiry.clientRemarks || inquiry.notes || '',
       quotationDate: now.split('T')[0],
       branchUid: branchUid,
       branchName: branchName,
       inquiryId: id,
       quoteNo: quoteNo,
       status: 'Draft',
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+      archivedReason: null,
+      rejectedAt: null,
+      rejectedBy: null,
+      rejectionReason: null,
       createdAt: now,
       updatedAt: now,
       operatorId: branchUid
@@ -987,6 +1211,8 @@ module.exports = {
   getInquiryById,
   updateInquiry,
   deleteInquiry,
+  archiveInquiry,
+  restoreInquiry,
   confirmInquiry,
   getInquirySchema,
   saveInquirySchema,

@@ -133,11 +133,41 @@ const queryDatabaseAdvanced = async (collectionName, options = {}) => {
       queryRef = queryRef.limit(options.limit); //Limit the number of documents returned
     }
 
-    const snapshot = await queryRef.get(); //Get the query results
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); //Returns the results in the format of { id: doc.id, ...doc.data() }
+    try {
+      const snapshot = await queryRef.get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (queryErr) {
+      if (queryErr.code === 9 || (queryErr.message && queryErr.message.includes('The query requires an index'))) {
+        console.warn(`[Firebase] Missing/provisioning index for query on ${collectionName}. Falling back to in-memory sort:`, queryErr.message);
+        let fallbackQuery = db.collection(collectionName);
+        if (options.filters && Array.isArray(options.filters)) {
+          options.filters.forEach(filter => {
+            fallbackQuery = fallbackQuery.where(filter.field, filter.operator || '==', filter.value);
+          });
+        }
+        const fallbackSnap = await fallbackQuery.get();
+        let docs = fallbackSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (options.orderBy && options.orderBy.field) {
+          const field = options.orderBy.field;
+          const dir = options.orderBy.direction === 'asc' ? 1 : -1;
+          docs.sort((a, b) => {
+            const valA = a[field] || '';
+            const valB = b[field] || '';
+            if (valA < valB) return -1 * dir;
+            if (valA > valB) return 1 * dir;
+            return 0;
+          });
+        }
+        if (options.limit && docs.length > options.limit) {
+          docs = docs.slice(0, options.limit);
+        }
+        return docs;
+      }
+      throw queryErr;
+    }
   } catch (error) {
-    console.error(`Firebase Admin SDK: Error querying ${collectionName}:`, error); //Log the error
-    throw error; //Throw the error
+    console.error(`Firebase Admin SDK: Error querying ${collectionName}:`, error);
+    throw error;
   }
 };
 

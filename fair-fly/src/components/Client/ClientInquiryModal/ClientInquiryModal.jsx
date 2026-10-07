@@ -569,7 +569,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
           <textarea
             className="input-base textarea-requirements"
             rows="5"
-            placeholder={`• (1) Unit Tourist Bus (49 Regular seats, audio/video entertainment)&#10;• 3D/2N Tour: QC - Bolinao - Alaminos - QC&#10;• Target Travel Dates: April 29 to May 1&#10;• Need lodging recommendations in Bolinao`}
+            placeholder={'• (1) Unit Tourist Bus (49 Regular seats, audio/video entertainment)\n• 3D/2N Tour: QC - Bolinao - Alaminos - QC\n• Target Travel Dates: April 29 to May 1\n• Need lodging recommendations in Bolinao'}
             value={specifiedRequirements}
             onChange={(e) => setSpecifiedRequirements(e.target.value)}
             required

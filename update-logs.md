@@ -1,5 +1,459 @@
 # Update Logs
 
+## [2026-10-07] UI Polish: Client Portal Navbar Branding, 500px–320px Modal Optimizations & Zoom Hardening
+
+### Overview
+Refined the Client Portal UI by removing the text "Fairfly Client" and its subheading from the top navbar ([`AppNavbar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx)), displaying exclusively the clean Fairfly brand logo. In addition, hardened all Client Portal modals, forms, and page tabs against narrow mobile viewports down to 320px and aggressive browser zoom levels.
+
+### Key Changes
+1. **Navbar Text Cleanup ([`AppNavbar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx))**:
+   - Removed `<div className="app-nav-brand-text">` containing `<p id="top-title">Fairfly Client</p>` and `<p id="down-title">{portalSubtitle}</p>`.
+   - Now displays only the high-resolution Fairfly logo `<img className="app-nav-logo">` linking to `/client`.
+2. **Official Service Inquiry Form SAF-01-002 ([`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx), [`client-inquiry-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/client-inquiry-modal.css), [`client-service-request-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/client-service-request-modal.css))**:
+   - Replaced multi-column grid with a strict single-column column-flex stack (`display: flex !important; flex-direction: column !important; width: 100% !important;`) on mobile breakpoints (`<= 48rem` / `768px` down to `320px`).
+   - Every field (Representative / Full Name, Population / Pax Count, Address, Cellphone No., Telephone No., Email Address, Preferred Processing Branch) now spans the full container width with zero side-by-side splitting.
+   - Fixed raw `&#10;` HTML entity in Section 3 textarea placeholder with proper JavaScript `\n` linebreaks.
+   - Stacked `.client-type-options` toggle buttons vertically below 500px (`width: 100%`) so that "Individual" and "Company / Organization" buttons never clip or overflow modal margins.
+   - Responsive padding, font-sizes, and check-tile heights down to 320px.
+3. **Client Appointment Form Modal ([`client-appointment-form.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientAppointmentForm/client-appointment-form.css))**:
+   - Added dedicated responsive rules for `.appointmentForm`: `.form-grid-2` collapses to 1 column below 500px, and `.form-actions` stacks action buttons (`Cancel` / `Schedule Appointment`) to full-width with `flex-direction: column-reverse`.
+   - Tuned form inputs and labels for 360px and 320px viewports.
+4. **Client Dashboard & Welcome Hero Banner ([`welcome-hero.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/WelcomeHero/welcome-hero.css), [`client-dashboard.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientDashboard/client-dashboard.css))**:
+   - Scaled hero typography (`1.35rem` at 500px, `1.15rem` at 360px-320px) and padded container safely to prevent text overflow under high zoom.
+   - Fixed `.client-action-grid` minmax to `minmax(min(100%, 18rem), 1fr)` to prevent 320px viewport horizontal clipping.
+5. **Client Tracking Portal Tabs ([`client-tracking.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css))**:
+   - Stacked `.client-portal-main-tabs` into vertical full-width tab buttons on screens `<= 30rem` (480px down to 320px), preventing the tab labels ("My Inquiries & Quotations") from being truncated or clipped at narrow widths.
+6. **Appointments Page & Grid ([`client-appointments.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientAppointments/client-appointments.css))**:
+   - Updated `.appointments-grid` to `minmax(min(100%, 20rem), 1fr)` and added 320px-360px styling rules.
+7. **Verification**:
+   - Headless browser verification with zoom and small viewport testing (360px and 320px) confirmed `scrollWidth === clientWidth === 320px` (0px horizontal overflow).
+   - Vite production build (`npm run build`) completed cleanly with 0 errors.
+
+## [2026-10-07] UI Optimization: Mobile Layout & Typography Hardening for ~500px - 320px Screen Resolutions
+
+### Overview
+Conducted comprehensive mobile layout and component hardening across all **Landing Page** and **Client Portal** views targeting narrow smartphones from **500px down to 320px** (the smallest supported mobile viewport standard). Validated with automated headless browser multi-viewport testing across 320px, 375px, 420px, and 500px screens with zero horizontal overflow.
+
+### Key Changes
+1. **Public Navbar & Header Controls ([`navbar.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Navbar/navbar.css))**:
+   - Adjusted navbar padding to `0.375rem 0.625rem` below 480px and `0.25rem 0.375rem` below 340px.
+   - Scaled brand logo image cleanly to `1.875rem` (480px) and `1.625rem` (320px), preventing collision with hamburger menu and action buttons.
+   - Constrained `.btnFranchiseMobile` touch target with tight padding and icon alignment.
+2. **Landing Hero Section & Trust Strip ([`landing.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/Landing/landing.css))**:
+   - Tuned hero heading to `1.85rem` on `<= 400px` viewports, preventing awkward single-word wrapping on 320px screens.
+   - Tightened `.hero-text-col` padding to `1.5rem 0.75rem`.
+   - Adjusted `.trust-item` and teaser box padding to `1rem 0.75rem` with clean bottom borders.
+3. **Public Services Catalog & Cards ([`services.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/services.css))**:
+   - Adjusted section padding to `2rem 0.625rem` (384px) and `1.5rem 0.375rem` (320px).
+   - Formatted `.service-card-footer` into a clean column with full-width primary CTA button.
+   - Scaled dropdown select and search inputs to comfortable touch sizing (`0.5rem 1.75rem 0.5rem 2rem`).
+4. **Public Service Tracker ([`request-tracker.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/request-tracker.css))**:
+   - Added `<= 360px` rules for tracker search card (`padding: 1rem 0.625rem;`), stepper section, and result meta grid.
+   - Title scaled to `1.4rem` to fit within 320px screens.
+5. **Client Portal Layout & Marketplace ([`client-layout.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientLayout/client-layout.css), [`client-tracking.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css), [`client-services-marketplace.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServicesMarketplace/client-services-marketplace.css))**:
+   - Reduced main padding to `1rem 0.5rem 2.5rem` on `<= 400px` screens.
+   - Adjusted tracking KPI cards, tabs, and action buttons for 360px-320px screens.
+   - Standardized shopping card footer and action button column stacking on 320px widths.
+6. **Verification**:
+   - Verified across 320px, 375px, 420px, and 500px viewports via automated browser testing.
+   - Achieved 100% pass rate: `document.documentElement.scrollWidth <= window.innerWidth` across all tested routes with zero horizontal overflow.
+   - Built cleanly with `npm run build` (0 errors).
+
+## [2026-10-07] UI Enhancement: Universal Category Dropdown & Compact Toolbar Container
+
+### Overview
+Updated the `.services-toolbar` on the Landing Page and Services catalog ([`Services.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/Services.jsx), [`services.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/services.css)) to use the clean dropdown selection across all screen sizes (including desktop) and fixed the disproportionately tall container bug at different resolutions/zooms.
+
+### Key Changes
+1. **Universal Dropdown Presentation ([`Services.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/Services.jsx))**:
+   - Replaced horizontal category chips completely with the category `<select>` dropdown (`.services-category-select-wrapper`) across all viewports.
+2. **Compact Container Sizing & Flex Alignment ([`services.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/services.css))**:
+   - Switched `.services-toolbar` to `flex-direction: row; justify-content: space-between; align-items: center;` on desktop and tablets down to 640px, placing the Category Dropdown and Search Bar side-by-side in a single compact row.
+   - Constrained `.services-category-select-wrapper` to `flex: 0 1 18rem; min-width: 12rem; max-width: 22rem;` and `.services-search-wrapper` to `flex: 0 1 22rem; min-width: 14rem; max-width: 24rem;`, eliminating excessive toolbar height and large blank white space.
+   - On mobile viewports (`<= 40rem` / 640px), `.services-toolbar` stacks vertically with clean full-width controls.
+3. **Verification**:
+   - Browser subagent verified on desktop (1280x800) and mobile (375x667, 420x800).
+   - Category filtering and search queries work smoothly with zero console errors.
+   - Vite production build (`npm run build`) succeeded in 2.86s with 0 errors.
+
+## [2026-10-07] UI Architecture: Resolution-Proportional REM Scaling Across All Breakpoints
+
+### Overview
+Implemented proportional root font scaling across Desktop, Tablet, and Mobile ranges using CSS `calc()` and `clamp()` based on the project's responsive breakpoints (`index.css`). This maintains screen-relative proportions for all REM-based typography, spacing, gaps, and dimensions within each responsive range while preserving desktop, tablet, and mobile layouts intact. Operator and Admin portals are guarded with fixed 16px root font size (`html:has(.app-layout-container)`).
+
+### Scaling Formulas & Breakpoint Reference Widths
+1. **Desktop Range (`> 1024px`, Reference: `1280px`)**:
+   - `font-size: clamp(12.8px, calc(16px * 100vw / 1280), 18px);`
+   - At reference width (1280px): Exactly `16px`.
+   - At intermediate desktop (1100px): Proportional reduction to `13.75px` without breaking the desktop layout.
+2. **Tablet Range (`640.02px` to `1024px`, Reference: `768px`)**:
+   - `font-size: clamp(13.33px, calc(16px * 100vw / 768), 21.33px);`
+   - At reference width (768px): Exactly `16px`.
+   - At intermediate tablet (900px): Proportional enlargement to `18.75px`.
+   - At narrow tablet (680px): Proportional scaling to `14.17px`.
+3. **Mobile Range (`<= 640px`, Reference: `480px`)**:
+   - `font-size: clamp(10.67px, calc(16px * 100vw / 480), 21.33px);`
+   - At reference width (480px): Exactly `16px`.
+   - At intermediate mobile (375px): Proportional scaling to `12.5px`.
+   - At narrowest mobile (320px): Proportional scaling to `10.67px`.
+4. **Portal Scoping Guard**:
+   - `html:has(.app-layout-container) { font-size: 16px !important; }` prevents any unintended scaling on Operator and Admin dashboards.
+
+### Verification
+- Full browser subagent inspection verified all reference, intermediate, and narrowest widths across all 3 ranges with zero horizontal scrollbar overflow (`scrollWidth <= clientWidth`).
+- Vite production build (`npm run build`) completed cleanly with 0 errors.
+
+## [2026-10-07] Bug Fix: Safe Price Formatting in ClientServiceRequestModal
+
+### Overview
+Fixed `Uncaught TypeError: selectedService.price.startsWith is not a function` in [`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx).
+
+### Key Changes
+1. **Defensive Price Resolution**:
+   - Replaced direct string method calls (`selectedService.price.startsWith(...)`) with type-safe handling supporting numeric amounts (e.g. `1500`), currency-formatted strings (`₱1,500`, `PHP 1,500`), and fallback defaults (`'Standard Fee'`).
+   - Cleaned sanitization via `parseFloat(String(p).replace(/[^0-9.]/g, ''))` with `toLocaleString('en-US')`.
+2. **Verification**:
+   - Production bundle compiled cleanly with `npm run build` in 7.13s with 0 errors.
+
+## [2026-10-06] Mobile-First Responsiveness & Navigation Overhaul: Landing Page, Client Portal & Mobile Chat
+
+### Overview
+Executed a comprehensive mobile-first responsiveness overhaul across all **Landing Page** and **Client Portal** views, components, modals, filters, toolbars, and layouts. Solved mobile chat recipient navigation by implementing a dedicated mobile conversation back button and state preservation pattern. Validated with automated Chrome DevTools Protocol (CDP) multi-viewport testing across 5 standard viewport resolutions (320px, 375px, 412px, 768px, 1280px) achieving a 100% pass rate (50/50 test matrix) with zero horizontal overflow.
+
+### Key Changes
+1. **Mobile Chat Recipient Navigation & Back Flow ([`MessagesPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/MessagesPage/MessagesPage.jsx), [`messages-page.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/MessagesPage/messages-page.css))**:
+   - Implemented a dedicated `.messages-btn-back-mobile` touch button (36x36px) styled with high-contrast arrow icon in the conversation header.
+   - Button is visible exclusively on mobile viewports (`<= 48rem` / 768px) and hidden on desktop (`display: none`).
+   - Clicking the button invokes `setActiveConversation(null)` to smoothly transition back to the recipient list / search interface without refreshing or losing state.
+   - Preserves complete two-pane side-by-side layout on desktop viewports.
+2. **Fixed Mobile Baseline Strategy Across Client Portal & Marketplace ([`client-services-marketplace.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServicesMarketplace/client-services-marketplace.css), [`client-dashboard.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientDashboard/client-dashboard.css))**:
+   - Implemented responsive column collapsing for `.shopping-layout` at `<= 64rem` (1024px) converting sticky side-by-side collision into a structured vertical stack.
+   - Replaced fixed minimum widths on `.shopping-search-box` with flexible `min-width: min(100%, 16rem)`.
+   - Enabled `flex-wrap: wrap` and flexible auto-stretching for `.shopping-toolbar-controls`, `.shopping-sort-wrap`, and `.shopping-card-footer` on small viewports (`<= 30rem` / 480px), eliminating horizontal card and toolbar clipping.
+   - Constrained `.client-action-grid` to single-column stacking below 48rem.
+3. **Landing Page & Public Component Hardening ([`services.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Services/services.css), [`landing.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/Landing/landing.css), [`navbar.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Navbar/navbar.css), [`chatbot.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Chatbot/chatbot.css), [`request-tracker.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/request-tracker.css), [`puzzle-house.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/FranchisePuzzleBanner/puzzle-house.css))**:
+   - Corrected `.services-toolbar` and `.services-category-chips` with explicit `min-width: 0; max-width: 100%; overflow-x: auto; flex-wrap: nowrap;` to prevent flex children from expanding parent viewport width.
+   - Fixed CSS syntax error (premature closing brace in `services.css`) that previously prevented lightningcss minification.
+   - Constrained floating `.chatbot-box` to `left: 0.75rem; right: 0.75rem; width: auto; max-width: calc(100vw - 1.5rem); height: min(520px, calc(100dvh - 2rem));` on mobile screens.
+   - Added `overflow-x: hidden` and `max-width: 100vw` protection to `.nav-mobile-drawer`.
+   - Adjusted `.trust-item` and `.hero-text-col` padding and min-heights for comfortable mobile viewing.
+   - Constrained Franchise Puzzle Banner stage height and callout cards below 420px.
+4. **Client Tracking, Appointments & Modals ([`client-tracking.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css), [`client-appointments.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientAppointments/client-appointments.css), [`service-tracker.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceTracker/service-tracker.css), modal stylesheets)**:
+   - Enabled horizontal scrolling for `.client-portal-main-tabs` and responsive stacking for tracking header row and KPI cards.
+   - Added `@media (max-width: 480px)` rules across client modals (`quotation-detail-modal`, `inquiry-detail-modal`, `payment-modal`, `client-service-request-modal`, `franchise-application-form`) converting modal action buttons to full-width stacked columns.
+5. **Automated Verification**:
+   - `npm run build` completed cleanly in 2.23s with 0 errors.
+   - Full automated CDP test suite executed across 5 viewports (320px, 375px, 412px, 768px, 1280px) on 10 routes: 50 out of 50 combinations passed with zero horizontal overflow (`scrollWidth === clientWidth`).
+   - Chat navigation tested live on mobile viewport: recipient selection displays conversation with 36x36px Back button; clicking Back smoothly returns to recipient list; desktop preserves side-by-side layout with Back button hidden.
+
+## [2026-10-06] Feature Refinement: Strict Service Tracking ID Enforcement on Public Tracker
+
+### Overview
+Updated the public **Real-Time Service Tracker** across frontend and backend ([`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx), [`TrackerPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/TrackerPage/TrackerPage.jsx), and [`trackingController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/trackingController.js)) to **strictly accept official Service Tracking IDs (`SRV-2026-XXXXXX` / `SVC-...`) only**, completely disallowing Quotation IDs (`QT-...`, `QUO-...`), Inquiry Reference codes (`INQ-...`, `SAF-...`), and Receipt Numbers (`RCT-...`).
+
+### Key Changes
+1. **Backend Validation & Guard Clauses ([`trackingController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/trackingController.js))**:
+   - Added guard clauses that immediately reject Quotation IDs (`QT-`, `QUO-`, `QTN-`), Inquiry codes (`INQ-`, `SAF-`), and Receipt numbers (`RCT-`) with `400 Bad Request` and clear guidance error messages.
+   - Removed direct quotation and inquiry database queries from public tracking resolution.
+   - Strictly resolves active services by their high-entropy `serviceCode` or direct fulfillment document ID.
+2. **Frontend UI & Validation Hardening ([`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx))**:
+   - Added client-side format checking in `performTrackLookup` to intercept and warn users if they submit non-tracking references.
+   - Updated search input placeholder to `Enter Service Tracking ID (e.g. SRV-2026-000123)...`.
+   - Updated header subtitle and sample chips to only present `SRV-2026-XXXXXX` format.
+   - Cleaned URL parameter parsing to only accept `trackingId`, `serviceCode`, and `code`.
+3. **Portal Guidance Updates ([`TrackerPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/TrackerPage/TrackerPage.jsx))**:
+   - Replaced quotation reference guide card with "Real-Time Milestone Tracking" instructions clarifying that tracking is initiated after service confirmation via `SRV-2026-XXXXXX`.
+4. **Verification**:
+   - Automated integration test suite [`testReceiptAndTrackingIntegration.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testReceiptAndTrackingIntegration.js) updated to test strict rejection of `QT-...`, `RCT-...`, and `INQ-...` inputs; all tests passed 100%.
+   - Frontend built cleanly with `npm run build`.
+
+
+
+## [2026-10-06] Security & Performance: Optimized & Relaxed Rate Limiting for Public Tracker and Landing Page
+
+### Overview
+Significantly relaxed and tiered backend rate limits across the FairFly system ([`rateLimitService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/rateLimitService.js), [`rateLimiter.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/middleware/rateLimiter.js), [`trackingRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/trackingRoutes.js), and [`receiptRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/receiptRoutes.js)) to eliminate false-positive `HTTP 429 Too Many Requests` during public request tracking lookups, sample chip exploration, and background synchronization.
+
+### Key Enhancements
+1. **Dedicated High-Capacity Public Tracking Rate Limiter (`trackerRateLimiter`)**:
+   - Introduced `trackerLimiter` configured for **180 requests per 1 minute window** (up from the legacy shared 10 req / 10 min window).
+   - Applied `trackerRateLimiter` to `GET /api/tracking/public/:trackingId` and `GET /api/receipts/public/:code`.
+   - Accommodates live typing, rapid sample tracking code lookups (`QT-...`, `SRV-...`, `RCT-...`), and real-time reconciliation heartbeats without throttling genuine users.
+2. **Relaxed Public Landing Page Limiter (`publicRateLimiter`)**:
+   - Increased capacity to **60 requests per 1 minute window** (up from 10 req / 10 min).
+   - Prevents throttling on public inquiry submissions, schema pre-fetches, appointment bookings, and franchise applications.
+3. **Upgraded API Limiter (`apiRateLimiter`)**:
+   - Increased authenticated dashboard capacity to **300 requests per 1 minute window** (up from 100 req / 15 min).
+   - Ensures rapid multi-tab operator and admin workflows operate seamlessly.
+4. **Verification**:
+   - Automated integration test suite [`testReceiptAndTrackingIntegration.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testReceiptAndTrackingIntegration.js) executed and verified 100% passing (6/6 test suites).
+
+
+
+## [2026-10-06] Reliability: Dual-Engine Real-Time & Background Auto-Reconciliation in Public Request Tracker
+
+### Overview
+Hardened the public **Real-Time Request Tracker** ([`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx) at `/track` and `/tracking`) to ensure live status progression and milestone updates sync automatically without manual page refreshes.
+
+### Key Enhancements
+1. **Multi-Document `onSnapshot` Real-Time Listeners**:
+   - Subscribed to `activeServices/{fulfillmentId}` for live procedure step completions, milestone timestamps, overall status (`Processing` -> `Completed`), and timeline advancements.
+   - Subscribed to `quotations/{quotationId}` for instant payment status updates (`PAID`), service code assignments, and fulfillment linking.
+2. **Resilient Background Heartbeat Reconciliation**:
+   - Implemented a background 4-second reconciliation interval that silently re-queries the public tracking endpoint in case browser privacy shields (e.g. Edge/Safari tracking prevention, storage partition blocks, or intermittent network drops) interrupt Firestore WebSocket connections.
+3. **Seamless State Merging**:
+   - Updates merge directly into `trackingData` state without unmounting components or triggering UI loading spinners, guaranteeing smooth, real-time live sync.
+4. **Verification**:
+   - Built frontend with `npm run build` (passed cleanly).
+
+## [2026-10-06] UI Bug Fix: Fixed Overflowing "View File" Action Button in Operator Service Procedure
+
+### Overview
+Resolved a UI layout overflow bug on the **Operator Service Procedure** page ([`OperatorServiceProcedure.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx) at `/operator/services/:id/procedure`) where long submitted requirement file names caused the "View File" action buttons to stretch and overflow outside of the left sidebar container into the timeline steps column.
+
+### Root Cause
+1. `.op-submitted-doc-box` used a horizontal flex layout with `justify-content: space-between` inside a fixed 20rem sidebar without `min-width: 0` / `flex-shrink` boundaries on the text container.
+2. Long filenames (such as `FairFly_Receipt_RCT-2026-FA5E2A.pdf`) expanded past the sidebar width, pushing the "View File" button out of the card boundary and overflowing into the right procedure timeline column.
+
+### Key Changes
+1. **Layout Restructuring in [`OperatorServiceProcedure.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx)**:
+   - Restructured `.op-submitted-doc-box` and `.op-submitted-img-actions` into distinct `.op-submitted-doc-info` and `.op-doc-details` containers with clean ellipsis truncation for long file titles.
+   - Standardized the file download / view button to a dedicated full-width card action button with download icon and clean typography.
+2. **CSS Hardening in [`operator-service-procedure.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServiceProcedure/operator-service-procedure.css)**:
+   - Added `minmax(280px, 22rem) minmax(0, 1fr)` to `.op-procedure-grid` and `min-width: 0` / `overflow: hidden` to `.op-procedure-sidebar-panel`, `.op-procedure-panel-card`, and `.op-submitted-req-card`.
+   - Styled `.op-submitted-doc-box` with `flex-direction: column`, ensuring filenames truncate cleanly with ellipsis while action buttons occupy full card width without overflowing.
+3. **Verification**:
+   - Built frontend with `npm run build` (passed cleanly).
+
+## [2026-10-06] Bug Fix: Resolved "Maximum update depth exceeded" Infinite Loop in QuotationAttachRequirementsModal & ClientTrackingPage
+
+### Overview
+Fixed a React runtime infinite re-render loop on [`ClientTrackingPage`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx) that occurred when loading the client tracking dashboard.
+
+### Root Cause
+1. [`QuotationAttachRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx) was mounted with `isOpen={Boolean(attachingRequirementsQuotation)}` (`false` by default).
+2. Inside `QuotationAttachRequirementsModal`, `useSubmittedRequirements` evaluated non-memoized fallback arrays `[]` on every render cycle, producing a fresh object reference.
+3. The pre-fill `useEffect` was triggered by changing reference dependencies and called `setInputs({})` on every render when `!isOpen`, creating an infinite `setState -> re-render -> setInputs({}) -> re-render` cascade.
+
+### Key Changes
+1. **Memoized Resolved Requirements in [`useSubmittedRequirements.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/hooks/useSubmittedRequirements.js)**:
+   - Defined a module-level static `EMPTY_ARRAY = []`.
+   - Memoized `resolvedList` using `useMemo` with dependencies on `[record, fallbackRequirements]` to guarantee stable array references across render passes.
+2. **Hardened [`QuotationAttachRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx)**:
+   - Guarded hook subscription to only fetch `submittedRequirementsId` when `isOpen` is true.
+   - Updated `useEffect` to safely check if `inputs` is already empty before updating state (`setInputs(prev => Object.keys(prev).length === 0 ? prev : {})`).
+   - Added change-detection during pre-fill population so `setInputs` only dispatches when property values actually change.
+   - Added early return `if (!isOpen) return null;`.
+3. **Conditional Modal Mounting**:
+   - In [`ClientTrackingPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx) and [`QuotationDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx), conditionally mounted `QuotationAttachRequirementsModal` only when the active quotation or modal trigger is truthy.
+4. **Verification**:
+   - Built frontend with `npm run build` (passed cleanly).
+   - Executed full backend test suites (`testWorkflowRemodel.js` and `testReceiptAndTrackingIntegration.js`, both passed 100%).
+
+## [2026-10-06] Architecture: Strict Separation of Client Remarks & Operator Remarks Across Entire Workflow
+
+### Overview
+Comprehensively audited and repaired the remarks architecture across the backend, database mappings, API routes, and frontend views to guarantee that **Client Remarks** (from inquiry intake `SAF-01-002`) and **Operator Remarks** (from quotation creation `ADF-07-001`) remain strictly separate and accurately labeled across the inquiry → quotation → payment/fulfillment workflow.
+
+### Key Changes
+1. **Quotation Creation & Prefill Fixes**:
+   - In [`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx), fixed bug where `initialData.remarks` (Client Remarks from inquiry) erroneously overwritten `formData.remarks` (Operator Payment Terms & Remarks default).
+   - Preserved default Operator Payment Terms (`- Initial payment of 50% upon confirmation\n- Full payment on or before tour commencement`) and labeled Section 5 as **"Operator Remarks & Payment Terms"**.
+   - Added a dedicated readonly **"Client's Remarks / Special Instructions (from SAF-01-002 Intake)"** reference card in Section 2 so operators can view what the client requested during intake without polluting quotation terms.
+   - Payload explicitly submits `remarks`, `operatorRemarks`, and `clientRemarks`.
+
+2. **Inquiry Detail & History Display Realignment**:
+   - In [`InquiryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx), updated section to **"Client Remarks & Special Instructions (SAF-01-002 Col 3)"**.
+   - In [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx) and [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx), re-aligned card headers to **"Client Remarks & Notes (SAF-01-002 Col 3)"** and upgraded `parseInquiryData` to handle `clientRemarks` as a first-class field.
+
+3. **Quotation Detail & Client Quotation Modal**:
+   - In [`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx), labeled Section 5 as **"Operator Remarks & Payment Terms"** and added a distinct **"Client Remarks & Special Instructions (from Inquiry Intake)"** card when linked to an inquiry.
+   - In [`QuotationDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx), labeled the operator notes card as **"Operator Remarks & Payment Terms"** displaying `quotation.operatorRemarks || quotation.remarks`.
+
+4. **Backend Controllers, Services & Allowed Fields**:
+   - In [`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js), canonicalized `clientRemarks` on inquiries and preserved both `operatorRemarks` and `clientRemarks` when auto-creating quotations.
+   - In [`quotationController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/quotationController.js), saved `operatorRemarks` and `clientRemarks` distinctly in `createQuotation`, `updateQuotation`, and `createCustomServiceFromQuotation`.
+   - In [`receiptService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/receiptService.js), [`receiptController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/receiptController.js), and [`trackingController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/trackingController.js), ensured receipt description uses `serviceTitle` rather than operator remarks, and tracked `operatorRemarks` / `clientRemarks` as separate properties.
+   - In [`inquiryRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/inquiryRoutes.js), [`quotationRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/quotationRoutes.js), and [`activeServiceRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/activeServiceRoutes.js), whitelisted `operatorRemarks` and `clientRemarks` in `allowedFields`.
+
+5. **PDF Normalization (`PdfDocumentView.jsx`)**:
+   - In `normalizeInquiryPdfData`, normalized `inquiryData.remarks` from `clientRemarks || remarks`.
+   - In `normalizeQuotationPdfData`, normalized `quotationData.remarks` strictly from `operatorRemarks || remarks`.
+
+6. **Verification**:
+   - Frontend `npm run build` compiled cleanly with 0 errors.
+   - Backend automated test suites `testWorkflowRemodel.js` and `testReceiptAndTrackingIntegration.js` passed 100%.
+
+
+
+## [2026-10-06] Clean Architecture: Removed Document Requirements Field from Create Quotation Modal
+
+### Overview
+Removed the redundant **"Document Requirements (Needed by Agency from Client) *"** input field and form validation requirement from the **Create Quotation Modal** ([`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx)). Service requirements are already modeled on and supplied by the linked catalog Service and reviewed on the dedicated Quotation Detail Page.
+
+### Key Changes
+1. **Removed Redundant Field**:
+   - Removed the `<textarea name="requirements">` input block from Section 2 of `CreateQuotationModal.jsx`.
+   - Updated `isFormValid` to no longer require `formData.requirements`, allowing operators to create quotations cleanly with client information, linked catalog service, rates, and inclusions/exclusions.
+2. **Workflow Alignment**:
+   - Document requirements for the service are automatically supplied by the catalog service and managed on the quotation detail review workflow ([`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx)) and client submission portal ([`QuotationAttachRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx)).
+
+
+
+## [2026-10-06] Feature: Client Quick Action "Submit Requirements" Button & File Attachment Robustness
+
+### Overview
+Added an obvious, high-visibility **"Submit Requirements"** quick action button to the Client Quotations Received Table and resolved client-side file attachment state preservation and input handling in `QuotationAttachRequirementsModal` to match the reliability of the operator on-site walk-in workflow.
+
+### Key Changes
+1. **Prominent "Submit Requirements" Quick Action Button**:
+   - In [`ClientTrackingPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx), replaced the generic/subdued button with high-contrast, obvious action buttons in the Quotations Received table:
+     - **`Submit Requirements`** (Primary Purple with `fa-cloud-arrow-up`) when requirements are pending/required.
+     - **`Update Requirements`** (Warning Red with `fa-triangle-exclamation`) when the operator has requested corrections.
+     - **`In Review`** (Soft Blue with `fa-clock-rotate-left`) when documents are submitted and awaiting operator review.
+   - Clicking **"Submit Requirements"** or **"Update Requirements"** now directly opens [`QuotationAttachRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx) without forcing the client to navigate through multiple nested views.
+
+2. **Client-Side File Attachment Fixes**:
+   - **State Preservation**: Updated `useEffect` in `QuotationAttachRequirementsModal.jsx` using functional `setInputs(prev => ...)` to ensure that newly selected `File` objects are never wiped out or reset to `null` when existing submission data loads asynchronously.
+   - **File Input DOM Reset**: Added native `<input type="file">` `.value = ''` clearing on remove/error to allow the user to remove and re-select the exact same file without triggering silent `onChange` drops.
+   - **Comprehensive File Extensions**: Updated the file input `accept` attribute to allow all document and image formats supported by the backend pipeline (`.pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .jpg, .jpeg, .png, .webp, .gif, image/*`).
+   - **Enhanced Selected File UI**: Added file size display, clear file name truncation with tooltip, a dedicated **"Change"** button (`.attach-change-file-btn`), and an explicit **"Remove"** `(X)` button.
+
+3. **Verification**:
+   - Frontend compiled cleanly (`npm run build` passed with zero errors).
+   - Backend automated tests passed 100% (`testWorkflowRemodel.js` and `testReceiptAndTrackingIntegration.js`).
+
+## [2026-10-06] Feature: Real-Time onSnapshot Sync for Request Tracker & Firestore Rules
+
+### Overview
+Integrated live real-time synchronization (`onSnapshot`) into the **Request Tracker** ([`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx)) and updated [`firestore.rules`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/firestore.rules) so that when operators progress through service procedure milestones or advance quotation states, the public tracking screen updates immediately without requiring a browser page refresh.
+
+### Key Changes
+1. **Firestore `onSnapshot` Real-Time Synchronization**:
+   - Subscribed to the active fulfillment document (`doc(db, 'activeServices', fulfillmentId)`) with automatic milestone re-computation.
+   - Live updates milestone status badges (`Pending`, `Processing`, `Completed`), completion timestamps, phase stepper nodes (Stage 1 to 5), and status summaries (`In Progress`, `Service Completed`, etc.) instantaneously as changes occur in Firestore.
+   - Subscribed to quotation documents (`doc(db, 'quotations', quotationId)`) for real-time payment confirmation and activation transitions.
+   - Proper lifecycle management: unsubscribes all Firestore listeners on component unmount or reference reset.
+2. **Security Rules (`firestore.rules`)**:
+   - Added `allow get: if true;` on `activeServices`, `quotations`, `inquiries`, and `receipts` to support direct document `onSnapshot` tracking by ID while maintaining strict `allow list` restrictions against unauthorized scraping.
+
+### Overview
+Resolved the modal viewport clipping issue on the public Landing Page E-Receipt viewer and enriched the customer/quotation reference resolution across backend endpoints and PDF rendering components so that the **"BILLED & ISSUED TO"** and **"TRANSACTION & BRANCH DETAILS"** sections display authoritative customer details instead of fallback placeholders.
+
+### Key Changes
+1. **Modal Viewport & Stacking Context Fix**:
+   - Upgraded [`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx) to mount directly onto `document.body` via `createPortal` with background scroll locking.
+   - Restyled `.pdf-export-modal-overlay` and `.pdf-export-modal-card` in [`pdf-document.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/pdf-document.css) with `align-items: flex-start`, `padding: 3rem 1.25rem 2rem`, `max-height: calc(100vh - 4.5rem)`, and sticky header toolbar (`position: sticky; top: 0; z-index: 20`).
+   - Completely eliminates the bug where the top toolbar (Print, Download PDF, Close) was tucked under the sticky navbar.
+
+2. **Customer & Reference Resolution ("Billed & Issued To")**:
+   - Enriched [`trackingController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/trackingController.js) and [`receiptController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/receiptController.js) to resolve and return full customer information (`clientName`, `contactPerson`, `clientEmail`, `clientPhone`, `quoteNo`, `quotationId`, `paymentId`, `taxAmount`, `rate`, `inclusions`, `exclusions`, `tourDates`).
+   - Enhanced [`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx) `handleOpenReceiptModal` to seamlessly merge tracking and quotation context.
+   - Updated `normalizeReceiptPdfData` in `PdfDocumentView.jsx` with hierarchical fallbacks (`data.clientName`, `data.fullName`, `data.customerName`, `data.quotation?.clientName`, `data.contactPerson`, `quoteNo`, `paymentId`).
+
+3. **Verification**:
+   - Frontend compiled cleanly (`npm run build` passed in 2.81s).
+   - Backend automated integration test suite [`testReceiptAndTrackingIntegration.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testReceiptAndTrackingIntegration.js) passed 100%.
+   - Full workflow test suite [`testWorkflowRemodel.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testWorkflowRemodel.js) passed 100%.
+
+## [2026-10-06] Clean Architecture: Removed Requirement Inputs & Mandatory Block from Create Quotation Modal
+
+### Overview
+Simplified the **Create Quotation Modal** ([`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx)) by removing redundant interactive service requirements file/text inputs and the "Complete Mandatory Requirements" blocking check from quotation creation.
+
+### Key Changes
+1. **Separation of Concerns**:
+   - Preparing a commercial quotation from an inquiry is now purely focused on commercial terms (linked service package, rate, tax, inclusions, exclusions, tour dates, and remarks).
+   - All requirement uploading, review, and walk-in on-site input handling is centralized on the dedicated **Quotation Detail Page** ([`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx)) via [`QuotationRequirementsReview.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx).
+2. **Simplified Modal Flow**:
+   - Removed `reqInputs`, `serviceRequirements` synchronization, and client-side file upload logic from `CreateQuotationModal`.
+   - Submit button now straightforwardly generates the official quotation (`ADF-07-001`) and navigates directly to the quotation detail view for requirement handling.
+
+## [2026-10-06] Feature 17: E-Receipt Generation and QR-Based Service Tracking
+
+### Overview
+Implemented complete end-to-end Electronic Receipt (**E-Receipt**) generation and dynamic **QR-based Public Service Tracking** for FairFly Travel & Tours. Whenever a quotation is successfully paid—whether through an online PayMongo transaction or an operator-recorded Face-to-Face (F2F) counter/cash payment—the backend atomically issues an official E-Receipt (`RCT-YYYY-XXXXXX`), provisions an active service fulfillment (`SVC-...`), and generates a high-entropy public Service Code (`SRV-YYYY-XXXXXX`) with an embedded QR code linking to the public Landing Page tracker.
+
+### Key Changes & Architecture
+
+1. **Atomic Payment Finalization & Idempotency**:
+   - Upgraded [`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js) with `finalizeSuccessfulPayment` executing inside an ACID Firestore transaction.
+   - Guaranteed strict idempotency: repeated PayMongo webhook events, verification callbacks, or duplicate F2F cash recording actions immediately return the existing fulfillment (`SVC-...`) and receipt (`RCT-...`) without duplicate records or multiple receipt numbers.
+   - Integrated with [`idGenerator.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/utils/idGenerator.js) for standardized `RCT-YYYY-XXXXXX` and `SRV-YYYY-XXXXXX` identifiers.
+
+2. **Backend Receipt Service & Secure Endpoints**:
+   - Built [`receiptService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/receiptService.js) with dynamic QR code generation (encoding `${FRONTEND_URL}/#track-request?trackingId=${serviceCode}`), VAT / non-VAT itemization, BIR compliance structure, and DOT accreditation.
+   - Created [`receiptController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/receiptController.js) and [`receiptRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/receiptRoutes.js):
+     - Protected routes with RBAC & BOLA / IDOR ownership validation (`GET /api/receipts/:id`, `GET /api/receipts/quotation/:quotationId`, `GET /api/receipts/fulfillment/:fulfillmentId`).
+     - Public rate-limited lookup endpoint (`GET /api/receipts/public/:code`) with privacy sanitation.
+   - Included dynamic retroactive receipt creation for older paid quotations that predated the receipts collection.
+
+3. **Dedicated Public Service Tracker Page (`/track` & `/tracking`)**:
+   - Built [`TrackerPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/TrackerPage/TrackerPage.jsx) as a dedicated, standalone public tracking page with architectural Swiss hero header, helpful reference code guidelines, and direct branch support contacts.
+   - Updated Navbar with a prominent **"Track Request"** `NavLink` linking directly to `/track` on desktop and mobile drawer.
+   - Enhanced [`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx) to automatically read URL parameters (`?trackingId=...` or `?code=...`) upon QR scan or manual entry and trigger immediate service resolution.
+   - Built multi-identifier resolution in [`trackingController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/trackingController.js) supporting Service Codes (`SRV-...`), Receipt Numbers (`RCT-...`), Quotation Numbers (`QT-...`), Quotation IDs, and Service Fulfillment IDs.
+   - Privacy-safe client data sanitization: customer names are masked (e.g. `Maria S.`), internal operator notes and auth UIDs are omitted, and progress milestones are rendered clearly.
+   - Added direct **"View Official E-Receipt"** button on the public tracker opening the high-fidelity receipt modal.
+
+4. **Official E-Receipt Document Viewer (Form ADF-07-002)**:
+   - Upgraded [`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx) and [`pdf-document.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/pdf-document.css) to support `type="receipt"`.
+   - Rendered official FairFly E-Receipt with company header, BIR/DOT accreditation badges, client and payment metadata, QR code block with legible Service Code beneath, breakdown of rates/fees, payment method breakdown, authorized signatory, and one-click PDF download / browser print functionality.
+
+5. **Client & Operator Portal Integration**:
+   - **Client Portal**:
+     - Auto-opens the E-Receipt on post-payment redirect from PayMongo.
+     - Added **"View E-Receipt"** action button in the Quotations DataTable on [`ClientTrackingPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx) for all paid records.
+     - Added **Service Code** badge and **"View Official E-Receipt"** in [`ClientServiceTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceTracker/ClientServiceTracker.jsx).
+   - **Operator Portal**:
+     - Embedded receipt number, service code, and **"View / Print E-Receipt"** action modal in [`OperatorPaymentModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/OperatorPaymentModal/OperatorPaymentModal.jsx) upon successful cash payment recording.
+     - Added **"View E-Receipt"** header action and payment details link on [`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx).
+
+6. **Automated Integration & Regression Verification**:
+   - Created [`testReceiptAndTrackingIntegration.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testReceiptAndTrackingIntegration.js) verifying ID standards, F2F cash payment atomic issuance, PayMongo verification, idempotency protection, public multi-identifier tracking, and cross-tenant IDOR security gates (100% passing).
+   - Verified no regressions in existing workflow and archiving suites (`testWorkflowRemodel.js`, `testInquiryQuotationArchivingAndRejection.js`).
+
+- **Problem:** Opening the Admin Service edit modal crashed with `formData.price.trim is not a function` when a service's `price` was stored as a number in Firestore.
+- **Fix:** [`ServiceForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceModal/ServiceForm.jsx) now coerces `name`, `customCategory`, `price`, and `description` with `String(value ?? '')` before trimming, both in validation and in the submit payload.
+
+---
+
+## [2026-10-06] Inquiry & Quotation Archiving System + Client Quotation Rejection Workflow
+
+### Overview
+Replaced permanent deletion of **Inquiries** and **Quotations** with an asymmetric cascading archival and restoration system across backend and frontend, while introducing complete **Client-Side Quotation Rejection** functionality (`Draft -> Sent -> Accepted OR Rejected`). This preserves historical records, eliminates accidental data loss, maintains clean operational tables, and completes the quotation lifecycle.
+
+### Key Changes
+
+1. **Disabled Permanent Deletion**:
+   - Replaced all "Delete" buttons and modal dialogs across Inquiry and Quotation views with "Archive".
+   - `DELETE /api/inquiries/:id` and `DELETE /api/quotations/:id` now reject deletion with `400 Bad Request` explaining that permanent deletion has been retired to preserve business and audit history.
+
+2. **Asymmetric Cascading Archival Model**:
+   - **Archiving an Inquiry**: Automatically cascades and archives all linked quotations, assigning `archivedReason: 'inquiry_archived'`.
+   - **Archiving a Quotation**: Archives only that specific quotation (`archivedReason: 'manual_archive'`); the parent inquiry remains active.
+   - **Restoring an Inquiry**: Restores the parent inquiry and selectively restores only quotations that were cascade-archived (`archivedReason === 'inquiry_archived'`), preserving independently archived quotations.
+   - **Restoring a Quotation**: Strictly verifies parent inquiry state; prevents orphaned quotations by rejecting restoration with `400 Bad Request` if the parent inquiry is archived.
+
+3. **Client-Side Quotation Rejection Lifecycle**:
+   - Added backend route `POST /api/quotations/:id/reject` with BOLA ownership verification (`clientUid === req.user.uid`), role-based access, and state validation (cannot reject paid, accepted, archived, or already rejected quotations).
+   - Generates server timestamps (`rejectedAt`), records `rejectedBy` and optional `rejectionReason`, updates originating inquiry status to `rejected`, and emits real-time notifications to the branch operator and administrators.
+   - Client portal presents **"Reject Quotation"** button alongside acceptance when quotation is in `Sent` status.
+   - Built confirmation modal with optional rejection reason textarea adhering to the zero-radius design token standard.
+   - Updated quotation tables and detail modals to display `Rejected` status pill, rejection date, and reason banner while disabling further decision actions.
+
+4. **Active vs. Archived Table Segregation**:
+   - Added `FilterChipGroup` with `[ Active Records ] [ Archived ]` toggle on Operator Inquiries, Operator Quotations, and Admin Inquiry History pages.
+   - Updated database queries to exclude archived records by default (`archived: false`), ensuring fast query execution and clean daily operational queues.
+   - Added graceful fallback handling in `queryDatabaseAdvanced` for missing/provisioning Firestore composite indexes.
+   - Existing documents safely treated as active via database migration script (`migrateArchiveFields.js`).
+
+5. **Automated Verification**:
+   - Created and executed comprehensive integration test suite [`testInquiryQuotationArchivingAndRejection.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testInquiryQuotationArchivingAndRejection.js) verifying all 7 core archival, cascade, restoration guard, deletion block, and client rejection requirements.
+   - Verified 100% pass rate across existing security (`testSecurityFixes.js`) and workflow (`testWorkflowRemodel.js`) test suites.
+
+---
+
 ## [2026-10-06] Operator Quotation Details: Hide "Request Corrections" and Actions Toolbar Once Requirements Verified
 
 ### Overview

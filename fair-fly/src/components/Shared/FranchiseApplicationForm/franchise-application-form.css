@@ -263,13 +263,26 @@
 
 /* Responsive */
 @media (max-width: 540px) {
-  .formRow,
-  .formRow--name {
-    grid-template-columns: 1fr;
+  .modalOverlay {
+    padding: 0.5rem;
   }
 
   .modal {
-    padding: 18px 14px;
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem 0.85rem;
+    max-height: 95vh;
+  }
+
+  .formRow,
+  .formRow--name {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .formActions {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 }
 

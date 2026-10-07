@@ -382,6 +382,8 @@ const addMessageToThread = async (req, res) => {
     const newMessageObj = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       senderId: activeId,
+      senderRole: activeRole,
+      senderName: activeName,
       message: message.trim(),
       createdAt: now
     };

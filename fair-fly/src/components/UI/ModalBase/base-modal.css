@@ -132,3 +132,52 @@
     padding: 1rem;
   }
 }
+
+@media (max-width: 500px) {
+  .base-modal-container {
+    width: 96% !important;
+    max-height: 94vh;
+  }
+
+  .base-modal-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .base-modal-title {
+    font-size: 1rem;
+  }
+
+  .base-modal-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .base-modal-body {
+    padding: 0.875rem 0.75rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .base-modal-container {
+    width: 98% !important;
+    max-height: 96vh;
+    border-width: 1px;
+  }
+
+  .base-modal-header {
+    padding: 0.75rem 0.625rem;
+  }
+
+  .base-modal-title {
+    font-size: 0.9375rem;
+  }
+
+  .base-modal-close-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .base-modal-body {
+    padding: 0.75rem 0.5rem;
+  }
+}

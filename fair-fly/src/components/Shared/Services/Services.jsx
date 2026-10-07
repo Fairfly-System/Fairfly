@@ -488,24 +488,24 @@ export default function Services() {
           </p>
         </div>
 
-        {/* Filter Toolbar: Search & Category Chips */}
+        {/* Filter Toolbar: Category Dropdown & Search Bar */}
         <div className="services-toolbar">
-          {/* Category Filter Chips */}
-          <div className="services-category-chips">
-            {categoryTabs.map((tab) => {
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`service-chip-btn ${activeCategory === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveCategory(tab.id)}
-                >
-                  <i className={tab.icon}></i>
-                  <span>{tab.label}</span>
-                  <span className="chip-count">{tab.count}</span>
-                </button>
-              );
-            })}
+          {/* Category Filter Dropdown */}
+          <div className="services-category-select-wrapper">
+            <i className="fa-solid fa-layer-group select-icon" aria-hidden="true"></i>
+            <select
+              className="services-category-select"
+              value={activeCategory}
+              onChange={(e) => setActiveCategory(e.target.value)}
+              aria-label="Filter services by category"
+            >
+              {categoryTabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label} ({tab.count})
+                </option>
+              ))}
+            </select>
+            <i className="fa-solid fa-chevron-down select-arrow-icon" aria-hidden="true"></i>
           </div>
 
           {/* Search Box */}

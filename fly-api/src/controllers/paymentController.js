@@ -5,12 +5,13 @@ const {
   verifyWebhookSignature 
 } = require('../services/paymongoService');
 const { buildFulfillmentPayload } = require('./quotationController');
+const { buildReceiptPayload } = require('../services/receiptService');
 const { 
   createNotification, 
   notifyBranch, 
   notifyAdmins 
 } = require('../services/notificationService');
-const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
+const { ID_PREFIXES, generatePrefixedId, generateReceiptNo, generateServiceCode } = require('../utils/idGenerator');
 const { logFromRequest } = require('../services/operatorLoggerService');
 
 const COLLECTIONS = {
@@ -18,6 +19,7 @@ const COLLECTIONS = {
   QUOTATIONS: 'quotations',
   INQUIRIES: 'inquiries',
   ACTIVE_SERVICES: 'activeServices',
+  RECEIPTS: 'receipts',
   USERS: 'users'
 };
 
@@ -32,6 +34,12 @@ const COLLECTIONS = {
 const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
   const now = new Date().toISOString();
 
+  // Pre-generate unique identifiers for fulfillment, public service code, and official receipt
+  const preGeneratedFulfillmentId = generatePrefixedId(ID_PREFIXES.ACTIVE_SERVICE);
+  const preGeneratedServiceCode = generateServiceCode();
+  const preGeneratedReceiptId = generatePrefixedId(ID_PREFIXES.RECEIPT);
+  const preGeneratedReceiptNo = generateReceiptNo();
+
   const result = await db.runTransaction(async (transaction) => {
     const paymentRef = db.collection(COLLECTIONS.PAYMENTS).doc(paymentId);
     const paymentDoc = await transaction.get(paymentRef);
@@ -45,10 +53,17 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
       ...(paymentDoc.data() || {})
     };
 
-    // 1. IDEMPOTENCY GUARD: If payment was already finalized as PAID, exit cleanly with existing fulfillmentId
+    // 1. IDEMPOTENCY GUARD: If payment was already finalized as PAID, exit cleanly with existing fulfillmentId & receipt
     if (paymentData.status === 'PAID' && paymentData.fulfillmentId) {
       console.log(`[Payment Idempotency] Payment ${paymentId} already marked PAID. Fulfillment ID: ${paymentData.fulfillmentId}`);
-      return { alreadyProcessed: true, fulfillmentId: paymentData.fulfillmentId, paymentData };
+      return { 
+        alreadyProcessed: true, 
+        fulfillmentId: paymentData.fulfillmentId, 
+        serviceCode: paymentData.serviceCode || null,
+        receiptId: paymentData.receiptId || null,
+        receiptNo: paymentData.receiptNo || null,
+        paymentData 
+      };
     }
 
     const quotationRef = db.collection(COLLECTIONS.QUOTATIONS).doc(paymentData.quotationId);
@@ -70,28 +85,66 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
       transaction.update(paymentRef, {
         status: 'PAID',
         fulfillmentId: quotationData.activeServiceId,
+        serviceCode: quotationData.serviceCode || null,
+        receiptId: quotationData.receiptId || null,
+        receiptNo: quotationData.receiptNo || null,
         providerPaymentId: providerData.paymentId || paymentData.providerPaymentId || null,
         paymentMethodType: providerData.paymentMethod || paymentData.paymentMethodType || null,
         paidAt: paymentData.paidAt || now,
         updatedAt: now
       });
-      return { alreadyProcessed: true, fulfillmentId: quotationData.activeServiceId, paymentData };
+      return { 
+        alreadyProcessed: true, 
+        fulfillmentId: quotationData.activeServiceId, 
+        serviceCode: quotationData.serviceCode || null,
+        receiptId: quotationData.receiptId || null,
+        receiptNo: quotationData.receiptNo || null,
+        paymentData 
+      };
     }
 
-    // 3. Generate exactly one Active Service ID
-    const fulfillmentId = generatePrefixedId(ID_PREFIXES.ACTIVE_SERVICE);
-    const activeServiceRef = db.collection(COLLECTIONS.ACTIVE_SERVICES).doc(fulfillmentId);
+    const fulfillmentId = preGeneratedFulfillmentId;
+    const serviceCode = preGeneratedServiceCode;
+    const receiptId = preGeneratedReceiptId;
+    const receiptNo = preGeneratedReceiptNo;
 
-    // 4. Construct server-side fulfillment document from trusted quotation data
-    const fulfillmentPayload = await buildFulfillmentPayload(quotationData, paymentData, fulfillmentId);
+    const activeServiceRef = db.collection(COLLECTIONS.ACTIVE_SERVICES).doc(fulfillmentId);
+    const receiptRef = db.collection(COLLECTIONS.RECEIPTS).doc(receiptId);
+
+    // 3. Construct server-side fulfillment document from trusted quotation data
+    const fulfillmentPayload = await buildFulfillmentPayload(quotationData, paymentData, fulfillmentId, {
+      serviceCode,
+      receiptId,
+      receiptNo
+    });
+
+    // 4. Construct authoritative E-Receipt document with QR tracking URL
+    const enrichedPayment = {
+      ...paymentData,
+      providerPaymentId: providerData.paymentId || paymentData.providerPaymentId || null,
+      paymentMethodType: providerData.paymentMethod || paymentData.paymentMethodType || null,
+      paidAt: now
+    };
+    const receiptPayload = await buildReceiptPayload({
+      quotation: quotationData,
+      payment: enrichedPayment,
+      fulfillmentId,
+      serviceCode,
+      receiptId,
+      receiptNo
+    });
 
     // 5. Commit all document state transitions atomically in a single ACID transaction
     transaction.set(activeServiceRef, fulfillmentPayload);
+    transaction.set(receiptRef, receiptPayload);
 
     transaction.update(quotationRef, {
       status: 'PAID',
       paymentStatus: 'PAID',
       activeServiceId: fulfillmentId,
+      serviceCode: serviceCode,
+      receiptId: receiptId,
+      receiptNo: receiptNo,
       paymentId: paymentId,
       paidAt: now,
       updatedAt: now
@@ -102,22 +155,36 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
       transaction.update(inquiryRef, {
         status: 'paid',
         confirmedActiveServiceId: fulfillmentId,
+        confirmedServiceCode: serviceCode,
+        confirmedReceiptId: receiptId,
+        confirmedReceiptNo: receiptNo,
         confirmedQuotationId: quotationData.id || paymentData.quotationId || null,
         updatedAt: now
       });
     }
 
-
     transaction.update(paymentRef, {
       status: 'PAID',
       fulfillmentId: fulfillmentId,
+      serviceCode: serviceCode,
+      receiptId: receiptId,
+      receiptNo: receiptNo,
       providerPaymentId: providerData.paymentId || paymentData.providerPaymentId || null,
       paymentMethodType: providerData.paymentMethod || paymentData.paymentMethodType || null,
       paidAt: now,
       updatedAt: now
     });
 
-    return { alreadyProcessed: false, fulfillmentId, paymentData: { ...paymentData, quotationData } };
+    return { 
+      alreadyProcessed: false, 
+      fulfillmentId, 
+      serviceCode, 
+      receiptId, 
+      receiptNo, 
+      receipt: receiptPayload,
+      receiptData: receiptPayload,
+      paymentData: { ...paymentData, quotationData } 
+    };
   });
 
   // Post-transaction notifications & logging (fired only when new fulfillment was generated)
@@ -132,11 +199,11 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
       createNotification({
         recipientUid: clientUid,
         recipientRole: 'client',
-        title: 'Payment Confirmed · Service Active',
-        message: `Your payment for Quotation ${quoteNo} was confirmed! Service fulfillment has been initiated in Ongoing Services.`,
+        title: 'Payment Confirmed · E-Receipt Ready',
+        message: `Your payment for Quotation ${quoteNo} was confirmed! Service tracking code ${result.serviceCode} and official E-Receipt ${result.receiptNo} have been generated.`,
         type: 'service',
         link: '/client/tracking',
-        metadata: { quotationId: quote.id, paymentId, fulfillmentId: result.fulfillmentId }
+        metadata: { quotationId: quote.id, paymentId, fulfillmentId: result.fulfillmentId, receiptId: result.receiptId, serviceCode: result.serviceCode }
       }).catch(err => console.warn('[Payment] Client notification error:', err.message));
     }
 
@@ -145,24 +212,24 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
       notifyBranch({
         branchUid: branchUid,
         branchName: quote.branchName || 'Branch Office',
-        title: 'Quotation Paid · Service Initialized',
-        message: `Payment confirmed for Quotation ${quoteNo} (${quote.clientName || 'Client'}). Service fulfillment ${result.fulfillmentId} is now active.`,
+        title: 'Quotation Paid · Receipt Issued',
+        message: `Payment confirmed for Quotation ${quoteNo} (${quote.clientName || 'Client'}). Service ${result.fulfillmentId} (Code: ${result.serviceCode}) and Receipt ${result.receiptNo} created.`,
         type: 'service',
         link: `/operator/ongoing-services/${result.fulfillmentId}`,
-        metadata: { quotationId: quote.id, paymentId, fulfillmentId: result.fulfillmentId }
+        metadata: { quotationId: quote.id, paymentId, fulfillmentId: result.fulfillmentId, receiptId: result.receiptId, serviceCode: result.serviceCode }
       }).catch(err => console.warn('[Payment] Operator notification error:', err.message));
     }
 
     // 3. Notify Admins
     notifyAdmins({
       title: 'Quotation Paid & Fulfillment Created',
-      message: `Quotation ${quoteNo} (₱${Number(quote.totalAmount || 0).toLocaleString()}) was successfully paid via PayMongo. Service ${result.fulfillmentId} activated.`,
+      message: `Quotation ${quoteNo} (₱${Number(quote.totalAmount || 0).toLocaleString()}) was successfully paid. Receipt ${result.receiptNo} and service ${result.fulfillmentId} activated.`,
       type: 'service',
       link: '/admin/inquiry-history',
-      metadata: { quotationId: quote.id, paymentId, fulfillmentId: result.fulfillmentId }
+      metadata: { quotationId: quote.id, paymentId, fulfillmentId: result.fulfillmentId, receiptId: result.receiptId }
     }).catch(err => console.warn('[Payment] Admin notification error:', err.message));
 
-    console.log(`[Payment Finalized] Payment ${paymentId} -> Fulfillment ${result.fulfillmentId} created successfully.`);
+    console.log(`[Payment Finalized] Payment ${paymentId} -> Fulfillment ${result.fulfillmentId} & Receipt ${result.receiptNo} created successfully.`);
   }
 
   return result;
@@ -211,28 +278,31 @@ const recordCashPayment = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Only authorized branch operators and administrators can record cash payments.' });
     }
 
-    // 2. Status validation
+    // 2. Idempotency Guard: Check if quotation is already finalized as PAID or has an active fulfillment
+    if (quotation.paymentStatus === 'PAID' || quotation.status === 'PAID' || quotation.activeServiceId) {
+      return res.status(200).json({
+        alreadyProcessed: true,
+        status: 'PAID',
+        paymentId: quotation.paymentId || null,
+        fulfillmentId: quotation.activeServiceId,
+        serviceCode: quotation.serviceCode || null,
+        receiptId: quotation.receiptId || null,
+        receiptNo: quotation.receiptNo || null,
+        message: 'This quotation has already been paid and service fulfillment activated.'
+      });
+    }
+
+    // 2.1 Status validation for pending payment
     if (quotation.status !== 'Accepted') {
       return res.status(400).json({
         error: `Cannot record payment for quotation with status "${quotation.status}". The quotation must be accepted first.`
       });
     }
 
-    // 2.1 Requirements Approval Validation
+    // 2.2 Requirements Approval Validation
     if (quotation.requirementsStatus && quotation.requirementsStatus !== 'approved' && quotation.requirementsStatus !== 'not_required') {
       return res.status(400).json({
         error: `Cannot record payment: Quotation requirements must be approved prior to payment (Current requirements status: "${quotation.requirementsStatus}").`
-      });
-    }
-
-    // 3. Idempotency Guard: Quotation already finalized as PAID or fulfilled
-    if (quotation.paymentStatus === 'PAID' || quotation.activeServiceId) {
-      return res.status(200).json({
-        alreadyProcessed: true,
-        status: 'PAID',
-        paymentId: quotation.paymentId || null,
-        fulfillmentId: quotation.activeServiceId,
-        message: 'This quotation has already been paid and service fulfillment activated.'
       });
     }
 
@@ -250,6 +320,9 @@ const recordCashPayment = async (req, res) => {
         status: 'PAID',
         paymentId: existingPay.id,
         fulfillmentId: existingPay.fulfillmentId || quotation.activeServiceId,
+        serviceCode: existingPay.serviceCode || quotation.serviceCode || null,
+        receiptId: existingPay.receiptId || quotation.receiptId || null,
+        receiptNo: existingPay.receiptNo || quotation.receiptNo || null,
         message: 'Payment for this quotation was already recorded.'
       });
     }
@@ -323,9 +396,13 @@ const recordCashPayment = async (req, res) => {
       status: 'PAID',
       paymentId,
       fulfillmentId: finalResult.fulfillmentId,
+      serviceCode: finalResult.serviceCode,
+      receiptId: finalResult.receiptId,
+      receiptNo: finalResult.receiptNo,
+      receipt: finalResult.receipt || finalResult.receiptData || null,
       amount: totalAmount,
       quoteNo: quotation.quoteNo,
-      message: 'Direct cash payment confirmed successfully. Service fulfillment has been activated.'
+      message: 'Direct cash payment confirmed successfully. Service fulfillment and official E-Receipt have been activated.'
     });
   } catch (error) {
     console.error('Error in recordCashPayment:', error);
@@ -539,6 +616,9 @@ const verifyPayment = async (req, res) => {
         status: 'PAID',
         paymentId: id,
         fulfillmentId: payment.fulfillmentId,
+        serviceCode: payment.serviceCode || null,
+        receiptId: payment.receiptId || null,
+        receiptNo: payment.receiptNo || null,
         message: 'Payment has already been confirmed and fulfilled.'
       });
     }
@@ -578,6 +658,10 @@ const verifyPayment = async (req, res) => {
         status: 'PAID',
         paymentId: id,
         fulfillmentId: finalResult.fulfillmentId,
+        serviceCode: finalResult.serviceCode,
+        receiptId: finalResult.receiptId,
+        receiptNo: finalResult.receiptNo,
+        receipt: finalResult.receipt || finalResult.receiptData || null,
         message: 'Payment verified successfully! Your service order has been activated in Ongoing Services.'
       });
     }

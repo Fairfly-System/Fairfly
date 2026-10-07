@@ -3,6 +3,14 @@
 .data-table-container {
   position: relative;
   width: 100%;
+  max-width: 100%;
+}
+
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Permanent Bulk Action Bar (Prevents Layout Shift) */

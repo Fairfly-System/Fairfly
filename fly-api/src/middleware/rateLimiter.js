@@ -1,4 +1,15 @@
-const { publicLimiter, apiLimiter } = require('../services/rateLimitService');
+const { publicLimiter, apiLimiter, trackerLimiter } = require('../services/rateLimitService');
+
+/**
+ * Rate limiting middleware for public tracking & status lookups (generous limits to support auto-sync & live updates)
+ */
+const trackerRateLimiter = (req, res, next) => {
+  const key = `tracker-${req.ip}`;
+  if (!trackerLimiter.isAllowed(key)) {
+    return res.status(429).json({ error: 'Too many tracking requests. Please slow down and try again in a few moments.' });
+  }
+  next();
+};
 
 /**
  * Rate limiting middleware for public endpoints (uses IP address)
@@ -27,6 +38,8 @@ const apiRateLimiter = (req, res, next) => {
 };
 
 module.exports = {
+  trackerRateLimiter,
   publicRateLimiter,
   apiRateLimiter
 };
+

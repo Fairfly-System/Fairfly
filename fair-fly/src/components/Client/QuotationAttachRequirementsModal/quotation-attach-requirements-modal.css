@@ -188,6 +188,28 @@
   font-size: 0.75rem;
 }
 
+.attach-change-file-btn {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.725rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.25rem;
+  transition: all 0.15s ease;
+  border-radius: 0px;
+}
+
+.attach-change-file-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
 .attach-remove-file-btn {
   background: none;
   border: none;
@@ -204,3 +226,39 @@
   padding-top: 1rem;
   border-top: 1px solid var(--border-color, #e2e8f0);
 }
+
+@media (max-width: 500px) {
+  .attach-reqs-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .attach-reqs-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .attach-req-item {
+    padding: 0.75rem 0.625rem;
+  }
+
+  .attach-new-file-selected .file-name-txt {
+    max-width: 130px;
+  }
+}
+
+@media (max-width: 360px) {
+  .attach-req-item {
+    padding: 0.625rem 0.5rem;
+  }
+
+  .attach-new-file-selected .file-name-txt {
+    max-width: 90px;
+  }
+
+  .attach-file-upload-btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+

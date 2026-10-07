@@ -81,27 +81,20 @@ export default function AppNavbar({
             </button>
           )}
 
-          {/* Render Brand Logo & Title on Client portal only */}
+          {/* Render Brand Logo on Client portal */}
           {isClient && (
-            <>
-              <NavLink to="/client" className="app-nav-brand" aria-label="Fairfly Client Home">
-                <img
-                  src="/FairflyLogo.png"
-                  alt="FairFly Logo"
-                  className="app-nav-logo"
-                  loading="eager"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = "/favicon1.png";
-                  }}
-                />
-              </NavLink>
-
-              <div className="app-nav-brand-text">
-                <p id="top-title">Fairfly {portalName}</p>
-                {portalSubtitle && <p id="down-title">{portalSubtitle}</p>}
-              </div>
-            </>
+            <NavLink to="/client" className="app-nav-brand" aria-label="Fairfly Client Home">
+              <img
+                src="/FairflyLogo.png"
+                alt="FairFly Logo"
+                className="app-nav-logo"
+                loading="eager"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/favicon1.png";
+                }}
+              />
+            </NavLink>
           )}
         </div>
 

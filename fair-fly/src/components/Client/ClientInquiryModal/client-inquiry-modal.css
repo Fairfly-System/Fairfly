@@ -178,8 +178,8 @@
 
 @media (max-width: 540px) {
   .inquiry-name-row {
-    grid-template-columns: 1fr 0.45fr 1fr;
-    gap: 0.5rem;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
   }
 }
 
@@ -376,21 +376,100 @@ select.input-base {
   cursor: not-allowed;
 }
 
-/* Responsive Breakpoints */
-@media (max-width: 640px) {
+/* Responsive Breakpoints — Single Column on Mobile */
+@media (max-width: 48rem), (max-width: 768px) {
   .inquiry-fields-grid {
-    grid-template-columns: 1fr;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.875rem !important;
   }
+
+  .inquiry-field-group {
+    width: 100% !important;
+  }
+
   .inquiry-field-group.col-span-2 {
-    grid-column: span 1;
+    width: 100% !important;
+    grid-column: auto !important;
   }
+
+  .inquiry-name-row {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.625rem !important;
+  }
+
+  .inquiry-name-row .inquiry-field-group {
+    width: 100% !important;
+  }
+
+  .inquiry-field-group.mi-input input {
+    text-align: left !important;
+  }
+
   .services-checkbox-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr !important;
   }
+
+  .client-type-selector {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.625rem !important;
+  }
+
+  .client-type-options {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  .client-type-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .modal-title-with-badge {
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+    font-size: 1rem !important;
+  }
+
   .inquiry-modal-footer {
-    flex-direction: column-reverse;
+    flex-direction: column-reverse !important;
   }
+
   .inquiry-modal-footer button {
-    width: 100%;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .inquiry-section {
+    padding: 0.875rem 0.75rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .inquiry-section {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .inquiry-intro-callout {
+    padding: 0.75rem 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  .input-base {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .service-check-tile {
+    padding: 0.5rem 0.625rem;
+  }
+
+  .service-tile-label {
+    font-size: 0.75rem;
   }
 }

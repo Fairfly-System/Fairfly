@@ -495,11 +495,12 @@ export default function OperatorServiceProcedure() {
                             }
                           />
                           <div className="op-submitted-img-actions">
-                            <span className="op-file-name">{fileMeta.fileName || 'Attached Image'}</span>
+                            <span className="op-file-name" title={fileMeta.fileName || 'Attached Image'}>
+                              {fileMeta.fileName || 'Attached Image'}
+                            </span>
                             <button
                               type="button"
-                              className="op-req-view-btn"
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                              className="op-req-view-btn secondary"
                               title="View full resolution in Lightbox"
                               onClick={() =>
                                 openLightbox({
@@ -509,7 +510,8 @@ export default function OperatorServiceProcedure() {
                                 })
                               }
                             >
-                              <i className="fa-solid fa-expand"></i> View Full Image
+                              <i className="fa-solid fa-expand"></i>
+                              <span>View Full Image</span>
                             </button>
                           </div>
                         </div>
@@ -518,14 +520,16 @@ export default function OperatorServiceProcedure() {
                       {/* Document File Link */}
                       {fileMeta && !isImage && (
                         <div className="op-submitted-doc-box">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <i className="fa-solid fa-file-pdf" style={{ fontSize: '1.25rem', color: '#ef4444' }}></i>
-                            <div style={{ overflow: 'hidden' }}>
-                              <div className="op-file-name">{fileMeta.fileName || 'Attached Document'}</div>
+                          <div className="op-submitted-doc-info">
+                            <i className="fa-solid fa-file-pdf op-doc-icon"></i>
+                            <div className="op-doc-details">
+                              <span className="op-file-name" title={fileMeta.fileName || 'Attached Document'}>
+                                {fileMeta.fileName || 'Attached Document'}
+                              </span>
                               {fileMeta.fileSize && (
-                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                <span className="op-file-size">
                                   ({(fileMeta.fileSize / 1024 / 1024).toFixed(2)} MB)
-                                </div>
+                                </span>
                               )}
                             </div>
                           </div>
@@ -534,9 +538,10 @@ export default function OperatorServiceProcedure() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="op-req-view-btn"
-                            title="Download/View Document"
+                            title="Download / View Document"
                           >
-                            <i className="fa-solid fa-download"></i> View File
+                            <i className="fa-solid fa-file-arrow-down"></i>
+                            <span>View File</span>
                           </a>
                         </div>
                       )}

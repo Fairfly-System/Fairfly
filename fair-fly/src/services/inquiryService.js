@@ -10,6 +10,9 @@ export function fetchInquiries(token, params = {}, successCallback, errorCallbac
   if (params.branchUid && params.branchUid !== 'all') {
     queryParts.push(`branchUid=${encodeURIComponent(params.branchUid)}`);
   }
+  if (params.archived !== undefined && params.archived !== null && params.archived !== 'all') {
+    queryParts.push(`archived=${encodeURIComponent(params.archived)}`);
+  }
   if (queryParts.length > 0) {
     url += `?${queryParts.join('&')}`;
   }
@@ -61,16 +64,33 @@ export function updateInquiry(token, id, inquiryData, successCallback, errorCall
   );
 }
 
-export function deleteInquiry(token, id, successCallback, errorCallback, setIsLoading) {
+export function archiveInquiry(token, id, successCallback, errorCallback, setIsLoading) {
   return ApiCaller(
-    `${API_BASE_URL}/api/inquiries/${id}`,
-    'DELETE',
+    `${API_BASE_URL}/api/inquiries/${id}/archive`,
+    'POST',
     null,
     token ? { Authorization: `Bearer ${token}` } : {},
     successCallback,
     errorCallback,
     setIsLoading
   );
+}
+
+export function restoreInquiry(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/inquiries/${id}/restore`,
+    'POST',
+    null,
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function deleteInquiry(token, id, successCallback, errorCallback, setIsLoading) {
+  // Gracefully route legacy delete calls to archiveInquiry
+  return archiveInquiry(token, id, successCallback, errorCallback, setIsLoading);
 }
 
 export function confirmInquiry(token, id, successCallback, errorCallback, setIsLoading) {

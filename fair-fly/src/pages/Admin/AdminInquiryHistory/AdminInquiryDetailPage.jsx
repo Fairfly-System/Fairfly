@@ -7,12 +7,10 @@ import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
-import { deleteInquiry } from '../../../services/inquiryService';
+import { archiveInquiry, restoreInquiry } from '../../../services/inquiryService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './admin-inquiry-history.css';
 import '../../Operator/OperatorInquiryForms/inquiry-form-detail.css';
-
-const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
 
 // Helper to safely parse requirements and remarks across all legacy and new inquiry formats
 function parseInquiryData(inquiry) {
@@ -26,8 +24,8 @@ function parseInquiryData(inquiry) {
     requirementsText = inquiry.requirements.trim();
   }
 
-  // 2. Parse Remarks / Notes
-  const rawRemarks = inquiry.remarks || inquiry.notes;
+  // 2. Parse Client Remarks / Notes
+  const rawRemarks = inquiry.clientRemarks || inquiry.remarks || (inquiry.notes !== inquiry.specifiedRequirements ? inquiry.notes : '');
   if (typeof rawRemarks === 'string' && rawRemarks.trim()) {
     remarksText = rawRemarks.trim();
   } else if (typeof rawRemarks === 'object' && rawRemarks !== null) {
@@ -66,8 +64,10 @@ export default function AdminInquiryDetailPage() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
 
   // Directly subscribe to the specific inquiry document
@@ -98,20 +98,38 @@ export default function AdminInquiryDetailPage() {
     return parseInquiryData(inquiry);
   }, [inquiry]);
 
-  const handleDelete = async () => {
+  const isArchived = Boolean(inquiry?.archived);
+
+  const handleArchive = async () => {
     if (!inquiry) return;
-    deleteInquiry(
+    archiveInquiry(
       userToken,
       inquiry.id,
       () => {
-        addToast('Inquiry record deleted successfully', 'success');
-        setShowDeleteConfirm(false);
+        addToast('Inquiry record and associated quotations archived successfully', 'success');
+        setShowArchiveConfirm(false);
         navigate('/admin/inquiry-history');
       },
       (error) => {
-        addToast(toFriendlyMessage(error, 'Failed to delete inquiry record'), 'error');
+        addToast(toFriendlyMessage(error, 'Failed to archive inquiry record'), 'error');
       },
-      setIsDeleting
+      setIsArchiving
+    );
+  };
+
+  const handleRestore = async () => {
+    if (!inquiry) return;
+    restoreInquiry(
+      userToken,
+      inquiry.id,
+      () => {
+        addToast('Inquiry record and linked quotations restored to active records', 'success');
+        setShowRestoreConfirm(false);
+      },
+      (error) => {
+        addToast(toFriendlyMessage(error, 'Failed to restore inquiry record'), 'error');
+      },
+      setIsRestoring
     );
   };
 
@@ -123,24 +141,45 @@ export default function AdminInquiryDetailPage() {
 
   const actions = useMemo(() => {
     if (!inquiry) return [];
+
+    if (isArchived) {
+      return [
+        {
+          label: 'Export to PDF (SAF-01-002)',
+          icon: 'fa-solid fa-file-pdf',
+          onClick: () => setShowPdfModal(true),
+          className: 'btn-secondary',
+          disabled: isRestoring,
+        },
+        {
+          label: 'Restore Record',
+          icon: 'fa-solid fa-rotate-left',
+          onClick: () => setShowRestoreConfirm(true),
+          className: 'btn-primary',
+          disabled: isRestoring,
+          style: { background: 'var(--brand-primary, #6366f1)' }
+        }
+      ];
+    }
+
     return [
       {
         label: 'Export to PDF (SAF-01-002)',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-primary',
-        disabled: isDeleting,
+        disabled: isArchiving,
         style: { background: 'var(--purple, #7c3aed)' }
       },
       {
-        label: 'Delete Record',
-        icon: 'fa-solid fa-trash',
-        onClick: () => setShowDeleteConfirm(true),
-        className: 'btn-danger',
-        disabled: isDeleting,
+        label: 'Archive Record',
+        icon: 'fa-solid fa-box-archive',
+        onClick: () => setShowArchiveConfirm(true),
+        className: 'btn-secondary',
+        disabled: isArchiving,
       },
     ];
-  }, [inquiry, isDeleting]);
+  }, [inquiry, isArchived, isArchiving, isRestoring]);
 
   const isConfirmed = ['confirmed', 'accepted', 'quotation_created'].includes((inquiry?.status || '').toLowerCase());
 
@@ -148,8 +187,8 @@ export default function AdminInquiryDetailPage() {
     <RecordDetailLayout
       title={inquiry?.fullName || inquiry?.clientName || 'Inquiry Record Profile'}
       subtitle={inquiry?.serviceType || 'Service Inquiry'}
-      status={(inquiry?.status || 'SUBMITTED').toUpperCase()}
-      statusType={isConfirmed ? 'success' : 'warning'}
+      status={isArchived ? 'ARCHIVED' : (inquiry?.status || 'SUBMITTED').toUpperCase()}
+      statusType={isArchived ? 'neutral' : (isConfirmed ? 'success' : 'warning')}
       breadcrumbs={breadcrumbs}
       backTo="/admin/inquiry-history"
       backLabel="Back to Inquiry History"
@@ -161,8 +200,38 @@ export default function AdminInquiryDetailPage() {
       {inquiry && (
         <div className="inquiry-detail-wrapper">
 
+          {/* Archived Status Banner */}
+          {isArchived && (
+            <div className="inquiry-confirmed-banner" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+              <div className="inquiry-confirmed-info">
+                <div className="inquiry-confirmed-icon" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                  <i className="fa-solid fa-box-archive"></i>
+                </div>
+                <div>
+                  <h3 className="inquiry-confirmed-title" style={{ color: '#334155' }}>
+                    This Inquiry Record is Archived
+                  </h3>
+                  <p className="inquiry-confirmed-sub" style={{ color: '#64748b' }}>
+                    Archived records are hidden from active lists. Associated quotations are also archived. You can restore this inquiry at any time.
+                  </p>
+                </div>
+              </div>
+              <div className="inquiry-confirmed-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowRestoreConfirm(true)}
+                  disabled={isRestoring}
+                  style={{ background: 'var(--brand-primary, #6366f1)' }}
+                >
+                  <i className="fa-solid fa-rotate-left"></i> Restore Record
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Confirmed Cross-Reference Banner */}
-          {isConfirmed && (
+          {isConfirmed && !isArchived && (
             <div className="inquiry-confirmed-banner">
               <div className="inquiry-confirmed-info">
                 <div className="inquiry-confirmed-icon">
@@ -293,7 +362,7 @@ export default function AdminInquiryDetailPage() {
           <div className="details-grid-2">
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-regular fa-comment-dots"></i> Remarks & Internal Notes
+                <i className="fa-regular fa-comment-dots"></i> Client Remarks & Notes (SAF-01-002 Col 3)
               </h2>
               <p className="inquiry-text inquiry-preline-text">
                 {parsedData.remarksText}
@@ -321,17 +390,30 @@ export default function AdminInquiryDetailPage() {
             </article>
           </div>
 
-          {/* Delete confirmation */}
+          {/* Archive Confirmation Modal */}
           <ConfirmationModal
-            isOpen={showDeleteConfirm}
-            onClose={() => !isDeleting && setShowDeleteConfirm(false)}
-            Icon={TrashIcon}
-            Title="Delete this inquiry record?"
-            Desc={`"${inquiry.formNo || 'Inquiry Form'}" will be permanently deleted. This action cannot be undone.`}
-            BtnColor="var(--error-red)"
-            confirmText="Delete Record"
-            isLoading={isDeleting}
-            OnConfirm={handleDelete}
+            isOpen={showArchiveConfirm}
+            onClose={() => !isArchiving && setShowArchiveConfirm(false)}
+            Icon={() => <i className="fa-solid fa-box-archive" style={{ color: 'var(--purple-dark, #4338ca)' }}></i>}
+            Title="Archive this inquiry?"
+            Desc="Archiving this inquiry will also archive its associated quotations. The records will remain available from the Archived view."
+            BtnColor="var(--purple-dark, #4338ca)"
+            confirmText="Archive Inquiry"
+            isLoading={isArchiving}
+            OnConfirm={handleArchive}
+          />
+
+          {/* Restore Confirmation Modal */}
+          <ConfirmationModal
+            isOpen={showRestoreConfirm}
+            onClose={() => !isRestoring && setShowRestoreConfirm(false)}
+            Icon={() => <i className="fa-solid fa-rotate-left" style={{ color: 'var(--brand-primary, #6366f1)' }}></i>}
+            Title="Restore this inquiry?"
+            Desc="Restoring this inquiry will return it to active records and restore quotations that were archived with it."
+            BtnColor="var(--brand-primary, #6366f1)"
+            confirmText="Restore Record"
+            isLoading={isRestoring}
+            OnConfirm={handleRestore}
           />
 
           {/* PDF Preview & Export Modal */}
@@ -339,7 +421,7 @@ export default function AdminInquiryDetailPage() {
             isOpen={showPdfModal}
             onClose={() => setShowPdfModal(false)}
             type="inquiry"
-            data={combinedInquiry || inquiry}
+            data={inquiry}
           />
         </div>
       )}

@@ -23,3 +23,10 @@
     gap: 1.5rem;
   }
 }
+
+@media (max-width: 25rem) { /* 400px down to 320px */
+  .client-portal-main {
+    padding: 1rem 0.5rem 2.5rem;
+    gap: 1rem;
+  }
+}

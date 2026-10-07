@@ -712,11 +712,15 @@ export default function ClientServiceRequestModal({
                   <div className="client-req-service-header-row">
                     <strong className="client-req-service-name">{selectedService.name}</strong>
                     <span className="client-req-service-price">
-                      {selectedService.price
-                        ? (selectedService.price.startsWith('₱') || selectedService.price.startsWith('PHP')
-                            ? selectedService.price
-                            : `₱${Number(selectedService.price).toLocaleString('en-US')}`)
-                        : 'Standard Fee'}
+                      {(() => {
+                        const p = selectedService.price;
+                        if (!p && p !== 0) return 'Standard Fee';
+                        if (typeof p === 'string' && (p.startsWith('₱') || p.startsWith('PHP'))) {
+                          return p;
+                        }
+                        const num = typeof p === 'number' ? p : parseFloat(String(p).replace(/[^0-9.]/g, '')) || 0;
+                        return `₱${num.toLocaleString('en-US')}`;
+                      })()}
                     </span>
                   </div>
 

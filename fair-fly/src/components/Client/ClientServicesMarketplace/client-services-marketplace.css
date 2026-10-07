@@ -59,6 +59,7 @@
   gap: 1.5rem;
   align-items: flex-start;
   width: 100%;
+  min-width: 0;
 }
 
 /* ── Aside Filter Sidebar ────────────────────────────────────────── */
@@ -298,7 +299,7 @@
 /* Search Bar */
 .shopping-search-box {
   flex: 1;
-  min-width: 16rem;
+  min-width: min(100%, 16rem);
   position: relative;
   display: flex;
   align-items: center;
@@ -905,3 +906,135 @@
 .shopping-end-reached i {
   color: var(--success);
 }
+
+/* ==========================================================================
+   Responsive Breakpoints for Marketplace
+   ========================================================================== */
+@media (max-width: 64rem) {
+  .shopping-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .shopping-aside {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .shopping-products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 48rem) {
+  .shopping-toolbar-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .shopping-search-box {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .shopping-toolbar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .shopping-products-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .shopping-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .shopping-toolbar-card {
+    padding: 0.875rem 0.75rem;
+  }
+
+  .shopping-toolbar-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .shopping-sort-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .shopping-sort-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .shopping-view-switcher {
+    margin-left: auto;
+  }
+
+  .shopping-card-footer {
+    flex-wrap: wrap;
+    gap: 0.625rem;
+  }
+
+  .shopping-card-footer > div:last-child {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .shopping-card-footer > div:last-child button {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    padding: 0.5rem 0.375rem;
+  }
+
+  .shopping-card-body {
+    padding: 1rem 0.875rem;
+  }
+
+  .shopping-aside {
+    padding: 1rem 0.875rem;
+  }
+}
+
+@media (max-width: 22.5rem) { /* 360px down to 320px */
+  .shopping-toolbar-card {
+    padding: 0.625rem 0.5rem;
+  }
+
+  .shopping-card-body {
+    padding: 0.875rem 0.625rem;
+  }
+
+  .shopping-card-name {
+    font-size: 1.05rem;
+  }
+
+  .shopping-card-footer {
+    padding: 0.625rem 0.625rem 0.875rem 0.625rem;
+  }
+
+  .shopping-card-footer > div:last-child {
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .shopping-card-footer > div:last-child button {
+    width: 100%;
+    padding: 0.5rem 0.5rem;
+  }
+}
+
+

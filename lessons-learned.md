@@ -1,6 +1,27 @@
 # Lessons Learned
 # A File for Agents to write their mistakes so that next runs can prevent doing the same thing (Automatic Improvement)
 
+## [2026-10-06] Client Requirements File State Wiping & File Input Value Persistence
+- **Problem**: In `QuotationAttachRequirementsModal`, when a client selected a file for a mandatory requirement, the selection would intermittently be wiped out / reset to `null` before submission, and re-selecting the same file after removing it failed to trigger the input `onChange` handler.
+- **Root Cause**:
+  1. `useEffect` with `[requirementItems, existingSubmitted]` dependency blindly reset `inputs` state with `{ file: null }` whenever `existingSubmitted` finished loading or updated, overwriting any freshly selected `File` object in state.
+  2. When removing or replacing a file, the `<input type="file">` DOM element's `.value` was not cleared, preventing the browser from firing an `onChange` event if the user chose the same file again.
+  3. The `accept` filter attribute omitted valid document formats (`.xls`, `.xlsx`, `.ppt`, `.pptx`, `.webp`, `.gif`) supported by the backend file upload pipeline.
+- **Prevention**:
+  1. Always use functional state updates (`setInputs(prev => ...)`) that preserve user-selected `file` objects and text values when pre-filling or syncing external asynchronous data.
+  2. Explicitly clear the native `<input type="file">` element's `.value = ''` upon removal or error so that `onChange` reliably triggers on every file selection.
+  3. Ensure file input `accept` attributes consistently match the full whitelist in `fileSecurity.js`.
+
+## [2026-10-06] Modal Stacking Context Viewport Clipping & Incomplete Receipt Data Normalization
+- **Problem**: When opening the Official E-Receipt preview modal on the public landing page, the top toolbar (title, Print, Download PDF, and Close buttons) was partially clipped/tucked under the sticky navigation header. Additionally, the "BILLED & ISSUED TO" section only displayed placeholder text ("Valued Client") and missing quotation/payment references ("N/A", "PAY-CONFIRMED").
+- **Root Cause**:
+  1. `PdfDocumentView` was rendered inline within the component hierarchy without `createPortal(..., document.body)` and used flexbox `align-items: center` with `max-height: 90vh`. When rendered on pages with sticky headers or ancestor stacking contexts, tall A4 documents were pushed upward and clipped off the top of the viewport.
+  2. The public tracking controller endpoint constructed an abbreviated `receiptSummary` payload that omitted `clientName`, `contactPerson`, `quoteNo`, `quotationId`, `paymentId`, and itemization fields, causing the client-side receipt normalizer to fall back to generic defaults.
+- **Prevention**:
+  1. Always render full-screen document preview and PDF export modals directly onto `document.body` using `ReactDOM.createPortal`.
+  2. Use `align-items: flex-start`, top padding (e.g. `3rem`), `overflow-y: auto`, and sticky header toolbars (`position: sticky; top: 0; z-index: 20`) on modal containers so top actions are never unreachable or cut off on smaller screens.
+  3. Ensure backend tracking summaries and public document endpoints return complete client and transaction metadata while preserving privacy masking standards.
+
 ## [2026-10-04] Misclassifying Client's Service Intake Specifications as Agency Document Requirements
 - **Problem**: When a client submitted a service inquiry (`SAF-01-002`), the backend synthesized a fake document requirement `{ name: 'Specified Requirements of Client', value: specifiedRequirements }` in the `submitted_requirements` collection. This caused the client's desired service description to be rendered in document attachment grids and quotation requirement checklists as an unfulfilled file requirement rather than the client's service specifications.
 - **Root Cause**: In `fly-api/src/controllers/inquiryController.js`, `createInquiry` contained a fallback: `resolvedSpecReqs ? [{ name: 'Specified Requirements of Client', value: resolvedSpecReqs, required: false }] : []`. This conflated "Specified Requirements of Client" (what the client needs/wants from the agency's service) with agency document requirements (documents/files the agency needs from the client, such as Valid ID or Birth Certificate).

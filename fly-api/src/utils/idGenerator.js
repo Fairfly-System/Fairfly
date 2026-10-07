@@ -38,12 +38,36 @@ const ID_PREFIXES = {
 
   // Financial & Security operations
   PAYMENT: 'PAY',
+  RECEIPT: 'RCT',
+  SERVICE_CODE: 'SRV',
   PASSWORD_RESET: 'PRR',
 
   // System & logs
   FAQ: 'FAQ',
   ADMIN_LOG: 'LOG',
   OPERATOR_LOG: 'OPL'
+};
+
+const crypto = require('crypto');
+
+/**
+ * Generates a clean, authoritative receipt number.
+ * Example: RCT-2026-A1B2C3
+ */
+const generateReceiptNo = () => {
+  const year = new Date().getFullYear();
+  const randomSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `RCT-${year}-${randomSuffix}`;
+};
+
+/**
+ * Generates a high-entropy public service tracking code for manual entry or QR scanning.
+ * Example: SRV-2026-D4E5F6
+ */
+const generateServiceCode = () => {
+  const year = new Date().getFullYear();
+  const randomSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `SRV-${year}-${randomSuffix}`;
 };
 
 /**
@@ -110,6 +134,8 @@ const hasPrefix = (id, prefix) => {
 module.exports = {
   ID_PREFIXES,
   generatePrefixedId,
+  generateReceiptNo,
+  generateServiceCode,
   parsePrefix,
   getRawId,
   hasPrefix

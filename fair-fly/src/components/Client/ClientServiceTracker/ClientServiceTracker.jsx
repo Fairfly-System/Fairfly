@@ -21,7 +21,7 @@ const CATEGORY_ICON_MAP = {
   'general services': 'fa-solid fa-concierge-bell'
 };
 
-export default function ClientServiceTracker({ service }) {
+export default function ClientServiceTracker({ service, onOpenReceipt }) {
   const { openLightbox } = useLightbox();
   const [showSteps, setShowSteps] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
@@ -230,6 +230,13 @@ export default function ClientServiceTracker({ service }) {
               Requested: {dateFormatted}
             </span>
 
+            {service.serviceCode && (
+              <span className="tracker-tag-pill" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0', fontWeight: 700, fontFamily: 'monospace' }}>
+                <i className="fa-solid fa-qrcode" style={{ marginRight: '0.25rem' }}></i>
+                {service.serviceCode}
+              </span>
+            )}
+
             {Array.isArray(service.tags) && service.tags.slice(0, 3).map((t, idx) => (
               <span key={idx} className="tracker-tag-pill">
                 #{t}
@@ -279,6 +286,19 @@ export default function ClientServiceTracker({ service }) {
           >
             <i className={`fa-solid ${showRequirements ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
             {showRequirements ? 'Hide Uploaded Documents' : `Submitted Requirements (${requirementsList.length})`}
+          </button>
+        )}
+
+        {onOpenReceipt && (
+          <button
+            type="button"
+            className="service-steps-show"
+            onClick={() => onOpenReceipt(service)}
+            style={{ marginLeft: 'auto', background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}
+            title="View and download official ADF-07-002 E-Receipt"
+          >
+            <i className="fa-solid fa-receipt"></i>
+            <span>Official E-Receipt</span>
           </button>
         )}
       </div>

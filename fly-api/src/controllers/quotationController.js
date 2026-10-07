@@ -1,9 +1,9 @@
-const { 
-  addToDatabase, 
-  getFromDatabase, 
-  queryDatabaseAdvanced, 
-  updateToDatabase, 
-  deleteFromDatabase 
+const {
+  addToDatabase,
+  getFromDatabase,
+  queryDatabaseAdvanced,
+  updateToDatabase,
+  deleteFromDatabase
 } = require('../services/firebaseService');
 const { db } = require('../config/firebase');
 const { compileWorkflowStepsForService } = require('./activeServiceController');
@@ -30,28 +30,30 @@ const COLLECTIONS = {
  */
 const createQuotation = async (req, res) => {
   try {
-    const { 
+    const {
       clientUid,
-      clientName, 
+      clientName,
       contactPerson,
-      clientEmail, 
-      clientPhone, 
+      clientEmail,
+      clientPhone,
       serviceId,
-      serviceTitle, 
+      serviceTitle,
       requirements,
       submittedRequirements,
-      tourDates, 
-      inclusions, 
-      exclusions, 
+      tourDates,
+      inclusions,
+      exclusions,
       rateBreakdown,
-      rate, 
+      rate,
       taxAmount,
-      totalAmount, 
+      totalAmount,
       preparedByName,
       preparedByTitle,
       preparedByContact,
       preparedBy,
       remarks,
+      operatorRemarks,
+      clientRemarks,
       quotationDate,
       branchUid,
       branchName,
@@ -151,9 +153,9 @@ const createQuotation = async (req, res) => {
     effectiveSubmittedReqs = effectiveSubmittedReqs.filter((r) => {
       const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
       return name !== 'specified requirements of client' &&
-             name !== 'client specified requirements' &&
-             name !== 'specified requirements of the client' &&
-             name !== 'specified requirements';
+        name !== 'client specified requirements' &&
+        name !== 'specified requirements of the client' &&
+        name !== 'specified requirements';
     });
 
     let effectiveSubmittedReqId = req.body.submittedRequirementsId || null;
@@ -174,9 +176,9 @@ const createQuotation = async (req, res) => {
         cleanServiceReqs = serviceReqs.filter((r) => {
           const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
           return name !== 'specified requirements of client' &&
-                 name !== 'client specified requirements' &&
-                 name !== 'specified requirements of the client' &&
-                 name !== 'specified requirements';
+            name !== 'client specified requirements' &&
+            name !== 'specified requirements of the client' &&
+            name !== 'specified requirements';
         });
 
         const mandatory = cleanServiceReqs.filter(r => (typeof r === 'object' ? r.required !== false : true));
@@ -200,7 +202,7 @@ const createQuotation = async (req, res) => {
           if (reqDoc && Array.isArray(reqDoc.requirements)) {
             effectiveSubmittedReqs = reqDoc.requirements;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const mandatoryServiceReqs = cleanServiceReqs.filter(r => (typeof r === 'object' ? r.required !== false : true));
@@ -258,13 +260,22 @@ const createQuotation = async (req, res) => {
       preparedByTitle: preparedByTitle || req.userDetails?.title || (req.userDetails?.role === 'admin' ? 'Business Head' : 'Branch Operator'),
       preparedByContact: preparedByContact || req.userDetails?.phoneNumber || req.userDetails?.phone || '',
       preparedBy: preparedByName || preparedBy || req.userDetails?.name || 'Operator',
-      remarks: remarks || '',
+      remarks: (operatorRemarks !== undefined && operatorRemarks !== null ? String(operatorRemarks) : String(remarks || '')).trim(),
+      operatorRemarks: (operatorRemarks !== undefined && operatorRemarks !== null ? String(operatorRemarks) : String(remarks || '')).trim(),
+      clientRemarks: (clientRemarks !== undefined && clientRemarks !== null ? String(clientRemarks) : (linkedInquiry?.clientRemarks || linkedInquiry?.remarks || linkedInquiry?.notes || '')).trim(),
       quotationDate: quotationDate || now.split('T')[0],
       branchUid: effectiveBranchUid,
       branchName: effectiveBranchName,
       inquiryId: inquiryId || null,
       quoteNo: `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      status: 'Draft',
+      status: req.body.status || 'Sent',
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+      archivedReason: null,
+      rejectedAt: null,
+      rejectedBy: null,
+      rejectionReason: null,
       activeServiceId: null,
       createdAt: now,
       updatedAt: now,
@@ -328,7 +339,7 @@ const createQuotation = async (req, res) => {
  */
 const getQuotations = async (req, res) => {
   try {
-    const { status, branchUid, clientUid, inquiryId, limit } = req.query;
+    const { status, branchUid, clientUid, inquiryId, limit, archived } = req.query;
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
@@ -343,9 +354,16 @@ const getQuotations = async (req, res) => {
 
     // If operator user is calling, restrict to their branch quotations
     if (req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator') {
-      options.filters.push({ field: 'branchUid', operator: '==', value: req.user.uid });
+      options.filters.push({ field: 'branchUid', operator: '==', value: req.userDetails?.branchUid || req.user.uid });
     } else if (branchUid && branchUid !== 'all') {
       options.filters.push({ field: 'branchUid', operator: '==', value: branchUid });
+    }
+
+    // Archive visibility filtering
+    if (archived === 'true') {
+      options.filters.push({ field: 'archived', operator: '==', value: true });
+    } else if (archived !== 'all') {
+      options.filters.push({ field: 'archived', operator: '==', value: false });
     }
 
     if (inquiryId) {
@@ -359,7 +377,17 @@ const getQuotations = async (req, res) => {
     }
 
     const results = await queryDatabaseAdvanced(COLLECTIONS.QUOTATIONS, options);
-    return res.status(200).json(results);
+    const normalized = results.map(q => ({
+      ...q,
+      archived: q.archived === true,
+      archivedAt: q.archivedAt || null,
+      archivedBy: q.archivedBy || null,
+      archivedReason: q.archivedReason || null,
+      rejectedAt: q.rejectedAt || null,
+      rejectedBy: q.rejectedBy || null,
+      rejectionReason: q.rejectionReason || null
+    }));
+    return res.status(200).json(normalized);
   } catch (error) {
     console.error('Error listing quotations:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -379,6 +407,16 @@ const updateQuotationStatus = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
 
+    const userRole = req.userDetails?.role;
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
+        (existing.operatorId && existing.operatorId === req.user.uid) ||
+        (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only update quotations for your branch.' });
+      }
+    }
+
     if (existing.status === 'PAID' || existing.paymentStatus === 'PAID') {
       return res.status(400).json({ error: 'Cannot change status of a quotation that has already been paid and activated.' });
     }
@@ -392,15 +430,6 @@ const updateQuotationStatus = async (req, res) => {
           error: `Cannot ${actionVerb}: Service requirements must be verified and approved first by the branch operator.`,
           requirementsStatus: existing.requirementsStatus || 'pending'
         });
-      }
-    }
-
-    const userRole = req.userDetails?.role;
-    if (userRole === 'operator' || userRole === 'branch_operator') {
-      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
-        (existing.operatorId && existing.operatorId === req.user.uid);
-      if (!isBranchMatch) {
-        return res.status(403).json({ error: 'Forbidden: You can only update quotations for your branch.' });
       }
     }
 
@@ -502,12 +531,12 @@ const updateQuotationStatus = async (req, res) => {
 /**
  * Helper to construct an Active Service Fulfillment document payload from server-side quotation and payment data
  */
-const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) => {
+const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId, options = {}) => {
   const now = new Date().toISOString();
   const serviceTitle = quotation.serviceTitle || 'Custom Service';
   const totalAmountNum = Number(quotation.totalAmount || quotation.rate || 0);
-  const servicePrice = totalAmountNum > 0 
-    ? `₱${totalAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}` 
+  const servicePrice = totalAmountNum > 0
+    ? `₱${totalAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
     : 'Custom Quoted Price';
 
   // Compile workflow steps for this custom service
@@ -534,8 +563,8 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
 
   let resolvedSubmittedReqId = quotation.submittedRequirementsId || quotation.submitted_requirements || originatingInquiry?.submittedRequirementsId || originatingInquiry?.submitted_requirements || null;
 
-  const resolvedSubmittedReqs = Array.isArray(quotation.submittedRequirements) 
-    ? quotation.submittedRequirements 
+  const resolvedSubmittedReqs = Array.isArray(quotation.submittedRequirements)
+    ? quotation.submittedRequirements
     : (Array.isArray(originatingInquiry?.requirements) ? originatingInquiry.requirements : []);
 
   if (!resolvedSubmittedReqId && resolvedSubmittedReqs.length > 0) {
@@ -551,6 +580,9 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
 
   return {
     id: activeServiceDocId,
+    serviceCode: options.serviceCode || quotation.serviceCode || null,
+    receiptId: options.receiptId || quotation.receiptId || null,
+    receiptNo: options.receiptNo || quotation.receiptNo || null,
     clientUid: quotation.clientUid || (payment ? payment.clientUid : null),
     clientName: quotation.clientName || 'Valued Client',
     clientEmail: quotation.clientEmail || '',
@@ -571,7 +603,9 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId) =
     operatorId: assignedOperatorId,
     branchUid: assignedOperatorId,
     branchName: assignedBranchName,
-    additionalNotes: `Custom Service created from Quotation ${quotation.quoteNo || quotation.id || ''}.\nTour Date: ${quotation.tourDates || 'N/A'}\nInclusions: ${quotation.inclusions || 'N/A'}\nExclusions: ${quotation.exclusions || 'N/A'}\nRemarks: ${quotation.remarks || 'N/A'}`,
+    additionalNotes: `Custom Service created from Quotation ${quotation.quoteNo || quotation.id || ''}.\nTour Date: ${quotation.tourDates || 'N/A'}\nInclusions: ${quotation.inclusions || 'N/A'}\nExclusions: ${quotation.exclusions || 'N/A'}\nOperator Remarks: ${quotation.operatorRemarks || quotation.remarks || 'N/A'}${quotation.clientRemarks ? `\nClient Remarks: ${quotation.clientRemarks}` : ''}`,
+    operatorRemarks: quotation.operatorRemarks || quotation.remarks || '',
+    clientRemarks: quotation.clientRemarks || '',
     inquiryId: quotation.inquiryId || null,
     quotationId: quotation.id || quotation.quotationId || payment?.quotationId || null,
     paymentId: payment?.id || quotation.paymentId || null,
@@ -637,9 +671,9 @@ const submitQuotationRequirements = async (req, res) => {
     const cleanReqs = requirements.filter((r) => {
       const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
       return name !== 'specified requirements of client' &&
-             name !== 'client specified requirements' &&
-             name !== 'specified requirements of the client' &&
-             name !== 'specified requirements';
+        name !== 'client specified requirements' &&
+        name !== 'specified requirements of the client' &&
+        name !== 'specified requirements';
     });
 
     // Validate against catalog service schema if serviceId is present
@@ -914,15 +948,15 @@ const acceptQuotation = async (req, res) => {
     }
 
     if (quotation.status === 'PAID' || quotation.paymentStatus === 'PAID') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Quotation has already been paid and converted to an active service.',
         quotationId: id,
-        activeServiceId: quotation.activeServiceId 
+        activeServiceId: quotation.activeServiceId
       });
     }
 
     if (quotation.status === 'Accepted') {
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Quotation has already been accepted. Please proceed to payment to activate service.',
         quotationId: id,
         quoteNo: quotation.quoteNo,
@@ -1006,7 +1040,249 @@ const acceptQuotation = async (req, res) => {
 };
 
 /**
- * Delete quotation
+ * Archive a quotation (does NOT archive the parent inquiry)
+ */
+const archiveQuotation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+
+    const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Quotation not found' });
+
+    const userRole = req.userDetails?.role;
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
+        (existing.operatorId && existing.operatorId === req.user.uid) ||
+        (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only archive quotations for your branch.' });
+      }
+    }
+
+    const now = new Date().toISOString();
+    await updateToDatabase(dbPath, {
+      archived: true,
+      archivedAt: now,
+      archivedBy: req.user.uid,
+      archivedReason: req.body?.archivedReason || 'manual_archive',
+      updatedAt: now
+    });
+
+    await logFromRequest(req, {
+      action: 'ARCHIVE_QUOTATION',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Archived Quotation ${existing.quoteNo || id} for ${existing.clientName || 'Client'}`,
+      metadata: { quoteNo: existing.quoteNo, clientName: existing.clientName }
+    });
+
+    return res.status(200).json({
+      message: 'Quotation archived successfully',
+      id,
+      archived: true
+    });
+  } catch (error) {
+    console.error('Error archiving quotation:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Restore an archived quotation (verifies parent inquiry is active)
+ */
+const restoreQuotation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+
+    const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const existing = await getFromDatabase(dbPath);
+    if (!existing) return res.status(404).json({ error: 'Quotation not found' });
+
+    const userRole = req.userDetails?.role;
+    if (userRole === 'operator' || userRole === 'branch_operator') {
+      const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
+        (existing.operatorId && existing.operatorId === req.user.uid) ||
+        (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid);
+      if (!isBranchMatch) {
+        return res.status(403).json({ error: 'Forbidden: You can only restore quotations for your branch.' });
+      }
+    }
+
+    // Check parent Inquiry: if parent inquiry is archived, prevent restore
+    if (existing.inquiryId) {
+      try {
+        const parentInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${existing.inquiryId}`);
+        if (parentInquiry && parentInquiry.archived === true) {
+          return res.status(400).json({
+            error: 'Cannot restore quotation: The parent inquiry is currently archived. Please restore the parent inquiry first.',
+            parentInquiryId: existing.inquiryId,
+            parentInquiryArchived: true
+          });
+        }
+      } catch (inqErr) {
+        console.warn('[Quotation] Error verifying parent inquiry archival state:', inqErr.message);
+      }
+    }
+
+    const now = new Date().toISOString();
+    await updateToDatabase(dbPath, {
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+      archivedReason: null,
+      restoredAt: now,
+      restoredBy: req.user.uid,
+      updatedAt: now
+    });
+
+    await logFromRequest(req, {
+      action: 'RESTORE_QUOTATION',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Restored Quotation ${existing.quoteNo || id} for ${existing.clientName || 'Client'}`,
+      metadata: { quoteNo: existing.quoteNo, clientName: existing.clientName }
+    });
+
+    return res.status(200).json({
+      message: 'Quotation restored successfully',
+      id,
+      archived: false
+    });
+  } catch (error) {
+    console.error('Error restoring quotation:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Client rejects quotation (or operator on behalf of client)
+ * POST /api/quotations/:id/reject
+ */
+const rejectQuotation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Quotation ID is required' });
+
+    const dbPath = `${COLLECTIONS.QUOTATIONS}/${id}`;
+    const quotation = await getFromDatabase(dbPath);
+    if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
+
+    const userRole = req.userDetails?.role;
+    const isClient = userRole === 'client';
+    const isOperator = userRole === 'operator' || userRole === 'branch_operator';
+    const isAdmin = userRole === 'admin';
+
+    // Role & Ownership Verification (BOLA defense)
+    if (isClient) {
+      if (quotation.clientUid && quotation.clientUid !== req.user.uid) {
+        return res.status(403).json({ error: 'Forbidden: You cannot reject a quotation prepared for another client.' });
+      }
+    } else if (isOperator) {
+      const isBranchMatch = (quotation.branchUid && quotation.branchUid === req.user.uid) ||
+        (quotation.operatorId && quotation.operatorId === req.user.uid);
+      if (!isBranchMatch && !isAdmin) {
+        return res.status(403).json({ error: 'Forbidden: You can only reject quotations for your branch.' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges to reject this quotation.' });
+    }
+
+    // State validation
+    if (quotation.archived === true) {
+      return res.status(400).json({ error: 'Cannot reject an archived quotation.' });
+    }
+
+    if (quotation.status === 'PAID' || quotation.paymentStatus === 'PAID') {
+      return res.status(400).json({ error: 'Cannot reject a quotation that has already been paid and processed.' });
+    }
+
+    if (quotation.status === 'Accepted') {
+      return res.status(400).json({ error: 'Quotation has already been accepted and cannot be rejected.' });
+    }
+
+    if (quotation.status === 'Rejected') {
+      return res.status(400).json({ error: 'Quotation has already been rejected.' });
+    }
+
+    if (quotation.status === 'Cancelled') {
+      return res.status(400).json({ error: 'Quotation has already been cancelled.' });
+    }
+
+    const now = new Date().toISOString();
+    const reason = (req.body.rejectionReason || req.body.reason || '').trim();
+
+    const updates = {
+      status: 'Rejected',
+      rejectedAt: now,
+      rejectedBy: req.user.uid,
+      rejectionReason: reason || null,
+      updatedAt: now
+    };
+
+    await updateToDatabase(dbPath, updates);
+
+    // Sync to linked inquiry if applicable
+    if (quotation.inquiryId) {
+      try {
+        await updateToDatabase(`${COLLECTIONS.INQUIRIES}/${quotation.inquiryId}`, {
+          status: 'rejected',
+          rejectionReason: reason || null,
+          updatedAt: now
+        });
+      } catch (inqErr) {
+        console.warn('[Quotation] Failed to sync rejection to originating inquiry:', inqErr.message);
+      }
+    }
+
+    // 1. Notify Branch Operator
+    if (quotation.branchUid || quotation.operatorId) {
+      notifyBranch({
+        branchUid: quotation.branchUid || quotation.operatorId,
+        branchName: quotation.branchName,
+        title: 'Quotation Rejected by Client',
+        message: `${quotation.clientName || 'Client'} has rejected Quotation ${quotation.quoteNo || id}.${reason ? ` Reason: "${reason}"` : ''}`,
+        type: 'quotation',
+        link: `/operator/quotations/${id}`,
+        metadata: { quotationId: id, quoteNo: quotation.quoteNo, status: 'Rejected', reason }
+      }).catch(err => console.warn('Operator notification error on quotation reject:', err.message));
+    }
+
+    // 2. Notify Admins
+    notifyAdmins({
+      title: 'Quotation Rejected',
+      message: `Quotation ${quotation.quoteNo || id} for ${quotation.clientName || 'Client'} at ${quotation.branchName || 'Branch'} was rejected by the client.`,
+      type: 'quotation',
+      link: '/admin/inquiry-history',
+      metadata: { quotationId: id, branchName: quotation.branchName, status: 'Rejected', reason }
+    }).catch(err => console.warn('Admin notification error on quotation reject:', err.message));
+
+    await logFromRequest(req, {
+      action: 'REJECT_QUOTATION',
+      entityType: 'quotation',
+      entityId: id,
+      description: `Quotation ${quotation.quoteNo || id} rejected by ${isClient ? 'Client' : req.userDetails?.name || 'Staff'}${reason ? `: "${reason}"` : ''}`,
+      metadata: { quoteNo: quotation.quoteNo, clientName: quotation.clientName, reason }
+    });
+
+    return res.status(200).json({
+      message: 'Quotation rejected successfully.',
+      quotationId: id,
+      quoteNo: quotation.quoteNo,
+      status: 'Rejected',
+      rejectedAt: now,
+      rejectionReason: reason || null
+    });
+  } catch (error) {
+    console.error('Error rejecting quotation:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Permanent deletion of quotations is disabled in favor of archiving
  */
 const deleteQuotation = async (req, res) => {
   try {
@@ -1017,29 +1293,21 @@ const deleteQuotation = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Quotation not found' });
 
-    if (existing.status === 'PAID' || existing.paymentStatus === 'PAID') {
-      return res.status(400).json({ error: 'Cannot delete a quotation that has already been paid and processed.' });
-    }
-
     const userRole = req.userDetails?.role;
     if (userRole === 'operator' || userRole === 'branch_operator') {
       const isBranchMatch = (existing.branchUid && existing.branchUid === req.user.uid) ||
-        (existing.operatorId && existing.operatorId === req.user.uid);
+        (existing.operatorId && existing.operatorId === req.user.uid) ||
+        (existing.branchUid && req.userDetails?.branchUid && existing.branchUid === req.userDetails?.branchUid);
       if (!isBranchMatch) {
         return res.status(403).json({ error: 'Forbidden: You can only delete quotations for your branch.' });
       }
     }
 
-    await logFromRequest(req, {
-      action: 'DELETE_QUOTATION',
-      entityType: 'quotation',
-      entityId: id,
-      description: `Deleted Quotation ${existing.quoteNo || id} for ${existing.clientName || 'Client'}`,
-      metadata: { quoteNo: existing.quoteNo, clientName: existing.clientName }
+    // Permanent delete is disabled
+    return res.status(400).json({
+      error: 'Permanent deletion of quotations has been disabled to preserve historical business records. Please use the archive feature instead.',
+      archivalRecommended: true
     });
-
-    await deleteFromDatabase(dbPath);
-    return res.status(200).json({ message: 'Quotation deleted successfully' });
   } catch (error) {
     console.error('Error deleting quotation:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -1079,6 +1347,12 @@ const updateQuotation = async (req, res) => {
     if (updates.rate !== undefined) updates.rate = Number(updates.rate) || 0;
     if (updates.taxAmount !== undefined) updates.taxAmount = Number(updates.taxAmount) || 0;
     if (updates.totalAmount !== undefined) updates.totalAmount = Number(updates.totalAmount) || 0;
+
+    if (updates.remarks !== undefined || updates.operatorRemarks !== undefined) {
+      const opRemarks = updates.operatorRemarks !== undefined ? updates.operatorRemarks : updates.remarks;
+      updates.remarks = opRemarks;
+      updates.operatorRemarks = opRemarks;
+    }
 
     // Edge Case: If serviceId changes, reset requirements approval state and re-evaluate
     if (updates.serviceId && updates.serviceId !== existing.serviceId) {
@@ -1129,6 +1403,9 @@ module.exports = {
   updateQuotationStatus,
   acceptQuotation,
   deleteQuotation,
+  archiveQuotation,
+  restoreQuotation,
+  rejectQuotation,
   updateQuotation,
   submitQuotationRequirements,
   reviewQuotationRequirements,

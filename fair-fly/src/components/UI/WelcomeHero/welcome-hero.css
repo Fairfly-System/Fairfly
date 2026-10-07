@@ -90,3 +90,32 @@
     /* Hide illustration on mobile to save vertical space */
   }
 }
+
+@media (max-width: 500px) {
+  .welcome-hero {
+    padding: 1.125rem 0.875rem;
+  }
+
+  .welcome-hero-title {
+    font-size: 1.35rem;
+    word-break: break-word;
+  }
+
+  .welcome-hero-subtitle {
+    font-size: 0.84375rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .welcome-hero {
+    padding: 0.875rem 0.625rem;
+  }
+
+  .welcome-hero-title {
+    font-size: 1.15rem;
+  }
+
+  .welcome-hero-date {
+    font-size: 0.75rem;
+  }
+}

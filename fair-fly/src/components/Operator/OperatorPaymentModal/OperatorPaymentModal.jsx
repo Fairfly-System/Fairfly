@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import ConfirmationModal from '../../Admin/Modals/ConfirmationModal/ConfirmationModal';
+import PdfDocumentView from '../../Shared/PdfDocument/PdfDocumentView';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import { recordCashPayment, createCheckoutSession, verifyPayment } from '../../../services/paymentService';
@@ -21,11 +22,13 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // PayMongo Session state
+  // PayMongo Session & Receipt state
   const [checkoutSession, setCheckoutSession] = useState(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [fulfillmentId, setFulfillmentId] = useState(null);
   const [completedPaymentId, setCompletedPaymentId] = useState(null);
+  const [receiptDoc, setReceiptDoc] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Reset state on open/quotation change
   useEffect(() => {
@@ -37,6 +40,8 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
       setPaymentCompleted(false);
       setFulfillmentId(null);
       setCompletedPaymentId(null);
+      setReceiptDoc(null);
+      setShowReceiptModal(false);
     }
   }, [isOpen, quotation?.id]);
 
@@ -64,6 +69,15 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
         setPaymentCompleted(true);
         setFulfillmentId(res.fulfillmentId);
         setCompletedPaymentId(res.paymentId);
+        setReceiptDoc(res.receipt || {
+          ...quotation,
+          receiptNo: res.receiptNo || 'RCT-2026-OFFICIAL',
+          serviceCode: res.serviceCode,
+          fulfillmentId: res.fulfillmentId,
+          paymentId: res.paymentId,
+          amount: totalAmt,
+          paymentMethod: 'Direct Cash (Counter Receipt)'
+        });
         addToast('Cash payment confirmed and recorded! Service fulfillment activated.', 'success');
         if (onPaymentSuccess) {
           onPaymentSuccess(res);
@@ -119,6 +133,15 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
           setPaymentCompleted(true);
           setFulfillmentId(res.fulfillmentId);
           setCompletedPaymentId(payId);
+          setReceiptDoc(res.receipt || {
+            ...quotation,
+            receiptNo: res.receiptNo || 'RCT-2026-OFFICIAL',
+            serviceCode: res.serviceCode,
+            fulfillmentId: res.fulfillmentId,
+            paymentId: payId,
+            amount: totalAmt,
+            paymentMethod: 'PayMongo QR / Online'
+          });
           addToast('Payment verified successfully! Service fulfillment activated.', 'success');
           if (onPaymentSuccess) {
             onPaymentSuccess(res);
@@ -172,7 +195,7 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
               <h3 className="op-payment-success-title">Payment Confirmed & Recorded!</h3>
               <p className="op-payment-success-sub">
                 The payment for <strong>{quotation.quoteNo}</strong> ({quotation.serviceTitle}) was successfully processed.
-                Service fulfillment has been instantiated in Ongoing Services.
+                Service fulfillment and official E-Receipt have been generated.
               </p>
 
               <div className="op-payment-success-meta">
@@ -184,6 +207,18 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
                   <span>Method:</span>
                   <strong>{paymentMethod === 'direct_cash' ? 'Direct Cash Payment' : 'PayMongo QR / Online'}</strong>
                 </div>
+                {receiptDoc?.receiptNo && (
+                  <div className="op-payment-meta-row">
+                    <span>Official Receipt No:</span>
+                    <strong className="text-mono" style={{ color: '#15803d' }}>{receiptDoc.receiptNo}</strong>
+                  </div>
+                )}
+                {receiptDoc?.serviceCode && (
+                  <div className="op-payment-meta-row">
+                    <span>Service Tracking Code:</span>
+                    <strong className="text-mono" style={{ color: '#6366f1' }}>{receiptDoc.serviceCode}</strong>
+                  </div>
+                )}
                 {completedPaymentId && (
                   <div className="op-payment-meta-row">
                     <span>Payment Ref:</span>
@@ -199,6 +234,16 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
               </div>
 
               <div className="op-payment-success-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowReceiptModal(true)}
+                  style={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac', fontWeight: 700 }}
+                >
+                  <i className="fa-solid fa-receipt"></i>
+                  <span>View / Print E-Receipt</span>
+                </button>
+
                 {fulfillmentId && (
                   <button
                     type="button"
@@ -505,6 +550,16 @@ export default function OperatorPaymentModal({ isOpen, onClose, quotation, onPay
         onConfirm={handleConfirmCashPayment}
         isLoading={isProcessing}
       />
+
+      {/* Official E-Receipt Preview & Download Modal */}
+      {showReceiptModal && receiptDoc && (
+        <PdfDocumentView
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          type="receipt"
+          data={receiptDoc}
+        />
+      )}
     </>
   );
 }

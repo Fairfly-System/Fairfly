@@ -329,3 +329,28 @@ button.tracker-file-link {
   color: var(--orange);
   font-style: italic;
 }
+
+@media (max-width: 480px) {
+  .service-tracker {
+    padding: 1rem 0.875rem;
+  }
+
+  .tracker-thumbnail-box {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .tracker-service-name {
+    font-size: 1rem;
+  }
+
+  .tracker-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tracker-actions-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

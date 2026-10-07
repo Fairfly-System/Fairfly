@@ -21,10 +21,15 @@ const chatbotRoutes = require('./chatbotRoutes');
 const adminAnalyticsRoutes = require('./adminAnalyticsRoutes');
 const passwordResetRoutes = require('./passwordResetRoutes');
 const paymentRoutes = require('./paymentRoutes');
+const receiptRoutes = require('./receiptRoutes');
+const trackingRoutes = require('./trackingRoutes');
 const submittedRequirementsRoutes = require('./submittedRequirementsRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/receipts', receiptRoutes);
+router.use('/tracking', trackingRoutes);
+router.use('/track', trackingRoutes); // Friendly alias
 router.use('/submitted-requirements', submittedRequirementsRoutes);
 router.use('/submitted_requirements', submittedRequirementsRoutes); // Alias
 router.use('/qualifications', qualificationRoutes);

@@ -194,9 +194,9 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
   };
 
   const isFormValid = Boolean(
-    formData.name.trim() &&
-    (formData.category !== "Other" || formData.customCategory.trim()) &&
-    formData.price.trim() &&
+    String(formData.name ?? '').trim() &&
+    (formData.category !== "Other" || String(formData.customCategory ?? '').trim()) &&
+    String(formData.price ?? '').trim() &&
     String(formData.processingTime?.min || '').trim() !== "" &&
     workflowIds.length > 0
   );
@@ -204,14 +204,14 @@ export default function ServiceForm({ onSubmit, isLoading, initialData }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const finalCategory = formData.category === "Other" 
-      ? (formData.customCategory.trim() || "Other Services")
+      ? (String(formData.customCategory ?? '').trim() || "Other Services")
       : formData.category;
 
     const payload = {
-      name: formData.name.trim(),
+      name: String(formData.name ?? '').trim(),
       category: finalCategory,
-      price: formData.price.trim(),
-      description: formData.description.trim(),
+      price: String(formData.price ?? '').trim(),
+      description: String(formData.description ?? '').trim(),
       featured: formData.featured,
       processingTime: formData.processingTime,
       coverImage: formData.coverImage,

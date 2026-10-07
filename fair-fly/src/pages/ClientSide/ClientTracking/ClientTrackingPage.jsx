@@ -15,9 +15,12 @@ import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGr
 import useDebounce from '../../../hooks/useDebounce';
 import QuotationDetailModal from '../../../components/Client/QuotationDetailModal/QuotationDetailModal';
 import InquiryDetailModal from '../../../components/Client/InquiryDetailModal/InquiryDetailModal';
+import QuotationAttachRequirementsModal from '../../../components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
-import { acceptQuotation } from '../../../services/quotationService';
+import BaseModal from '../../../components/UI/ModalBase/BaseModal';
+import { acceptQuotation, rejectQuotation } from '../../../services/quotationService';
 import { verifyPayment } from '../../../services/paymentService';
+import { fetchReceiptByQuotationId, fetchReceiptByFulfillmentId } from '../../../services/receiptService';
 import './client-tracking.css';
 
 function formatRequirementsText(specifiedRequirements, requirements) {
@@ -66,6 +69,9 @@ export default function ClientTrackingPage() {
   const [loadingInquiries, setLoadingInquiries] = useState(true);
   const [loadingQuotations, setLoadingQuotations] = useState(true);
   const [acceptingQuoteId, setAcceptingQuoteId] = useState(null);
+  const [quotationToReject, setQuotationToReject] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectingQuoteId, setRejectingQuoteId] = useState(null);
 
   // Payment Modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -101,6 +107,7 @@ export default function ClientTrackingPage() {
   // Detail view modals state
   const [viewingQuotation, setViewingQuotation] = useState(null);
   const [viewingInquiry, setViewingInquiry] = useState(null);
+  const [attachingRequirementsQuotation, setAttachingRequirementsQuotation] = useState(null);
 
 
   // 1. Subscribe to real-time active services for logged-in client
@@ -162,10 +169,12 @@ export default function ClientTrackingPage() {
       unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const list = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          const list = snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter((i) => !i.archived);
           list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
           setInquiriesList(list);
           setLoadingInquiries(false);
@@ -174,7 +183,7 @@ export default function ClientTrackingPage() {
           console.error('Error subscribing to client inquiries:', err);
           onSnapshot(inquiriesRef, (snap) => {
             const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-            setInquiriesList(all.filter((i) => i.clientUid === user.uid));
+            setInquiriesList(all.filter((i) => i.clientUid === user.uid && !i.archived));
             setLoadingInquiries(false);
           });
         }
@@ -205,10 +214,12 @@ export default function ClientTrackingPage() {
       unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const list = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          const list = snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter((qDoc) => !qDoc.archived);
           list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
           setQuotationsList(list);
           setLoadingQuotations(false);
@@ -217,7 +228,7 @@ export default function ClientTrackingPage() {
           console.error('Error subscribing to client quotations:', err);
           onSnapshot(quotationsRef, (snap) => {
             const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-            setQuotationsList(all.filter((qDoc) => qDoc.clientUid === user.uid));
+            setQuotationsList(all.filter((qDoc) => qDoc.clientUid === user.uid && !qDoc.archived));
             setLoadingQuotations(false);
           });
         }
@@ -253,6 +264,9 @@ export default function ClientTrackingPage() {
                 'success'
               );
               setMainTab('ongoing');
+              if (res?.receipt) {
+                handleOpenPdf('receipt', res.receipt);
+              }
             },
             (err) => {
               console.warn('Payment verification sync:', err);
@@ -273,6 +287,43 @@ export default function ClientTrackingPage() {
       }
     }
   }, [userToken, addToast]);
+
+  const handleOpenReceipt = (target) => {
+    if (!userToken || !target) return;
+    const qId = target.quotationId || target.id;
+    const fulfillmentId = target.fulfillmentId || target.activeServiceId || (target.id?.startsWith('SVC-') ? target.id : null);
+
+    if (qId) {
+      fetchReceiptByQuotationId(
+        userToken,
+        qId,
+        (receiptData) => {
+          handleOpenPdf('receipt', receiptData);
+        },
+        () => {
+          if (fulfillmentId) {
+            fetchReceiptByFulfillmentId(
+              userToken,
+              fulfillmentId,
+              (receiptData) => handleOpenPdf('receipt', receiptData),
+              () => handleOpenPdf('receipt', target)
+            );
+          } else {
+            handleOpenPdf('receipt', target);
+          }
+        }
+      );
+    } else if (fulfillmentId) {
+      fetchReceiptByFulfillmentId(
+        userToken,
+        fulfillmentId,
+        (receiptData) => handleOpenPdf('receipt', receiptData),
+        () => handleOpenPdf('receipt', target)
+      );
+    } else {
+      handleOpenPdf('receipt', target);
+    }
+  };
 
   // Accept Quotation modal triggers (replaces native window.confirm/alert with ConfirmationModal)
   const handleInitiateAcceptQuotation = (quotation) => {
@@ -322,6 +373,39 @@ export default function ClientTrackingPage() {
         setQuotationToAccept(null);
         console.error('Error accepting quotation:', err);
         addToast(err?.message || 'Failed to accept quotation. Please try again.', 'danger');
+      }
+    );
+  };
+
+  const handleInitiateRejectQuotation = (quotation) => {
+    if (!quotation?.id) return;
+    setQuotationToReject(quotation);
+    setRejectionReason('');
+  };
+
+  const handleConfirmRejectQuotation = () => {
+    if (!quotationToReject?.id) return;
+
+    const targetQuotation = quotationToReject;
+    setRejectingQuoteId(targetQuotation.id);
+
+    rejectQuotation(
+      userToken,
+      targetQuotation.id,
+      rejectionReason.trim(),
+      (res) => {
+        setRejectingQuoteId(null);
+        setQuotationToReject(null);
+        setRejectionReason('');
+        addToast(
+          'Quotation proposal rejected. The branch team has been notified.',
+          'info'
+        );
+      },
+      (err) => {
+        setRejectingQuoteId(null);
+        console.error('Error rejecting quotation:', err);
+        addToast(err?.message || 'Failed to reject quotation. Please try again.', 'danger');
       }
     );
   };
@@ -382,6 +466,7 @@ export default function ClientTrackingPage() {
     { value: 'all', label: 'All Quotations', count: quotationsList.length },
     { value: 'sent', label: 'Pending Acceptance', count: quotationsList.filter((q) => q.status === 'Sent').length },
     { value: 'accepted', label: 'Accepted', count: quotationsList.filter((q) => q.status === 'Accepted').length },
+    { value: 'rejected', label: 'Rejected', count: quotationsList.filter((q) => (q.status || '').toLowerCase() === 'rejected').length },
     { value: 'draft', label: 'In Preparation', count: quotationsList.filter((q) => q.status === 'Draft').length },
   ], [quotationsList]);
 
@@ -393,6 +478,8 @@ export default function ClientTrackingPage() {
       result = result.filter((q) => q.status === 'Sent');
     } else if (quoteStatusFilter === 'accepted') {
       result = result.filter((q) => q.status === 'Accepted');
+    } else if (quoteStatusFilter === 'rejected') {
+      result = result.filter((q) => (q.status || '').toLowerCase() === 'rejected');
     } else if (quoteStatusFilter === 'draft') {
       result = result.filter((q) => q.status === 'Draft');
     }
@@ -508,26 +595,31 @@ export default function ClientTrackingPage() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Status & Requirements',
       render: (quote) => {
-        const isAccepted = quote.status === 'Accepted';
-        const reqStatus = quote.requirementsStatus;
+        const isAccepted = (quote.status || '').toLowerCase() === 'accepted';
+        const rawReqStatus = (quote.requirementsStatus || '').toLowerCase();
+        const reqStatus = rawReqStatus || 'pending';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-start' }}>
             <span className={`quote-status-pill status-${(quote.status || 'draft').toLowerCase()}`}>
-              {quote.status}
+              {quote.status || 'Draft'}
             </span>
-            {reqStatus && reqStatus !== 'not_required' && !isAccepted && (
+            {reqStatus !== 'not_required' && !isAccepted && (
               <span style={{
-                fontSize: '0.7rem',
-                padding: '0.15rem 0.4rem',
+                fontSize: '0.725rem',
+                padding: '0.2rem 0.5rem',
                 background: reqStatus === 'approved' ? '#f0fdf4' : reqStatus === 'submitted' ? '#eff6ff' : reqStatus === 'changes_requested' ? '#fef2f2' : '#fffbeb',
                 color: reqStatus === 'approved' ? '#166534' : reqStatus === 'submitted' ? '#1e40af' : reqStatus === 'changes_requested' ? '#b91c1c' : '#b45309',
                 border: `1px solid ${reqStatus === 'approved' ? '#bbf7d0' : reqStatus === 'submitted' ? '#bfdbfe' : reqStatus === 'changes_requested' ? '#fecaca' : '#fde68a'}`,
                 fontWeight: 600,
-                borderRadius: '0px'
+                borderRadius: '0px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem'
               }}>
-                {reqStatus === 'approved' ? '✓ Reqs Approved' : reqStatus === 'submitted' ? 'Reqs In Review' : reqStatus === 'changes_requested' ? 'Reqs Correction' : 'Reqs Required'}
+                <i className={`fa-solid ${reqStatus === 'approved' ? 'fa-circle-check' : reqStatus === 'submitted' ? 'fa-clock-rotate-left' : reqStatus === 'changes_requested' ? 'fa-triangle-exclamation' : 'fa-file-circle-exclamation'}`}></i>
+                <span>{reqStatus === 'approved' ? 'Reqs Approved' : reqStatus === 'submitted' ? 'Reqs In Review' : reqStatus === 'changes_requested' ? 'Corrections Needed' : 'Reqs Required'}</span>
               </span>
             )}
             {isAccepted && (
@@ -544,12 +636,21 @@ export default function ClientTrackingPage() {
       key: 'actions',
       header: 'Actions',
       render: (quote) => {
-        const isSent = quote.status === 'Sent';
-        const isAccepted = quote.status === 'Accepted';
-        const isPaid = quote.paymentStatus === 'PAID';
-        const isPaymentPending = quote.paymentStatus === 'PAYMENT_PENDING';
+        const statusLower = (quote.status || '').toLowerCase();
+        const isSent = statusLower === 'sent';
+        const isDraft = statusLower === 'draft';
+        const isAccepted = statusLower === 'accepted';
+        const isRejected = statusLower === 'rejected';
+        const isFulfilled = statusLower === 'fulfilled' || (quote.fulfillmentStatus || '').toLowerCase() === 'fulfilled';
+        const isPaid = (quote.paymentStatus || '').toUpperCase() === 'PAID';
+        const isPaymentPending = (quote.paymentStatus || '').toUpperCase() === 'PAYMENT_PENDING';
         const totalAmt = Number(quote.totalAmount || quote.rate || 0);
-        const canAccept = !quote.requirementsStatus || quote.requirementsStatus === 'approved' || quote.requirementsStatus === 'not_required';
+
+        // Determine requirement workflow status
+        const rawReqStatus = (quote.requirementsStatus || '').toLowerCase();
+        const reqStatus = rawReqStatus || 'pending';
+        const canAccept = reqStatus === 'approved' || reqStatus === 'not_required';
+        const isPendingAcceptance = isSent || isDraft;
 
         return (
           <div className="client-row-actions">
@@ -575,15 +676,125 @@ export default function ClientTrackingPage() {
               <i className="fa-solid fa-file-pdf"></i>
             </button>
 
-            {/* Accept & Pay Action or Attach Docs */}
-            {isSent && (
-              canAccept ? (
+            {/* View Official E-Receipt (if Paid) */}
+            {isPaid && (
+              <button
+                type="button"
+                className="icon-btn pdf-action"
+                title="View Official E-Receipt (ADF-07-002)"
+                aria-label="View Official E-Receipt"
+                onClick={() => handleOpenReceipt(quote)}
+                style={{ color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4' }}
+              >
+                <i className="fa-solid fa-receipt"></i>
+              </button>
+            )}
+
+            {/* Requirements Action: Obvious Submit Requirements / Update Requirements Button */}
+            {!isAccepted && !isRejected && !isFulfilled && !canAccept && (
+              <>
+                {reqStatus === 'submitted' ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-xs btn-reqs-in-review"
+                    onClick={() => setViewingQuotation(quote)}
+                    title="Service requirements submitted · Awaiting operator verification"
+                    style={{
+                      borderRadius: '0px',
+                      background: '#eff6ff',
+                      color: '#1e40af',
+                      borderColor: '#bfdbfe',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    <i className="fa-solid fa-clock-rotate-left"></i>
+                    <span>In Review</span>
+                  </button>
+                ) : reqStatus === 'changes_requested' ? (
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-xs btn-action-submit-reqs"
+                    onClick={() => setAttachingRequirementsQuotation(quote)}
+                    title="Corrections requested by operator · Click to update requirements"
+                    style={{
+                      borderRadius: '0px',
+                      background: '#dc2626',
+                      borderColor: '#b91c1c',
+                      color: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontWeight: 600,
+                      boxShadow: '0 1px 2px rgba(220, 38, 38, 0.2)'
+                    }}
+                  >
+                    <i className="fa-solid fa-triangle-exclamation"></i>
+                    <span>Update Requirements</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-xs btn-action-submit-reqs"
+                    onClick={() => setAttachingRequirementsQuotation(quote)}
+                    title="Service requirements required · Click to submit requirements"
+                    style={{
+                      borderRadius: '0px',
+                      background: 'var(--brand-primary, #6366f1)',
+                      borderColor: 'var(--brand-primary, #6366f1)',
+                      color: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontWeight: 600,
+                      boxShadow: '0 1px 3px rgba(99, 102, 241, 0.25)'
+                    }}
+                  >
+                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Submit Requirements</span>
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Accept & Reject Actions (When requirements approved or not required, and quotation pending acceptance) */}
+            {isPendingAcceptance && canAccept && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-xs"
+                  onClick={() => handleInitiateRejectQuotation(quote)}
+                  disabled={rejectingQuoteId === quote.id}
+                  title="Reject Quotation"
+                  style={{
+                    borderRadius: '0px',
+                    borderColor: '#fca5a5',
+                    color: '#b91c1c',
+                    background: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}
+                >
+                  {rejectingQuoteId === quote.id ? (
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-circle-xmark"></i>
+                      <span>Reject</span>
+                    </>
+                  )}
+                </button>
+
                 <button
                   type="button"
                   className="btn btn-primary btn-xs"
                   onClick={() => handleInitiateAcceptQuotation(quote)}
                   disabled={acceptingQuoteId === quote.id}
                   title="Accept Quotation & Proceed to Pay"
+                  style={{ borderRadius: '0px' }}
                 >
                   {acceptingQuoteId === quote.id ? (
                     <i className="fa-solid fa-spinner fa-spin"></i>
@@ -594,17 +805,36 @@ export default function ClientTrackingPage() {
                     </>
                   )}
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-xs"
-                  onClick={() => setViewingQuotation(quote)}
-                  title="Review & Attach Service Documents"
-                >
-                  <i className="fa-solid fa-file-arrow-up"></i>
-                  <span>{quote.requirementsStatus === 'changes_requested' ? 'Update Docs' : quote.requirementsStatus === 'submitted' ? 'In Review' : 'Attach Docs'}</span>
-                </button>
-              )
+              </>
+            )}
+
+            {/* Reject action if quotation pending acceptance and requirements are not yet approved */}
+            {isPendingAcceptance && !canAccept && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => handleInitiateRejectQuotation(quote)}
+                disabled={rejectingQuoteId === quote.id}
+                title="Reject Quotation"
+                style={{
+                  borderRadius: '0px',
+                  borderColor: '#fca5a5',
+                  color: '#b91c1c',
+                  background: '#fff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+              >
+                {rejectingQuoteId === quote.id ? (
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-circle-xmark"></i>
+                    <span>Reject</span>
+                  </>
+                )}
+              </button>
             )}
 
             {isAccepted && isPaymentPending && (
@@ -635,7 +865,7 @@ export default function ClientTrackingPage() {
         );
       }
     }
-  ], [acceptingQuoteId]);
+  ], [acceptingQuoteId, rejectingQuoteId, userToken]);
 
   // Inquiry Columns for DataTable
   const inquiryColumns = useMemo(() => [
@@ -916,7 +1146,11 @@ export default function ClientTrackingPage() {
               </div>
             ) : (
               filteredServices.map((service) => (
-                <ClientServiceTracker key={service.id} service={service} />
+                <ClientServiceTracker
+                  key={service.id}
+                  service={service}
+                  onOpenReceipt={handleOpenReceipt}
+                />
               ))
             )}
           </div>
@@ -1144,6 +1378,10 @@ export default function ClientTrackingPage() {
           setViewingQuotation(null);
           handleInitiateAcceptQuotation(q);
         }}
+        onRejectQuotation={(q) => {
+          setViewingQuotation(null);
+          handleInitiateRejectQuotation(q);
+        }}
         onOpenPayment={(q) => {
           setViewingQuotation(null);
           handleOpenPayment(q);
@@ -1176,6 +1414,145 @@ export default function ClientTrackingPage() {
         onConfirm={handleConfirmAcceptQuotation}
         isLoading={!!acceptingQuoteId}
       />
+
+      {/* Quotation Rejection Confirmation Modal */}
+      <BaseModal
+        isOpen={!!quotationToReject}
+        onClose={() => !rejectingQuoteId && setQuotationToReject(null)}
+        maxWidth="32rem"
+        width="100%"
+        isLoading={!!rejectingQuoteId}
+      >
+        <div style={{ padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div
+              style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '0px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.25rem',
+                flexShrink: 0
+              }}
+            >
+              <i className="fa-solid fa-ban"></i>
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-dark, #0f172a)' }}>
+                Reject Quotation
+              </h3>
+              <p style={{ margin: '0.15rem 0 0', fontSize: '0.8125rem', color: 'var(--text-light, #64748b)' }}>
+                {quotationToReject?.quoteNo} · {quotationToReject?.serviceTitle || 'Custom Service'}
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '0px',
+              color: '#991b1b',
+              fontSize: '0.85rem',
+              lineHeight: 1.45,
+              marginBottom: '1rem'
+            }}
+          >
+            <strong>Are you sure you want to reject this quotation?</strong>
+            <div style={{ marginTop: '0.25rem' }}>
+              You will not be able to accept this quotation after rejecting it. This action will notify the branch operator that you have declined this proposal.
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label
+              htmlFor="rejection-reason"
+              style={{
+                display: 'block',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: 'var(--text-dark, #1e293b)',
+                marginBottom: '0.35rem'
+              }}
+            >
+              Reason for Rejection <span style={{ fontWeight: 400, color: 'var(--text-light, #64748b)' }}>(Optional)</span>
+            </label>
+            <textarea
+              id="rejection-reason"
+              rows={3}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="e.g. Budget exceeds expectations, preferred dates unavailable, seeking alternative itinerary..."
+              style={{
+                width: '100%',
+                padding: '0.625rem',
+                fontSize: '0.85rem',
+                border: '1px solid var(--border-color, #cbd5e1)',
+                borderRadius: '0px',
+                background: '#fff',
+                fontFamily: 'inherit',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setQuotationToReject(null)}
+              disabled={!!rejectingQuoteId}
+              style={{ borderRadius: '0px' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleConfirmRejectQuotation}
+              disabled={!!rejectingQuoteId}
+              style={{
+                borderRadius: '0px',
+                background: '#dc2626',
+                borderColor: '#dc2626',
+                color: '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              {rejectingQuoteId ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  <span>Rejecting...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-ban"></i>
+                  <span>Confirm Rejection</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </BaseModal>
+
+      {/* Direct Quick Action Requirements Attachment Modal */}
+      {Boolean(attachingRequirementsQuotation) && (
+        <QuotationAttachRequirementsModal
+          isOpen={Boolean(attachingRequirementsQuotation)}
+          onClose={() => setAttachingRequirementsQuotation(null)}
+          quotation={attachingRequirementsQuotation}
+          onSuccess={() => {
+            setAttachingRequirementsQuotation(null);
+          }}
+        />
+      )}
     </div>
   );
 }

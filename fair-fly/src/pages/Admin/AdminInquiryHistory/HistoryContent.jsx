@@ -22,6 +22,7 @@ export default function HistoryContent() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedBranch, setSelectedBranch] = useState('all');
+  const [archiveView, setArchiveView] = useState('active'); // 'active' | 'archived'
 
   // Modals state
   const [showBuilderModal, setShowBuilderModal] = useState(false);
@@ -56,7 +57,7 @@ export default function HistoryContent() {
     return () => { isMounted = false; };
   }, []);
 
-  // Server-side KPI Metrics
+  // Server-side KPI Metrics (Active Records)
   const [kpis, setKpis] = useState({
     total: 0,
     confirmed: 0,
@@ -68,9 +69,9 @@ export default function HistoryContent() {
     try {
       const colRef = collection(firestore, 'inquiries');
       const [totalSnap, confSnap, pendSnap] = await Promise.all([
-        getCountFromServer(colRef),
-        getCountFromServer(query(colRef, where('status', 'in', ['confirmed', 'Confirmed', 'accepted', 'completed']))),
-        getCountFromServer(query(colRef, where('status', 'in', ['pending', 'Pending']))),
+        getCountFromServer(query(colRef, where('archived', '==', false))),
+        getCountFromServer(query(colRef, where('archived', '==', false), where('status', 'in', ['confirmed', 'Confirmed', 'accepted', 'completed']))),
+        getCountFromServer(query(colRef, where('archived', '==', false), where('status', 'in', ['pending', 'Pending']))),
       ]);
       setKpis({
         total: totalSnap.data().count,
@@ -90,7 +91,7 @@ export default function HistoryContent() {
 
   // Construct query-level constraints
   const queryFilters = useMemo(() => {
-    const list = [];
+    const list = [where('archived', '==', archiveView === 'archived')];
     if (statusFilter !== 'all') {
       list.push(where('status', 'in', [
         statusFilter,
@@ -101,7 +102,7 @@ export default function HistoryContent() {
       list.push(where('branchName', '==', selectedBranch));
     }
     return list;
-  }, [statusFilter, selectedBranch]);
+  }, [statusFilter, selectedBranch, archiveView]);
 
   // Client search filter function for multi-field bounded search
   const searchFilterFn = useCallback(
@@ -130,10 +131,11 @@ export default function HistoryContent() {
 
       const inqBranch = inq.branchName || inq.preferredBranchLocation || '';
       const matchesBranch = selectedBranch === 'all' || inqBranch === selectedBranch;
+      const matchesArchive = archiveView === 'archived' ? Boolean(inq.archived) : !inq.archived;
 
-      return matchesSearch && matchesStatus && matchesBranch;
+      return matchesSearch && matchesStatus && matchesBranch && matchesArchive;
     },
-    [debouncedSearch, statusFilter, selectedBranch]
+    [debouncedSearch, statusFilter, selectedBranch, archiveView]
   );
 
   // Firestore cursor pagination hook
@@ -148,6 +150,7 @@ export default function HistoryContent() {
   } = useFirestorePagination({
     collectionName: 'inquiries',
     filters: queryFilters,
+    filterKey: `${archiveView}-${statusFilter}-${selectedBranch}`,
     orderByField: 'createdAt',
     orderDirection: 'desc',
     initialPageSize: 10,
@@ -273,6 +276,18 @@ export default function HistoryContent() {
 
           <FilterChipGroup
             chips={[
+              { value: 'active', label: 'Active' },
+              { value: 'archived', label: 'Archived' },
+            ]}
+            activeChip={archiveView}
+            onChipChange={(val) => {
+              setArchiveView(val);
+              goToPage(1);
+            }}
+          />
+
+          <FilterChipGroup
+            chips={[
               { value: 'all', label: `All (${totalCount})` },
               { value: 'confirmed', label: `Confirmed (${confirmedCount})` },
               { value: 'pending', label: `Pending (${pendingCount})` },
@@ -302,8 +317,8 @@ export default function HistoryContent() {
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
                     <div className="empty-state-box">
-                      <i className="fa-solid fa-file-circle-question empty-icon"></i>
-                      <p>No inquiry records match your search or filter criteria.</p>
+                      <i className={`fa-solid ${archiveView === 'archived' ? 'fa-box-archive' : 'fa-file-circle-question'} empty-icon`}></i>
+                      <p>{archiveView === 'archived' ? 'No archived inquiry records found.' : 'No inquiry records match your search or filter criteria.'}</p>
                     </div>
                   </td>
                 </tr>
@@ -357,9 +372,15 @@ export default function HistoryContent() {
                         </span>
                       </td>
                       <td>
-                        <span className={statusPillClass} style={{ textTransform: 'capitalize' }}>
-                          {inq.status || 'Pending'}
-                        </span>
+                        {inq.archived ? (
+                          <span className="status-pill status-pill-disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                            <i className="fa-solid fa-box-archive" style={{ marginRight: '0.3rem' }}></i>Archived
+                          </span>
+                        ) : (
+                          <span className={statusPillClass} style={{ textTransform: 'capitalize' }}>
+                            {inq.status || 'Pending'}
+                          </span>
+                        )}
                       </td>
                       <td className="actions-col" style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end' }}>

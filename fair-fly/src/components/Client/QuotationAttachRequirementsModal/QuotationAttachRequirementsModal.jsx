@@ -26,9 +26,9 @@ export default function QuotationAttachRequirementsModal({
   // Requirement Inputs State: { [idx]: { textValue: '', file: File|null, existingFile: Object|null } }
   const [inputs, setInputs] = useState({});
 
-  // 1. Fetch existing submitted requirements if available
+  // 1. Fetch existing submitted requirements if available (only subscribe when modal is open)
   const { requirements: existingSubmitted } = useSubmittedRequirements(
-    quotation?.submittedRequirementsId
+    isOpen ? quotation?.submittedRequirementsId : null
   );
 
   // 2. Fetch catalog service schema
@@ -71,6 +71,8 @@ export default function QuotationAttachRequirementsModal({
 
   // Unified items to present to user
   const requirementItems = useMemo(() => {
+    if (!isOpen) return [];
+
     if (serviceSchema.length > 0) {
       return serviceSchema.map((item, idx) => {
         const name = typeof item === 'string' ? item.trim() : (item.name || item.title || `Requirement ${idx + 1}`).trim();
@@ -80,38 +82,77 @@ export default function QuotationAttachRequirementsModal({
       });
     }
 
-    // Fallback: If quotation has legacy embedded requirements
-    if (Array.isArray(quotation?.requirements) && quotation.requirements.length > 0) {
-      return quotation.requirements.map((item, idx) => {
-        const name = typeof item === 'string' ? item.trim() : (item.name || item.title || `Requirement ${idx + 1}`).trim();
-        const inputType = typeof item === 'object' ? item.inputType || 'text' : 'text';
-        const isRequired = typeof item === 'object' ? item.required !== false : true;
-        return { name, inputType, required: isRequired };
-      });
-    }
+    const fallbackList = Array.isArray(existingSubmitted) && existingSubmitted.length > 0
+      ? existingSubmitted
+      : (Array.isArray(quotation?.submittedRequirements) && quotation.submittedRequirements.length > 0
+          ? quotation.submittedRequirements
+          : (Array.isArray(quotation?.requirements) ? quotation.requirements : []));
 
-    return [];
-  }, [serviceSchema, quotation?.requirements]);
+    const cleanFallback = fallbackList.filter((r) => {
+      const name = (typeof r === 'string' ? r : (r?.name || r?.title || r?.label || '')).trim().toLowerCase();
+      return name &&
+             name !== 'specified requirements of client' &&
+             name !== 'client specified requirements' &&
+             name !== 'specified requirements of the client' &&
+             name !== 'specified requirements';
+    });
 
-  // Pre-fill inputs when existing submissions or requirementItems change
+    return cleanFallback.map((item, idx) => {
+      const name = typeof item === 'string' ? item.trim() : (item.name || item.title || `Requirement ${idx + 1}`).trim();
+      const inputType = typeof item === 'object' ? item.inputType || 'text' : 'text';
+      const isRequired = typeof item === 'object' ? item.required !== false : true;
+      return { name, inputType, required: isRequired };
+    });
+  }, [isOpen, serviceSchema, quotation?.requirements, quotation?.submittedRequirements, existingSubmitted]);
+
+  // Pre-fill inputs when existing submissions or requirementItems change without wiping user selections
   useEffect(() => {
-    if (requirementItems.length > 0) {
-      const initialMap = {};
-      requirementItems.forEach((item, idx) => {
-        const matched = (existingSubmitted || []).find((s) => {
-          const sName = typeof s === 'string' ? s.trim() : (s?.name || s?.title || '').trim();
-          return sName.toLowerCase() === item.name.toLowerCase();
-        });
-
-        initialMap[idx] = {
-          textValue: typeof matched?.value === 'string' ? matched.value : (matched?.textValue || ''),
-          file: null,
-          existingFile: matched?.file || (matched?.fileUrl ? { url: matched.fileUrl, fileName: matched.fileName } : null)
-        };
-      });
-      setInputs(initialMap);
+    if (!isOpen) {
+      setInputs((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+      return;
     }
-  }, [requirementItems, existingSubmitted]);
+
+    if (requirementItems.length > 0) {
+      setInputs((prev) => {
+        let hasChanges = false;
+        const next = { ...prev };
+        requirementItems.forEach((item, idx) => {
+          const matched = (existingSubmitted || []).find((s) => {
+            const sName = typeof s === 'string' ? s.trim() : (s?.name || s?.title || '').trim();
+            return sName.toLowerCase() === item.name.toLowerCase();
+          }) || (Array.isArray(quotation?.submittedRequirements) ? quotation.submittedRequirements.find((s) => {
+            const sName = typeof s === 'string' ? s.trim() : (s?.name || s?.title || '').trim();
+            return sName.toLowerCase() === item.name.toLowerCase();
+          }) : null);
+
+          const existingFile = matched?.file || (matched?.fileUrl ? { url: matched.fileUrl, fileName: matched.fileName } : null);
+          const existingText = typeof matched?.value === 'string' ? matched.value : (matched?.textValue || '');
+
+          if (!next[idx]) {
+            next[idx] = {
+              textValue: existingText,
+              file: null,
+              existingFile
+            };
+            hasChanges = true;
+          } else {
+            const current = next[idx];
+            const nextText = current.textValue !== undefined && current.textValue !== '' ? current.textValue : existingText;
+            const nextExistingFile = current.existingFile || existingFile;
+            if (current.textValue !== nextText || current.existingFile !== nextExistingFile) {
+              next[idx] = {
+                textValue: nextText,
+                file: current.file || null,
+                existingFile: nextExistingFile
+              };
+              hasChanges = true;
+            }
+          }
+        });
+        return hasChanges ? next : prev;
+      });
+    }
+  }, [isOpen, quotation?.id, requirementItems, existingSubmitted, quotation?.submittedRequirements]);
 
   // Validation: Mandatory fields/files must not be empty
   const isSubmissionValid = useMemo(() => {
@@ -137,9 +178,11 @@ export default function QuotationAttachRequirementsModal({
   const handleFileChange = (idx, file) => {
     if (!file) return;
 
-    // Check size limit: 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      addToast('File exceeds 10MB size limit', 'warning');
+    // Check size limit: 25MB (matching backend upload limit)
+    if (file.size > 25 * 1024 * 1024) {
+      addToast('File exceeds 25MB size limit', 'warning');
+      const inputEl = document.getElementById(`client-file-${idx}`);
+      if (inputEl) inputEl.value = '';
       return;
     }
 
@@ -153,6 +196,9 @@ export default function QuotationAttachRequirementsModal({
   };
 
   const handleRemoveSelectedFile = (idx) => {
+    const inputEl = document.getElementById(`client-file-${idx}`);
+    if (inputEl) inputEl.value = '';
+
     setInputs(prev => ({
       ...prev,
       [idx]: {
@@ -243,6 +289,8 @@ export default function QuotationAttachRequirementsModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -330,7 +378,7 @@ export default function QuotationAttachRequirementsModal({
                         <input
                           type="file"
                           id={`client-file-${idx}`}
-                          accept={inputType === 'image' ? 'image/*' : '.pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx'}
+                          accept={inputType === 'image' ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.gif,image/*'}
                           className="attach-hidden-file-input"
                           onChange={(e) => handleFileChange(idx, e.target.files[0])}
                           disabled={isSubmitting}
@@ -344,8 +392,11 @@ export default function QuotationAttachRequirementsModal({
                         ) : (
                           <div className="attach-new-file-selected">
                             <i className="fa-solid fa-paperclip"></i>
-                            <span className="file-name-txt">{state.file.name}</span>
+                            <span className="file-name-txt" title={state.file.name}>{state.file.name}</span>
                             <span className="file-size-txt">({(state.file.size / 1024).toFixed(0)} KB)</span>
+                            <label htmlFor={`client-file-${idx}`} className="attach-change-file-btn" title="Choose a different file">
+                              <i className="fa-solid fa-pen"></i> Change
+                            </label>
                             <button
                               type="button"
                               className="attach-remove-file-btn"

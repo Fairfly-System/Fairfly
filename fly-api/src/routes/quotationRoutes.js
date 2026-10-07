@@ -6,6 +6,9 @@ const {
   updateQuotationStatus, 
   acceptQuotation, 
   deleteQuotation,
+  archiveQuotation,
+  restoreQuotation,
+  rejectQuotation,
   updateQuotation,
   submitQuotationRequirements,
   reviewQuotationRequirements
@@ -44,6 +47,8 @@ const QUOTATION_ALLOWED_FIELDS = [
   'preparedByContact',
   'preparedBy',
   'remarks',
+  'operatorRemarks',
+  'clientRemarks',
   'quotationDate',
   'branchUid',
   'branchName',
@@ -53,6 +58,15 @@ const QUOTATION_ALLOWED_FIELDS = [
   'status',
   'paymentStatus',
   'activeServiceId',
+  'archived',
+  'archivedAt',
+  'archivedBy',
+  'archivedReason',
+  'restoredAt',
+  'restoredBy',
+  'rejectedAt',
+  'rejectedBy',
+  'rejectionReason',
   'id',
   'createdAt',
   'updatedAt'
@@ -103,6 +117,23 @@ router.post(
 // Accept quotation (Client or on-site Operator — verified in controller)
 router.post('/:id/accept', performanceProfiler('POST /quotations/:id/accept', verifyFirebaseToken, apiRateLimiter, acceptQuotation));
 
+// Reject quotation (Client decision or Operator recording client decision)
+router.post(
+  '/:id/reject',
+  performanceProfiler(
+    'POST /quotations/:id/reject',
+    verifyFirebaseToken,
+    requireRole(['client', 'operator', 'branch_operator', 'admin']),
+    allowedFields(['reason', 'rejectionReason']),
+    apiRateLimiter,
+    rejectQuotation
+  )
+);
+
+// Archive and Restore routes (replacing permanent deletion)
+router.post('/:id/archive', performanceProfiler('POST /quotations/:id/archive', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, archiveQuotation));
+router.post('/:id/restore', performanceProfiler('POST /quotations/:id/restore', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, restoreQuotation));
+
 // Update quotation status (Admin or Assigned Operator)
 router.patch('/:id/status', performanceProfiler('PATCH /quotations/:id/status', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, updateQuotationStatus));
 
@@ -110,7 +141,7 @@ router.patch('/:id/status', performanceProfiler('PATCH /quotations/:id/status', 
 router.patch('/:id', performanceProfiler('PATCH /quotations/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), allowedFields(QUOTATION_ALLOWED_FIELDS), apiRateLimiter, updateQuotation));
 router.put('/:id', performanceProfiler('PUT /quotations/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), allowedFields(QUOTATION_ALLOWED_FIELDS), apiRateLimiter, updateQuotation));
 
-// Delete quotation (Admin or Assigned Operator)
-router.delete('/:id', performanceProfiler('DELETE /quotations/:id', verifyFirebaseToken, requireRole(['admin', 'operator']), apiRateLimiter, deleteQuotation));
+// Permanent delete endpoint is disabled; returns 400 explaining archiving policy
+router.delete('/:id', performanceProfiler('DELETE /quotations/:id', verifyFirebaseToken, requireRole(['admin', 'operator', 'branch_operator']), apiRateLimiter, deleteQuotation));
 
 module.exports = router;

@@ -222,32 +222,22 @@
   cursor: not-allowed;
 }
 
-@media screen and (max-width: 768px) {
-
-    
-}
-
 @media screen and (max-width: 576px) {
-
   .chatbot-launcher {
-  
-  font-size: 14px;
-  bottom: 20px;
-  right: 20px;
- 
-}
+    font-size: 14px;
+    bottom: 1rem;
+    right: 1rem;
+    padding: 14px;
+  }
 
-
-.chatbot-box {
-
-  bottom: 30px;
-  right: 25px;
-  width: 310px;
-  height: 510px;
-
-}
-
-
+  .chatbot-box {
+    bottom: 1rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    max-width: calc(100vw - 1.5rem);
+    height: min(520px, calc(100dvh - 2rem));
+  }
 }
 
 .chatbot-quick-access {

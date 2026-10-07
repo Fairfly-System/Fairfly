@@ -117,14 +117,16 @@ service cloud.firestore {
     // ── Active Client Services / Processing Requests ──────────────
     // CUD operations strictly handled by backend Admin SDK upon verified payment
     match /active_services/{activeId} {
-      allow read: if isAdmin() 
+      allow get: if true;
+      allow list: if isAdmin() 
         || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
       allow create: if false;
       allow update: if isAdminOrOperator();
       allow delete: if isAdmin();
     }
     match /activeServices/{activeId} {
-      allow read: if isAdmin() 
+      allow get: if true;
+      allow list: if isAdmin() 
         || (isSignedIn() && (resource.data.clientUid == request.auth.uid || resource.data.operatorId == request.auth.uid || resource.data.branchUid == request.auth.uid));
       allow create: if false;
       allow update: if isAdminOrOperator();
@@ -175,20 +177,30 @@ service cloud.firestore {
 
     // ── Quotations ────────────────────────────────────────────────
     match /quotations/{quotationId} {
-      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow get: if true;
+      allow list: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
       allow write: if isAdminOrOperator();
     }
     match /quotation_requests/{requestId} {
-      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow get: if true;
+      allow list: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdminOrOperator();
     }
 
     // ── Inquiries ─────────────────────────────────────────────────
     match /inquiries/{inquiryId} {
-      allow read: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow get: if true;
+      allow list: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
       allow create: if isSignedIn();
       allow update, delete: if isAdminOrOperator();
+    }
+
+    // ── Receipts (Official E-Receipts ADF-07-002) ──────────────────
+    match /receipts/{receiptId} {
+      allow get: if true;
+      allow list: if isAdminOrOperator() || (isSignedIn() && resource.data.clientUid == request.auth.uid);
+      allow write: if false;
     }
 
     // ── Submitted Requirements (Normalized Pseudo-Relational Store) ─

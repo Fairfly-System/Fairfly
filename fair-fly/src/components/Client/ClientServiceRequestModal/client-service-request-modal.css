@@ -285,3 +285,96 @@
   margin-top: 0.5rem;
 }
 
+/* Responsive Breakpoints — Single Column on Mobile */
+@media (max-width: 48rem), (max-width: 768px) {
+  .inquiry-form-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.875rem !important;
+  }
+
+  .inquiry-form-grid .inquiry-field-group,
+  .inquiry-form-grid .inquiry-field-group.col-span-2 {
+    width: 100% !important;
+    grid-column: auto !important;
+  }
+
+  .inquiry-form-grid .inquiry-name-row {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.625rem !important;
+  }
+
+  .inquiry-form-grid .inquiry-name-row .inquiry-field-group {
+    width: 100% !important;
+  }
+
+  .inquiry-form-grid .client-type-selector {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.625rem !important;
+  }
+
+  .inquiry-form-grid .client-type-options {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  .inquiry-form-grid .client-type-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .client-req-section {
+    padding: 0.875rem 0.75rem;
+  }
+
+  .client-req-card {
+    padding: 0.75rem 0.625rem;
+  }
+
+  .client-req-service-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .client-req-actions-bar {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .client-req-actions-bar button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .client-req-section {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .client-req-card {
+    padding: 0.625rem 0.5rem;
+  }
+
+  .client-req-service-details-placeholder {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .client-req-service-name {
+    font-size: 0.875rem;
+  }
+
+  .client-req-service-price {
+    font-size: 0.95rem;
+  }
+}
+

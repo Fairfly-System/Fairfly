@@ -115,15 +115,15 @@ export default function InquiryDetailModal({
           </div>
         </div>
 
-        {/* Operator Remarks / Notes */}
-        {(inquiry.notes || inquiry.remarks) && (
-          <div className="inq-modal-section" style={{ background: 'var(--warning-yellow-light, #fffbeb)', borderColor: '#fde68a' }}>
-            <div className="inq-section-heading" style={{ color: '#b45309' }}>
-              <i className="fa-solid fa-circle-info" style={{ color: '#d97706' }}></i>
-              Operator Remarks & Updates
+        {/* Client Remarks & Special Instructions */}
+        {(inquiry.clientRemarks || inquiry.remarks || (typeof inquiry.notes === 'string' && inquiry.notes.trim() && inquiry.notes !== inquiry.specifiedRequirements)) && (
+          <div className="inq-modal-section">
+            <div className="inq-section-heading" style={{ color: 'var(--primary, #4338ca)' }}>
+              <i className="fa-regular fa-comment-dots" style={{ color: 'var(--brand-primary, #6366f1)' }}></i>
+              Client Remarks & Special Instructions (SAF-01-002 Col 3)
             </div>
-            <div className="inq-text-block" style={{ color: '#78350f' }}>
-              {inquiry.notes || inquiry.remarks}
+            <div className="inq-text-block">
+              {inquiry.clientRemarks || inquiry.remarks || inquiry.notes}
             </div>
           </div>
         )}

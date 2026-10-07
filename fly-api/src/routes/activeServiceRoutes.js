@@ -25,6 +25,8 @@ const ACTIVE_SERVICE_ALLOWED_FIELDS = [
   'operatorId',
   'branchName',
   'additionalNotes',
+  'operatorRemarks',
+  'clientRemarks',
   'submittedRequirements',
   'submittedRequirementsId',
   'source',

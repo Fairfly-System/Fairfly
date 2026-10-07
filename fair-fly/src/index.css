@@ -31,11 +31,42 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 5.5rem;
+  /* Baseline default root font size */
+  font-size: 16px;
+}
+
+/* ==========================================================================
+   !PRIO — Resolution-Proportional REM Scaling Across All Breakpoints
+   Formula: Root Font Size = 16px * (Current Viewport Width / Reference Viewport Width)
+   ========================================================================== */
+
+/* A. Standard Desktop -> Just Before Tablet (1024px to 1440px+, reference: 1280px) */
+@media screen and (min-width: 1024.02px) {
+  html {
+    font-size: clamp(12.8px, calc(16px * 100vw / 1280), 18px);
+  }
+}
+
+/* B. Tablet -> Just Before Mobile (640.02px to 1024px, reference: 768px) */
+@media screen and (min-width: 640.02px) and (max-width: 1024px) {
+  html {
+    font-size: clamp(13.33px, calc(16px * 100vw / 768), 21.33px);
+  }
+}
+
+/* C. Mobile -> Smallest Supported Screen (320px to 640px, reference: 480px) */
+@media screen and (max-width: 640px) {
+  html {
+    font-size: clamp(10.67px, calc(16px * 100vw / 480), 21.33px);
+  }
+}
+
+/* Preserve fixed standard root baseline for Admin and Operator portals */
+html:has(.app-layout-container) {
+  font-size: 16px !important;
 }
 
 :root {
-  font-size: 100%; /* 1rem = 16px */
-
   /* Typography */
   --font: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: 'Instrument Serif', Georgia, serif;
@@ -619,6 +650,42 @@ tbody tr.selected:hover td {
 
 .form-input::placeholder, .form-textarea::placeholder {
   color: var(--text-light);
+}
+
+/* Responsive Grid Form Utilities */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+@media (max-width: 48rem) {
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* Universal Table Horizontal Scroll Container */
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom Universal Scrollbar (White track with Main Accent thumb) */

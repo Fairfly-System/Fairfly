@@ -10,6 +10,7 @@ export default function QuotationDetailModal({
   onClose,
   quotation,
   onAcceptQuotation,
+  onRejectQuotation,
   onOpenPayment,
   onOpenPdf,
   isAccepting = false,
@@ -29,6 +30,7 @@ export default function QuotationDetailModal({
   const isFulfilled = (quotation.status || '').toLowerCase() === 'fulfilled' || (quotation.fulfillmentStatus || '').toLowerCase() === 'fulfilled';
   const isAccepted = quotation.status === 'Accepted' && !isFulfilled;
   const isSent = quotation.status === 'Sent' && !isFulfilled;
+  const isRejected = (quotation.status || '').toLowerCase() === 'rejected';
   const isPaid = quotation.paymentStatus === 'PAID';
   const isPaymentPending = (quotation.paymentStatus || '').toUpperCase() === 'PAYMENT_PENDING';
 
@@ -84,6 +86,35 @@ export default function QuotationDetailModal({
             ) : null}
           </div>
         </div>
+
+        {/* Rejection Notice Banner */}
+        {isRejected && (
+          <div style={{
+            padding: '0.85rem 1.15rem',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#991b1b',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.35rem',
+            marginBottom: '1rem'
+          }}>
+            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+              <i className="fa-solid fa-circle-xmark" style={{ color: 'var(--error-red, #dc2626)' }}></i>
+              <span>Quotation Proposal Rejected</span>
+            </div>
+            {quotation.rejectedAt && (
+              <span style={{ fontSize: '0.8rem', color: '#b91c1c' }}>
+                Date Declined: {new Date(quotation.rejectedAt).toLocaleString()}
+              </span>
+            )}
+            {quotation.rejectionReason && (
+              <span style={{ fontSize: '0.825rem', marginTop: '0.2rem' }}>
+                <strong>Reason:</strong> {quotation.rejectionReason}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Pricing Overview */}
         <div className="quote-modal-financial-grid">
@@ -307,14 +338,14 @@ export default function QuotationDetailModal({
         </div>
 
         {/* Operator Remarks */}
-        {quotation.remarks && (
+        {(quotation.operatorRemarks || quotation.remarks) && (
           <div className="quote-modal-section" style={{ background: 'var(--warning-yellow-light, #fffbeb)', borderColor: '#fde68a' }}>
             <div className="quote-section-heading" style={{ color: '#b45309' }}>
               <i className="fa-solid fa-circle-info" style={{ color: '#d97706' }}></i>
-              Operator Remarks & Special Instructions
+              Operator Remarks & Payment Terms
             </div>
             <div className="quote-text-block" style={{ color: '#78350f' }}>
-              {quotation.remarks}
+              {quotation.operatorRemarks || quotation.remarks}
             </div>
           </div>
         )}
@@ -341,48 +372,92 @@ export default function QuotationDetailModal({
 
           <div className="quote-modal-footer-right">
             {isSent && (
-              canAccept ? (
+              <>
                 <button
                   type="button"
-                  className="btn btn-primary btn-accept"
+                  className="btn btn-secondary"
                   onClick={() => {
                     onClose();
-                    onAcceptQuotation && onAcceptQuotation(quotation);
+                    onRejectQuotation && onRejectQuotation(quotation);
                   }}
-                  disabled={isAccepting}
-                >
-                  <i className="fa-solid fa-circle-check"></i>
-                  <span>Accept & Proceed to Pay</span>
-                </button>
-              ) : reqStatus === 'submitted' ? (
-                <span
                   style={{
+                    borderRadius: '0px',
+                    borderColor: '#fca5a5',
+                    color: '#b91c1c',
+                    background: '#fff',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '0.4rem',
-                    background: '#eff6ff',
-                    color: '#1e40af',
-                    border: '1px solid #bfdbfe',
-                    padding: '0.45rem 0.85rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    borderRadius: '0px'
+                    gap: '0.4rem'
                   }}
                 >
-                  <i className="fa-solid fa-clock-rotate-left"></i>
-                  <span>Requirements Under Review</span>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => setShowAttachModal(true)}
-                  style={{ background: 'var(--brand-primary, #6366f1)', borderRadius: '0px' }}
-                >
-                  <i className="fa-solid fa-file-arrow-up"></i>
-                  <span>{reqStatus === 'changes_requested' ? 'Update Requirements' : 'Attach Requirements to Accept'}</span>
+                  <i className="fa-solid fa-circle-xmark"></i>
+                  <span>Reject Quotation</span>
                 </button>
-              )
+
+                {canAccept ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-accept"
+                    onClick={() => {
+                      onClose();
+                      onAcceptQuotation && onAcceptQuotation(quotation);
+                    }}
+                    disabled={isAccepting}
+                    style={{ borderRadius: '0px' }}
+                  >
+                    <i className="fa-solid fa-circle-check"></i>
+                    <span>Accept & Proceed to Pay</span>
+                  </button>
+                ) : reqStatus === 'submitted' ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: '#eff6ff',
+                      color: '#1e40af',
+                      border: '1px solid #bfdbfe',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      borderRadius: '0px'
+                    }}
+                  >
+                    <i className="fa-solid fa-clock-rotate-left"></i>
+                    <span>Requirements Under Review</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setShowAttachModal(true)}
+                    style={{ background: 'var(--brand-primary, #6366f1)', borderRadius: '0px' }}
+                  >
+                    <i className="fa-solid fa-file-arrow-up"></i>
+                    <span>{reqStatus === 'changes_requested' ? 'Update Requirements' : 'Attach Requirements to Accept'}</span>
+                  </button>
+                )}
+              </>
+            )}
+
+            {isRejected && (
+              <span
+                style={{
+                  background: '#fee2e2',
+                  color: '#b91c1c',
+                  border: '1px solid #fca5a5',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.45rem 0.85rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  borderRadius: '0px'
+                }}
+              >
+                <i className="fa-solid fa-ban"></i>
+                <span>Proposal Rejected</span>
+              </span>
             )}
 
             {isAccepted && isPaymentPending && (
@@ -426,11 +501,16 @@ export default function QuotationDetailModal({
         </div>
       </div>
 
-      <QuotationAttachRequirementsModal
-        isOpen={showAttachModal}
-        onClose={() => setShowAttachModal(false)}
-        quotation={quotation}
-      />
+      {showAttachModal && (
+        <QuotationAttachRequirementsModal
+          isOpen={showAttachModal}
+          onClose={() => setShowAttachModal(false)}
+          quotation={quotation}
+          onSuccess={() => {
+            setShowAttachModal(false);
+          }}
+        />
+      )}
     </BaseModal>
   );
 }

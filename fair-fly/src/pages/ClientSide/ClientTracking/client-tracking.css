@@ -234,6 +234,26 @@
 }
 
 @media (max-width: 48rem) {
+  .tracking-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tracking-primary-purple-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .client-portal-main-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .portal-main-tab-btn {
+    flex-shrink: 0;
+  }
+
   .tracking-toolbar-card {
     flex-direction: column;
     align-items: stretch;
@@ -246,6 +266,55 @@
   .tracking-tabs {
     overflow-x: auto;
     padding-bottom: 0.25rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .client-portal-main-tabs {
+    flex-direction: column;
+    border-bottom: none;
+    gap: 0.5rem;
+    overflow-x: visible;
+  }
+
+  .portal-main-tab-btn {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8125rem;
+    border: 1px solid var(--border-color);
+  }
+
+  .tracking-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-kpi-card {
+    padding: 0.875rem 1rem;
+  }
+}
+
+@media (max-width: 22.5rem) { /* 360px down to 320px */
+  .tracking-header-title {
+    font-size: 1.25rem;
+  }
+
+  .tracking-kpi-card {
+    padding: 0.75rem 0.625rem;
+  }
+
+  .tracking-toolbar-card {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .portal-main-tab-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78125rem;
+  }
+
+  .tracking-primary-purple-btn {
+    padding: 0.5625rem 0.75rem;
+    font-size: 0.8125rem;
   }
 }
 
@@ -438,6 +507,11 @@
 .quote-status-pill.status-accepted {
   background: #dcfce7;
   color: #15803d;
+}
+
+.quote-status-pill.status-rejected {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .quote-details-row {

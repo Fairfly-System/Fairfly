@@ -2,11 +2,13 @@ const {
   getFromDatabase, 
   queryDatabaseAdvanced 
 } = require('../services/firebaseService');
+const { db } = require('../config/firebase');
 
 const COLLECTIONS = {
   ACTIVE_SERVICES: 'activeServices',
   QUOTATIONS: 'quotations',
-  INQUIRIES: 'inquiries'
+  INQUIRIES: 'inquiries',
+  RECEIPTS: 'receipts'
 };
 
 function maskClientName(name) {
@@ -23,83 +25,129 @@ function maskClientName(name) {
 
 /**
  * Public Request Tracking Endpoint
- * Resolves Quotation ID/Number, Inquiry ID/Control Number, or Active Service ID.
+ * Strictly resolves official Service Tracking IDs (SRV-2026-XXXXXX or SVC-...)
+ * Quotation IDs (QT-...), Inquiry IDs (INQ-...), and Receipt Numbers (RCT-...) are strictly disallowed.
  */
 const getPublicTrackingStatus = async (req, res) => {
   try {
     const { trackingId } = req.params;
     if (!trackingId || typeof trackingId !== 'string') {
-      return res.status(400).json({ error: 'Tracking reference ID is required' });
+      return res.status(400).json({ error: 'Tracking reference ID is required.' });
     }
 
     const queryId = trackingId.trim();
     const cleanUpper = queryId.toUpperCase();
 
+    // Explicit rejection for disallowed reference formats
+    if (cleanUpper.startsWith('QT-') || cleanUpper.startsWith('QUO-') || cleanUpper.startsWith('QTN-')) {
+      return res.status(400).json({
+        error: 'Quotation IDs (QT-...) cannot be tracked here. Only official Service Tracking IDs (e.g., SRV-2026-XXXXXX) are allowed on the public tracker.'
+      });
+    }
+
+    if (cleanUpper.startsWith('INQ-') || cleanUpper.startsWith('SAF-')) {
+      return res.status(400).json({
+        error: 'Inquiry reference codes (INQ-...) cannot be tracked here. Only official Service Tracking IDs (e.g., SRV-2026-XXXXXX) are allowed on the public tracker.'
+      });
+    }
+
+    if (cleanUpper.startsWith('RCT-')) {
+      return res.status(400).json({
+        error: 'Receipt Numbers (RCT-...) cannot be tracked directly. Please enter the Service Tracking ID (SRV-2026-XXXXXX) indicated on your receipt.'
+      });
+    }
+
+    if (cleanUpper.startsWith('PAY-') || cleanUpper.startsWith('USR-') || cleanUpper.startsWith('TKT-') || cleanUpper.startsWith('APT-')) {
+      return res.status(400).json({
+        error: 'Invalid reference code. Only official Service Tracking IDs (e.g., SRV-2026-XXXXXX) are allowed on the public tracker.'
+      });
+    }
+
     let matchedService = null;
     let matchedQuotation = null;
     let matchedInquiry = null;
+    let matchedReceipt = null;
 
-    // 1. Try direct ID lookup in activeServices
+    // 1. Query activeServices collection by serviceCode
     try {
-      matchedService = await getFromDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${queryId}`);
-    } catch (err) {}
-
-    // 2. Try direct ID lookup in quotations
-    if (!matchedService) {
-      try {
-        matchedQuotation = await getFromDatabase(`${COLLECTIONS.QUOTATIONS}/${queryId}`);
-      } catch (err) {}
-    }
-
-    // 3. Try direct ID lookup in inquiries
-    if (!matchedService && !matchedQuotation) {
-      try {
-        matchedInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${queryId}`);
-      } catch (err) {}
-    }
-
-    // 4. If not found by document ID, search by custom identifiers (quoteNo, controlNo)
-    if (!matchedService && !matchedQuotation && !matchedInquiry) {
-      // Check quotations by quoteNo (exact or case-insensitive)
-      const quoteMatches = await queryDatabaseAdvanced(COLLECTIONS.QUOTATIONS, {
-        filters: [{ field: 'quoteNo', operator: '==', value: queryId }],
-        limit: 1
-      });
-
-      if (quoteMatches && quoteMatches.length > 0) {
-        matchedQuotation = quoteMatches[0];
-      } else if (cleanUpper.startsWith('QT-') || cleanUpper.startsWith('QUO-')) {
-        // Try uppercase variant if entered in lowercase
-        const upperMatches = await queryDatabaseAdvanced(COLLECTIONS.QUOTATIONS, {
-          filters: [{ field: 'quoteNo', operator: '==', value: cleanUpper }],
-          limit: 1
-        });
-        if (upperMatches && upperMatches.length > 0) {
-          matchedQuotation = upperMatches[0];
+      const srvSnap = await db.collection(COLLECTIONS.ACTIVE_SERVICES)
+        .where('serviceCode', '==', queryId)
+        .limit(1)
+        .get();
+      if (!srvSnap.empty) {
+        matchedService = { id: srvSnap.docs[0].id, ...srvSnap.docs[0].data() };
+      } else if (cleanUpper.startsWith('SRV-')) {
+        const upperSnap = await db.collection(COLLECTIONS.ACTIVE_SERVICES)
+          .where('serviceCode', '==', cleanUpper)
+          .limit(1)
+          .get();
+        if (!upperSnap.empty) {
+          matchedService = { id: upperSnap.docs[0].id, ...upperSnap.docs[0].data() };
         }
       }
+    } catch (err) {
+      console.warn('[Tracking] Error querying activeServices by serviceCode:', err.message);
     }
 
-    if (!matchedService && !matchedQuotation && !matchedInquiry) {
-      // Check inquiries by controlNo
-      const inqMatches = await queryDatabaseAdvanced(COLLECTIONS.INQUIRIES, {
-        filters: [{ field: 'controlNo', operator: '==', value: queryId }],
-        limit: 1
-      });
-      if (inqMatches && inqMatches.length > 0) {
-        matchedInquiry = inqMatches[0];
+    // 2. Try direct ID lookup in activeServices (for direct SVC-... fulfillment IDs)
+    if (!matchedService) {
+      try {
+        const serviceDoc = await getFromDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${queryId}`);
+        if (serviceDoc) {
+          matchedService = { id: queryId, ...serviceDoc };
+        }
+      } catch (err) {}
+    }
+
+    // 3. Query receipts by serviceCode (to resolve linked fulfillment)
+    if (!matchedService) {
+      try {
+        const rctSnap = await db.collection(COLLECTIONS.RECEIPTS)
+          .where('serviceCode', '==', queryId)
+          .limit(1)
+          .get();
+        if (!rctSnap.empty) {
+          matchedReceipt = { id: rctSnap.docs[0].id, ...rctSnap.docs[0].data() };
+        } else if (cleanUpper.startsWith('SRV-')) {
+          const upperCodeSnap = await db.collection(COLLECTIONS.RECEIPTS)
+            .where('serviceCode', '==', cleanUpper)
+            .limit(1)
+            .get();
+          if (!upperCodeSnap.empty) {
+            matchedReceipt = { id: upperCodeSnap.docs[0].id, ...upperCodeSnap.docs[0].data() };
+          }
+        }
+      } catch (err) {
+        console.warn('[Tracking] Error querying receipts by serviceCode:', err.message);
       }
     }
 
-    // If still not found, return 404
-    if (!matchedService && !matchedQuotation && !matchedInquiry) {
+    // If still not resolved to an active service or receipt by serviceCode, return 404
+    if (!matchedService && !matchedReceipt) {
       return res.status(404).json({
-        error: 'No active request found matching this reference code. Please verify your Quotation Number, Inquiry Code, or Service Tracking ID.'
+        error: `No active service found matching Tracking ID "${queryId}". Please verify your Service Tracking ID (e.g. SRV-2026-XXXXXX).`
       });
     }
 
-    // 5. Cross-reference related documents for unified status
-    // If we have a quotation, check for active service or linked inquiry
+    // 9. Cross-reference related documents for unified status
+    if (matchedReceipt) {
+      if (matchedReceipt.fulfillmentId && !matchedService) {
+        try {
+          matchedService = await getFromDatabase(`${COLLECTIONS.ACTIVE_SERVICES}/${matchedReceipt.fulfillmentId}`);
+        } catch (err) {}
+      }
+      if (matchedReceipt.quotationId && !matchedQuotation) {
+        try {
+          matchedQuotation = await getFromDatabase(`${COLLECTIONS.QUOTATIONS}/${matchedReceipt.quotationId}`);
+        } catch (err) {}
+      }
+      if (matchedReceipt.inquiryId && !matchedInquiry) {
+        try {
+          matchedInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${matchedReceipt.inquiryId}`);
+        } catch (err) {}
+      }
+    }
+
     if (matchedQuotation) {
       if (matchedQuotation.activeServiceId && !matchedService) {
         try {
@@ -111,9 +159,13 @@ const getPublicTrackingStatus = async (req, res) => {
           matchedInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${matchedQuotation.inquiryId}`);
         } catch (err) {}
       }
+      if (matchedQuotation.receiptId && !matchedReceipt) {
+        try {
+          matchedReceipt = await getFromDatabase(`${COLLECTIONS.RECEIPTS}/${matchedQuotation.receiptId}`);
+        } catch (err) {}
+      }
     }
 
-    // If we have an inquiry, check for linked quotation or active service
     if (matchedInquiry) {
       if (matchedInquiry.confirmedActiveServiceId && !matchedService) {
         try {
@@ -125,9 +177,13 @@ const getPublicTrackingStatus = async (req, res) => {
           matchedQuotation = await getFromDatabase(`${COLLECTIONS.QUOTATIONS}/${matchedInquiry.confirmedQuotationId}`);
         } catch (err) {}
       }
+      if (matchedInquiry.confirmedReceiptId && !matchedReceipt) {
+        try {
+          matchedReceipt = await getFromDatabase(`${COLLECTIONS.RECEIPTS}/${matchedInquiry.confirmedReceiptId}`);
+        } catch (err) {}
+      }
     }
 
-    // If we have a service, check for originating quotation or inquiry
     if (matchedService) {
       if (matchedService.quotationId && !matchedQuotation) {
         try {
@@ -139,9 +195,28 @@ const getPublicTrackingStatus = async (req, res) => {
           matchedInquiry = await getFromDatabase(`${COLLECTIONS.INQUIRIES}/${matchedService.inquiryId}`);
         } catch (err) {}
       }
+      if (matchedService.receiptId && !matchedReceipt) {
+        try {
+          matchedReceipt = await getFromDatabase(`${COLLECTIONS.RECEIPTS}/${matchedService.receiptId}`);
+        } catch (err) {}
+      }
     }
 
-    // 6. Calculate progress stage (1 to 5)
+    // Try fetching receipt by quotationId if not yet resolved and quotation is PAID
+    if (!matchedReceipt && matchedQuotation) {
+      const qPaid = (matchedQuotation.status || '').toUpperCase() === 'PAID' || (matchedQuotation.paymentStatus || '').toUpperCase() === 'PAID';
+      if (qPaid) {
+        const rSnap = await db.collection(COLLECTIONS.RECEIPTS)
+          .where('quotationId', '==', matchedQuotation.id || matchedQuotation.quotationId)
+          .limit(1)
+          .get();
+        if (!rSnap.empty) {
+          matchedReceipt = { id: rSnap.docs[0].id, ...rSnap.docs[0].data() };
+        }
+      }
+    }
+
+    // 10. Calculate progress stage (1 to 5)
     let currentStage = 1;
     let statusLabel = 'Request Received';
     let statusType = 'info'; // 'info', 'warning', 'primary', 'success', 'danger'
@@ -205,15 +280,22 @@ const getPublicTrackingStatus = async (req, res) => {
       }
     }
 
-    // 7. Extract sanitized client and branch details
-    const rawClientName = matchedService?.clientName || matchedQuotation?.clientName || matchedInquiry?.clientName || matchedInquiry?.fullName || '';
+    // 11. Extract client and branch details
+    const rawClientName = matchedReceipt?.clientName || matchedQuotation?.clientName || matchedService?.clientName || matchedInquiry?.clientName || matchedInquiry?.fullName || '';
+    const rawContactPerson = matchedReceipt?.contactPerson || matchedQuotation?.contactPerson || matchedInquiry?.contactPerson || '';
+    const rawClientEmail = matchedReceipt?.clientEmail || matchedQuotation?.clientEmail || matchedInquiry?.email || '';
+    const rawClientPhone = matchedReceipt?.clientPhone || matchedQuotation?.clientPhone || matchedInquiry?.cellphone || matchedInquiry?.phoneNumber || matchedInquiry?.telNo || '';
     const maskedName = maskClientName(rawClientName);
-    const serviceTitle = matchedService?.serviceType || matchedQuotation?.serviceTitle || matchedInquiry?.serviceType || 'Travel Service Request';
-    const branchName = matchedService?.branchName || matchedQuotation?.branchName || matchedInquiry?.branchName || 'FairFly Branch Office';
-    const dateInitiated = matchedService?.createdAt || matchedQuotation?.createdAt || matchedInquiry?.createdAt || null;
+    const serviceTitle = matchedReceipt?.serviceTitle || matchedQuotation?.serviceTitle || matchedService?.serviceType || matchedInquiry?.serviceType || 'Travel Service Request';
+    const branchName = matchedReceipt?.branchName || matchedQuotation?.branchName || matchedService?.branchName || matchedInquiry?.branchName || 'FairFly Branch Office';
+    const dateInitiated = matchedService?.createdAt || matchedQuotation?.createdAt || matchedInquiry?.createdAt || matchedReceipt?.createdAt || null;
     const lastUpdated = matchedService?.updatedAt || matchedQuotation?.updatedAt || matchedInquiry?.updatedAt || dateInitiated;
 
-    // 8. Sanitize procedure steps (if active service is present)
+    // Resolved service tracking code and fulfillment ID
+    const effectiveServiceCode = matchedReceipt?.serviceCode || matchedService?.serviceCode || matchedQuotation?.serviceCode || null;
+    const effectiveFulfillmentId = matchedService?.id || matchedQuotation?.activeServiceId || matchedReceipt?.fulfillmentId || null;
+
+    // 12. Sanitize procedure steps
     const sanitizedSteps = Array.isArray(matchedService?.steps)
       ? matchedService.steps.map((st, idx) => ({
           stepNumber: st.stepNumber || idx + 1,
@@ -225,27 +307,84 @@ const getPublicTrackingStatus = async (req, res) => {
         }))
       : [];
 
-    // 9. Quotation public summary (if available)
+    // 13. Quotation public summary
     const quotationSummary = matchedQuotation
       ? {
+          id: matchedQuotation.id,
           quoteNo: matchedQuotation.quoteNo || null,
+          clientName: matchedQuotation.clientName || rawClientName || null,
+          contactPerson: matchedQuotation.contactPerson || rawContactPerson || null,
+          clientEmail: matchedQuotation.clientEmail || rawClientEmail || null,
+          clientPhone: matchedQuotation.clientPhone || rawClientPhone || null,
+          serviceTitle: matchedQuotation.serviceTitle || serviceTitle,
           totalAmount: Number(matchedQuotation.totalAmount || matchedQuotation.rate || 0),
+          rate: Number(matchedQuotation.rate || matchedQuotation.totalAmount || 0),
+          taxAmount: Number(matchedQuotation.taxAmount || 0),
+          rateBreakdown: matchedQuotation.rateBreakdown || null,
           status: matchedQuotation.status || 'Draft',
           paymentStatus: matchedQuotation.paymentStatus || 'UNPAID',
+          paymentId: matchedQuotation.paymentId || null,
           tourDates: matchedQuotation.tourDates || null,
           inclusions: matchedQuotation.inclusions || null,
           exclusions: matchedQuotation.exclusions || null,
-          quotationDate: matchedQuotation.quotationDate || null
+          quotationDate: matchedQuotation.quotationDate || null,
+          branchName: matchedQuotation.branchName || branchName,
+          preparedByName: matchedQuotation.preparedByName || matchedQuotation.preparedBy || null
         }
       : null;
 
-    // 10. Inquiry public summary (if available)
+    // 14. Inquiry public summary
     const inquirySummary = matchedInquiry
       ? {
+          id: matchedInquiry.id,
           controlNo: matchedInquiry.controlNo || null,
           formNo: matchedInquiry.formNo || 'SAF-01-002',
+          clientName: matchedInquiry.clientName || matchedInquiry.fullName || null,
+          contactPerson: matchedInquiry.contactPerson || null,
           status: matchedInquiry.status || 'submitted',
           dateInquired: matchedInquiry.dateInquired || null
+        }
+      : null;
+
+    // 15. Safe Public Receipt details (if receipt available)
+    const receiptSummary = matchedReceipt
+      ? {
+          id: matchedReceipt.id || matchedReceipt.receiptId,
+          receiptId: matchedReceipt.id || matchedReceipt.receiptId,
+          receiptNo: matchedReceipt.receiptNo,
+          formNo: matchedReceipt.formNo || 'ADF-07-002',
+          serviceCode: matchedReceipt.serviceCode || effectiveServiceCode,
+          fulfillmentId: matchedReceipt.fulfillmentId || effectiveFulfillmentId,
+          quotationId: matchedReceipt.quotationId || matchedQuotation?.id || null,
+          quoteNo: matchedReceipt.quoteNo || matchedQuotation?.quoteNo || null,
+          paymentId: matchedReceipt.paymentId || matchedQuotation?.paymentId || (matchedReceipt.receiptNo ? `PAY-${matchedReceipt.receiptNo.replace('RCT-', '')}` : 'PAY-CONFIRMED'),
+          providerPaymentId: matchedReceipt.providerPaymentId || null,
+          clientName: matchedReceipt.clientName || rawClientName || 'Valued Client',
+          contactPerson: matchedReceipt.contactPerson || rawContactPerson || null,
+          clientEmail: matchedReceipt.clientEmail || rawClientEmail || null,
+          clientPhone: matchedReceipt.clientPhone || rawClientPhone || null,
+          serviceTitle: matchedReceipt.serviceTitle || matchedQuotation?.serviceTitle || serviceTitle,
+          description: matchedReceipt.description || matchedQuotation?.serviceTitle || serviceTitle || 'Standard tour & travel service fulfillment',
+          operatorRemarks: matchedReceipt.operatorRemarks || matchedQuotation?.operatorRemarks || matchedQuotation?.remarks || null,
+          clientRemarks: matchedReceipt.clientRemarks || matchedQuotation?.clientRemarks || null,
+          tourDates: matchedReceipt.tourDates || matchedQuotation?.tourDates || 'As arranged with client',
+          inclusions: matchedReceipt.inclusions || matchedQuotation?.inclusions || null,
+          exclusions: matchedReceipt.exclusions || matchedQuotation?.exclusions || null,
+          rate: Number(matchedReceipt.rate || matchedQuotation?.rate || matchedReceipt.amount || 0),
+          taxAmount: Number(matchedReceipt.taxAmount || matchedQuotation?.taxAmount || 0),
+          rateBreakdown: matchedReceipt.rateBreakdown || matchedQuotation?.rateBreakdown || null,
+          amount: Number(matchedReceipt.amount || matchedQuotation?.totalAmount || matchedQuotation?.rate || 0),
+          currency: matchedReceipt.currency || 'PHP',
+          paymentMethod: matchedReceipt.paymentMethod || 'Direct Payment',
+          branchName: matchedReceipt.branchName || matchedQuotation?.branchName || branchName,
+          receivedByOperatorName: matchedReceipt.receivedByOperatorName || matchedQuotation?.preparedByName || matchedQuotation?.preparedBy || 'Emmanuel Manlapig',
+          status: (matchedReceipt.status || 'PAID').toUpperCase(),
+          paidAt: matchedReceipt.paidAt || matchedReceipt.issuedAt || matchedQuotation?.paidAt || now,
+          issuedAt: matchedReceipt.issuedAt || matchedReceipt.createdAt || now,
+          qrTrackingUrl: matchedReceipt.qrTrackingUrl,
+          qrCodeDataUrl: matchedReceipt.qrCodeDataUrl,
+          businessName: matchedReceipt.businessName || 'FairFly Travel & Tours',
+          legalNotice: matchedReceipt.legalNotice || 'This electronic receipt is an official acknowledgment of payment received by FairFly Travel and Tours.'
         }
       : null;
 
@@ -290,7 +429,9 @@ const getPublicTrackingStatus = async (req, res) => {
 
     return res.status(200).json({
       trackingReference: queryId,
-      foundType: matchedService ? 'active_service' : (matchedQuotation ? 'quotation' : 'inquiry'),
+      serviceCode: effectiveServiceCode,
+      fulfillmentId: effectiveFulfillmentId,
+      foundType: matchedService ? 'active_service' : (matchedReceipt ? 'receipt' : (matchedQuotation ? 'quotation' : 'inquiry')),
       status: statusLabel,
       statusType,
       statusDescription,
@@ -299,12 +440,15 @@ const getPublicTrackingStatus = async (req, res) => {
       serviceTitle,
       branchName,
       clientName: maskedName,
+      fullName: rawClientName,
+      contactPerson: rawContactPerson || null,
       dateInitiated,
       lastUpdated,
       timeline: lifecycleTimeline,
       steps: sanitizedSteps,
       quotation: quotationSummary,
-      inquiry: inquirySummary
+      inquiry: inquirySummary,
+      receipt: receiptSummary
     });
   } catch (error) {
     console.error('Error fetching public tracking status:', error);

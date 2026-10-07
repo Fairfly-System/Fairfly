@@ -3,9 +3,9 @@ import { API_BASE_URL } from '../utils/config';
 
 /**
  * Fetch public tracking status for a request without requiring an authenticated account.
- * Supports Quotation ID/Number (QT-...), Inquiry Control Number (INQ-...), or Service Tracking ID (ACT-...).
+ * Strictly resolves official Service Tracking IDs (SRV-2026-XXXXXX / SVC-...).
  *
- * @param {string} trackingId - Tracking code or document ID
+ * @param {string} trackingId - Service Tracking Code or Fulfillment ID
  * @param {Function} successCallback - Callback invoked on successful status response
  * @param {Function} errorCallback - Callback invoked on lookup failure or network error
  * @param {Function} setIsLoading - Callback to toggle loading state

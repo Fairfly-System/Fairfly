@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { firestore } from '../firebase';
+
+const EMPTY_ARRAY = [];
 
 /**
  * Custom hook to subscribe/fetch only the specified submitted_requirements document.
@@ -42,9 +44,15 @@ export function useSubmittedRequirements(submittedRequirementsId, fallbackRequir
     return () => unsub();
   }, [submittedRequirementsId]);
 
-  const resolvedList = (record && Array.isArray(record.requirements) && record.requirements.length > 0)
-    ? record.requirements
-    : (Array.isArray(fallbackRequirements) ? fallbackRequirements : []);
+  const resolvedList = useMemo(() => {
+    if (record && Array.isArray(record.requirements) && record.requirements.length > 0) {
+      return record.requirements;
+    }
+    if (Array.isArray(fallbackRequirements) && fallbackRequirements.length > 0) {
+      return fallbackRequirements;
+    }
+    return EMPTY_ARRAY;
+  }, [record, fallbackRequirements]);
 
   return {
     requirements: resolvedList,
@@ -54,3 +62,4 @@ export function useSubmittedRequirements(submittedRequirementsId, fallbackRequir
 }
 
 export default useSubmittedRequirements;
+

@@ -61,14 +61,14 @@ export default function ClientDashboard() {
               <i className="fa-solid fa-file-circle-plus"></i>
             </div>
             <div>
-              <h2>Custom Service Request</h2>
-              <p>Submit custom requirements or start an official service inquiry (SAF-01-002)</p>
+              <h2>Service Request</h2>
+              <p>Start an official service inquiry (SAF-01-002)</p>
             </div>
           </div>
 
           <div className="client-card-body">
             <p>
-              Submit custom requirements for travel packages, PSA documents, passport renewals, VISA assistance, and airline bookings assigned directly to your preferred branch.
+              Submit inquiries for travel packages, PSA documents, passport renewals, VISA assistance, and airline bookings assigned directly to your preferred branch.
             </p>
 
             <button
@@ -77,7 +77,7 @@ export default function ClientDashboard() {
               onClick={() => setShowInquiryModal(true)}
             >
               <i className="fa-solid fa-plus-circle"></i>
-              Request Custom Service
+              Submit Inquiry
             </button>
           </div>
         </article>

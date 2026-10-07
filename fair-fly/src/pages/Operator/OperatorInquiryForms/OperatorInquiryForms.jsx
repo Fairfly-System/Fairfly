@@ -4,6 +4,7 @@ import { where } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import CreateInquiryFormModal from '../../../components/Operator/CreateInquiryFormModal/CreateInquiryFormModal';
 import Pagination from '../../../components/UI/Pagination/Pagination';
+import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import useFirestorePagination from '../../../hooks/useFirestorePagination';
@@ -15,12 +16,16 @@ export function InquiryContent() {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
+  const [archiveView, setArchiveView] = useState('active'); // 'active' | 'archived'
 
-  // Query-level Firestore filter scoped to branch operator
+  // Query-level Firestore filter scoped to branch operator & archive status
   const firestoreFilters = useMemo(() => {
     if (!user?.uid) return [];
-    return [where('branchUid', '==', user.uid)];
-  }, [user?.uid]);
+    return [
+      where('branchUid', '==', user.uid),
+      where('archived', '==', archiveView === 'archived')
+    ];
+  }, [user?.uid, archiveView]);
 
   // Client search predicate for bounded candidate pool
   const searchFilterFn = useCallback((f) => {
@@ -44,7 +49,7 @@ export function InquiryContent() {
   } = useFirestorePagination({
     collectionName: 'inquiries',
     filters: firestoreFilters,
-    filterKey: user?.uid || '',
+    filterKey: `${user?.uid || ''}_${archiveView}`,
     orderByField: 'createdAt',
     orderDirection: 'desc',
     initialPageSize: 5,
@@ -75,7 +80,7 @@ export function InquiryContent() {
 
       <section className="card op-inquiry">
 
-      {/* Toolbar Search */}
+      {/* Toolbar Search & Active/Archived Filter */}
       <div className="table-toolbar">
         <div className="search-box">
           <i className="fa-solid fa-magnifying-glass search-icon"></i>
@@ -100,6 +105,18 @@ export function InquiryContent() {
             </button>
           )}
         </div>
+
+        <FilterChipGroup
+          chips={[
+            { value: 'active', label: 'Active Records' },
+            { value: 'archived', label: 'Archived' },
+          ]}
+          activeChip={archiveView}
+          onChipChange={(val) => {
+            setArchiveView(val);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       {/* Forms List Container */}
@@ -122,9 +139,9 @@ export function InquiryContent() {
           ))
         ) : inquiryForms.length === 0 ? (
           <div className="op-inquiry-empty">
-            <i className="fa-regular fa-folder-open"></i>
-            <h3>No inquiry forms found</h3>
-            <p>Create your first client inquiry intake form</p>
+            <i className={`fa-regular ${archiveView === 'archived' ? 'fa-box-archive' : 'fa-folder-open'}`}></i>
+            <h3>{archiveView === 'archived' ? 'No archived inquiry forms' : 'No inquiry forms found'}</h3>
+            <p>{archiveView === 'archived' ? 'Archived inquiries will be stored here.' : 'Create your first client inquiry intake form'}</p>
           </div>
         ) : (
           inquiryForms.map((form) => (
@@ -148,7 +165,13 @@ export function InquiryContent() {
                 >
                   <i className="fa-solid fa-eye"></i> View
                 </Link>
-                <span className="status-pill status-pill-active">{form.status || 'Active'}</span>
+                {form.archived ? (
+                  <span className="status-pill status-pill-disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                    <i className="fa-solid fa-box-archive" style={{ marginRight: '0.3rem' }}></i>Archived
+                  </span>
+                ) : (
+                  <span className="status-pill status-pill-active">{form.status || 'Active'}</span>
+                )}
               </div>
             </article>
           ))

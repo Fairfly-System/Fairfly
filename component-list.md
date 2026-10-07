@@ -431,13 +431,14 @@
 - **Functionality:** High-fidelity printable document viewer and PDF exporter (using `html2pdf.js`). Renders official FairFly documents:
   - Standard Inquiry Form (`SAF-01-002`)
   - Formal Price Quotation
+  - Official Electronic Receipt (`ADF-07-002`) with integrated dynamic QR Code and public Service Code tracker link
 - **Props:**
   | Prop | Type | Default | Required | Description |
   | :--- | :--- | :--- | :--- | :--- |
   | `isOpen` | `boolean` | — | Yes | Modal visibility |
   | `onClose` | `Function` | — | Yes | Close callback |
-  | `type` | `'quotation'\|'inquiry'` | `'quotation'` | No | Document template type |
-  | `data` | `Object` | — | Yes | Inquiry or quotation payload |
+  | `type` | `'quotation'\|'inquiry'\|'receipt'` | `'quotation'` | No | Document template type |
+  | `data` | `Object` | — | Yes | Inquiry, quotation, or receipt payload |
 
 ---
 

@@ -76,12 +76,19 @@ class RateLimitService {
   }
 }
 
-// Instantiate specific limiters
-const publicLimiter = new RateLimitService(10, 600000);   // Public endpoints: 10 requests per 10 mins (e.g. submissions)
-const apiLimiter = new RateLimitService(100, 900000);     // General endpoints: 100 requests per 15 mins
+// Instantiate specific limiters:
+// 1. Tracker / Public Read Limiter: 180 requests per 1 minute (supports real-time tracking, background polling, sample tests)
+const trackerLimiter = new RateLimitService(180, 60000);
+
+// 2. Public Limiter: 60 requests per 1 minute (for landing page forms, public inquiries, appointments)
+const publicLimiter = new RateLimitService(60, 60000);
+
+// 3. API Limiter: 300 requests per 1 minute (for authenticated client/operator/admin actions and dashboard operations)
+const apiLimiter = new RateLimitService(300, 60000);
 
 module.exports = {
   RateLimitService,
+  trackerLimiter,
   publicLimiter,
   apiLimiter
 };

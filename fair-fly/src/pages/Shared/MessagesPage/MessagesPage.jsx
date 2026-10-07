@@ -580,10 +580,10 @@ export default function MessagesPage() {
                 <div className="messages-partner-profile">
                   <button
                     type="button"
-                    className="icon-btn"
-                    style={{ marginRight: '0.5rem', display: 'none' }}
+                    className="messages-btn-back-mobile"
                     onClick={() => setActiveConversation(null)}
                     title="Back to conversations"
+                    aria-label="Back to conversations"
                   >
                     <i className="fa-solid fa-arrow-left"></i>
                   </button>

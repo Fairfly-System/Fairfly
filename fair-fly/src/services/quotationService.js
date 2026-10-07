@@ -1,15 +1,44 @@
 import ApiCaller from '../utils/ApiCaller';
 import { API_BASE_URL } from '../utils/config';
 
-export function fetchQuotations(token, successCallback, errorCallback, setIsLoading) {
+export function fetchQuotations(token, params = {}, successCallback, errorCallback, setIsLoading) {
+  let actualParams = {};
+  let cbSuccess = successCallback;
+  let cbError = errorCallback;
+  let cbLoading = setIsLoading;
+
+  if (typeof params === 'function') {
+    cbLoading = errorCallback;
+    cbError = successCallback;
+    cbSuccess = params;
+    actualParams = {};
+  } else if (params && typeof params === 'object') {
+    actualParams = params;
+  }
+
+  let url = `${API_BASE_URL}/api/quotations`;
+  const queryParts = [];
+  if (actualParams.status && actualParams.status !== 'all') {
+    queryParts.push(`status=${encodeURIComponent(actualParams.status)}`);
+  }
+  if (actualParams.branchUid && actualParams.branchUid !== 'all') {
+    queryParts.push(`branchUid=${encodeURIComponent(actualParams.branchUid)}`);
+  }
+  if (actualParams.archived !== undefined && actualParams.archived !== null && actualParams.archived !== 'all') {
+    queryParts.push(`archived=${encodeURIComponent(actualParams.archived)}`);
+  }
+  if (queryParts.length > 0) {
+    url += `?${queryParts.join('&')}`;
+  }
+
   return ApiCaller(
-    `${API_BASE_URL}/api/quotations`,
+    url,
     'GET',
     null,
-    { Authorization: `Bearer ${token}` },
-    successCallback,
-    errorCallback,
-    setIsLoading
+    token ? { Authorization: `Bearer ${token}` } : {},
+    cbSuccess,
+    cbError,
+    cbLoading
   );
 }
 
@@ -49,16 +78,45 @@ export function updateQuotation(token, id, quotationData, successCallback, error
   );
 }
 
-export function deleteQuotation(token, id, successCallback, errorCallback, setIsLoading) {
+export function archiveQuotation(token, id, successCallback, errorCallback, setIsLoading) {
   return ApiCaller(
-    `${API_BASE_URL}/api/quotations/${id}`,
-    'DELETE',
+    `${API_BASE_URL}/api/quotations/${id}/archive`,
+    'POST',
     null,
-    { Authorization: `Bearer ${token}` },
+    token ? { Authorization: `Bearer ${token}` } : {},
     successCallback,
     errorCallback,
     setIsLoading
   );
+}
+
+export function restoreQuotation(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/quotations/${id}/restore`,
+    'POST',
+    null,
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function rejectQuotation(token, id, reason, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/quotations/${id}/reject`,
+    'POST',
+    { reason },
+    token ? { Authorization: `Bearer ${token}` } : {},
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+export function deleteQuotation(token, id, successCallback, errorCallback, setIsLoading) {
+  // Gracefully route legacy delete calls to archiveQuotation
+  return archiveQuotation(token, id, successCallback, errorCallback, setIsLoading);
 }
 
 export function updateQuotationStatus(token, id, status, successCallback, errorCallback, setIsLoading) {
