@@ -198,10 +198,54 @@ const notifyBranch = async ({
   }
 };
 
+/**
+ * Notify Super Admins and specifically assigned Admins for an operator ticket
+ */
+const notifyTicketAdmins = async ({
+  operatorId,
+  title,
+  message,
+  type = 'ticket',
+  link = '/admin/tickets',
+  metadata = {}
+}) => {
+  try {
+    const adminSnaps = await db.collection(COLLECTIONS.USERS)
+      .where('role', '==', 'admin')
+      .get();
+
+    const targetAdmins = adminSnaps.docs.filter(doc => {
+      const data = doc.data();
+      const isSuperAdmin = data.isSuperAdmin === true || data.email === 'admin@gmail.com';
+      if (isSuperAdmin) return true;
+      const assigned = Array.isArray(data.assignedOperators) ? data.assignedOperators : [];
+      return operatorId ? assigned.includes(operatorId) : false;
+    });
+
+    const promises = targetAdmins.map(doc =>
+      createNotification({
+        recipientUid: doc.id,
+        recipientRole: 'admin',
+        title,
+        message,
+        type,
+        link,
+        metadata
+      })
+    );
+
+    return await Promise.all(promises);
+  } catch (error) {
+    console.error('Error notifying ticket admins:', error);
+    return [];
+  }
+};
+
 module.exports = {
   createNotification,
   notifyBranch,
   notifyAdmins,
+  notifyTicketAdmins,
   notifyBranchOperators,
   notifyAllOperators
 };

@@ -481,6 +481,26 @@ const postAnnouncement = async (req, res) => {
       metadata: { announcementId: annId, priority }
     }).catch(err => console.warn('Announcement broadcast notification failed:', err));
 
+    // Notify other administrators (excluding the posting admin)
+    db.collection(COLLECTIONS.USERS)
+      .where('role', '==', 'admin')
+      .get()
+      .then(adminSnaps => {
+        const otherAdmins = adminSnaps.docs.filter(d => d.id !== req.user.uid);
+        return Promise.all(otherAdmins.map(d =>
+          createNotification({
+            recipientUid: d.id,
+            recipientRole: 'admin',
+            title: `Announcement: ${announcementData.title}`,
+            message: announcementData.content.substring(0, 100),
+            type: 'system',
+            link: '/admin/announcements',
+            metadata: { announcementId: annId, priority }
+          })
+        ));
+      })
+      .catch(err => console.warn('Admin announcement notification notice:', err));
+
     return res.status(201).json({
       id: annId,
       ...announcementData,

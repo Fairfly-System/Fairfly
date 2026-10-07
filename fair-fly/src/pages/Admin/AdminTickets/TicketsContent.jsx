@@ -27,6 +27,10 @@ export default function TicketsContent() {
   const [ticketsLoading, setTicketsLoading] = useState(true);
 
   const assignedOperators = useMemo(() => userDetails?.assignedOperators || [], [userDetails]);
+  const isSuperAdmin = useMemo(
+    () => userDetails?.isSuperAdmin === true || userDetails?.email === 'admin@gmail.com',
+    [userDetails]
+  );
   const [assignmentScope, setAssignmentScope] = useState('all'); // 'all' | 'assigned'
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,8 +97,8 @@ export default function TicketsContent() {
   const filteredTickets = useMemo(() => {
     if (!tickets) return [];
     return tickets.filter((ticket) => {
-      // Assignment scope filter
-      if (assignmentScope === 'assigned' && assignedOperators.length > 0) {
+      // Assignment scope filter for super admin toggle
+      if (isSuperAdmin && assignmentScope === 'assigned' && assignedOperators.length > 0) {
         if (!assignedOperators.includes(ticket.operatorId)) {
           return false;
         }
@@ -131,7 +135,7 @@ export default function TicketsContent() {
       const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [tickets, debouncedSearch, statusFilter, priorityFilter, ticketSort, assignmentScope, assignedOperators]);
+  }, [tickets, debouncedSearch, statusFilter, priorityFilter, ticketSort, isSuperAdmin, assignmentScope, assignedOperators]);
 
   // Paginated tickets slice
   const paginatedTickets = useMemo(() => {
@@ -141,6 +145,9 @@ export default function TicketsContent() {
 
   // AlertBar calculations
   const alertBarProps = useMemo(() => {
+    if (!isSuperAdmin && assignedOperators.length === 0) {
+      return { message: 'No branch operators are currently assigned to your administrator account.', type: 'info' };
+    }
     if (!tickets || tickets.length === 0) {
       return { message: 'No support tickets recorded yet. Create one or wait for operators to submit tickets.', type: 'info' };
     }
@@ -148,7 +155,6 @@ export default function TicketsContent() {
     const pending = tickets.filter((t) => (t.status || '').toLowerCase() === 'pending').length;
     const ongoing = tickets.filter((t) => (t.status || '').toLowerCase() === 'ongoing').length;
     const closed = tickets.filter((t) => (t.status || '').toLowerCase() === 'closed').length;
-
     if (pending > 0) {
       return {
         message: `${pending} pending support ticket${pending !== 1 ? 's' : ''} awaiting admin response. ${ongoing} ongoing, ${closed} closed out of ${total} total.`,
@@ -159,7 +165,7 @@ export default function TicketsContent() {
       message: `All tickets accounted for. ${ongoing} ongoing thread${ongoing !== 1 ? 's' : ''}, ${closed} closed thread${closed !== 1 ? 's' : ''} out of ${total} total.`,
       type: 'info',
     };
-  }, [tickets]);
+  }, [tickets, isSuperAdmin, assignedOperators]);
 
   // API Handler: Create Ticket
   const handleCreateTicket = async (ticketData) => {
@@ -291,8 +297,8 @@ export default function TicketsContent() {
           <section className="card tickets-table-card">
             <AlertBar message={alertBarProps.message} type={alertBarProps.type} />
 
-            {/* Scope Filter for Admins with Assigned Operators */}
-            {assignedOperators.length > 0 && (
+            {/* Scope Filter for Super Admins with Assigned Operators */}
+            {isSuperAdmin && assignedOperators.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-mid)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                   <i className="fa-solid fa-filter" style={{ color: 'var(--purple)' }}></i> Ticket View Scope:

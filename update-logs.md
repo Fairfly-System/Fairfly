@@ -1,5 +1,33 @@
 # Update Logs
 
+## [2026-10-07] Admin Portal: Strict Tab Notification Scoping & Operator Ticket Assigned Admin RBAC Hardening
+
+### Overview
+Restructured Administrator portal navigation badge notifications and hardened support ticket data access controls. Enforced that only seven specific domain-relevant administrative tabs display notification badges, completely eliminating badge counters from catalog/system tabs. In addition, investigated and hardened the Operator-to-Admin ticket assignment model so that branch operator tickets and their in-app notifications are strictly scoped to the specific Admin(s) they are assigned to and Super Admins.
+
+### Key Changes
+1. **Admin Tab Notification Badge Scoping ([`AdminLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx), [`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx))**:
+   - **Zero-Badge Tabs**: Strictly prohibited badges on **Services** (`/admin/services`), **Workflows** (`/admin/workflow-templates`), **Analytics** (`/admin`), **Resources** (`/admin/resources`), **QuickLinks** (`/admin/quick-links`), **Chatbot** (`/admin/chatbot`), **Operators** (`/admin/operators`), **Admins** (`/admin/admins`), and **Clients** (`/admin/clients`).
+   - **Active Badge Tabs (7 Allowed Admin Tabs)**:
+     - **Announcements (`/admin/announcements`)**: Real-time Firestore listener on `announcements` collection counting announcements created by other administrators (`authorUid !== user.uid`) since the admin's last viewed timestamp (persisted in `localStorage`). Resets upon visiting the tab.
+     - **Messages (`/admin/messages`)**: Real-time Firestore listener on `conversations` where `participants` contains `user.uid`, aggregating `unreadCount[user.uid]`.
+     - **Qualifications (`/admin/qualifications`)**: Real-time Firestore listener on `qualificationApplications` collection where `status == 'pending'`.
+     - **Tickets (`/admin/tickets`)**: Real-time Firestore listener on `tickets` collection with open statuses. Scoped so Support Admins only count tickets from their `assignedOperators`, while Super Admins count all open tickets.
+     - **Franchise Applications (`/admin/franchise-apps`)**: Real-time Firestore listener on `franchiseApplications` collection where `status == 'pending'`.
+     - **Consultations (`/admin/appointments`)**: Real-time Firestore listener on `appointments` collection where `type == 'franchise_consultation'` and `status == 'pending'`.
+     - **Inquiry History (`/admin/inquiry-history`)**: Real-time Firestore listener on `inquiries` collection where `archived == false` and `status` is pending/submitted.
+
+2. **Operator Support Tickets RBAC & Notification Hardening ([`ticketController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/ticketController.js), [`notificationService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/notificationService.js), [`TicketsContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminTickets/TicketsContent.jsx))**:
+   - **Assigned Admin Scoping**: Support Admins (`role === 'admin'` without `isSuperAdmin`) are strictly scoped to tickets where `ticket.operatorId` is in their `assignedOperators` array.
+   - **Endpoint Hardening**: `GET /api/tickets`, `GET /api/tickets/:id`, `PATCH /api/tickets/:id/status`, `POST /api/tickets/:id/messages`, and `POST /api/tickets/:id/close` verify assigned operator permissions for non-super admins, returning `403 Forbidden` for unassigned operator tickets.
+   - **Targeted Ticket Notifications**: Implemented `notifyTicketAdmins` in `notificationService.js` to dispatch ticket alerts (creation, replies, closures) strictly to Super Admins and the specific Admin(s) who have the operator in their `assignedOperators` list.
+   - **Frontend UI Optimization**: `TicketsContent.jsx` displays the Scope Filter chip toggle strictly for Super Admins who have assigned operators, while Support Admins automatically see their assigned branches without ambiguous options.
+
+3. **Verification**:
+   - Backend security test suite (`testSecurityFixes.js`) passed with 26/26 tests passing.
+   - Full automated workflow remodel test suite (`testWorkflowRemodel.js`) passed with 100% success across all online and walk-in flows.
+   - Vite frontend production build (`npm run build`) completed cleanly with 0 errors in 2.43s.
+
 ## [2026-10-07] Backend Architecture: Scoped Admin Notifications Strictly to Admin-Domain Operations
 
 ### Overview

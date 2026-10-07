@@ -4,7 +4,7 @@ const {
   queryDatabaseAdvanced, 
   updateToDatabase 
 } = require('../services/firebaseService');
-const { createNotification, notifyAdmins } = require('../services/notificationService');
+const { createNotification, notifyAdmins, notifyTicketAdmins } = require('../services/notificationService');
 const { ID_PREFIXES } = require('../utils/idGenerator');
 const { userCache } = require('../services/cacheService');
 
@@ -44,6 +44,15 @@ const enrichTicketsWithOperatorData = async (tickets) => {
       operatorEmail: ticket.operatorEmail || op.email || 'operator@fairfly.com'
     };
   });
+};
+
+/**
+ * Helper to determine if authenticated user is Super Admin
+ */
+const checkIsSuperAdmin = (req) => {
+  return req.userDetails?.isSuperAdmin === true || 
+    req.userDetails?.email === 'admin@gmail.com' || 
+    req.user?.email === 'admin@gmail.com';
 };
 
 /**
@@ -114,12 +123,14 @@ const createTicket = async (req, res) => {
 
     const docId = await addToDatabase(COLLECTIONS.TICKETS, newTicketData, ID_PREFIXES.TICKET);
 
-    // Notify admins
-    notifyAdmins({
+    // Notify assigned admins and super admins
+    notifyTicketAdmins({
+      operatorId: opId,
       title: 'New Support Ticket',
       message: `${opName} submitted ticket: "${newTicketData.title}" (${newTicketData.priority})`,
       type: 'ticket',
-      link: '/admin/tickets'
+      link: '/admin/tickets',
+      metadata: { ticketId: docId, operatorId: opId }
     }).catch(e => console.warn('Ticket notification warning:', e.message));
 
     return res.status(201).json({ id: docId, ...newTicketData, operatorName: opName, message: 'Ticket created successfully' });
@@ -131,6 +142,7 @@ const createTicket = async (req, res) => {
 
 /**
  * List support tickets with optional status & operatorId filtering
+ * Support Admins only see tickets for their assigned branch operators. Super Admins see all tickets.
  */
 const getTickets = async (req, res) => {
   try {
@@ -141,6 +153,9 @@ const getTickets = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Client accounts cannot access operator support tickets.' });
     }
 
+    const isSuperAdmin = checkIsSuperAdmin(req);
+    const assignedOperators = Array.isArray(req.userDetails?.assignedOperators) ? req.userDetails.assignedOperators : [];
+
     const options = {
       filters: [],
       orderBy: { field: 'createdAt', direction: 'desc' }
@@ -149,6 +164,15 @@ const getTickets = async (req, res) => {
     if (userRole === 'operator' || userRole === 'branch_operator') {
       options.filters.push({ field: 'operatorId', operator: '==', value: req.user.uid });
     } else if (operatorId) {
+      // If regular admin requested specific operatorId, ensure it's assigned to them
+      if (userRole === 'admin' && !isSuperAdmin && !assignedOperators.includes(operatorId)) {
+        if (page) {
+          const pageNum = parseInt(page, 10) || 1;
+          const limitNum = parseInt(limit, 10) || 10;
+          return res.status(200).json({ data: [], total: 0, page: pageNum, limit: limitNum, totalPages: 0 });
+        }
+        return res.status(200).json([]);
+      }
       options.filters.push({ field: 'operatorId', operator: '==', value: operatorId });
     }
 
@@ -156,10 +180,17 @@ const getTickets = async (req, res) => {
       options.filters.push({ field: 'status', operator: '==', value: status });
     }
 
+    let allResults = await queryDatabaseAdvanced(COLLECTIONS.TICKETS, options);
+
+    // Filter by assigned operators for Support Admins (non-super admins)
+    if (userRole === 'admin' && !isSuperAdmin) {
+      const assignedSet = new Set(assignedOperators);
+      allResults = allResults.filter(t => assignedSet.has(t.operatorId));
+    }
+
     if (page) {
       const pageNum = parseInt(page, 10) || 1;
       const limitNum = parseInt(limit, 10) || 10;
-      const allResults = await queryDatabaseAdvanced(COLLECTIONS.TICKETS, options);
       const total = allResults.length;
       const paginated = allResults.slice((pageNum - 1) * limitNum, pageNum * limitNum);
       const enrichedPaginated = await enrichTicketsWithOperatorData(paginated);
@@ -173,11 +204,10 @@ const getTickets = async (req, res) => {
     }
 
     if (limit) {
-      options.limit = parseInt(limit, 10);
+      allResults = allResults.slice(0, parseInt(limit, 10));
     }
 
-    const results = await queryDatabaseAdvanced(COLLECTIONS.TICKETS, options);
-    const enrichedResults = await enrichTicketsWithOperatorData(results);
+    const enrichedResults = await enrichTicketsWithOperatorData(allResults);
     return res.status(200).json(enrichedResults);
   } catch (error) {
     console.error('Error retrieving support tickets:', error);
@@ -203,9 +233,16 @@ const getTicketById = async (req, res) => {
     const userRole = req.userDetails?.role;
     const isOwner = ticket.operatorId === req.user?.uid;
     const isAdmin = userRole === 'admin';
+    const isSuperAdmin = checkIsSuperAdmin(req);
+    const assignedOperators = Array.isArray(req.userDetails?.assignedOperators) ? req.userDetails.assignedOperators : [];
 
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ error: 'Forbidden: You do not have permission to view this ticket.' });
+    }
+
+    // Support admin check: verify operator is assigned to them
+    if (isAdmin && !isSuperAdmin && !assignedOperators.includes(ticket.operatorId)) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view tickets for this operator branch.' });
     }
 
     let opName = ticket.operatorName;
@@ -307,6 +344,13 @@ const updateTicketStatus = async (req, res) => {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
+    const isSuperAdmin = checkIsSuperAdmin(req);
+    const assignedOperators = Array.isArray(req.userDetails?.assignedOperators) ? req.userDetails.assignedOperators : [];
+
+    if (!isSuperAdmin && !assignedOperators.includes(existing.operatorId)) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to update tickets for this operator branch.' });
+    }
+
     const now = new Date().toISOString();
     const updateData = {
       status: normalizedStatus,
@@ -365,9 +409,15 @@ const addMessageToThread = async (req, res) => {
     const userRole = req.userDetails?.role;
     const isOwner = existingTicket.operatorId === req.user?.uid;
     const isAdmin = userRole === 'admin';
+    const isSuperAdmin = checkIsSuperAdmin(req);
+    const assignedOperators = Array.isArray(req.userDetails?.assignedOperators) ? req.userDetails.assignedOperators : [];
 
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ error: 'Forbidden: You do not have permission to post in this ticket thread.' });
+    }
+
+    if (isAdmin && !isSuperAdmin && !assignedOperators.includes(existingTicket.operatorId)) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to post in tickets for this operator branch.' });
     }
 
     if (existingTicket.status === 'Closed') {
@@ -411,12 +461,13 @@ const addMessageToThread = async (req, res) => {
         metadata: { ticketId: id }
       }).catch(e => console.warn('Ticket reply notification warning:', e.message));
     } else if (activeRole === 'operator') {
-      notifyAdmins({
+      notifyTicketAdmins({
+        operatorId: existingTicket.operatorId,
         title: 'Operator Ticket Reply',
         message: `${activeName} replied on ticket: "${existingTicket.title}"`,
         type: 'ticket',
         link: '/admin/tickets',
-        metadata: { ticketId: id }
+        metadata: { ticketId: id, operatorId: existingTicket.operatorId }
       }).catch(e => console.warn('Admin ticket notification warning:', e.message));
     }
 
@@ -447,6 +498,14 @@ const closeTicket = async (req, res) => {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
+    const isSuperAdmin = checkIsSuperAdmin(req);
+    const assignedOperators = Array.isArray(req.userDetails?.assignedOperators) ? req.userDetails.assignedOperators : [];
+    const isClosedByAdmin = req.userDetails?.role === 'admin';
+
+    if (isClosedByAdmin && !isSuperAdmin && !assignedOperators.includes(existingTicket.operatorId)) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to close tickets for this operator branch.' });
+    }
+
     const now = new Date().toISOString();
     const closedByName = req.userDetails?.name || 'Admin';
 
@@ -455,8 +514,6 @@ const closeTicket = async (req, res) => {
       closedAt: now,
       updatedAt: now
     });
-
-    const isClosedByAdmin = req.userDetails?.role === 'admin';
 
     // If closed by admin, notify the operator
     if (isClosedByAdmin && existingTicket.operatorId) {
@@ -470,13 +527,14 @@ const closeTicket = async (req, res) => {
         metadata: { ticketId: id, status: 'Closed' }
       }).catch(e => console.warn('Ticket close operator notification warning:', e.message));
     } else if (!isClosedByAdmin) {
-      // If closed by operator, notify admins
-      notifyAdmins({
+      // If closed by operator, notify assigned admins & super admins
+      notifyTicketAdmins({
+        operatorId: existingTicket.operatorId,
         title: 'Ticket Closed by Operator',
         message: `Ticket "${existingTicket.title}" was resolved and closed by ${closedByName}.`,
         type: 'ticket',
         link: '/admin/tickets',
-        metadata: { ticketId: id, status: 'Closed' }
+        metadata: { ticketId: id, status: 'Closed', operatorId: existingTicket.operatorId }
       }).catch(e => console.warn('Ticket close admin notification warning:', e.message));
     }
 

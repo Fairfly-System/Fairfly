@@ -97,6 +97,24 @@ export default function AppSidebar({
         return 0;
       }
 
+      // Admin portal: Services, Workflows, Analytics, Resources, QuickLinks, Chatbot, Operators, Admins, Clients have NO notifications.
+      if (portalName === 'Admin') {
+        const disallowedAdminTabs = new Set([
+          '/admin',
+          '/admin/services',
+          '/admin/workflow-templates',
+          '/admin/resources',
+          '/admin/quick-links',
+          '/admin/chatbot',
+          '/admin/operators',
+          '/admin/admins',
+          '/admin/clients'
+        ]);
+        if (disallowedAdminTabs.has(linkPath) || ['services', 'workflow-templates', 'resources', 'quick-links', 'chatbot', 'operators', 'admins', 'clients'].includes(tabSlug)) {
+          return 0;
+        }
+      }
+
       const matchedCount = unreadList.filter((notif) => {
         const notifLink = (notif.link || '').toLowerCase();
         const notifType = (notif.type || '').toLowerCase();
