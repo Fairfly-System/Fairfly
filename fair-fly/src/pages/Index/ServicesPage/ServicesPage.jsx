@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import Services from '../../../components/Shared/Services/Services';
-import FooterCard from '../../../components/UI/FooterCard/FooterCard';
+import ServiceGuidelines from '../../../components/Landing/ServiceGuidelines/ServiceGuidelines';
 import './services-page.css';
 
 export default function ServicesPage() {
@@ -17,8 +17,8 @@ export default function ServicesPage() {
         <Services />
       </main>
 
-      {/* Footer Call to Action */}
-      <FooterCard />
+      {/* Standardized Step-by-Step Service Processing Guidelines */}
+      <ServiceGuidelines />
     </div>
   );
 }

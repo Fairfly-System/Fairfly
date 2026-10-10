@@ -67,11 +67,11 @@ export default function BusinessModel() {
         <div className="bm-header">
           <div className="bm-eyebrow">
             <span className="bm-eyebrow-accent" />
-            <span>ASSET-LIGHT BUSINESS ARCHITECTURE · SLIDES 07, 09-13</span>
+            <span>Asset-light business architecture · Slides 07, 09-13</span>
           </div>
           <h2 className="bm-title">
-            RE-DEFINING TRAVEL PRODUCTS: <br />
-            <span className="bm-title-accent">NO INVENTORY, HIGH VALUE.</span>
+            Re-defining travel products: <br />
+            <span className="bm-title-accent">No inventory, high value.</span>
           </h2>
           <p className="bm-subtitle">
             Traditional businesses require heavy inventory, warehouse space, and high overhead.
@@ -85,8 +85,8 @@ export default function BusinessModel() {
             <i className="fa-solid fa-paper-plane"></i>
           </div>
           <div className="bm-insight-content">
-            <span className="bm-insight-tag">[ CORE PARADIGM ]</span>
-            <h3 className="bm-insight-title">"YOUR PRODUCT IS YOUR SKILL & KNOWLEDGE."</h3>
+            <span className="bm-insight-tag">[ Core paradigm ]</span>
+            <h3 className="bm-insight-title">"Your product is your skill & knowledge."</h3>
             <p className="bm-insight-desc">
               Travel products are as simple as folding an airplane made of paper. The value is not the paper itself —
               it is the skill, accuracy, and verified service embedded within the document. You create the product,
@@ -101,8 +101,8 @@ export default function BusinessModel() {
           {/* FairFly Side */}
           <article className="bm-model-card bm-fairfly-card">
             <div className="bm-model-header">
-              <span className="bm-model-tag tag-fairfly">[ FAIRFLY MODERN MODEL ]</span>
-              <h3 className="bm-model-title">LEAN, DIGITAL & SCALABLE</h3>
+              <span className="bm-model-tag tag-fairfly">[ Fairfly modern model ]</span>
+              <h3 className="bm-model-title">Lean, digital & scalable</h3>
               <p className="bm-model-lead">Where do you want to spend your time? In a clean modern office or a cluttered stockroom?</p>
             </div>
 
@@ -125,8 +125,8 @@ export default function BusinessModel() {
           {/* Conventional Side */}
           <article className="bm-model-card bm-conventional-card">
             <div className="bm-model-header">
-              <span className="bm-model-tag tag-conventional">[ CONVENTIONAL RETAILING ]</span>
-              <h3 className="bm-model-title">HIGH-RISK INVENTORY TRAP</h3>
+              <span className="bm-model-tag tag-conventional">[ Conventional retailing ]</span>
+              <h3 className="bm-model-title">High-risk inventory trap</h3>
               <p className="bm-model-lead">Trapped by physical goods, fixed leases, cash flow delays, and depreciating assets.</p>
             </div>
 

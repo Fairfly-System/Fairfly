@@ -3,9 +3,9 @@ import Navbar from "../../components/Shared/Navbar/Navbar";
 
 export default function Index({user}) {
     return (
-        <>
-            <Navbar></Navbar>
+        <div className="public-module-root">
+            <Navbar />
             <Outlet />
-        </>
+        </div>
     )
 }

@@ -54,8 +54,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  /* text-transform: uppercase; */
   color: var(--text-mid, #475569);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -125,9 +125,9 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--text-light, #64748B);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .callout-badge {
@@ -136,8 +136,8 @@
   font-weight: 800;
   color: #FFFFFF;
   padding: 0.2rem 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  /* text-transform: uppercase; */
+  letter-spacing: 0.02em;
   border-radius: 0;
 }
 
@@ -146,7 +146,7 @@
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   color: var(--text-dark, #0F172A);
   margin: 0;
   width: 100%;

@@ -1,5 +1,8 @@
-import React from 'react'
-import './about.css'
+import React from 'react';
+import './about.css';
+import TrainingComparison from '../../../components/Landing/TrainingComparison/TrainingComparison';
+import BusinessSystem from '../../../components/Landing/BusinessSystem/BusinessSystem';
+import BusinessModel from '../../../components/Landing/BusinessModel/BusinessModel';
 
 const branches = [
   {
@@ -46,12 +49,12 @@ export default function About() {
           Travel & Tours
         </h1>
         <p className="subtitle">
-          Your trusted partner in travel documentation and tour services across the Philippines and the World.
+          An ISO 9001:2000-ready cloud ecosystem delivering standardized travel documentation, asset-light franchise operations, and over 29 years of industry expertise.
         </p>
       </div>
 
       <section className="about-section">
-        <h2 className="sectionTitle">Our Branches.</h2>
+        <h2 className="sectionTitle">Our Branches</h2>
 
         <div className="branchesList">
           {branches.map((b, i) => (
@@ -111,6 +114,15 @@ export default function About() {
         </div>
       </section>
 
+      {/* 29 Years Experience in 2 Months Training Academy */}
+      <TrainingComparison />
+
+      {/* ISO 9001-2000 Quality Management System Section */}
+      <BusinessSystem />
+
+      {/* Asset-Light & Zero Inventory Business Model Section */}
+      <BusinessModel />
+
       <section className="connectSection">
         <h2 className="sectionTitle">Connect With Us</h2>
         <div className="socialBtns">
@@ -126,5 +138,5 @@ export default function About() {
       </section>
 
     </div>
-  )
+  );
 }

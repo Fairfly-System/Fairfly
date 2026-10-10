@@ -68,12 +68,12 @@ export default function FranchiseSection() {
           <div className="fr-left">
             <div className="fr-eyebrow">
               <span className="fr-eyebrow-accent" />
-              <span>EXPANSION NETWORK · TURNKEY OPERATOR OPPORTUNITY</span>
+              <span>Expansion network · Turnkey operator opportunity</span>
             </div>
 
             <h2 className="fr-title">
-              OWN A FAIRFLY <br />
-              <span className="fr-title-accent">FRANCHISE BRANCH.</span>
+              Own a Fairfly <br />
+              <span className="fr-title-accent">franchise branch.</span>
             </h2>
 
             <p className="fr-desc">
@@ -93,7 +93,7 @@ export default function FranchiseSection() {
             </ul>
 
             <a href="#franchise" className="fr-cta" onClick={openModal}>
-              <span>APPLY FOR FRANCHISE</span>
+              <span>Apply for franchise</span>
               <i className="fa-solid fa-arrow-right"></i>
             </a>
           </div>

@@ -1,38 +1,36 @@
 .about-page {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font, 'Google Sans', sans-serif);
   min-height: 100vh;
   padding-bottom: 4rem;
+  animation: pageFadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-
 
 .about-header {
   text-align: center;
   padding: 4rem 2rem 0rem;
-
 }
 
 .about-title {
+  font-family: var(--font-heading, 'Fredoka', system-ui, sans-serif);
   font-size: clamp(2.8rem, 4vw, 3.6rem);
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.025em;
   margin-bottom: 0.8rem;
   color: #0f0f23;
-  animation: fadeDown 0.6s ease forwards;
 }
 
 .titleBlue  { color: #6B6FF5; }
 .titleOrange { color: #F97316; }
 
 .subtitle {
+  font-family: var(--font, 'Google Sans', sans-serif);
   font-size: 0.97rem;
   color: #5a5a7a;
   max-width: 420px;
   margin: 0 auto;
   line-height: 1.7;
-  animation: fadeUp 0.6s ease forwards;
 }
-
 
 .about-section {
   padding: 2rem 2rem;
@@ -41,15 +39,14 @@
 }
 
 .sectionTitle {
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-family: var(--font-heading, 'Fredoka', system-ui, sans-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
   color: #0f0f23;
   text-align: center;
   margin-bottom: 1.4rem;
-  letter-spacing: -0.01em;
-  animation: fadeUp 0.6s ease forwards;
+  letter-spacing: 0.025em;
 }
-
 
 .branchesList {
   display: flex;
@@ -60,7 +57,6 @@
   overflow: hidden;
   background: #fff;
   box-shadow: 0 2px 14px rgba(107,111,245,0.06);
-  animation: fadeUp 0.8s ease forwards;
 }
 
 .branchCard {

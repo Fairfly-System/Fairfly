@@ -8,22 +8,22 @@ export default function FooterCard() {
       <div className="footer-card">
         <div className="footer-card-eyebrow">
           <span className="footer-eyebrow-accent" />
-          <span>NEXT-STAGE ONBOARDING · GET STARTED TODAY</span>
+          <span>Next-stage onboarding · Get started today</span>
         </div>
         <h2 className="footer-title">
-          READY TO START YOUR JOURNEY <br />
-          WITH <span className="footer-title-accent">FAIRFLY?</span>
+          Ready to start your journey <br />
+          with <span className="footer-title-accent">Fairfly?</span>
         </h2>
         <p className="footer-sub">
           Join dozens of satisfied travelers and entrepreneurs who trust FairFly for expedited documentation, flight booking, and franchise operations nationwide.
         </p>
         <div className="footer-actions">
           <NavLink to="/register" className="footer-btn primary">
-            <span>CREATE AN ACCOUNT</span>
+            <span>Create an account</span>
             <i className="fa-solid fa-arrow-right"></i>
           </NavLink>
           <NavLink to="/services" className="footer-btn secondary">
-            <span>EXPLORE SERVICES</span>
+            <span>Explore services</span>
             <i className="fa-solid fa-arrow-up-right-from-square"></i>
           </NavLink>
         </div>

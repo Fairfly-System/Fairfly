@@ -4,6 +4,7 @@
   flex-direction: column;
   min-height: 100vh;
   background: var(--bg-body, #f8fafc);
+  animation: pageFadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .tracker-page-hero {
@@ -61,12 +62,12 @@
 }
 
 .tracker-page-title {
-  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-family: var(--font-heading, 'Fredoka', system-ui, sans-serif);
   font-size: 2.75rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  line-height: 1.22;
+  text-transform: none;
   color: #ffffff;
   margin: 0 0 1rem;
 }

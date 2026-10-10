@@ -46,10 +46,10 @@
 .landing-services-title {
   font-family: var(--font-display, 'Fredoka', system-ui, sans-serif);
   font-size: clamp(2rem, 3.5vw, 2.625rem);
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-dark, #0f0f23);
-  letter-spacing: -0.015em;
-  line-height: 1.2;
+  letter-spacing: 0.025em;
+  line-height: 1.25;
   margin: 0;
 }
 

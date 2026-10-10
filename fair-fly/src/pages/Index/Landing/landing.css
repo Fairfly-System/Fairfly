@@ -8,6 +8,7 @@
   width: 100%;
   overflow-x: hidden;
   background-color: var(--bg, #F8FAFC);
+  animation: pageFadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ==========================================================================
@@ -125,20 +126,20 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.9375rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   color: var(--purple-dark, #4338CA);
 }
 
-/* Hero Heading (Tall Condensed Architectural Typography) */
+/* Hero Heading (Fredoka Display Brand Typography) */
 .hero-heading {
-  font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
+  font-family: var(--font-heading, 'Fredoka', system-ui, sans-serif);
   font-size: clamp(2.2rem, 3.6vw, 3rem);
-  font-weight: 900;
+  font-weight: 600;
   color: var(--text-dark, #0F172A);
-  line-height: 1.08;
+  line-height: 1.22;
   margin-bottom: 1.5rem;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.035em;
   text-transform: none;
 }
 
@@ -148,9 +149,9 @@
 
 /* Fairfly brand logo styling: matches original logo typography and colors */
 .hero-heading-brand {
-  font-family: var(--font-logo, 'Fredoka', 'Plus Jakarta Sans', system-ui, sans-serif);
-  font-weight: 800;
-  letter-spacing: -0.015em;
+  font-family: var(--font-logo, 'Fredoka', 'Google Sans', system-ui, sans-serif);
+  font-weight: 700;
+  letter-spacing: 0.02em;
   display: inline-flex;
   align-items: baseline;
   padding: 0 0.2rem;
@@ -193,7 +194,7 @@
   font-size: clamp(0.84rem, 0.85vw, 0.95rem);
   font-weight: 800;
   letter-spacing: 0.025em;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   text-decoration: none;
   padding: clamp(0.65rem, 0.8vw, 0.85rem) clamp(0.35rem, 0.6vw, 0.95rem);
   border-radius: 0;
@@ -306,7 +307,7 @@
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--text-dark, #0F172A);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .trust-sub {
@@ -352,8 +353,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.875rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   color: var(--purple, #5558E3);
   margin-bottom: 0.65rem;
 }
@@ -373,7 +374,7 @@
   color: var(--text-dark, #0F172A);
   line-height: 1.1;
   margin-bottom: 0.85rem;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .teaser-desc {
@@ -394,8 +395,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   color: var(--text-mid, #475569);
   background: #F8FAFC;
   border: 1px solid var(--border-color, #E2E8F0);
@@ -418,8 +419,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 1.0625rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   padding: 1.1rem 1.85rem;
   border: 1px solid #0F172A;
   border-radius: 0;

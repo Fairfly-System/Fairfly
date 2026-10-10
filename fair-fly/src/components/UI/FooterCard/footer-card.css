@@ -29,8 +29,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.9375rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   color: var(--purple, #5558E3);
 }
 
@@ -48,7 +48,7 @@
   color: var(--text-dark, #0F172A);
   letter-spacing: 0.01em;
   line-height: 1.05;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   margin: 0;
 }
 
@@ -80,8 +80,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 1.0625rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   padding: 0.95rem 1.85rem;
   border-radius: 0;
   transition: all 0.15s ease;

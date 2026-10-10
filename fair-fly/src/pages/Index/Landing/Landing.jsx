@@ -3,11 +3,6 @@ import { Link } from 'react-router';
 import './landing.css';
 import FooterCard from '../../../components/UI/FooterCard/FooterCard';
 import FranchiseSection from '../../../components/FranchiseSection/FranchiseSection';
-import Explore from '../../../components/Explore/Explore';
-import BusinessSystem from '../../../components/Landing/BusinessSystem/BusinessSystem';
-import ServiceGuidelines from '../../../components/Landing/ServiceGuidelines/ServiceGuidelines';
-import BusinessModel from '../../../components/Landing/BusinessModel/BusinessModel';
-import TrainingComparison from '../../../components/Landing/TrainingComparison/TrainingComparison';
 import PuzzleHouse from '../../../components/Landing/FranchisePuzzleBanner/PuzzleHouse';
 
 export default function Landing() {
@@ -32,15 +27,15 @@ export default function Landing() {
             {/* Architectural Eyebrow (Zero roundness / badges) */}
             <div className="hero-eyebrow">
               <span className="eyebrow-accent" />
-              <span className="eyebrow-text">STANDARDIZED TRAVEL MANAGEMENT SYSTEM · ISO 9001:2000</span>
+              <span className="eyebrow-text">Standardized travel management system · ISO 9001:2000</span>
             </div>
 
             <h1 className="hero-heading">
-              START YOUR JOURNEY AS A FRANCHISE PARTNER, <br />
-              BUILD YOUR TRAVEL BUSINESS WITH{' '}
+              Start your journey as a franchise partner, <br />
+              build your travel business with{' '}
               <span className="hero-heading-brand">
-                <span className="brand-fair">fair</span>
-                <span className="brand-fly">fly</span>
+                <span className="brand-fair">Fair</span>
+                <span className="brand-fly">Fly</span>
               </span>
             </h1>
 
@@ -54,10 +49,10 @@ export default function Landing() {
                 <span>BROWSE SERVICES</span>
                 <i className="fa-solid fa-arrow-right"></i>
               </Link>
-              <a href="#business-system" className="btn-hero-secondary">
-                <span>BUSINESS SYSTEM</span>
-                <i className="fa-solid fa-plus"></i>
-              </a>
+              <Link to="/about" className="btn-hero-secondary">
+                <span>ABOUT FAIRFLY</span>
+                <i className="fa-solid fa-arrow-right"></i>
+              </Link>
               <a href="#franchise-section" className="btn-hero-outline">
                 <span>FRANCHISE INQUIRIES</span>
                 <i className="fa-solid fa-arrow-up-right-from-square"></i>
@@ -76,7 +71,7 @@ export default function Landing() {
           <div className="trust-item">
             <div className="trust-index">[ 01 ]</div>
             <div className="trust-text">
-              <span className="trust-title">ISO: 9001-2000 READY</span>
+              <span className="trust-title">ISO: 9001-2000 Ready</span>
               <span className="trust-sub">International QMS Operational Standards</span>
             </div>
           </div>
@@ -84,7 +79,7 @@ export default function Landing() {
           <div className="trust-item">
             <div className="trust-index">[ 02 ]</div>
             <div className="trust-text">
-              <span className="trust-title">ZERO INVENTORY</span>
+              <span className="trust-title">Zero inventory</span>
               <span className="trust-sub">Asset-Light 100% Cash-Basis Model</span>
             </div>
           </div>
@@ -92,7 +87,7 @@ export default function Landing() {
           <div className="trust-item">
             <div className="trust-index">[ 03 ]</div>
             <div className="trust-text">
-              <span className="trust-title">100% ONLINE CLOUD</span>
+              <span className="trust-title">100% Online cloud</span>
               <span className="trust-sub">Real-Time Centralized Virtual Office</span>
             </div>
           </div>
@@ -100,7 +95,7 @@ export default function Landing() {
           <div className="trust-item">
             <div className="trust-index">[ 04 ]</div>
             <div className="trust-text">
-              <span className="trust-title">2-MONTH FAST TRACK</span>
+              <span className="trust-title">2-Month fast track</span>
               <span className="trust-sub">29 Years Experience Transfer Academy</span>
             </div>
           </div>
@@ -113,43 +108,28 @@ export default function Landing() {
           <div className="teaser-left">
             <div className="teaser-eyebrow">
               <span className="teaser-eyebrow-dot" />
-              <span>CATALOG & ACCREDITED SOLUTIONS</span>
+              <span>Catalog & accredited solutions</span>
             </div>
-            <h2 className="teaser-title">LOOKING FOR TRAVEL & DOCUMENT ASSISTANCE?</h2>
+            <h2 className="teaser-title">Looking for travel & document assistance?</h2>
             <p className="teaser-desc">
               Explore our full catalog of certified DFA passport expediting, PSA civil registry document retrieval, embassy tourist visa filings, flight bookings, and holiday tour packages.
             </p>
             <div className="teaser-tags">
-              <span className="teaser-tag">[ PASSPORT FILING ]</span>
-              <span className="teaser-tag">[ PSA CERTIFICATES ]</span>
-              <span className="teaser-tag">[ VISA ASSISTANCE ]</span>
-              <span className="teaser-tag">[ FLIGHT TICKETING ]</span>
-              <span className="teaser-tag">[ TOUR PACKAGES ]</span>
+              <span className="teaser-tag">[ Passport filing ]</span>
+              <span className="teaser-tag">[ PSA certificates ]</span>
+              <span className="teaser-tag">[ Visa assistance ]</span>
+              <span className="teaser-tag">[ Flight ticketing ]</span>
+              <span className="teaser-tag">[ Tour packages ]</span>
             </div>
           </div>
           <div className="teaser-right">
             <Link to="/services" className="btn-teaser-cta">
-              <span>VIEW SERVICES CATALOG</span>
+              <span>View services catalog</span>
               <i className="fa-solid fa-arrow-right"></i>
             </Link>
           </div>
         </div>
       </section>
-
-      {/* ISO 9001-2000 Quality Management System Section */}
-      <BusinessSystem />
-
-      {/* Standardized Step-by-Step Service Processing Guidelines */}
-      <ServiceGuidelines />
-
-      {/* Asset-Light & Zero Inventory Business Model Section */}
-      <BusinessModel />
-
-      {/* 29 Years Experience in 2 Months Training Academy */}
-      <TrainingComparison />
-
-      {/* Explore Destination Gallery */}
-      <Explore />
 
       {/* Franchise Opportunity Section */}
       <FranchiseSection />

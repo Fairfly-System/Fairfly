@@ -4,6 +4,17 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  font-family: var(--font, 'Google Sans', system-ui, sans-serif);
+}
+
+.client-portal-layout h1,
+.client-portal-layout h2,
+.client-portal-layout h3,
+.client-portal-layout h4,
+.client-portal-layout h5,
+.client-portal-layout h6 {
+  font-family: 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.015em;
 }
 
 .client-portal-main {

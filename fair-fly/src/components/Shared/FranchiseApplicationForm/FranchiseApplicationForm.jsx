@@ -1,5 +1,6 @@
 import './franchise-application-form.css';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { useAuthContext } from '../../../context/AuthContext';
@@ -69,6 +70,9 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
   const { user, userDetails, userToken } = useAuthContext();
   const { addToast } = useToast();
 
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
   const [franchiseAppId, setFranchiseAppId] = useState(() => generateFranchiseId());
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -89,6 +93,21 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
   const [loadingBarangays, setLoadingBarangays] = useState(false);
 
   const provincesLoadedRef = useRef(false);
+
+  // Sync isOpen prop with internal animation states
+  useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+    } else if (isRendered) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isRendered]);
 
   // Prefill details for authenticated client
   useEffect(() => {
@@ -413,20 +432,53 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
   };
 
   const handleClose = () => {
-    setFormData(EMPTY_FORM);
-    setPendingFiles([]);
-    setErrors({});
-    setFranchiseAppId(generateFranchiseId());
-    onClose();
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      setFormData(EMPTY_FORM);
+      setPendingFiles([]);
+      setErrors({});
+      setFranchiseAppId(generateFranchiseId());
+      setIsRendered(false);
+      setIsClosing(false);
+      onClose();
+    }, 250);
   };
 
-  if (!isOpen) return null;
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget && !isLoading && !isUploadingFiles) {
+      handleClose();
+    }
+  };
+
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isRendered && !isClosing && !isLoading && !isUploadingFiles) {
+        handleClose();
+      }
+    };
+    if (isRendered) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isRendered, isClosing, isLoading, isUploadingFiles]);
+
+  if (!isRendered) return null;
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  return (
-    <div className="modalOverlay" role="dialog" aria-modal="true" aria-label="Franchise Application Form">
-      <div className="modal">
+  return createPortal(
+    <div
+      className={`modalOverlay ${isClosing ? 'modalOverlay--closing' : 'modalOverlay--entering'}`}
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Franchise Application Form"
+    >
+      <div className={`modal ${isClosing ? 'modal--closing' : 'modal--entering'}`}>
         <button className="closeBtn" onClick={handleClose} aria-label="Close modal">
           <i className="fa-solid fa-circle-xmark" />
         </button>
@@ -862,6 +914,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

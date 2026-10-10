@@ -7,6 +7,7 @@
   background-color: var(--bg, #f8fafc);
   display: flex;
   flex-direction: column;
+  animation: pageFadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Main Content Area */

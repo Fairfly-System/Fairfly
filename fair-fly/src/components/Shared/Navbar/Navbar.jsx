@@ -6,9 +6,7 @@ import FranchiseApplicationForm from '../FranchiseApplicationForm/FranchiseAppli
 export default function Navbar() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('');
   const location = useLocation();
-  const navigate = useNavigate();
 
   const isHome = location.pathname === '/home' || location.pathname === '/';
 
@@ -29,51 +27,6 @@ export default function Navbar() {
     };
   }, [isMobileMenuOpen]);
 
-  // Track active section on landing page via IntersectionObserver and initial hash
-  useEffect(() => {
-    if (!isHome) {
-      setActiveSection('');
-      return;
-    }
-
-    if (location.hash) {
-      const targetHash = location.hash.replace('#', '');
-      setActiveSection(targetHash);
-      const targetEl = document.getElementById(targetHash);
-      if (targetEl) {
-        setTimeout(() => {
-          targetEl.scrollIntoView({ behavior: 'smooth' });
-        }, 150);
-      }
-    }
-
-    const sectionIds = ['business-system', 'service-guidelines', 'business-model'];
-    const sections = sectionIds.map((id) => document.getElementById(id)).filter(Boolean);
-
-    if (sections.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      {
-        root: null,
-        rootMargin: '-20% 0px -55% 0px',
-        threshold: 0.1,
-      }
-    );
-
-    sections.forEach((sec) => observer.observe(sec));
-
-    return () => {
-      sections.forEach((sec) => observer.unobserve(sec));
-    };
-  }, [isHome, location.pathname, location.hash]);
-
   const openModal = (e) => {
     if (e) e.preventDefault();
     setIsMobileMenuOpen(false);
@@ -92,19 +45,13 @@ export default function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
-  const handleSectionClick = (e, sectionId) => {
+  const handleHomeClick = (e) => {
     if (isHome) {
       e.preventDefault();
-      setActiveSection(sectionId);
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-        window.history.replaceState(null, '', `#${sectionId}`);
-      }
-      setIsMobileMenuOpen(false);
-    } else {
-      setIsMobileMenuOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.history.replaceState(null, '', '/home');
     }
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -118,32 +65,15 @@ export default function Navbar() {
             </NavLink>
           </div>
 
-          {/* Center: Navigation buttons between Services and About */}
+          {/* Center: Navigation buttons (Home, Services, Track Request, About) */}
           <div className="nav-center nav-desktop-links">
-
-            <a
-              href="/home#business-system"
-              className={`linkNav ${isHome && activeSection === 'business-system' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'business-system')}
+            <NavLink
+              to="/home"
+              className={({ isActive }) => `linkNav ${isActive ? 'active' : ''}`}
+              onClick={handleHomeClick}
             >
-              Business System
-            </a>
-
-            <a
-              href="/home#service-guidelines"
-              className={`linkNav ${isHome && activeSection === 'service-guidelines' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'service-guidelines')}
-            >
-              Guidelines
-            </a>
-
-            <a
-              href="/home#business-model"
-              className={`linkNav ${isHome && activeSection === 'business-model' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'business-model')}
-            >
-              Model
-            </a>
+              Home
+            </NavLink>
 
             <NavLink
               to="/services"
@@ -218,6 +148,15 @@ export default function Navbar() {
         <div className={`nav-mobile-drawer ${isMobileMenuOpen ? 'open' : ''}`}>
           <div className="nav-mobile-links">
             <NavLink
+              to="/home"
+              className={({ isActive }) => `nav-mobile-item ${isActive ? 'active' : ''}`}
+              onClick={handleHomeClick}
+            >
+              <i className="fa-solid fa-house"></i>
+              <span>Home</span>
+            </NavLink>
+
+            <NavLink
               to="/services"
               className={({ isActive }) => `nav-mobile-item ${isActive ? 'active' : ''}`}
               onClick={closeMobileMenu}
@@ -234,33 +173,6 @@ export default function Navbar() {
               <i className="fa-solid fa-magnifying-glass-location"></i>
               <span>Track Request</span>
             </NavLink>
-
-            <a
-              href="/home#business-system"
-              className={`nav-mobile-item ${isHome && activeSection === 'business-system' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'business-system')}
-            >
-              <i className="fa-solid fa-award"></i>
-              <span>Business System</span>
-            </a>
-
-            <a
-              href="/home#service-guidelines"
-              className={`nav-mobile-item ${isHome && activeSection === 'service-guidelines' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'service-guidelines')}
-            >
-              <i className="fa-solid fa-diagram-project"></i>
-              <span>Guidelines</span>
-            </a>
-
-            <a
-              href="/home#business-model"
-              className={`nav-mobile-item ${isHome && activeSection === 'business-model' ? 'active' : ''}`}
-              onClick={(e) => handleSectionClick(e, 'business-model')}
-            >
-              <i className="fa-solid fa-lightbulb"></i>
-              <span>Business Model</span>
-            </a>
 
             <NavLink
               to="/about"

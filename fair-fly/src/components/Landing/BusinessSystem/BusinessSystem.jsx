@@ -9,7 +9,7 @@ const systemPillars = [
     iconBg: '#EEF2FF',
     title: 'Procedure Manuals & Standard Forms',
     desc: 'Pre-formatted digital forms and rigorous SOPs standardize every operation, eliminating guesswork and ensuring consistent, ISO-level execution across all branches.',
-    badge: 'STANDARDIZED SOPS'
+    badge: 'Standardized SOPs'
   },
   {
     code: '[ CLOUD-02 ]',
@@ -18,7 +18,7 @@ const systemPillars = [
     iconBg: '#FFF7ED',
     title: '100% Online Cloud & Virtual Office',
     desc: 'Real-time database accessibility anytime, anywhere. Manage document requests, appointments, transactions, and client communications seamlessly from any device.',
-    badge: 'CLOUD POWERED'
+    badge: 'Cloud powered'
   },
   {
     code: '[ SCALE-03 ]',
@@ -27,7 +27,7 @@ const systemPillars = [
     iconBg: '#F0FDF4',
     title: 'Scalable High-Volume Inquiry Intake',
     desc: 'Engineered to effortlessly handle continuous client traffic and large inquiry volumes with lean staffing, maximizing operational throughput and revenue.',
-    badge: 'LEAN & SCALABLE'
+    badge: 'Lean & scalable'
   },
   {
     code: '[ DATA-04 ]',
@@ -36,15 +36,15 @@ const systemPillars = [
     iconBg: '#F0F9FF',
     title: 'Quality Criteria & Predictive Analytics',
     desc: 'Continuous performance monitoring, SLA tracking, and business condition forecasting empower operators to make data-driven management decisions.',
-    badge: 'PERFORMANCE DRIVEN'
+    badge: 'Performance driven'
   }
 ];
 
 const highlights = [
-  { index: '01', icon: 'fa-solid fa-certificate', text: 'ISO: 9001-2000 READY STANDARDS' },
-  { index: '02', icon: 'fa-solid fa-network-wired', text: 'REAL-TIME ONLINE CENTRAL DATABASE' },
-  { index: '03', icon: 'fa-solid fa-handshake-angle', text: 'SUPPORTED BY LEADING TRAVEL PARTNERS' },
-  { index: '04', icon: 'fa-solid fa-shield-halved', text: 'ZERO COMPROMISE OPERATIONAL SECURITY' }
+  { index: '01', icon: 'fa-solid fa-certificate', text: 'ISO: 9001-2000 ready standards' },
+  { index: '02', icon: 'fa-solid fa-network-wired', text: 'Real-time online central database' },
+  { index: '03', icon: 'fa-solid fa-handshake-angle', text: 'Supported by leading travel partners' },
+  { index: '04', icon: 'fa-solid fa-shield-halved', text: 'Zero compromise operational security' }
 ];
 
 export default function BusinessSystem() {
@@ -65,11 +65,11 @@ export default function BusinessSystem() {
         <div className="bs-header">
           <div className="bs-eyebrow">
             <span className="bs-eyebrow-accent" />
-            <span>QUALITY MANAGEMENT SYSTEM · DO-52-000 ARCHITECTURE</span>
+            <span>Quality management system · DO-52-000 architecture</span>
           </div>
           <h2 className="bs-title">
-            ENGINEERED ON INTERNATIONAL <br />
-            <span className="bs-title-accent">ISO: 9001-2000 STANDARDS.</span>
+            Engineered on international <br />
+            <span className="bs-title-accent">ISO: 9001-2000 standards.</span>
           </h2>
           <p className="bs-subtitle">
             FairFly's proprietary business architecture transforms travel management through standardized procedures,

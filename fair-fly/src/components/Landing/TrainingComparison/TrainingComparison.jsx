@@ -63,11 +63,11 @@ export default function TrainingComparison() {
         <div className="tc-header">
           <div className="tc-eyebrow">
             <span className="tc-eyebrow-accent" />
-            <span>ACADEMY & KNOWLEDGE TRANSFER · 60-DAY OPERATIONAL DRILLS</span>
+            <span>Academy & knowledge transfer · 60-day operational drills</span>
           </div>
           <h2 className="tc-title">
-            29 YEARS OF TRAVEL EXPERTISE, <br />
-            <span className="tc-title-accent">ACQUIRED IN JUST 2 MONTHS.</span>
+            29 years of travel expertise, <br />
+            <span className="tc-title-accent">acquired in just 2 months.</span>
           </h2>
           <p className="tc-subtitle">
             Where do you want to learn your craft? Through expensive trial-and-error mistakes on your own,
@@ -80,8 +80,8 @@ export default function TrainingComparison() {
           {/* FairFly Academy Card */}
           <article className="tc-card tc-card-system">
             <div className="tc-card-header">
-              <span className="tc-card-tag tag-success">[ FAIRFLY STRUCTURED ACADEMY ]</span>
-              <h3 className="tc-card-heading">ACCELERATED MASTERY & MENTORSHIP</h3>
+              <span className="tc-card-tag tag-success">[ Fairfly structured academy ]</span>
+              <h3 className="tc-card-heading">Accelerated mastery & mentorship</h3>
               <p className="tc-card-sub">Proven curriculum backed by 29 years of operational wisdom.</p>
             </div>
 
@@ -104,8 +104,8 @@ export default function TrainingComparison() {
           {/* Traditional Route Card */}
           <article className="tc-card tc-card-traditional">
             <div className="tc-card-header">
-              <span className="tc-card-tag tag-warning">[ UNGUIDED TRIAL & ERROR ]</span>
-              <h3 className="tc-card-heading">PAINFUL SLOW GUESSWORK</h3>
+              <span className="tc-card-tag tag-warning">[ Unguided trial & error ]</span>
+              <h3 className="tc-card-heading">Painful slow guesswork</h3>
               <p className="tc-card-sub">Learning through lost clients, unassisted re-bookings, and capital drain.</p>
             </div>
 

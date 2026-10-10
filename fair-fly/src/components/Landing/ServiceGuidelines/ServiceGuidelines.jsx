@@ -147,11 +147,11 @@ export default function ServiceGuidelines() {
         <div className="sg-header">
           <div className="sg-eyebrow">
             <span className="sg-eyebrow-accent" />
-            <span>OPERATIONAL SOP MANUAL · SLIDES 14-17</span>
+            <span>Operational SOP manual · Slides 14-17</span>
           </div>
           <h2 className="sg-title">
-            STANDARDIZED STEP-BY-STEP <br />
-            <span className="sg-title-accent">SERVICE PROCESSING GUIDELINES.</span>
+            Standardized step-by-step <br />
+            <span className="sg-title-accent">Service processing guidelines.</span>
           </h2>
           <p className="sg-subtitle">
             Every service in the FairFly ecosystem follows strict, ISO-compliant workflows to guarantee error-free

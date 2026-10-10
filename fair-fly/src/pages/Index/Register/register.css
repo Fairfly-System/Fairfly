@@ -9,6 +9,7 @@
   display: flex;
   background: #ffffff;
   font-family: inherit;
+  animation: pageFadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* --------------------------------------------------------------------------

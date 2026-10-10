@@ -76,8 +76,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.9375rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
   color: var(--purple, #5558E3);
 }
 
@@ -95,7 +95,7 @@
   color: var(--text-dark, #0F172A);
   line-height: 1.05;
   letter-spacing: 0.01em;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .bm-title-accent {
@@ -147,9 +147,9 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--purple, #5558E3);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .bm-insight-title {
@@ -158,7 +158,7 @@
   font-weight: 900;
   letter-spacing: 0.01em;
   color: var(--text-dark, #0F172A);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   margin: 0;
   line-height: 1.15;
 }
@@ -209,8 +209,8 @@
   font-family: var(--font-editorial, 'Barlow Condensed', sans-serif);
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* text-transform: uppercase; */
 }
 
 .tag-fairfly {
@@ -227,7 +227,7 @@
   font-weight: 900;
   letter-spacing: 0.01em;
   color: var(--text-dark, #0F172A);
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   margin: 0;
   line-height: 1.1;
 }
@@ -301,7 +301,7 @@
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: 0.01em;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   color: var(--text-dark, #0F172A);
   margin: 0;
   line-height: 1.2;

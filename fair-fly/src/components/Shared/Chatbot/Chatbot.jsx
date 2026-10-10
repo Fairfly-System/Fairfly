@@ -10,6 +10,7 @@ export default function Chatbot() {
     location.pathname.startsWith("/operator");
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: "model",
@@ -20,6 +21,14 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [faqs, setFaqs] = useState([]);
   const chatEndRef = useRef(null);
+  const quickAccessRef = useRef(null);
+
+  const scrollQuickQuestions = (direction) => {
+    if (quickAccessRef.current) {
+      const amount = direction === "left" ? -140 : 140;
+      quickAccessRef.current.scrollBy({ left: amount, behavior: "smooth" });
+    }
+  };
 
   useEffect(() => {
     if (isHiddenRoute) return undefined;
@@ -45,6 +54,19 @@ export default function Chatbot() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const handleOpen = () => {
+    setIsOpen(true);
+    setIsClosing(false);
+  };
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 220);
+  };
+
   const handleSend = (e, selectedPrompt = "") => {
     e?.preventDefault();
     const messageToSend = selectedPrompt || input.trim();
@@ -68,7 +90,9 @@ export default function Chatbot() {
     sendChatbotMessage(
       { message: userMessage, history },
       (res) => {
-        const replyText = res?.reply || "I'm here to help you learn more about Fairfly's services and branch locations! Feel free to ask about what we offer.";
+        const replyText =
+          res?.reply ||
+          "I'm here to help you learn more about Fairfly's services and branch locations! Feel free to ask about what we offer.";
         setMessages([...updatedMessages, { role: "model", text: replyText }]);
         setLoading(false);
       },
@@ -77,7 +101,8 @@ export default function Chatbot() {
         let fallbackText = "Oops, something went wrong. Please try again in a bit!";
 
         if (errorString.includes("429") || errorString.includes("quota")) {
-          fallbackText = "Slow down a bit! You've hit a temporary limit. Please wait about a minute before sending your next message, thanks!";
+          fallbackText =
+            "Slow down a bit! You've hit a temporary limit. Please wait about a minute before sending your next message, thanks!";
         }
 
         setMessages([
@@ -95,10 +120,10 @@ export default function Chatbot() {
 
   return (
     <>
-      {/* FLOATING LAUNCHER BUTTON */}
+      {/* BLOCKY FLOATING LAUNCHER BUTTON */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpen}
           className="chatbot-launcher"
           aria-label="Open Fairfly AI chat"
         >
@@ -106,29 +131,26 @@ export default function Chatbot() {
         </button>
       )}
 
-      {/* EXPANDED CHAT BOX WINDOW */}
-      {isOpen && (
-        <div className="chatbot-box">
+      {/* EXPANDED CHAT BOX WINDOW (WITH OPEN / CLOSE ANIMATIONS) */}
+      {(isOpen || isClosing) && (
+        <div className={`chatbot-box ${isClosing ? "chatbot-closing" : "chatbot-opening"}`}>
           {/* Header */}
           <div className="chatbot-header">
-            <div className="chatbot-avatar-container">
-              <div className="chatbot-avatar-placeholder">
-                <img src="/FairflyLogo.png" alt="Fairfly Logo" />
-              </div>
-              <div className="chatbot-header-info">
-                <span className="chatbot-bot-name">Chat with Fairfly</span>
-                <span className="chatbot-status">
-                  <span className="chatbot-green-dot"></span>
-                  Online Now
-                </span>
-              </div>
+            <div className="chatbot-header-info">
+              <span className="chatbot-bot-name">Fairfly AI Assistant</span>
+              <span className="chatbot-status">
+                <span className="chatbot-powered-tag">Powered by Gemini</span>
+                <span className="chatbot-status-sep">·</span>
+                <span className="chatbot-green-dot"></span>
+                <span>Online</span>
+              </span>
             </div>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="chatbot-close-button"
               aria-label="Close chat"
             >
-              <i className="fa-solid fa-circle-xmark"></i>
+              <i className="fa-solid fa-xmark"></i>
             </button>
           </div>
 
@@ -143,7 +165,11 @@ export default function Chatbot() {
             ))}
             {loading && (
               <div className="chatbot-message-row model">
-                <div className="chatbot-typing-indicator">Typing...</div>
+                <div className="chatbot-bubble model typing" aria-label="Assistant is typing">
+                  <span className="typing-dot"></span>
+                  <span className="typing-dot"></span>
+                  <span className="typing-dot"></span>
+                </div>
               </div>
             )}
             <div ref={chatEndRef} />
@@ -152,8 +178,36 @@ export default function Chatbot() {
           {/* Quick FAQ Suggestion Chips */}
           {faqs.length > 0 && (
             <div className="chatbot-quick-access" aria-label="Frequently asked questions">
-              <span className="chatbot-quick-access-title">Quick questions</span>
-              <div className="chatbot-quick-access-list">
+              <div className="chatbot-quick-access-header">
+                <span className="chatbot-quick-access-title">Quick questions</span>
+                <div className="chatbot-quick-nav">
+                  <button
+                    type="button"
+                    className="chatbot-quick-nav-btn"
+                    onClick={() => scrollQuickQuestions("left")}
+                    aria-label="Scroll left"
+                  >
+                    <i className="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <button
+                    type="button"
+                    className="chatbot-quick-nav-btn"
+                    onClick={() => scrollQuickQuestions("right")}
+                    aria-label="Scroll right"
+                  >
+                    <i className="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
+              <div
+                ref={quickAccessRef}
+                className="chatbot-quick-access-list"
+                onWheel={(e) => {
+                  if (e.deltaY !== 0) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
+                }}
+              >
                 {faqs.map((faq) => (
                   <button
                     type="button"

@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './service-detail-modal.css';
 
 /**
@@ -45,6 +46,8 @@ export default function ServiceDetailModal({
   service,
   onAvailService,
 }) {
+  const modalBodyRef = useRef(null);
+
   // ESC key listener & body scroll lock
   useEffect(() => {
     if (!isOpen) return;
@@ -65,6 +68,13 @@ export default function ServiceDetailModal({
     };
   }, [isOpen, onClose]);
 
+  // Always reset scroll to top when opening or switching service
+  useEffect(() => {
+    if (isOpen && modalBodyRef.current) {
+      modalBodyRef.current.scrollTop = 0;
+    }
+  }, [isOpen, service]);
+
   if (!isOpen || !service) return null;
 
   const requirements = Array.isArray(service.requirements) ? service.requirements : [];
@@ -72,7 +82,7 @@ export default function ServiceDetailModal({
   const turnaround = formatProcessingTime(service.processingTime);
   const priceDisplay = formatPriceDisplay(service.price);
 
-  return (
+  return createPortal(
     <div
       className="service-modal-overlay"
       onClick={onClose}
@@ -94,7 +104,7 @@ export default function ServiceDetailModal({
           <i className="fa-solid fa-xmark"></i>
         </button>
 
-        <div className="service-modal-body">
+        <div className="service-modal-body" ref={modalBodyRef}>
           {/* Hero Media Banner with FairFly Brand Logo Fallback */}
           <div className={`service-modal-hero ${!service.coverImage ? 'service-modal-hero-logo' : ''}`}>
             {service.coverImage ? (
@@ -244,6 +254,7 @@ export default function ServiceDetailModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
