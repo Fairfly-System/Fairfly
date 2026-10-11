@@ -21,6 +21,7 @@ export default function AppSidebar({
   navLinks = [],
   tabNotifications,
   isOpen,
+  onTabClick,
   onClose,
 }) {
   const { user, userDetails } = useAuthContext();
@@ -194,6 +195,9 @@ export default function AppSidebar({
                 onClick={() => {
                   if (clearNotificationsForTab) {
                     clearNotificationsForTab(link.to);
+                  }
+                  if (onTabClick) {
+                    onTabClick(link.to);
                   }
                   if (onClose) onClose();
                 }}

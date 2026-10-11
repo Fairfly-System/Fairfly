@@ -20,6 +20,7 @@ export default function AppLayout({
   navLinks,
   tabNotifications,
   statCards,
+  onTabClick,
   children,
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -43,6 +44,7 @@ export default function AppLayout({
         navLinks={navLinks}
         tabNotifications={tabNotifications}
         isOpen={isSidebarOpen}
+        onTabClick={onTabClick}
         onClose={() => setIsSidebarOpen(false)}
       />
 

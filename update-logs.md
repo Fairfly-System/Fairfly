@@ -1,5 +1,26 @@
 # Update Logs
 
+## [2026-10-11] UI/UX: Instant Tab Notification Clearing on Click (Inquiry History, Tickets, Franchise Applications)
+
+### Overview
+Implemented instant badge clearing for the **Inquiry History**, **Tickets**, and **Franchise Application** navigation tabs upon clicking or navigating to them in the sidebar. Once an administrator (or operator for tickets) clicks or visits the tab, the badge counter clears immediately to `0`. Subsequent unread counts only increment if new records are created or updated after the visit timestamp.
+
+### Key Changes
+1. **Sidebar and Layout Event Wiring ([`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx), [`AppLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppLayout/AppLayout.jsx))**:
+   - Added `onTabClick` handler prop to `AppSidebar` and forwarded it through `AppLayout`.
+   - Wired `NavLink.onClick` to immediately call `onTabClick(link.to)` alongside existing Firestore notification deletions in `clearNotificationsForTab`.
+2. **Admin Portal Tab State & Timestamp Tracking ([`AdminLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx))**:
+   - Added per-user localStorage timestamp persistence for tabs: `fairfly_admin_last_inquiries_seen_${uid}`, `fairfly_admin_last_tickets_seen_${uid}`, `fairfly_admin_last_franchise_seen_${uid}`, and `fairfly_admin_last_announcements_seen_${uid}`.
+   - Added `handleTabClick` callback to set the respective state counter to `0` and update the timestamp immediately on user click.
+   - Added `useEffect` listening on `location.pathname` so direct URL visits, breadcrumb clicks, or programmatic navigation also immediately clear the badge counter.
+   - Updated `onSnapshot` listeners for `inquiries`, `tickets`, and `franchiseApplications`:
+     - If the admin is currently viewing the tab (`location.pathname.startsWith(...)`), the badge count is strictly pinned to `0`.
+     - When outside the tab, only records with `createdAt` or `updatedAt` newer than `lastSeenTime` increment the badge counter.
+3. **Operator Portal Tickets Tab Parity ([`OperatorLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx))**:
+   - Implemented the identical clearing and timestamp-filtering mechanism for the operator `/operator/tickets` tab, tracking `fairfly_operator_last_tickets_seen_${uid}`.
+4. **Verification**:
+   - Vite frontend build (`npm run build`) completed successfully with 0 errors in 3.73s.
+
 ## [2026-10-07] Admin Portal: Strict Tab Notification Scoping & Operator Ticket Assigned Admin RBAC Hardening
 
 ### Overview

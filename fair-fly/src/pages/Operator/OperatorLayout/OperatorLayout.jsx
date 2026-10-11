@@ -1,11 +1,19 @@
-import { Outlet } from 'react-router';
-import { useState, useEffect, useMemo } from 'react';
+import { Outlet, useLocation } from 'react-router';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, where, or, limit } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import './operator-layout.css';
+
+const parseDocTime = (val) => {
+  if (!val) return 0;
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (typeof val === 'number') return val;
+  const parsed = new Date(val).getTime();
+  return isNaN(parsed) ? 0 : parsed;
+};
 
 const baseOperatorLinks = [
   { to: '/operator', end: true, icon: 'fa-solid fa-table-cells-large', label: 'Dashboard' },
@@ -23,12 +31,35 @@ const baseOperatorLinks = [
 ];
 
 export default function OperatorLayout() {
+  const location = useLocation();
   const { user, userDetails } = useAuthContext();
   // Real-time stat metrics
   const [activeServices, setActiveServices] = useState(0);
   const [completedServices, setCompletedServices] = useState(0);
   const [pendingActions, setPendingActions] = useState(0);
   const [openTickets, setOpenTickets] = useState(0);
+
+  // Clear tab notification immediately when the operator clicks a tab in the sidebar
+  const handleTabClick = useCallback((tabPath) => {
+    if (!user?.uid) return;
+    const nowIso = new Date().toISOString();
+    const p = (tabPath || '').toLowerCase();
+    if (p.includes('tickets')) {
+      localStorage.setItem(`fairfly_operator_last_tickets_seen_${user.uid}`, nowIso);
+      setOpenTickets(0);
+    }
+  }, [user?.uid]);
+
+  // Reset tab notification badges when operator navigates to their respective pages
+  useEffect(() => {
+    if (!user?.uid) return;
+    const nowIso = new Date().toISOString();
+    const current = (location.pathname || '').toLowerCase();
+    if (current.startsWith('/operator/tickets')) {
+      localStorage.setItem(`fairfly_operator_last_tickets_seen_${user.uid}`, nowIso);
+      setOpenTickets(0);
+    }
+  }, [location.pathname, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -82,18 +113,33 @@ export default function OperatorLayout() {
       setPendingActions(0);
     });
 
-    // Real-time listener for open tickets strictly scoped to this operator
+    // Real-time listener for open tickets strictly scoped to this operator (clears upon clicking/viewing)
     const qTickets = query(
       collection(firestore, 'tickets'),
       where('operatorId', '==', user.uid),
       limit(50)
     );
     const unsubTickets = onSnapshot(qTickets, (snapshot) => {
+      if (location.pathname.toLowerCase().startsWith('/operator/tickets')) {
+        setOpenTickets(0);
+        return;
+      }
+      const lastSeenStr = user?.uid ? localStorage.getItem(`fairfly_operator_last_tickets_seen_${user.uid}`) : null;
+      const lastSeenTime = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
+
       let open = 0;
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
         const isOpenStatus = data.status === 'Open' || data.status === 'open' || data.status === 'pending' || data.status === 'In Progress';
-        if (isOpenStatus) open++;
+        if (!isOpenStatus) return;
+        if (!lastSeenTime) {
+          open++;
+          return;
+        }
+        const recordTime = parseDocTime(data.updatedAt) || parseDocTime(data.createdAt);
+        if (recordTime > lastSeenTime) {
+          open++;
+        }
       });
       setOpenTickets(open);
     }, (err) => {
@@ -106,7 +152,7 @@ export default function OperatorLayout() {
       unsubAppointments();
       unsubTickets();
     };
-  }, [user?.uid]);
+  }, [user?.uid, location.pathname]);
 
   const branchRevenue = Number(userDetails?.totalRevenue) || 0;
 
@@ -122,6 +168,7 @@ export default function OperatorLayout() {
       portalSubtitle="Branch Operations"
       navLinks={baseOperatorLinks}
       tabNotifications={tabNotifications}
+      onTabClick={handleTabClick}
       statCards={
         <>
           <KpiCard

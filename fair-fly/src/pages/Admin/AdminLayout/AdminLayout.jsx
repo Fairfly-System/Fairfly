@@ -25,6 +25,15 @@ const baseAdminLinks = [
   { to: '/admin/chatbot', icon: 'fa-solid fa-robot', label: 'Chatbot' },
 ];
 
+// Helper to safely parse any Firestore timestamp representation
+const parseDocTime = (val) => {
+  if (!val) return 0;
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (typeof val === 'number') return val;
+  const parsed = new Date(val).getTime();
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 export default function AdminLayout() {
   const location = useLocation();
   const { user, userDetails } = useAuthContext();
@@ -60,11 +69,45 @@ export default function AdminLayout() {
   const [pendingAppointments, setPendingAppointments] = useState(0);
   const [pendingInquiries, setPendingInquiries] = useState(0);
 
-  // Reset announcement badge when user navigates to Announcements page
-  useEffect(() => {
-    if (location.pathname === '/admin/announcements' && user?.uid) {
-      localStorage.setItem(`fairfly_admin_last_announcements_seen_${user.uid}`, new Date().toISOString());
+  // Clear tab notification immediately when the user clicks a tab in the sidebar
+  const handleTabClick = useCallback((tabPath) => {
+    if (!user?.uid) return;
+    const nowIso = new Date().toISOString();
+    const p = (tabPath || '').toLowerCase();
+
+    if (p.includes('announcements')) {
+      localStorage.setItem(`fairfly_admin_last_announcements_seen_${user.uid}`, nowIso);
       setAnnouncementsCount(0);
+    } else if (p.includes('inquiry-history') || p.includes('inquiry')) {
+      localStorage.setItem(`fairfly_admin_last_inquiries_seen_${user.uid}`, nowIso);
+      setPendingInquiries(0);
+    } else if (p.includes('tickets')) {
+      localStorage.setItem(`fairfly_admin_last_tickets_seen_${user.uid}`, nowIso);
+      setOpenTickets(0);
+    } else if (p.includes('franchise-apps') || p.includes('franchise')) {
+      localStorage.setItem(`fairfly_admin_last_franchise_seen_${user.uid}`, nowIso);
+      setPendingApps(0);
+    }
+  }, [user?.uid]);
+
+  // Reset tab notification badges when user navigates to their respective pages
+  useEffect(() => {
+    if (!user?.uid) return;
+    const nowIso = new Date().toISOString();
+    const current = (location.pathname || '').toLowerCase();
+
+    if (current.startsWith('/admin/announcements')) {
+      localStorage.setItem(`fairfly_admin_last_announcements_seen_${user.uid}`, nowIso);
+      setAnnouncementsCount(0);
+    } else if (current.startsWith('/admin/inquiry-history')) {
+      localStorage.setItem(`fairfly_admin_last_inquiries_seen_${user.uid}`, nowIso);
+      setPendingInquiries(0);
+    } else if (current.startsWith('/admin/tickets')) {
+      localStorage.setItem(`fairfly_admin_last_tickets_seen_${user.uid}`, nowIso);
+      setOpenTickets(0);
+    } else if (current.startsWith('/admin/franchise-apps')) {
+      localStorage.setItem(`fairfly_admin_last_franchise_seen_${user.uid}`, nowIso);
+      setPendingApps(0);
     }
   }, [location.pathname, user?.uid]);
 
@@ -95,10 +138,10 @@ export default function AdminLayout() {
 
     // 2. Real-time badge indicators
 
-    // 2.1 Announcements (Only if made by someone else)
+    // 2.1 Announcements (Only if made by someone else, clears upon clicking)
     const qAnnouncements = query(collection(firestore, 'announcements'), limit(50));
     const unsubAnnouncements = onSnapshot(qAnnouncements, (snapshot) => {
-      if (location.pathname === '/admin/announcements') {
+      if (location.pathname.toLowerCase().startsWith('/admin/announcements')) {
         setAnnouncementsCount(0);
         return;
       }
@@ -108,7 +151,7 @@ export default function AdminLayout() {
       const unread = snapshot.docs.filter((doc) => {
         const d = doc.data();
         if (d.authorUid === user?.uid) return false;
-        const createdTime = d.createdAt ? (d.createdAt.toDate ? d.createdAt.toDate().getTime() : new Date(d.createdAt).getTime()) : 0;
+        const createdTime = parseDocTime(d.createdAt);
         return createdTime > lastSeenTime;
       });
       setAnnouncementsCount(unread.length);
@@ -142,30 +185,64 @@ export default function AdminLayout() {
       setPendingQualifications(snapshot.size);
     }, () => setPendingQualifications(0));
 
-    // 2.4 Tickets (Scoped to Assigned Admins and Super Admins)
+    // 2.4 Tickets (Scoped to Assigned Admins and Super Admins, clears upon clicking)
     const qTickets = query(
       collection(firestore, 'tickets'),
       where('status', 'in', ['Open', 'open', 'In Progress', 'in_progress', 'pending', 'Pending']),
       limit(100)
     );
     const unsubTickets = onSnapshot(qTickets, (snapshot) => {
-      if (isSuperAdmin) {
-        setOpenTickets(snapshot.size);
-      } else {
-        const assignedSet = new Set(assignedOperators);
-        const count = snapshot.docs.filter((doc) => assignedSet.has(doc.data().operatorId)).length;
-        setOpenTickets(count);
+      if (location.pathname.toLowerCase().startsWith('/admin/tickets')) {
+        setOpenTickets(0);
+        return;
       }
+      const lastSeenStr = user?.uid ? localStorage.getItem(`fairfly_admin_last_tickets_seen_${user.uid}`) : null;
+      const lastSeenTime = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
+
+      let validDocs = snapshot.docs;
+      if (!isSuperAdmin) {
+        const assignedSet = new Set(assignedOperators);
+        validDocs = validDocs.filter((doc) => assignedSet.has(doc.data().operatorId));
+      }
+
+      if (!lastSeenTime) {
+        setOpenTickets(validDocs.length);
+        return;
+      }
+
+      const unread = validDocs.filter((doc) => {
+        const d = doc.data();
+        const recordTime = parseDocTime(d.updatedAt) || parseDocTime(d.createdAt);
+        return recordTime > lastSeenTime;
+      });
+      setOpenTickets(unread.length);
     }, () => setOpenTickets(0));
 
-    // 2.5 Franchise Applications
+    // 2.5 Franchise Applications (Clears upon clicking)
     const qFranchise = query(
       collection(firestore, 'franchiseApplications'),
       where('status', 'in', ['pending', 'Pending']),
       limit(100)
     );
     const unsubFranchise = onSnapshot(qFranchise, (snapshot) => {
-      setPendingApps(snapshot.size);
+      if (location.pathname.toLowerCase().startsWith('/admin/franchise-apps')) {
+        setPendingApps(0);
+        return;
+      }
+      const lastSeenStr = user?.uid ? localStorage.getItem(`fairfly_admin_last_franchise_seen_${user.uid}`) : null;
+      const lastSeenTime = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
+
+      if (!lastSeenTime) {
+        setPendingApps(snapshot.size);
+        return;
+      }
+
+      const unread = snapshot.docs.filter((doc) => {
+        const d = doc.data();
+        const createdTime = parseDocTime(d.createdAt) || parseDocTime(d.updatedAt);
+        return createdTime > lastSeenTime;
+      });
+      setPendingApps(unread.length);
     }, () => setPendingApps(0));
 
     // 2.6 Consultations (Pending franchise consultations)
@@ -182,18 +259,29 @@ export default function AdminLayout() {
       setPendingAppointments(pending.length);
     }, () => setPendingAppointments(0));
 
-    // 2.7 Inquiry History (Pending or submitted client inquiries)
+    // 2.7 Inquiry History (Pending or submitted client inquiries, clears upon clicking)
     const qInquiries = query(
       collection(firestore, 'inquiries'),
       where('archived', '==', false),
       limit(100)
     );
     const unsubInquiries = onSnapshot(qInquiries, (snapshot) => {
-      const pending = snapshot.docs.filter((doc) => {
-        const s = (doc.data().status || '').toLowerCase();
-        return s === 'pending' || s === 'submitted';
+      if (location.pathname.toLowerCase().startsWith('/admin/inquiry-history')) {
+        setPendingInquiries(0);
+        return;
+      }
+      const lastSeenStr = user?.uid ? localStorage.getItem(`fairfly_admin_last_inquiries_seen_${user.uid}`) : null;
+      const lastSeenTime = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
+
+      const unread = snapshot.docs.filter((doc) => {
+        const d = doc.data();
+        const s = (d.status || '').toLowerCase();
+        if (s !== 'pending' && s !== 'submitted') return false;
+        if (!lastSeenTime) return true;
+        const createdTime = parseDocTime(d.createdAt) || parseDocTime(d.updatedAt);
+        return createdTime > lastSeenTime;
       });
-      setPendingInquiries(pending.length);
+      setPendingInquiries(unread.length);
     }, () => setPendingInquiries(0));
 
     return () => {
@@ -245,6 +333,7 @@ export default function AdminLayout() {
       portalSubtitle="Management Portal"
       navLinks={navLinks}
       tabNotifications={tabNotifications}
+      onTabClick={handleTabClick}
       statCards={
         <>
           {/* ── Revenue ── */}
