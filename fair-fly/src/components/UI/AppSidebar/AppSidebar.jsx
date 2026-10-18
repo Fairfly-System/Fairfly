@@ -219,14 +219,27 @@ export default function AppSidebar({
           })}
         </nav>
 
-        {/* Profile Box at bottom */}
-        <div className="sidebar-profile">
+        {/* Profile Box at bottom — Clickable link on desktop and mobile drawer */}
+        <NavLink
+          to={`/${portalName.toLowerCase()}/profile`}
+          className={({ isActive }) => `sidebar-profile ${isActive ? 'active' : ''}`}
+          onClick={() => {
+            if (onClose) onClose();
+          }}
+          title="View & Edit Profile"
+          aria-label="View & Edit Profile"
+        >
           <div className="sidebar-profile-avatar">{getInitials()}</div>
           <div className="sidebar-profile-info">
             <span className="sidebar-profile-name">{profileName}</span>
             <span className="sidebar-profile-role">{displayRole()}</span>
           </div>
-        </div>
+          <i
+            className="fa-solid fa-angle-right sidebar-profile-arrow"
+            style={{ marginLeft: 'auto', fontSize: '0.8125rem', color: 'var(--text-light)' }}
+            aria-hidden="true"
+          ></i>
+        </NavLink>
       </aside>
     </>
   );

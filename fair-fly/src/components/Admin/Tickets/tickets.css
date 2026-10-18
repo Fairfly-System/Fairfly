@@ -16,21 +16,24 @@
 }
 
 .ticket-status-badge.pending {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--warning-yellow-light);
+  color: #B78103;
   border: 1px solid #fde68a;
 }
 
-.ticket-status-badge.ongoing {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+.ticket-status-badge.ongoing,
+.ticket-status-badge.open,
+.ticket-status-badge.in-progress {
+  background-color: var(--purple-light-2);
+  color: var(--purple-dark);
+  border: 1px solid #c7d2fe;
 }
 
-.ticket-status-badge.closed {
-  background-color: #f3f4f6;
-  color: #4b5563;
-  border: 1px solid #e5e7eb;
+.ticket-status-badge.closed,
+.ticket-status-badge.resolved {
+  background-color: var(--complete-green-light);
+  color: var(--complete-green-dark);
+  border: 1px solid #86efac;
 }
 
 /* Category & Priority Pills */

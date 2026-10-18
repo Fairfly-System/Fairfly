@@ -38,8 +38,11 @@ const enrichTicketsWithOperatorData = async (tickets) => {
 
   return tickets.map(ticket => {
     const op = opMap.get(ticket.operatorId) || {};
+    const { messages, ...rest } = ticket;
     return {
-      ...ticket,
+      ...rest,
+      messageCount: ticket.messageCount || (Array.isArray(messages) ? messages.length : 1),
+      lastMessage: ticket.lastMessage || (Array.isArray(messages) && messages.length > 0 ? messages[messages.length - 1].message : ticket.title),
       operatorName: ticket.operatorName || op.branchName || op.name || op.fullName || 'Operator Branch',
       operatorEmail: ticket.operatorEmail || op.email || 'operator@fairfly.com'
     };
@@ -65,7 +68,8 @@ const createTicket = async (req, res) => {
       title, 
       category, 
       priority, 
-      initialMessage 
+      initialMessage,
+      message 
     } = req.body;
 
     if (!title || !title.trim()) {
@@ -98,12 +102,16 @@ const createTicket = async (req, res) => {
       console.warn('User record lookup notice for operatorId:', opId, err.message);
     }
 
-    const firstMsgText = initialMessage && initialMessage.trim() ? initialMessage.trim() : title.trim();
+    const firstMsgText = (initialMessage && initialMessage.trim())
+      || (message && message.trim())
+      || title.trim();
     const now = new Date().toISOString();
 
     const initialMessageObj = {
       id: `msg_${Date.now()}_1`,
       senderId: opId,
+      senderRole: 'operator',
+      senderName: opName,
       message: firstMsgText,
       createdAt: now
     };
@@ -118,10 +126,17 @@ const createTicket = async (req, res) => {
       updatedAt: now,
       closedAt: null,
       lastMessage: firstMsgText,
-      messages: [initialMessageObj]
+      lastMessageAt: now,
+      lastSenderId: opId,
+      lastSenderRole: 'operator',
+      messageCount: 1
     };
 
     const docId = await addToDatabase(COLLECTIONS.TICKETS, newTicketData, ID_PREFIXES.TICKET);
+
+    // Save initial message to subcollection tickets/{docId}/messages
+    initialMessageObj.ticketId = docId;
+    await addToDatabase(`tickets/${docId}/messages`, initialMessageObj);
 
     // Notify assigned admins and super admins
     notifyTicketAdmins({
@@ -133,7 +148,13 @@ const createTicket = async (req, res) => {
       metadata: { ticketId: docId, operatorId: opId }
     }).catch(e => console.warn('Ticket notification warning:', e.message));
 
-    return res.status(201).json({ id: docId, ...newTicketData, operatorName: opName, message: 'Ticket created successfully' });
+    return res.status(201).json({ 
+      id: docId, 
+      ...newTicketData, 
+      messages: [initialMessageObj],
+      operatorName: opName, 
+      message: 'Ticket created successfully' 
+    });
   } catch (error) {
     console.error('Error creating support ticket:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -264,6 +285,35 @@ const getTicketById = async (req, res) => {
       } catch (err) {}
     }
 
+    // Fetch thread messages from subcollection (with backward-compatible merge for legacy tickets)
+    let subcollectionMessages = [];
+    try {
+      subcollectionMessages = await queryDatabaseAdvanced(`tickets/${id}/messages`, {
+        orderBy: { field: 'createdAt', direction: 'asc' }
+      });
+    } catch (subErr) {
+      console.warn(`[Tickets] Subcollection query notice for ticket ${id}:`, subErr.message);
+    }
+
+    if (subcollectionMessages && subcollectionMessages.length > 0) {
+      if (Array.isArray(ticket.messages) && ticket.messages.length > 0) {
+        const msgMap = new Map();
+        ticket.messages.forEach(m => {
+          const key = m.id || `${m.createdAt}_${m.message}`;
+          msgMap.set(key, m);
+        });
+        subcollectionMessages.forEach(m => {
+          const key = m.id || `${m.createdAt}_${m.message}`;
+          msgMap.set(key, m);
+        });
+        ticket.messages = Array.from(msgMap.values()).sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      } else {
+        ticket.messages = subcollectionMessages;
+      }
+    } else {
+      ticket.messages = Array.isArray(ticket.messages) ? ticket.messages : [];
+    }
+
     // Resolve participants map for thread senders & operator
     const participants = {};
     if (ticket.operatorId) {
@@ -307,10 +357,65 @@ const getTicketById = async (req, res) => {
       ...ticket,
       operatorName: opName || 'Operator Branch',
       operatorEmail: opEmail || 'operator@fairfly.com',
-      participants
+      participants,
+      messageCount: (ticket.messages || []).length
     });
   } catch (error) {
     console.error('Error retrieving ticket by ID:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Get ticket messages thread directly
+ */
+const getTicketMessages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Ticket ID is required' });
+
+    const ticket = await getFromDatabase(`${COLLECTIONS.TICKETS}/${id}`);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    const userRole = req.userDetails?.role;
+    const isOwner = ticket.operatorId === req.user?.uid;
+    const isAdmin = userRole === 'admin';
+    const isSuperAdmin = checkIsSuperAdmin(req);
+    const assignedOperators = Array.isArray(req.userDetails?.assignedOperators) ? req.userDetails.assignedOperators : [];
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view this ticket.' });
+    }
+    if (isAdmin && !isSuperAdmin && !assignedOperators.includes(ticket.operatorId)) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view tickets for this operator branch.' });
+    }
+
+    let subcollectionMessages = [];
+    try {
+      subcollectionMessages = await queryDatabaseAdvanced(`tickets/${id}/messages`, {
+        orderBy: { field: 'createdAt', direction: 'asc' }
+      });
+    } catch (subErr) {
+      console.warn(`[Tickets] Subcollection query notice for ticket ${id}:`, subErr.message);
+    }
+
+    let messages = subcollectionMessages;
+    if (!messages || messages.length === 0) {
+      messages = Array.isArray(ticket.messages) ? ticket.messages : [];
+    } else if (Array.isArray(ticket.messages) && ticket.messages.length > 0) {
+      const msgMap = new Map();
+      ticket.messages.forEach(m => msgMap.set(m.id || `${m.createdAt}_${m.message}`, m));
+      messages.forEach(m => msgMap.set(m.id || `${m.createdAt}_${m.message}`, m));
+      messages = Array.from(msgMap.values()).sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    }
+
+    return res.status(200).json({
+      ticketId: id,
+      messages,
+      count: messages.length
+    });
+  } catch (error) {
+    console.error('Error retrieving ticket messages:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -431,6 +536,7 @@ const addMessageToThread = async (req, res) => {
 
     const newMessageObj = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ticketId: id,
       senderId: activeId,
       senderRole: activeRole,
       senderName: activeName,
@@ -438,14 +544,19 @@ const addMessageToThread = async (req, res) => {
       createdAt: now
     };
 
-    const updatedMessages = [...(existingTicket.messages || []), newMessageObj];
+    // Save to subcollection
+    await addToDatabase(`tickets/${id}/messages`, newMessageObj);
     
     // Automatically transition Pending tickets to Ongoing when a reply is posted
     const newStatus = existingTicket.status === 'Pending' ? 'Ongoing' : existingTicket.status;
+    const currentCount = existingTicket.messageCount || (Array.isArray(existingTicket.messages) ? existingTicket.messages.length : 0);
 
     await updateToDatabase(dbPath, {
-      messages: updatedMessages,
       lastMessage: message.trim(),
+      lastMessageAt: now,
+      lastSenderId: activeId,
+      lastSenderRole: activeRole,
+      messageCount: currentCount + 1,
       status: newStatus,
       updatedAt: now
     });
@@ -549,6 +660,7 @@ module.exports = {
   createTicket,
   getTickets,
   getTicketById,
+  getTicketMessages,
   updateTicketStatus,
   addMessageToThread,
   closeTicket

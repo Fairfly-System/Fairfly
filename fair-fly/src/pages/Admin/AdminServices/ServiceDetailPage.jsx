@@ -542,7 +542,7 @@ export default function ServiceDetailPage() {
                   <i className="fa-solid fa-diagram-project"></i> Attached Workflows ({attachedWorkflows.length > 0 ? attachedWorkflows.length : (service.steps?.length ? 1 : 0)})
                 </h2>
                 {attachedWorkflows.length > 0 && (
-                  <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
+                  <span className="status-pill status-pill-active" style={{ fontSize: '0.75rem' }}>
                     {totalStepsCount} Total Step{totalStepsCount !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -557,12 +557,12 @@ export default function ServiceDetailPage() {
                           <i className="fa-solid fa-diagram-project" style={{ color: 'var(--purple)' }}></i>
                           <h3 className="attached-workflow-title">{wf.name}</h3>
                           {wf.serviceType && (
-                            <span className="status-pill" style={{ fontSize: '0.6875rem' }}>
+                            <span className="status-pill status-pill-info" style={{ fontSize: '0.6875rem' }}>
                               {wf.serviceType}
                             </span>
                           )}
                         </div>
-                        <span className="status-pill status-active" style={{ fontSize: '0.6875rem' }}>
+                        <span className="status-pill status-pill-active" style={{ fontSize: '0.6875rem' }}>
                           {Array.isArray(wf.steps) ? wf.steps.length : 0} Step{Array.isArray(wf.steps) && wf.steps.length === 1 ? '' : 's'}
                         </span>
                       </div>
@@ -682,8 +682,8 @@ export default function ServiceDetailPage() {
             onClose={() => !isConfirmLoading && setConfirmState(null)}
             Icon={BanIcon}
             Title={service.status === 'Active' ? 'Disable this service item?' : 'Enable this service item?'}
-            Desc={service.status === 'Active' 
-              ? `"${service.name}" will be hidden from the catalog until re-enabled.` 
+            Desc={service.status === 'Active'
+              ? `"${service.name}" will be hidden from the catalog until re-enabled.`
               : `"${service.name}" will be reactivated in the client search catalog.`
             }
             BtnColor="var(--orange)"

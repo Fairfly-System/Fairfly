@@ -181,22 +181,36 @@ export default function CreateInquiryFormModal({ onClose }) {
       : (form.contactPerson.trim() || canonicalClientName);
 
     const payload = {
-      ...form,
+      formNo: 'SAF-01-002',
+      controlNo: form.controlNo,
       clientType: form.clientType,
       companyName: form.clientType === 'company' ? form.companyName.trim() : '',
       clientName: canonicalClientName,
-      firstName: (form.clientType === 'company' ? form.contactPersonFirstName : form.firstName).trim(),
-      middleInitial: (form.clientType === 'company' ? form.contactPersonMiddleInitial : form.middleInitial).trim(),
-      lastName: (form.clientType === 'company' ? form.contactPersonLastName : form.lastName).trim(),
       contactPerson: canonicalContactPerson,
-      contactPersonFirstName: (form.clientType === 'company' ? form.contactPersonFirstName : form.firstName).trim(),
-      contactPersonMiddleInitial: (form.clientType === 'company' ? form.contactPersonMiddleInitial : form.middleInitial).trim(),
-      contactPersonLastName: (form.clientType === 'company' ? form.contactPersonLastName : form.lastName).trim(),
-      formNo: 'SAF-01-002',
+      population: form.population?.trim() || '',
+      address: form.address?.trim() || '',
+      telNo: form.telNo?.trim() || '',
+      cellphone: form.cellphone?.trim() || '',
+      email: form.email?.trim() || '',
+      contractNo: form.contractNo?.trim() || '',
+      isNo: form.isNo?.trim() || '',
+      dateInquired: form.dateInquired,
+      serviceId: form.serviceId || null,
+      serviceType: form.serviceType || 'Package Tour',
+      servicesOffered: form.servicesOffered || [],
+      servicePrice: form.servicePrice || '',
+      specifiedRequirements: form.specifiedRequirements.trim(),
+      clientRemarks: form.remarks?.trim() || '',
+      notes: form.remarks?.trim() || '',
+      agentName: form.agentName || (userDetails?.name || userDetails?.fullName || 'Operator'),
+      agentSignature: form.agentSignature || '',
+      acknowledgedBy: form.acknowledgedBy || '',
+      acknowledgedSignature: form.acknowledgedSignature || '',
       branchUid: (userDetails?.role === 'operator' || userDetails?.role === 'branch_operator') ? user?.uid : null,
       branchName: userDetails?.branchName || userDetails?.name || 'Branch Office',
+      customFields: form.customFields || {},
       status: 'submitted',
-      notes: form.remarks
+      isWalkIn: true
     };
 
     setIsSubmitting(true);

@@ -1,6 +1,32 @@
 # Lessons Learned
 # A File for Agents to write their mistakes so that next runs can prevent doing the same thing (Automatic Improvement)
 
+## [2026-10-18] Tenant Branch Identity Governance: Branch Names Must Be Immutable to Operators and Admin-Exclusive
+- **Problem**: Operators were previously able to edit their assigned branch name in the Operator Profile View, creating the risk of unauthorized branch rebranding, naming drift, and desynchronization with official franchise records and client receipts.
+- **Root Cause**:
+  1. Frontend profile edit form ([`ProfileEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ProfileEditModal/ProfileEditModal.jsx)) provided an editable text input for `branchName` to operators and required it on submission.
+  2. Backend profile endpoint ([`authController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/authController.js)) blindly processed `branchName` and `name` from `updates` without checking if the acting user was an operator.
+- **Prevention**:
+  1. Tenant/franchise identity attributes (such as `branchName`) must be strictly immutable to tenant operators. Only Head Office Super Administrators may alter branch names via administrative operator management endpoints ([`operatorController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/operatorController.js) `PATCH /api/operators/:id`).
+  2. Enforce zero-trust guards on self-service profile endpoints: if an operator attempts to submit `branchName` or `name`, reject immediately with `403 Forbidden`.
+  3. Render immutable governance attributes in the UI as strictly `readOnly` and `disabled`, complete with visual lock pills and explanatory helper captions informing users that branch names are assigned exclusively by Head Office.
+  4. Separate authorized representative details (`fullName`) from organizational branch identity (`branchName`), allowing operators to update their designated contact person without altering branch naming.
+
+## [2026-10-12] Orphaned Mutation Records & Firestore Map Staling in Aggregation Documents
+- **Problem**: Total Revenue KPI card in the Admin Header displayed ₱59,188 while the Performance Overview card in the Analytics tab displayed ₱40,388, causing a discrepancy in reported revenue.
+- **Root Cause**:
+  1. The `payments` and `activeServices` collections contained orphaned test records referencing an obsolete operator (`USR-OPR-hLtV3RFWzgPtuIM2C9Wn`, Branch "Test") whose account had been purged from the `users` collection.
+  2. The analytics engine correctly calculated operator metrics based on registered operators in `users` (2 operators: Baliuag with ₱40,388 and Apalit with ₱0), whereas `system_stats/revenue` previously accumulated the orphaned payment. Additionally, updating `system_stats/revenue` with `{ merge: true }` caused deleted operator keys in the `operators` map to persist indefinitely.
+- **Prevention**:
+  1. Always ensure data integrity by auditing foreign references: records in `payments` and `activeServices` must strictly belong to active, registered operators in `users`.
+  2. When pruning or recalculating aggregation documents (`system_stats/revenue`), do not use `{ merge: true }` without explicitly deleting stale keys (`admin.firestore.FieldValue.delete()`), or overwrite the document cleanly so obsolete operator IDs are completely removed.
+  3. Ensure cleanup scripts cross-reference the canonical `users` table to detect and delete orphaned records across related collections (`payments`, `activeServices`, `receipts`).
+
+## [2026-10-12] Firestore Real-Time Metric Scaling: Dedicated Aggregation Document vs Collection Scanning
+- **Problem**: Querying or subscribing with `onSnapshot` to an entire collection (e.g. `payments` where `status == 'PAID'`) to compute a single dashboard scalar KPI (e.g. `totalRevenue`) transfers all $N$ documents over the network on every load, consuming excessive bandwidth, compute, and Firestore document read quotas.
+- **Root Cause**: Real-time push listeners on collections download all matching documents to compute sums client-side because Firestore does not support reactive `sum()` stream queries across collection snapshots.
+- **Prevention**: For platform-level scalar metrics and KPIs, maintain a dedicated aggregation/counter document (e.g. `system_stats/revenue`). Use server-side ACID transactions (`admin.firestore.FieldValue.increment`) on payment mutations in the backend to keep it perfectly updated, and have frontend layout listeners subscribe strictly to that single document (1 document read, instant real-time push).
+
 ## [2026-10-06] Client Requirements File State Wiping & File Input Value Persistence
 - **Problem**: In `QuotationAttachRequirementsModal`, when a client selected a file for a mandatory requirement, the selection would intermittently be wiped out / reset to `null` before submission, and re-selecting the same file after removing it failed to trigger the input `onChange` handler.
 - **Root Cause**:
@@ -204,4 +230,10 @@
   2. Conditionally mount modals in parent components (`{isModalOpen && selectedRecord && <HistoryDetailModal ... />}`), ensuring the child only mounts when active and completely unmounts when closed.
   3. Keep requirement queries lean: look up by `submittedRequirementsId` directly, and show the empty state simply when `!submittedDocs || submittedDocs.length === 0`.
 
+## [2026-10-18] Omission of Terminal & Commercial Statuses from UI Badge Color Class Mappings
+- **Problem**: In the Operator Inquiry Forms module, inquiries with status `'paid'` were displayed with an amber/yellow pending warning badge on the list view and a completely colorless/washed-out gray badge on the detail view. Statuses such as `'quotation_created'` and `'quotation_sent'` were rendered with raw snake_case underscores (`quotation_created`).
+- **Root Cause**: 
+  1. Frontend status mappers only matched a subset of positive lifecycle states (`accepted`, `confirmed`, `completed`, `active`), omitting `'paid'` and `'fulfilled'`. Any unmatched status fell back to `'status-pill-pending'` (yellow) on list views or `'neutral'` (gray) on detail layouts.
+  2. Status strings were displayed raw (`form.status`) without string sanitation or underscore replacement.
+- **Prevention**: Always build centralized or comprehensive status mapper utilities that account for the full entity lifecycle (`submitted`, `quotation_created`, `quotation_sent`, `accepted`, `paid`, `completed`, `fulfilled`, `rejected`, `cancelled`, `archived`). Sanitize display strings with `.replace(/_/g, ' ')` before rendering in badges.
 

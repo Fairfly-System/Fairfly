@@ -205,17 +205,20 @@
   font-size: 0.725rem;
   font-weight: 600;
   padding: 0.15rem 0.5rem;
-  border-radius: 9999px;
+  border-radius: 0;
+  border: 1px solid transparent;
 }
 
 .cif-req-badge.pending {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--warning-yellow-light, #fef3c7);
+  color: #b45309;
+  border-color: #fde68a;
 }
 
 .cif-req-badge.uploaded {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: var(--complete-green-light, #dcfce7);
+  color: var(--complete-green-dark, #166534);
+  border-color: #86efac;
 }
 
 .cif-upload-box {

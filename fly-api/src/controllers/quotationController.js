@@ -258,8 +258,6 @@ const createQuotation = async (req, res) => {
       preparedByName: preparedByName || preparedBy || req.userDetails?.name || 'Operator',
       preparedByTitle: preparedByTitle || req.userDetails?.title || (req.userDetails?.role === 'admin' ? 'Business Head' : 'Branch Operator'),
       preparedByContact: preparedByContact || req.userDetails?.phoneNumber || req.userDetails?.phone || '',
-      preparedBy: preparedByName || preparedBy || req.userDetails?.name || 'Operator',
-      remarks: (operatorRemarks !== undefined && operatorRemarks !== null ? String(operatorRemarks) : String(remarks || '')).trim(),
       operatorRemarks: (operatorRemarks !== undefined && operatorRemarks !== null ? String(operatorRemarks) : String(remarks || '')).trim(),
       clientRemarks: (clientRemarks !== undefined && clientRemarks !== null ? String(clientRemarks) : (linkedInquiry?.clientRemarks || linkedInquiry?.remarks || linkedInquiry?.notes || '')).trim(),
       quotationDate: quotationDate || now.split('T')[0],
@@ -277,8 +275,7 @@ const createQuotation = async (req, res) => {
       rejectionReason: null,
       activeServiceId: null,
       createdAt: now,
-      updatedAt: now,
-      operatorId: effectiveBranchUid || (isOperatorUser ? req.user?.uid : 'operator_admin')
+      updatedAt: now
     };
 
     const docId = await addToDatabase(COLLECTIONS.QUOTATIONS, newQuotation, ID_PREFIXES.QUOTATION);
@@ -378,6 +375,12 @@ const getQuotations = async (req, res) => {
     const results = await queryDatabaseAdvanced(COLLECTIONS.QUOTATIONS, options);
     const normalized = results.map(q => ({
       ...q,
+      preparedByName: q.preparedByName || q.preparedBy || 'Operator',
+      preparedBy: q.preparedBy || q.preparedByName || 'Operator',
+      operatorRemarks: q.operatorRemarks !== undefined ? q.operatorRemarks : (q.remarks || ''),
+      remarks: q.remarks !== undefined ? q.remarks : (q.operatorRemarks || ''),
+      branchUid: q.branchUid || q.operatorId || null,
+      operatorId: q.operatorId || q.branchUid || null,
       archived: q.archived === true,
       archivedAt: q.archivedAt || null,
       archivedBy: q.archivedBy || null,
@@ -578,7 +581,6 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId, o
   }
 
   return {
-    id: activeServiceDocId,
     serviceCode: options.serviceCode || quotation.serviceCode || null,
     receiptId: options.receiptId || quotation.receiptId || null,
     receiptNo: options.receiptNo || quotation.receiptNo || null,
@@ -587,19 +589,15 @@ const buildFulfillmentPayload = async (quotation, payment, activeServiceDocId, o
     clientEmail: quotation.clientEmail || '',
     clientPhone: quotation.clientPhone || '',
     serviceId: quotation.serviceId || null,
-    serviceUID: quotation.serviceId || null,
     serviceType: serviceTitle,
     price: servicePrice,
     submittedRequirementsId: resolvedSubmittedReqId,
-    priority: 'Normal Priority',
     priorityType: 'normal',
     status: 'Pending',
     currentStepIndex: 0,
-    totalSteps: compiledSteps.length,
     startedAt: now,
     completedAt: null,
     steps: compiledSteps,
-    operatorId: assignedOperatorId,
     branchUid: assignedOperatorId,
     branchName: assignedBranchName,
     additionalNotes: `Custom Service created from Quotation ${quotation.quoteNo || quotation.id || ''}.\nTour Date: ${quotation.tourDates || 'N/A'}\nInclusions: ${quotation.inclusions || 'N/A'}\nExclusions: ${quotation.exclusions || 'N/A'}\nOperator Remarks: ${quotation.operatorRemarks || quotation.remarks || 'N/A'}${quotation.clientRemarks ? `\nClient Remarks: ${quotation.clientRemarks}` : ''}`,

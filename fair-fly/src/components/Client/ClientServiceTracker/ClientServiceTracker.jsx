@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import Steps from './Steps/Steps';
 import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../Shared/PdfDocument/PdfDocumentView';
 import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './service-tracker.css';
 
@@ -23,6 +24,7 @@ const CATEGORY_ICON_MAP = {
 
 export default function ClientServiceTracker({ service, onOpenReceipt }) {
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
   const [showSteps, setShowSteps] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
   const [inquiryRequirements, setInquiryRequirements] = useState([]);
@@ -368,6 +370,23 @@ export default function ClientServiceTracker({ service, onOpenReceipt }) {
                         >
                           <i className="fa-regular fa-image" style={{ marginRight: '0.35rem' }}></i>
                           <span>{fileName || 'View Attached Image'}</span>
+                        </button>
+                      ) : isPdfUrl(fileUrl, fileName) ? (
+                        <button
+                          type="button"
+                          className="tracker-file-link"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                          title={fileName ? `View ${fileName} PDF` : 'View Attached PDF'}
+                          onClick={() =>
+                            openPdfModal({
+                              type: 'file',
+                              url: fileUrl,
+                              title: fileName || name || 'Attached Requirement Document'
+                            })
+                          }
+                        >
+                          <i className="fa-solid fa-file-pdf" style={{ marginRight: '0.35rem', color: '#ef4444' }}></i>
+                          <span>{fileName || 'View Attached PDF'}</span>
                         </button>
                       ) : (
                         <a

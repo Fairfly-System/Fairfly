@@ -46,13 +46,9 @@ export default function Dashboard() {
   const [ticketPage, setTicketPage] = useState(1);
   const [dashboardTicketSort, setDashboardTicketSort] = useState('priority');
   
-  // Recent activity from Firestore (15 items)
+  // Recent activity from Firestore (5 items)
   const [recentLogs, setRecentLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
-
-  // All logs for modal
-  const [allLogs, setAllLogs] = useState([]);
-  const [allLogsLoading, setAllLogsLoading] = useState(true);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
 
   useEffect(() => {
@@ -96,29 +92,6 @@ export default function Dashboard() {
     );
     return unsubscribe;
   }, []);
-
-  // ── All logs subscription (when modal is opened) ──────────────────────────
-  useEffect(() => {
-    if (!isViewAllOpen) return;
-
-    const q = query(
-      collection(firestore, 'admin-logs'),
-      orderBy('timestamp', 'desc'),
-      limit(100)
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setAllLogs(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-        setAllLogsLoading(false);
-      },
-      (err) => {
-        console.error('Failed to subscribe to admin-logs (all):', err);
-        setAllLogsLoading(false);
-      }
-    );
-    return unsubscribe;
-  }, [isViewAllOpen]);
 
   // ── Export logs helper (.txt download) ────────────────────────────────────
   const handleExportLogs = useCallback(
@@ -281,7 +254,7 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={revenueData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#eceef3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `₱${Math.round(value / 1000)}k`} />
                   <Tooltip formatter={(value) => [formatCurrency(value), 'Revenue']} />
                   <Legend />
@@ -447,8 +420,6 @@ export default function Dashboard() {
       <AdminLogsModal
         isOpen={isViewAllOpen}
         onClose={() => setIsViewAllOpen(false)}
-        allLogs={allLogs}
-        allLogsLoading={allLogsLoading}
         onExportLogs={(logs) => handleExportLogs(logs)}
       />
     </main>

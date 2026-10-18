@@ -185,8 +185,7 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
         fileUrl,
         fileName,
         fileSize,
-        fileType,
-        fileExtension
+        fileType
       });
     } catch (error) {
       console.error('Error submitting resource:', error);

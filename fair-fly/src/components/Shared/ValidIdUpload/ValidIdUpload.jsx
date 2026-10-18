@@ -3,6 +3,7 @@ import { UploadCloud, CheckCircle2, Trash2, Eye, Info, FileText } from 'lucide-r
 import ValidIdInfoModal, { ACCEPTED_ID_TYPES } from '../ValidIdInfoModal/ValidIdInfoModal';
 import { useToast } from '../../UI/toast/ToastProvider';
 import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+import { usePdfModal } from '../../Shared/PdfDocument/PdfDocumentView';
 import './valid-id-upload.css';
 
 export default function ValidIdUpload({
@@ -20,6 +21,7 @@ export default function ValidIdUpload({
   const { addToast } = useToast();
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
 
   const frontInputRef = useRef(null);
   const backInputRef = useRef(null);
@@ -130,15 +132,20 @@ export default function ValidIdUpload({
 
             <div className="id-uploaded-actions">
               {isPdf ? (
-                <a
-                  href={fileData.previewUrl || fileData.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
                   className="id-action-icon-btn view"
                   title="View PDF document"
+                  onClick={() =>
+                    openPdfModal({
+                      type: 'file',
+                      url: fileData.previewUrl || fileData.url,
+                      title: fileData.name || label || 'Government ID PDF'
+                    })
+                  }
                 >
                   <Eye size={15} />
-                </a>
+                </button>
               ) : (
                 <button
                   type="button"

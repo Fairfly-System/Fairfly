@@ -16,6 +16,7 @@ import NewChatModal from '../../../components/Shared/Messaging/NewChatModal/NewC
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import useDebounce from '../../../hooks/useDebounce';
 import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import './messages-page.css';
 
 function formatFileSize(bytes) {
@@ -117,6 +118,7 @@ export default function MessagesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
 
   // Pre-load eligible contacts into user profiles cache
   useEffect(() => {
@@ -431,7 +433,7 @@ export default function MessagesPage() {
 
   return (
     <div className="messages-page-wrapper page-fade-in">
-      <Breadcrumbs items={breadcrumbItems} />
+      {userDetails.role !== 'client' && <Breadcrumbs items={breadcrumbItems} />}
 
       <div className={`messages-container-card ${activeConversation ? 'chat-open' : ''}`}>
         {/* ────────────────────────────────────────────────────────────────
@@ -644,6 +646,24 @@ export default function MessagesPage() {
                                 title="Click to view image"
                               >
                                 <i className="fa-solid fa-file-image message-attachment-icon"></i>
+                                <div className="message-attachment-meta">
+                                  <span className="message-attachment-name">{msg.fileMetadata.fileName}</span>
+                                  <span className="message-attachment-size">{formatFileSize(msg.fileMetadata.fileSize)}</span>
+                                </div>
+                                <i className="fa-solid fa-expand" style={{ fontSize: '0.875rem' }}></i>
+                              </button>
+                            ) : isPdfUrl(msg.fileMetadata.fileUrl, msg.fileMetadata.fileName) ? (
+                              <button
+                                type="button"
+                                onClick={() => openPdfModal({
+                                  type: 'file',
+                                  url: msg.fileMetadata.fileUrl,
+                                  title: msg.fileMetadata.fileName || 'Attached PDF Document'
+                                })}
+                                className="message-attachment-card message-attachment-card-btn"
+                                title="Click to view PDF document"
+                              >
+                                <i className="fa-solid fa-file-pdf message-attachment-icon" style={{ color: '#ef4444' }}></i>
                                 <div className="message-attachment-meta">
                                   <span className="message-attachment-name">{msg.fileMetadata.fileName}</span>
                                   <span className="message-attachment-size">{formatFileSize(msg.fileMetadata.fileSize)}</span>

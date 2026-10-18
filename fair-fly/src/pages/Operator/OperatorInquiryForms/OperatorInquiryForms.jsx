@@ -11,6 +11,24 @@ import useFirestorePagination from '../../../hooks/useFirestorePagination';
 import useDebounce from '../../../hooks/useDebounce';
 import './operator-inquiry-forms.css';
 
+const getInquiryStatusClass = (status) => {
+  const s = (status || '').toLowerCase();
+  if (['accepted', 'confirmed', 'completed', 'active', 'paid', 'fulfilled', 'closed', 'resolved'].includes(s)) {
+    return 'status-pill-active';
+  }
+  if (['rejected', 'cancelled', 'disabled'].includes(s)) {
+    return 'status-pill-disabled';
+  }
+  if (['quotation_created', 'quotation_sent', 'quoted', 'in-progress', 'in_progress', 'ongoing'].includes(s)) {
+    return 'status-pill-info';
+  }
+  return 'status-pill-pending';
+};
+
+const formatInquiryStatus = (status) => {
+  return (status || 'Submitted').replace(/_/g, ' ');
+};
+
 export function InquiryContent() {
   const { user, userDetails } = useAuthContext();
   const [showModal, setShowModal] = useState(false);
@@ -151,7 +169,9 @@ export function InquiryContent() {
                   <i className="fa-solid fa-file-lines"></i>
                 </div>
                 <div>
-                  <p className="op-inquiry-card-title">{form.fullName || form.title || 'Client Inquiry'}</p>
+                  <p className="op-inquiry-card-title">
+                    {form.clientName || form.fullName || form.companyName || form.contactPerson || form.title || 'Unnamed Client'}
+                  </p>
                   <p className="op-inquiry-card-meta">
                     Form No: <strong>{form.formNo || 'SAF-01'}</strong> · Service: {form.serviceType || 'General'} · Phone: {form.phoneNumber || 'N/A'}
                   </p>
@@ -166,11 +186,13 @@ export function InquiryContent() {
                   <i className="fa-solid fa-eye"></i> View
                 </Link>
                 {form.archived ? (
-                  <span className="status-pill status-pill-disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                  <span className="status-pill status-pill-neutral">
                     <i className="fa-solid fa-box-archive" style={{ marginRight: '0.3rem' }}></i>Archived
                   </span>
                 ) : (
-                  <span className="status-pill status-pill-active">{form.status || 'Active'}</span>
+                  <span className={`status-pill ${getInquiryStatusClass(form.status)}`}>
+                    {formatInquiryStatus(form.status)}
+                  </span>
                 )}
               </div>
             </article>

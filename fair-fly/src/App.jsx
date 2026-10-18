@@ -78,6 +78,7 @@ import AdminResources from './pages/Admin/AdminResources/AdminResources';
 import OperatorResources from './pages/Operator/OperatorResources/OperatorResources';
 import MessagesPage from './pages/Shared/MessagesPage/MessagesPage';
 import AnnouncementsPage from './pages/Shared/Announcements/AnnouncementsPage';
+import ProfilePage from './pages/Shared/Profile/ProfilePage';
 
 function App() {
 
@@ -93,6 +94,7 @@ function App() {
           <Route path="tracking" element={<ClientTrackingPage />} />
           <Route path="appointments" element={<ClientAppointmentsPage />} />
           <Route path="messages" element={<MessagesPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </>
     ),
@@ -120,6 +122,7 @@ function App() {
           <Route path="resources" element={<AdminResources />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="messages" element={<MessagesPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="franchise-apps" element={<AdminFranchiseApps />}>
             <Route index element={<FranchiseContent />} />
             <Route path=":id" element={<FranchiseAppDetailPage />} />
@@ -161,6 +164,7 @@ function App() {
           <Route path="resources" element={<OperatorResources />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="messages" element={<MessagesPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="tickets" element={<OperatorTickets />}>
             <Route index element={<OperatorTicketsContent />} />
             <Route path=":id" element={<OperatorTicketDetailPage />} />

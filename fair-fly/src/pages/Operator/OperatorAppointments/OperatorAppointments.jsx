@@ -270,9 +270,9 @@ export function AppointmentContent() {
                       <div className="op-appt-actions">
                         <span
                           className={`status-pill ${
-                            (a.status || '').toLowerCase() === 'confirmed'
+                            ['confirmed', 'completed'].includes((a.status || '').toLowerCase())
                               ? 'status-pill-active'
-                              : (a.status || '').toLowerCase() === 'cancelled'
+                              : ['cancelled', 'rejected'].includes((a.status || '').toLowerCase())
                               ? 'status-pill-disabled'
                               : 'status-pill-pending'
                           }`}

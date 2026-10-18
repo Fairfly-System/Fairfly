@@ -262,7 +262,7 @@ export default function ServiceContent() {
 
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-              <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
+              <span className="status-pill status-pill-active" style={{ fontSize: '0.75rem' }}>
                 {reqsCount} Requirement{reqsCount !== 1 ? 's' : ''}
               </span>
               {hasAttachment && (

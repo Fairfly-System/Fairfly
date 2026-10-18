@@ -13,6 +13,7 @@ import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { firestore } from '../../../firebase';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import './admin-qualification-detail.css';
 
 const ApproveIcon = (props) => <i className="fa-solid fa-certificate" {...props}></i>;
@@ -67,6 +68,7 @@ export default function AdminQualificationDetailPage() {
   const [confirmState, setConfirmState] = useState(null); // 'approve' | 'reject' | null
   const [docToPreview, setDocToPreview] = useState(null);
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
 
   // Live performance stats for the operator
   const [activeServicesCount, setActiveServicesCount] = useState(0);
@@ -182,14 +184,15 @@ export default function AdminQualificationDetailPage() {
       openLightbox({ url: docItem.url, title: docItem.name || 'Supporting Document' });
       return;
     }
-    const lowerName = (docItem.name || '').toLowerCase();
-    const isPdf = lowerName.endsWith('.pdf');
-
-    if (isPdf) {
-      setDocToPreview(docItem);
-    } else {
-      window.open(docItem.url, '_blank', 'noopener,noreferrer');
+    if (isPdfUrl(docItem.url, docItem.name)) {
+      openPdfModal({
+        type: 'file',
+        url: docItem.url,
+        title: docItem.name || 'Qualification Supporting Document'
+      });
+      return;
     }
+    window.open(docItem.url, '_blank', 'noopener,noreferrer');
   };
 
   const handlePrintDoc = (docItem) => {

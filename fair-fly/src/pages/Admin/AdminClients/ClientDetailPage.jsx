@@ -222,7 +222,7 @@ export default function ClientDetailPage() {
   const displayName = client?.fullName || client?.name || 'Client Profile';
 
   const breadcrumbs = [
-    { label: 'Admin Portal', to: '/admin' },
+    { label: 'Dashboard', to: '/admin' },
     { label: 'Client Accounts', to: '/admin/clients' },
     { label: loading ? 'Loading...' : displayName, active: true }
   ];
@@ -352,17 +352,17 @@ export default function ClientDetailPage() {
         isPending
           ? 'Pending Verification'
           : isRejected
-          ? 'Rejected'
-          : client?.status || 'Active'
+            ? 'Rejected'
+            : client?.status || 'Active'
       }
       statusType={
         isPending
           ? 'warning'
           : isRejected
-          ? 'danger'
-          : client?.status === 'Active'
-          ? 'success'
-          : 'neutral'
+            ? 'danger'
+            : client?.status === 'Active'
+              ? 'success'
+              : 'neutral'
       }
       breadcrumbs={breadcrumbs}
       backTo="/admin/clients"
@@ -455,15 +455,14 @@ export default function ClientDetailPage() {
                     <div className="detail-item">
                       <span className="detail-label">Account Status</span>
                       <span
-                        className={`status-pill ${
-                          isPending
+                        className={`status-pill ${isPending
                             ? 'status-pill-pending'
                             : isRejected
-                            ? 'status-pill-disabled'
-                            : client.status === 'Active'
-                            ? 'status-pill-active'
-                            : 'status-pill-disabled'
-                        }`}
+                              ? 'status-pill-disabled'
+                              : client.status === 'Active'
+                                ? 'status-pill-active'
+                                : 'status-pill-disabled'
+                          }`}
                       >
                         {isPending ? 'Pending Review' : isRejected ? 'Rejected' : client.status || 'Active'}
                       </span>
@@ -477,10 +476,10 @@ export default function ClientDetailPage() {
                       <span className="detail-value">
                         {client.createdAt
                           ? new Date(client.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
                           : '—'}
                       </span>
                     </div>
@@ -557,19 +556,18 @@ export default function ClientDetailPage() {
                   </div>
                   <div>
                     <span
-                      className={`status-pill ${
-                        isPending
+                      className={`status-pill ${isPending
                           ? 'status-pill-pending'
                           : isRejected
-                          ? 'status-pill-disabled'
-                          : 'status-pill-active'
-                      }`}
+                            ? 'status-pill-disabled'
+                            : 'status-pill-active'
+                        }`}
                     >
                       {isPending
                         ? 'Pending Administrator Review'
                         : isRejected
-                        ? 'Application Rejected'
-                        : 'Approved & Verified'}
+                          ? 'Application Rejected'
+                          : 'Approved & Verified'}
                     </span>
                   </div>
                 </div>
@@ -594,12 +592,12 @@ export default function ClientDetailPage() {
                     <span className="id-meta-val">
                       {client.idSubmittedAt
                         ? new Date(client.idSubmittedAt).toLocaleString(undefined, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short'
-                          })
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })
                         : client.createdAt
-                        ? new Date(client.createdAt).toLocaleDateString()
-                        : '—'}
+                          ? new Date(client.createdAt).toLocaleDateString()
+                          : '—'}
                     </span>
                   </div>
                   <div className="id-meta-item">
@@ -768,8 +766,8 @@ export default function ClientDetailPage() {
                     {isPending
                       ? 'Confirm that the ID photo matches the applicant and details are valid before approving.'
                       : isRejected
-                      ? 'This application is currently rejected. You may override and approve if documentation is verified.'
-                      : 'Account is verified. You may manage access or delete account if necessary.'}
+                        ? 'This application is currently rejected. You may override and approve if documentation is verified.'
+                        : 'Account is verified. You may manage access or delete account if necessary.'}
                   </p>
                 </div>
 

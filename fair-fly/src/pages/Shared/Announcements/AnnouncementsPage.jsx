@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import { auth } from '../../../firebase';
@@ -9,6 +10,7 @@ import {
   deleteAnnouncement
 } from '../../../services/chatService';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import SearchBar from '../../../components/UI/SearchBar/SearchBar';
 import FilterChipGroup from '../../../components/UI/FilterChipGroup/FilterChipGroup';
@@ -25,8 +27,17 @@ const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15MB
 export default function AnnouncementsPage() {
   const { user, userDetails } = useAuthContext();
   const { addToast } = useToast();
+  const location = useLocation();
 
   const isAdmin = userDetails?.role === 'admin' || userDetails?.isSuperAdmin;
+
+  const breadcrumbItems = useMemo(() => {
+    const isOperator = location.pathname.startsWith('/operator') || userDetails?.role === 'operator';
+    return [
+      { label: 'Dashboard', to: isOperator ? '/operator' : '/admin' },
+      { label: 'Announcements' }
+    ];
+  }, [location.pathname, userDetails?.role]);
 
   // Real-time Announcements List
   const [announcements, setAnnouncements] = useState([]);
@@ -340,11 +351,14 @@ export default function AnnouncementsPage() {
   };
 
   return (
-    <div className="announcements-page">
+    <div className="announcements-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+
       {/* Page Header */}
       <PageHeader
         title="Announcements"
         subtitle="Official notices, operational bulletins, and company broadcasts from Head Office."
+        illustrationSrc="/pageImages/shared/announcements.png"
       />
 
       {/* Toolbar: Debounced Search & Priority Filter Chips */}

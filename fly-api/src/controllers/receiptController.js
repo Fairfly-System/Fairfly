@@ -1,6 +1,7 @@
 const { db } = require('../config/firebase');
 const { 
   buildReceiptPayload,
+  formatReceiptDoc,
   getReceiptById: fetchReceiptDocById,
   getReceiptByQuotationId: fetchReceiptDocByQuotationId,
   getReceiptByFulfillmentId: fetchReceiptDocByFulfillmentId,
@@ -130,6 +131,7 @@ const getReceiptByQuotationId = async (req, res) => {
           receiptNo,
           serviceCode
         });
+        receipt = formatReceiptDoc({ id: receiptId, ...receipt });
       } else {
         return res.status(404).json({ error: 'No official receipt exists for this unpaid quotation.' });
       }
@@ -240,7 +242,7 @@ const getPublicReceiptByCode = async (req, res) => {
         .limit(1)
         .get();
       if (!snap.empty) {
-        receipt = { id: snap.docs[0].id, ...snap.docs[0].data() };
+        receipt = formatReceiptDoc(snap.docs[0]);
       }
     }
 

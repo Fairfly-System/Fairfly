@@ -4,6 +4,7 @@ const {
   createTicket, 
   getTickets, 
   getTicketById, 
+  getTicketMessages,
   updateTicketStatus, 
   addMessageToThread, 
   closeTicket 
@@ -18,6 +19,7 @@ const TICKET_ALLOWED_FIELDS = [
   'category',
   'priority',
   'initialMessage',
+  'message',
   'operatorId'
 ];
 
@@ -39,6 +41,9 @@ router.get('/', performanceProfiler('GET /tickets', verifyFirebaseToken, apiRate
 
 // Get specific ticket details by ID
 router.get('/:id', performanceProfiler('GET /tickets/:id', verifyFirebaseToken, apiRateLimiter, getTicketById));
+
+// Get ticket messages thread directly
+router.get('/:id/messages', performanceProfiler('GET /tickets/:id/messages', verifyFirebaseToken, apiRateLimiter, getTicketMessages));
 
 // Update ticket status (Pending, Ongoing, Closed)
 router.patch('/:id/status', performanceProfiler('PATCH /tickets/:id/status', verifyFirebaseToken, requireRole('admin'), allowedFields(['status']), apiRateLimiter, updateTicketStatus));

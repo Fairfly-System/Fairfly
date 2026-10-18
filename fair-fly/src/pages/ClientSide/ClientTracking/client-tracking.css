@@ -504,12 +504,16 @@
   color: #d97706;
 }
 
-.quote-status-pill.status-accepted {
+.quote-status-pill.status-accepted,
+.quote-status-pill.status-paid,
+.quote-status-pill.status-confirmed,
+.quote-status-pill.status-completed {
   background: #dcfce7;
   color: #15803d;
 }
 
-.quote-status-pill.status-rejected {
+.quote-status-pill.status-rejected,
+.quote-status-pill.status-cancelled {
   background: #fee2e2;
   color: #b91c1c;
 }
@@ -731,31 +735,49 @@
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.2rem 0.6rem;
-  border-radius: 9999px;
-  text-transform: capitalize;
+  border-radius: 0;
+  text-transform: uppercase;
+  border: 1px solid transparent;
 }
 
-.inquiry-status-pill.status-submitted {
-  background: #e0e7ff;
-  color: #4338ca;
+.inquiry-status-pill.status-submitted,
+.inquiry-status-pill.status-pending {
+  background: var(--warning-yellow-light, #fef3c7);
+  color: #b45309;
+  border-color: #fde68a;
 }
 
 .inquiry-status-pill.status-quotation_created,
-.inquiry-status-pill.status-quotation_sent {
-  background: #fef3c7;
-  color: #b45309;
+.inquiry-status-pill.status-quotation_sent,
+.inquiry-status-pill.status-quoted {
+  background: var(--purple-light-2, #ede9fe);
+  color: var(--purple-dark, #5b21b6);
+  border-color: #c7d2fe;
 }
 
 .inquiry-status-pill.status-pending_requirements {
   background: #fffbeb;
   color: #b45309;
-  border: 1px solid #fde68a;
+  border-color: #fde68a;
   font-weight: 700;
 }
 
-.inquiry-status-pill.status-accepted {
-  background: #dcfce7;
-  color: #15803d;
+.inquiry-status-pill.status-accepted,
+.inquiry-status-pill.status-completed,
+.inquiry-status-pill.status-confirmed,
+.inquiry-status-pill.status-closed,
+.inquiry-status-pill.status-paid,
+.inquiry-status-pill.status-fulfilled {
+  background: var(--complete-green-light, #dcfce7);
+  color: var(--complete-green-dark, #166534);
+  border-color: #86efac;
+}
+
+.inquiry-status-pill.status-rejected,
+.inquiry-status-pill.status-cancelled {
+  background: var(--error-red-light, #fee2e2);
+  color: var(--error-red-dark, #991b1b);
+  border-color: #fca5a5;
 }
 
 .inq-services-chips {

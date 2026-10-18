@@ -1,8 +1,34 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import html2pdf from 'html2pdf.js';
 import QRCode from 'qrcode';
 import './pdf-document.css';
+
+/**
+ * Universal helper to check if a URL or filename represents a PDF document
+ */
+export const isPdfUrl = (url = '', fileName = '') => {
+  if (!url && !fileName) return false;
+  const target = `${fileName || ''} ${url || ''}`.toLowerCase();
+  return target.endsWith('.pdf') || target.includes('.pdf?') || target.includes('application/pdf');
+};
+
+export const PdfModalContext = createContext(null);
+
+export const usePdfModal = () => {
+  const context = useContext(PdfModalContext);
+  if (!context) {
+    // Graceful fallback if invoked outside provider
+    return {
+      openPdfModal: (options) => {
+        console.warn('[usePdfModal] Called outside PdfModalProvider:', options);
+      },
+      closePdfModal: () => {},
+      isOpen: false
+    };
+  }
+  return context;
+};
 
 // Standard official service categories listed on SAF-01-002
 const OFFICIAL_SERVICES = [
@@ -138,7 +164,7 @@ function normalizeReceiptPdfData(data) {
 
   return {
     receiptNo: data.receiptNo || 'RCT-2026-OFFICIAL',
-    receiptId: data.receiptId || data.id || '',
+    receiptId: data.id || data.receiptId || '',
     formNo: data.formNo || 'ADF-07-002',
     serviceCode: data.serviceCode || data.trackingReference || 'SRV-2026-OFFICIAL',
     fulfillmentId: data.fulfillmentId || data.activeServiceId || 'SVC-PENDING',
@@ -173,18 +199,28 @@ function normalizeReceiptPdfData(data) {
   };
 }
 
-export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', data }) {
+export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', data, url, title }) {
   const printableRef = useRef(null);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedQr, setGeneratedQr] = useState(null);
 
-  const isQuotation = type === 'quotation';
-  const isReceipt = type === 'receipt';
-  const isInquiry = !isQuotation && !isReceipt;
+  const isFile =
+    type === 'file' ||
+    type === 'pdf' ||
+    Boolean(url) ||
+    Boolean(data?.fileUrl) ||
+    Boolean(data?.url && !data?.controlNo && !data?.servicesOffered && !data?.quoteNo);
+
+  const isQuotation = !isFile && type === 'quotation';
+  const isReceipt = !isFile && type === 'receipt';
+  const isInquiry = !isFile && !isQuotation && !isReceipt;
 
   const inquiryData = isInquiry ? normalizeInquiryPdfData(data) : null;
   const quotationData = isQuotation ? normalizeQuotationPdfData(data) : null;
   const receiptData = isReceipt ? normalizeReceiptPdfData(data) : null;
+
+  const resolvedFileUrl = url || data?.fileUrl || data?.url || '';
+  const fileTitle = title || data?.title || data?.fileName || data?.name || 'Attached PDF Document';
 
   // Prevent background body scrolling while modal is open
   useEffect(() => {
@@ -205,7 +241,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
       } else {
         const frontendBaseUrl = window.location.origin || 'http://localhost:5173';
         const targetCode = receiptData.serviceCode || receiptData.fulfillmentId || receiptData.receiptNo;
-        const trackingUrl = `${frontendBaseUrl}/track?trackingId=${encodeURIComponent(targetCode)}`;
+        const trackingUrl = receiptData.qrTrackingUrl || `${frontendBaseUrl}/track?trackingId=${encodeURIComponent(targetCode)}`;
         
         QRCode.toDataURL(trackingUrl, {
           margin: 1,
@@ -216,19 +252,21 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
             light: '#ffffff'
           }
         })
-          .then((url) => setGeneratedQr(url))
+          .then((qrUrl) => setGeneratedQr(qrUrl))
           .catch((err) => console.warn('[PdfDocumentView] QR generation failed:', err));
       }
     }
-  }, [isReceipt, receiptData?.serviceCode, receiptData?.qrCodeDataUrl]);
+  }, [isReceipt, receiptData?.serviceCode, receiptData?.qrCodeDataUrl, receiptData?.qrTrackingUrl, receiptData?.fulfillmentId, receiptData?.receiptNo]);
 
-  if (!isOpen || !data) return null;
+  if (!isOpen || (!data && !resolvedFileUrl)) return null;
 
-  const referenceNo = isReceipt
-    ? receiptData.receiptNo
+  const referenceNo = isFile
+    ? ''
+    : isReceipt
+    ? receiptData?.receiptNo
     : isQuotation 
-    ? quotationData.quoteNo 
-    : `${inquiryData.formNo} (${inquiryData.controlNo})`;
+    ? quotationData?.quoteNo 
+    : `${inquiryData?.formNo || 'SAF-01-002'} (${inquiryData?.controlNo || '23-001'})`;
 
   const formattedDocDate = (dateStr) => {
     if (!dateStr) return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -255,6 +293,18 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
   };
 
   const handleDownloadPdf = async () => {
+    if (isFile && resolvedFileUrl) {
+      const link = document.createElement('a');
+      link.href = resolvedFileUrl;
+      link.download = fileTitle.toLowerCase().endsWith('.pdf') ? fileTitle : `${fileTitle}.pdf`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     if (!printableRef.current || isExporting) return;
     setIsExporting(true);
 
@@ -285,6 +335,10 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
   };
 
   const handlePrint = () => {
+    if (isFile && resolvedFileUrl) {
+      window.open(resolvedFileUrl, '_blank');
+      return;
+    }
     window.print();
   };
 
@@ -296,7 +350,9 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
           <h2 className="pdf-modal-title">
             <i
               className={`fa-solid ${
-                isReceipt
+                isFile
+                  ? 'fa-file-pdf'
+                  : isReceipt
                   ? 'fa-receipt'
                   : isQuotation
                   ? 'fa-file-invoice-dollar'
@@ -305,13 +361,17 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
               style={{ color: 'var(--purple, #7c3aed)' }}
             ></i>
             <span>
-              {isReceipt
+              {isFile
+                ? fileTitle
+                : isReceipt
                 ? 'Official E-Receipt Preview'
                 : isQuotation
                 ? 'Quotation Document Preview'
                 : 'Official Inquiry Form Preview'}
             </span>
-            <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>({referenceNo})</span>
+            {referenceNo && (
+              <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>({referenceNo})</span>
+            )}
           </h2>
 
           <div className="pdf-modal-actions">
@@ -357,9 +417,18 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
           </div>
         </div>
 
-        {/* Printable Canvas */}
-        <div className="pdf-modal-body">
-          <div ref={printableRef} className="pdf-sheet">
+        {/* Modal Body / Viewer */}
+        {isFile ? (
+          <div className="pdf-modal-body pdf-modal-body--file">
+            <iframe
+              src={resolvedFileUrl}
+              className="pdf-embedded-frame"
+              title={fileTitle}
+            />
+          </div>
+        ) : (
+          <div className="pdf-modal-body">
+            <div ref={printableRef} className="pdf-sheet">
             {isReceipt ? (
               /* ============================================================ */
               /* OFFICIAL FAIRFLY E-RECEIPT (ADF-07-002 / RCT)                */
@@ -478,7 +547,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
                             <strong>Inclusions:</strong> {receiptData.inclusions}
                           </div>
                         )}
-                        {receiptData.description && (
+                        {receiptData.description && receiptData.description !== receiptData.serviceTitle && (
                           <div className="item-sub">{receiptData.description}</div>
                         )}
                       </td>
@@ -546,7 +615,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
                 {/* Legal Certification Notice & Official Seal */}
                 <div className="receipt-legal-notice">
                   <i className="fa-solid fa-shield-check" style={{ color: '#16a34a' }}></i>
-                  <span>{receiptData.legalNotice}</span>
+                  <span>{receiptData.legalNotice || 'This official e-receipt confirms the authorized processing and settlement of the designated FairFly travel and tour services under the FairFly System.'}</span>
                 </div>
 
                 {/* Official Accreditation Footer */}
@@ -861,8 +930,88 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
             )}
           </div>
         </div>
+        )}
       </div>
     </div>,
     document.body
+  );
+}
+
+/**
+ * Global PDF Modal Provider
+ * Allows any component in the application to launch the PDF viewer modal via usePdfModal().
+ */
+export function PdfModalProvider({ children }) {
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    type: 'quotation',
+    data: null,
+    url: '',
+    title: ''
+  });
+
+  const openPdfModal = useCallback((options) => {
+    if (!options) return;
+
+    if (typeof options === 'string') {
+      setModalState({
+        isOpen: true,
+        type: 'file',
+        url: options,
+        title: 'Attached PDF Document',
+        data: null
+      });
+      return;
+    }
+
+    const { type, data, url, fileUrl, title, name, fileName } = options;
+    const resolvedUrl = url || fileUrl || data?.fileUrl || data?.url || '';
+    const resolvedTitle = title || name || fileName || data?.title || data?.fileName || data?.name || 'Attached PDF Document';
+
+    if (
+      type === 'file' ||
+      type === 'pdf' ||
+      (resolvedUrl && type !== 'quotation' && type !== 'inquiry' && type !== 'receipt')
+    ) {
+      setModalState({
+        isOpen: true,
+        type: 'file',
+        url: resolvedUrl,
+        title: resolvedTitle,
+        data: data || null
+      });
+    } else {
+      setModalState({
+        isOpen: true,
+        type: type || 'quotation',
+        data: data || options,
+        url: '',
+        title: resolvedTitle
+      });
+    }
+  }, []);
+
+  const closePdfModal = useCallback(() => {
+    setModalState((prev) => ({
+      ...prev,
+      isOpen: false,
+      data: null,
+      url: '',
+      title: ''
+    }));
+  }, []);
+
+  return (
+    <PdfModalContext.Provider value={{ openPdfModal, closePdfModal, isOpen: modalState.isOpen }}>
+      {children}
+      <PdfDocumentView
+        isOpen={modalState.isOpen}
+        onClose={closePdfModal}
+        type={modalState.type}
+        data={modalState.data}
+        url={modalState.url}
+        title={modalState.title}
+      />
+    </PdfModalContext.Provider>
   );
 }

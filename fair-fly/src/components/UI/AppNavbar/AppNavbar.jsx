@@ -163,6 +163,7 @@ export default function AppNavbar({
                 </span>
               )}
             </NavLink>
+
           </div>
         )}
 
@@ -172,9 +173,27 @@ export default function AppNavbar({
 
           {/* Render welcome text for Client */}
           {isClient && (
-            <span className="app-nav-client-welcome">
+            <NavLink
+              to="/client/profile"
+              className="app-nav-client-welcome"
+              title="View & Edit Profile"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
               Welcome, <strong>{userDetails?.name || user?.displayName || user?.email?.split('@')[0] || 'Client'}</strong>
-            </span>
+            </NavLink>
+          )}
+
+          {/* Profile Quick Link for Client portal only (Admin & Operator use sidebar) */}
+          {isClient && (
+            <NavLink
+              to="/client/profile"
+              className={({ isActive }) => `app-nav-profile-btn ${isActive ? 'active' : ''}`}
+              title="My Profile"
+              aria-label="My Profile"
+            >
+              <i className="fa-regular fa-user"></i>
+              <span className="profile-text">Profile</span>
+            </NavLink>
           )}
 
           <a href="#" className="app-nav-logout" onClick={handleLogoutClick} aria-label="Log out">
@@ -210,6 +229,7 @@ export default function AppNavbar({
           </div>
         </BaseModal>
       </nav>
+
 
       {/* Client Mobile Sub-Navigation Bar */}
       {isClient && isClientMobileMenuOpen && (
@@ -264,6 +284,15 @@ export default function AppNavbar({
                 {clientTabCounts.messages > 9 ? '9+' : clientTabCounts.messages}
               </span>
             )}
+          </NavLink>
+
+          <NavLink
+            to="/client/profile"
+            onClick={() => setIsClientMobileMenuOpen(false)}
+            className={({ isActive }) => `client-mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <i className="fa-regular fa-user"></i>
+            <span className="client-mobile-nav-label">My Profile</span>
           </NavLink>
         </div>
       )}

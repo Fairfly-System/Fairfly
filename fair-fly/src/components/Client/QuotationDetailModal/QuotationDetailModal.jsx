@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useLightbox } from '../../UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../Shared/PdfDocument/PdfDocumentView';
 import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import QuotationAttachRequirementsModal from '../QuotationAttachRequirementsModal/QuotationAttachRequirementsModal';
 import './quotation-detail-modal.css';
@@ -16,6 +17,7 @@ export default function QuotationDetailModal({
   isAccepting = false,
 }) {
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
   const [showAttachModal, setShowAttachModal] = useState(false);
 
   const reqReferenceId = quotation?.submittedRequirementsId || quotation?.inquiryId || null;
@@ -275,6 +277,22 @@ export default function QuotationDetailModal({
                           >
                             <i className="fa-regular fa-image"></i>
                             <span>{fileName || 'View Attached Image'}</span>
+                          </button>
+                        ) : isPdfUrl(fileUrl, fileName) ? (
+                          <button
+                            type="button"
+                            className="quote-file-link"
+                            title={fileName ? `View ${fileName} PDF` : 'View Attached PDF'}
+                            onClick={() =>
+                              openPdfModal({
+                                type: 'file',
+                                url: fileUrl,
+                                title: fileName || reqName || 'Requirement Document'
+                              })
+                            }
+                          >
+                            <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                            <span>{fileName || 'View Attached PDF'}</span>
                           </button>
                         ) : (
                           <a

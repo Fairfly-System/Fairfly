@@ -221,7 +221,7 @@ async function runTests() {
       'ACT-2026-TEST'
     );
 
-    assert.strictEqual(fulfillment.id, 'ACT-2026-TEST');
+    assert.strictEqual(fulfillment.id, undefined, 'buildFulfillmentPayload must not write redundant self-referencing id');
     assert.strictEqual(fulfillment.quotationId, 'QTE-2026-TEST');
     assert.strictEqual(fulfillment.paymentId, 'PAY-2026-TEST');
     assert.strictEqual(fulfillment.clientUid, 'user_client_123');

@@ -9,6 +9,7 @@ import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModa
 import BaseModal from '../../../components/UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import './franchise-app-detail.css';
 
 const ApproveIcon = (props) => <i className="fa-solid fa-circle-check" {...props}></i>;
@@ -21,6 +22,7 @@ export default function FranchiseAppDetailPage({ isHistoryMode = false }) {
   const [loading, setLoading] = useState(true);
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
+  const { openPdfModal } = usePdfModal();
 
   const [confirmState, setConfirmState] = useState(null); // 'reject'
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
@@ -332,15 +334,30 @@ export default function FranchiseAppDetailPage({ isHistoryMode = false }) {
                       </div>
                       <div className="proof-actions">
                         {docItem.url && (
-                          <a
-                            href={docItem.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="proof-action-btn"
-                            title="Preview / Open Document"
-                          >
-                            <i className="fa-solid fa-arrow-up-right-from-square" />
-                          </a>
+                          isPdfUrl(docItem.url, docItem.name || docItem.fileName) ? (
+                            <button
+                              type="button"
+                              onClick={() => openPdfModal({
+                                type: 'file',
+                                url: docItem.url,
+                                title: docItem.name || docItem.fileName || 'Capability Proof Document'
+                              })}
+                              className="proof-action-btn"
+                              title="Preview PDF Document"
+                            >
+                              <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }} />
+                            </button>
+                          ) : (
+                            <a
+                              href={docItem.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="proof-action-btn"
+                              title="Preview / Open Document"
+                            >
+                              <i className="fa-solid fa-arrow-up-right-from-square" />
+                            </a>
+                          )
                         )}
                         {docItem.url && (
                           <a

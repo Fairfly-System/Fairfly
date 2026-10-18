@@ -255,21 +255,26 @@ export default function InquiryFormDetailPage() {
 
   const getStatusBadgeType = () => {
     const st = (form?.status || '').toLowerCase();
-    if (st === 'accepted' || st === 'confirmed') return 'success';
-    if (st === 'quotation_created' || st === 'quotation_sent') return 'purple';
-    if (st === 'submitted') return 'warning';
-    if (st === 'rejected' || st === 'cancelled') return 'danger';
+    if (['accepted', 'confirmed', 'completed', 'active', 'paid', 'fulfilled', 'closed', 'resolved'].includes(st)) {
+      return 'success';
+    }
+    if (['quotation_created', 'quotation_sent', 'quoted', 'in-progress', 'in_progress', 'ongoing'].includes(st)) {
+      return 'purple';
+    }
+    if (['submitted', 'pending', 'waiting', 'in-review', 'in_review'].includes(st)) {
+      return 'warning';
+    }
+    if (['rejected', 'cancelled', 'disabled'].includes(st)) {
+      return 'danger';
+    }
     return 'neutral';
   };
 
-
-  const isConfirmed = ['confirmed', 'accepted', 'quotation_created', 'quotation_sent'].includes((form?.status || '').toLowerCase());
-
   return (
     <RecordDetailLayout
-      title={form?.fullName || form?.clientName || 'Client Inquiry Intake'}
+      title={form?.clientName || form?.fullName || form?.companyName || form?.contactPerson || 'Client Inquiry Intake'}
       subtitle={form?.serviceType || 'Service Inquiry'}
-      status={isArchived ? 'ARCHIVED' : (form?.status || 'PENDING').toUpperCase()}
+      status={isArchived ? 'ARCHIVED' : (form?.status || 'SUBMITTED').replace(/_/g, ' ').toUpperCase()}
       statusType={isArchived ? 'neutral' : getStatusBadgeType()}
       breadcrumbs={breadcrumbs}
       backTo="/operator/inquiry-forms"
@@ -435,15 +440,15 @@ export default function InquiryFormDetailPage() {
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Client / Company Name</span>
-                  <span className="detail-value detail-value-bold">{form.fullName || form.clientName || 'N/A'}</span>
+                  <span className="detail-value detail-value-bold">{form.clientName || form.fullName || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Contact Person</span>
-                  <span className="detail-value">{form.contactPerson || form.fullName || 'N/A'}</span>
+                  <span className="detail-value">{form.contactPerson || form.clientName || form.fullName || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Cellphone Number</span>
-                  <span className="detail-value">{form.phoneNumber || form.cellphone || 'N/A'}</span>
+                  <span className="detail-value">{form.cellphone || form.phoneNumber || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Telephone No.</span>

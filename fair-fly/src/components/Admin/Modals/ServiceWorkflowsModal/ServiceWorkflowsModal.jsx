@@ -133,7 +133,7 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
   const filteredWorkflows = workflowsList.filter(wf =>
     (wf.name || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
     (wf.description || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-    (wf.serviceType || '').toLowerCase().includes(debouncedSearch.toLowerCase())
+    (wf.serviceType || wf.type || '').toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   return (
@@ -237,7 +237,7 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
                             {wf.name}
                           </h4>
                           {wf.serviceType && (
-                            <span className="status-pill" style={{ fontSize: '0.6875rem' }}>
+                            <span className="status-pill status-pill-info" style={{ fontSize: '0.6875rem' }}>
                               {wf.serviceType}
                             </span>
                           )}
@@ -247,7 +247,7 @@ export default function ServiceWorkflowsModal({ isOpen, onClose, initialWorkflow
                             {wf.description}
                           </p>
                         )}
-                        <span className="status-pill status-active" style={{ marginTop: '0.25rem', fontSize: '0.6875rem' }}>
+                        <span className="status-pill status-pill-active" style={{ marginTop: '0.25rem', fontSize: '0.6875rem' }}>
                           {stepsCount} Step{stepsCount !== 1 ? 's' : ''}
                         </span>
                       </div>

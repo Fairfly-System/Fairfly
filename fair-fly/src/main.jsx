@@ -6,6 +6,7 @@ import ToastProvider from './components/UI/toast/ToastProvider';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { LightboxProvider } from './components/UI/ImageLightbox/ImageLightbox';
+import { PdfModalProvider } from './components/Shared/PdfDocument/PdfDocumentView';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <NotificationProvider>
           <LightboxProvider>
-            <App />
+            <PdfModalProvider>
+              <App />
+            </PdfModalProvider>
           </LightboxProvider>
         </NotificationProvider>
       </AuthProvider>

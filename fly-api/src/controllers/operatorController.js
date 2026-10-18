@@ -115,6 +115,17 @@ const updateOperator = async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
+    if (updates.branchName !== undefined) {
+      const trimmedBranch = String(updates.branchName).trim();
+      sanitizedUpdates.branchName = trimmedBranch;
+      sanitizedUpdates.name = trimmedBranch;
+      try {
+        await admin.auth().updateUser(id, { displayName: trimmedBranch });
+      } catch (authErr) {
+        console.warn(`[Operator] Could not sync branchName to Firebase Auth displayName for operator ${id}:`, authErr.message);
+      }
+    }
+
     if (updates.isQualified !== undefined) {
       sanitizedUpdates.isQualified = Boolean(updates.isQualified);
     }
@@ -321,12 +332,9 @@ const fetchActiveBranchesInternal = async () => {
       const branchTitle = op.branchName || op.name || 'Branch Operator';
       const branchLocation = op.address || op.location || '';
       return {
-        uid: op.id,
         id: op.id,
         branchName: branchTitle,
-        name: branchTitle,
         address: branchLocation,
-        location: branchLocation,
         email: op.email || '',
         contactNumber: op.contactNumber || op.phone || '',
         isQualified: op.isQualified === true

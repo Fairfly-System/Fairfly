@@ -8,6 +8,7 @@ import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirement
 import { reviewQuotationRequirements, submitQuotationRequirements } from '../../../services/quotationService';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import { useLightbox, isImageUrl } from '../../UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../Shared/PdfDocument/PdfDocumentView';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './quotation-requirements-review.css';
 
@@ -19,6 +20,7 @@ export default function QuotationRequirementsReview({
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
 
   // 1. Fetch catalog service schema to know required items
   const [serviceSchema, setServiceSchema] = useState([]);
@@ -428,6 +430,21 @@ export default function QuotationRequirementsReview({
                             <span className="file-name-truncate">{fileName}</span>
                             {fileSize && <span className="file-size">({(fileSize / 1024 / 1024).toFixed(2)} MB)</span>}
                           </button>
+                        ) : isPdfUrl(fileUrl, fileName) ? (
+                          <button
+                            type="button"
+                            className="quotation-req-view-btn doc-view"
+                            onClick={() => openPdfModal({
+                              type: 'file',
+                              url: fileUrl,
+                              title: fileName || 'Requirement Document'
+                            })}
+                            title="View PDF Document"
+                          >
+                            <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                            <span className="file-name-truncate">{fileName}</span>
+                            {fileSize && <span className="file-size">({(fileSize / 1024 / 1024).toFixed(2)} MB)</span>}
+                          </button>
                         ) : (
                           <a
                             href={fileUrl}
@@ -435,7 +452,7 @@ export default function QuotationRequirementsReview({
                             rel="noreferrer"
                             className="quotation-req-view-btn doc-view"
                           >
-                            <i className="fa-solid fa-file-pdf"></i>
+                            <i className="fa-solid fa-file-arrow-down"></i>
                             <span className="file-name-truncate">{fileName}</span>
                             {fileSize && <span className="file-size">({(fileSize / 1024 / 1024).toFixed(2)} MB)</span>}
                           </a>

@@ -518,6 +518,219 @@ const checkAccountStatusForLogin = async (req, res) => {
 };
 
 /**
+ * Get profile of currently authenticated user
+ * User identity derived strictly from verified JWT (req.user.uid)
+ */
+const getProfile = async (req, res) => {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) {
+      return res.status(401).json({ error: 'Unauthorized: Missing user credentials' });
+    }
+
+    const userDoc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User profile not found in database' });
+    }
+
+    const userData = userDoc.data();
+    const { password: _p, ...cleanData } = userData;
+
+    // Fetch auth user metadata
+    let authUser = null;
+    try {
+      authUser = await admin.auth().getUser(uid);
+    } catch (authErr) {
+      console.warn(`[Profile] Could not fetch Auth record for ${uid}:`, authErr.message);
+    }
+
+    const isSuper = cleanData.role === 'admin' && (cleanData.isSuperAdmin === true || cleanData.email === 'admin@gmail.com' || req.user?.email === 'admin@gmail.com');
+
+    return res.status(200).json({
+      id: uid,
+      uid,
+      ...cleanData,
+      isSuperAdmin: isSuper,
+      email: authUser?.email || cleanData.email || req.user?.email || '',
+      emailVerified: authUser?.emailVerified || false,
+      authCreatedAt: authUser?.metadata?.creationTime || null,
+      authLastSignInTime: authUser?.metadata?.lastSignInTime || null
+    });
+  } catch (error) {
+    console.error('Error in getProfile:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
+/**
+ * Update basic personal information for currently authenticated user
+ * Editable fields: name, fullName, branchName, phone, contactNumber, address
+ * User identity derived strictly from req.user.uid
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) {
+      return res.status(401).json({ error: 'Unauthorized: Missing user credentials' });
+    }
+
+    const userDocRef = db.collection(COLLECTIONS.USERS).doc(uid);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User profile not found in database' });
+    }
+
+    const currentData = userDoc.data();
+    const updates = req.body;
+    const isOperator = currentData.role === 'operator' || currentData.role === 'branch_operator';
+
+    const sanitizedUpdates = {
+      updatedAt: new Date().toISOString()
+    };
+
+    // Strict Zero-Trust Guard: Operators cannot modify their assigned branch name
+    if (updates.branchName !== undefined) {
+      if (isOperator) {
+        return res.status(403).json({
+          error: 'Forbidden: Operators cannot modify their assigned branch name. Only administrators can alter branch names.'
+        });
+      }
+      const trimmed = updates.branchName.trim();
+      sanitizedUpdates.branchName = trimmed;
+    }
+
+    // Name handling
+    if (updates.fullName !== undefined) {
+      const trimmed = updates.fullName.trim();
+      if (!trimmed && !isOperator) {
+        return res.status(400).json({ error: 'Full name cannot be empty.' });
+      }
+      // For operators, fullName stores the Authorized Representative name without overwriting branch identity
+      sanitizedUpdates.fullName = trimmed;
+      if (!isOperator) {
+        sanitizedUpdates.name = trimmed; // Parity for clients and admins
+      }
+    } else if (updates.name !== undefined) {
+      if (isOperator) {
+        return res.status(403).json({
+          error: 'Forbidden: Operators cannot modify their assigned branch name. Only administrators can alter branch names.'
+        });
+      }
+      const trimmed = updates.name.trim();
+      if (!trimmed) {
+        return res.status(400).json({ error: 'Name cannot be empty.' });
+      }
+      sanitizedUpdates.fullName = trimmed;
+      sanitizedUpdates.name = trimmed;
+    }
+
+    // Phone / Contact number handling
+    if (updates.phone !== undefined) {
+      sanitizedUpdates.phone = updates.phone.trim();
+      if (isOperator) {
+        sanitizedUpdates.contactNumber = updates.phone.trim();
+      }
+    } else if (updates.contactNumber !== undefined) {
+      sanitizedUpdates.contactNumber = updates.contactNumber.trim();
+      sanitizedUpdates.phone = updates.contactNumber.trim();
+    }
+
+    // Address handling
+    if (updates.address !== undefined) {
+      sanitizedUpdates.address = typeof updates.address === 'string' ? updates.address.trim() : updates.address;
+    }
+
+    // Avoid empty write
+    if (Object.keys(sanitizedUpdates).length === 1 && sanitizedUpdates.updatedAt) {
+      return res.status(200).json({ message: 'No changes provided', id: uid });
+    }
+
+    await userDocRef.update(sanitizedUpdates);
+
+    // Sync displayName in Firebase Auth if name was changed (only for non-operators)
+    // Operators retain their Admin-assigned branchName as their primary displayName in Firebase Auth
+    if (!isOperator) {
+      const newDisplayName = sanitizedUpdates.fullName || sanitizedUpdates.name || sanitizedUpdates.branchName;
+      if (newDisplayName) {
+        try {
+          await admin.auth().updateUser(uid, { displayName: newDisplayName });
+        } catch (authErr) {
+          console.warn(`[Profile] Could not update displayName in Firebase Auth for ${uid}:`, authErr.message);
+        }
+      }
+    }
+
+    // Invalidate caches
+    userCache.delete(uid);
+    if (isOperator) {
+      const { staticDataCache } = require('../services/cacheService');
+      staticDataCache.delete('branches-list');
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      id: uid,
+      ...sanitizedUpdates
+    });
+  } catch (error) {
+    console.error('Error in updateProfile:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+  }
+};
+
+/**
+ * Dedicated secure Change Password endpoint
+ * Requires fresh client-side reauthentication proof (auth_time within 5 minutes)
+ * Updates password directly in Firebase Auth (never in Firestore)
+ */
+const changePassword = async (req, res) => {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) {
+      return res.status(401).json({ error: 'Unauthorized: Missing user credentials' });
+    }
+
+    const { newPassword, confirmPassword } = req.body;
+
+    if (!newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'New password is required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'New password and confirmation do not match.' });
+    }
+
+    // Verify recent authentication timestamp (within 5 minutes = 300 seconds)
+    const authTime = req.user?.auth_time;
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    if (!authTime || (nowEpoch - authTime) > 300) {
+      return res.status(401).json({
+        error: 'Recent authentication verification has expired. Please verify your current password again.',
+        code: 'AUTH_TIME_EXPIRED'
+      });
+    }
+
+    // Update password in Firebase Authentication
+    await admin.auth().updateUser(uid, { password: newPassword });
+
+    console.log(`[Auth] Password successfully updated for user ${uid}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password changed successfully.'
+    });
+  } catch (error) {
+    console.error('Error in changePassword:', error);
+    return res.status(500).json({ error: 'Failed to update password: ' + error.message });
+  }
+};
+
+/**
  * Legacy registerClient endpoint - delegates to initiateRegistration for secure verification flow
  */
 const registerClient = initiateRegistration;
@@ -530,7 +743,10 @@ module.exports = {
   verifyRegistrationCode: verifyRegistrationCodeController,
   resendRegistrationCode: resendRegistrationCodeController,
   reuploadId: reuploadIdController,
-  checkAccountStatusForLogin
+  checkAccountStatusForLogin,
+  getProfile,
+  updateProfile,
+  changePassword
 };
 
 

@@ -159,7 +159,6 @@ const createPendingRegistration = async ({
     middleInitial: resolvedMiddleInitial,
     lastName: resolvedLastName,
     fullName: resolvedFullName,
-    name: resolvedFullName,
     email: normalizedEmail,
     phone: phone.trim(),
     password, // temporary server-side storage until verification completes
@@ -297,7 +296,6 @@ const verifyRegistrationCode = async ({ email, code }) => {
     middleInitial: pendingData.middleInitial || '',
     lastName: pendingData.lastName || (pendingData.fullName ? pendingData.fullName.split(/\s+/).slice(1).join(' ') : ''),
     fullName: pendingData.fullName,
-    name: pendingData.fullName,
     email: pendingData.email,
     phone: pendingData.phone,
     role: 'client',

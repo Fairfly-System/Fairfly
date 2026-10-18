@@ -333,8 +333,8 @@ function DashboardContent() {
               const pct = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
               const clientName = s.clientName || s.name || 'Client Service';
               const serviceType = s.serviceType || s.type || 'General Service';
-              const priority = s.priority || 'Normal Priority';
-              const priorityType = s.priorityType || 'normal';
+              const priorityType = s.priorityType || (s.priority?.toLowerCase().includes('high') ? 'high' : 'normal');
+              const priority = s.priority || (priorityType === 'high' ? 'High Priority' : 'Normal Priority');
 
               return (
                 <article key={s.id} className="op-service-card">
@@ -349,7 +349,7 @@ function DashboardContent() {
                         </span>
                       )}
                       <span className={`op-priority ${priorityType}`}>{priority}</span>
-                      <span className={`op-status-badge ${s.status === 'Completed' ? 'completed' : s.status === 'Cancelled' ? 'cancelled' : 'processing'}`}>
+                      <span className={`op-status-badge ${(s.status || '').toLowerCase() === 'completed' ? 'completed' : (s.status || '').toLowerCase() === 'cancelled' ? 'cancelled' : (s.status || '').toLowerCase() === 'pending' ? 'pending' : 'processing'}`}>
                         {s.status || 'Processing'}
                       </span>
                     </div>

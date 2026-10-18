@@ -8,6 +8,7 @@ import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import './operator-service-procedure.css';
 
@@ -45,6 +46,7 @@ export default function OperatorServiceProcedure() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [inquiryRequirements, setInquiryRequirements] = useState([]);
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
 
   // Targeted single-document hook for normalized submittedRequirements
   const reqRefId = serviceRecord?.submittedRequirementsId || null;
@@ -414,8 +416,8 @@ export default function OperatorServiceProcedure() {
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <span className={`op-priority ${serviceRecord.priorityType || 'normal'}`}>
-            {serviceRecord.priority || 'Normal Priority'}
+          <span className={`op-priority ${serviceRecord.priorityType || (serviceRecord.priority?.toLowerCase().includes('high') ? 'high' : 'normal')}`}>
+            {serviceRecord.priority || (serviceRecord.priorityType === 'high' ? 'High Priority' : 'Normal Priority')}
           </span>
         </div>
       </div>
@@ -533,16 +535,32 @@ export default function OperatorServiceProcedure() {
                               )}
                             </div>
                           </div>
-                          <a
-                            href={fileMeta.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="op-req-view-btn"
-                            title="Download / View Document"
-                          >
-                            <i className="fa-solid fa-file-arrow-down"></i>
-                            <span>View File</span>
-                          </a>
+                          {isPdfUrl(fileMeta.url, fileMeta.fileName) ? (
+                            <button
+                              type="button"
+                              className="op-req-view-btn"
+                              title="View PDF Document"
+                              onClick={() => openPdfModal({
+                                type: 'file',
+                                url: fileMeta.url,
+                                title: fileMeta.fileName || 'Submitted Requirement Document'
+                              })}
+                            >
+                              <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                              <span>View PDF</span>
+                            </button>
+                          ) : (
+                            <a
+                              href={fileMeta.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="op-req-view-btn"
+                              title="Download / View Document"
+                            >
+                              <i className="fa-solid fa-file-arrow-down"></i>
+                              <span>View File</span>
+                            </a>
+                          )}
                         </div>
                       )}
 
@@ -668,6 +686,24 @@ export default function OperatorServiceProcedure() {
                         }
                       >
                         <i className="fa-solid fa-paperclip"></i>
+                        <span>{stepFile.name}</span>
+                        <i className="fa-solid fa-expand download-icon"></i>
+                      </button>
+                    ) : isPdfUrl(stepFile.url, stepFile.name) ? (
+                      <button
+                        type="button"
+                        className="swm-btn-file-attach"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                        title={`View Attached PDF: ${stepFile.name}`}
+                        onClick={() =>
+                          openPdfModal({
+                            type: 'file',
+                            url: stepFile.url,
+                            title: stepFile.name
+                          })
+                        }
+                      >
+                        <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
                         <span>{stepFile.name}</span>
                         <i className="fa-solid fa-expand download-icon"></i>
                       </button>

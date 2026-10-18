@@ -163,6 +163,32 @@ export default function ClientAppointmentForm({
 
     setIsSubmitting(true);
 
+    // Derive canonical ISO 8601 UTC timestamp assuming Asia/Manila (UTC+8)
+    let scheduledAt = null;
+    try {
+      const [y, m, d] = preferredDate.split('-').map(Number);
+      if (y && m && d) {
+        let mins = 600; // 10:00 AM default
+        const trimmedTime = (preferredTime || '').trim();
+        const match24 = trimmedTime.match(/^(\d{1,2}):(\d{2})$/);
+        const match12 = trimmedTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (match24) {
+          mins = parseInt(match24[1], 10) * 60 + parseInt(match24[2], 10);
+        } else if (match12) {
+          let hrs = parseInt(match12[1], 10);
+          const mn = parseInt(match12[2], 10);
+          const per = match12[3].toUpperCase();
+          if (per === 'PM' && hrs < 12) hrs += 12;
+          if (per === 'AM' && hrs === 12) hrs = 0;
+          mins = hrs * 60 + mn;
+        }
+        const hrs = Math.floor(mins / 60);
+        const mn = mins % 60;
+        const utcMs = Date.UTC(y, m - 1, d, hrs - 8, mn, 0);
+        scheduledAt = new Date(utcMs).toISOString();
+      }
+    } catch (e) {}
+
     const payload = {
       clientUid: user?.uid || '',
       clientName: clientName.trim(),
@@ -173,6 +199,7 @@ export default function ClientAppointmentForm({
       branchName: branchName || 'Main Branch',
       preferredDate: preferredDate,
       preferredTime: preferredTime || '10:00 AM',
+      scheduledAt: scheduledAt,
       serviceType: serviceType || 'General Consultation',
       purpose: purpose.trim() || 'Consultation & In-Person Document Turnover',
       status: 'Pending'

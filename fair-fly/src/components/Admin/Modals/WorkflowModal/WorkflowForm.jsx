@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../../UI/ModalBase/BaseModal';
 import { useLightbox, isImageUrl } from '../../../UI/ImageLightbox/ImageLightbox';
+import QuickLinkSelectSearch from '../../../UI/QuickLinkSelectSearch/QuickLinkSelectSearch';
 
 const EXECUTABLE_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.jar', '.vbs', '.js', '.scr', '.com', '.pif', '.application', '.gadget', '.msp', '.hta', '.cpl', '.msc'];
 
@@ -16,6 +17,7 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
   const [stepDescription, setStepDescription] = useState('');
 
   // Step Optional Attachments State
+  const [linkMode, setLinkMode] = useState('quicklink'); // 'quicklink' | 'manual'
   const [stepLinkUrl, setStepLinkUrl] = useState('');
   const [stepLinkTitle, setStepLinkTitle] = useState('');
   
@@ -354,24 +356,109 @@ function WorkflowStepsModal({ isOpen, onClose, initialSteps = [], onSaveSteps })
               Optional Step Attachments (Web Link or Direct Document Upload):
             </span>
 
-            {/* Web Link Input */}
-            <div style={{ display: 'flex', gap: '0.375rem' }}>
-              <input
-                type="url"
-                className="modalInput"
-                style={{ fontSize: '0.8125rem', flex: 2 }}
-                placeholder="Web Link URL (e.g. https://...)"
-                value={stepLinkUrl}
-                onChange={(e) => setStepLinkUrl(e.target.value)}
-              />
-              <input
-                type="text"
-                className="modalInput"
-                style={{ fontSize: '0.8125rem', flex: 1 }}
-                placeholder="Link Title (Optional)"
-                value={stepLinkTitle}
-                onChange={(e) => setStepLinkTitle(e.target.value)}
-              />
+            {/* Link Attachment Section: QuickLink vs Manual Link */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-mid)' }}>
+                  <i className="fa-solid fa-link" style={{ marginRight: '0.25rem', color: 'var(--purple)' }}></i>
+                  Web Link (Optional)
+                </span>
+                <div style={{ display: 'inline-flex', background: 'var(--card-bg, #fff)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 'var(--radius-sm, 0.375rem)', padding: '0.125rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (linkMode !== 'quicklink') {
+                        setLinkMode('quicklink');
+                        // Ensure only 1 link per step: clear manual inputs when switching
+                        setStepLinkUrl('');
+                        setStepLinkTitle('');
+                      }
+                    }}
+                    style={{
+                      border: 'none',
+                      background: linkMode === 'quicklink' ? 'var(--purple)' : 'transparent',
+                      color: linkMode === 'quicklink' ? '#fff' : 'var(--text-mid)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <i className="fa-solid fa-bolt" style={{ fontSize: '0.625rem' }}></i>
+                    From QuickLinks
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (linkMode !== 'manual') {
+                        setLinkMode('manual');
+                        // Ensure only 1 link per step: clear quicklink selection when switching
+                        setStepLinkUrl('');
+                        setStepLinkTitle('');
+                      }
+                    }}
+                    style={{
+                      border: 'none',
+                      background: linkMode === 'manual' ? 'var(--purple)' : 'transparent',
+                      color: linkMode === 'manual' ? '#fff' : 'var(--text-mid)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <i className="fa-solid fa-pen" style={{ fontSize: '0.625rem' }}></i>
+                    Manual URL
+                  </button>
+                </div>
+              </div>
+
+              {linkMode === 'quicklink' ? (
+                <div>
+                  <QuickLinkSelectSearch
+                    selectedTitle={stepLinkTitle}
+                    selectedUrl={stepLinkUrl}
+                    onSelectQuickLink={(ql) => {
+                      setStepLinkUrl(ql.url || '');
+                      setStepLinkTitle(ql.title || '');
+                    }}
+                    onClearSelection={() => {
+                      setStepLinkUrl('');
+                      setStepLinkTitle('');
+                    }}
+                    placeholder="Search QuickLinks collection (e.g. DFA, Cebu Pacific, VFS, PSA)..."
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.375rem' }}>
+                  <input
+                    type="url"
+                    className="modalInput"
+                    style={{ fontSize: '0.8125rem', flex: 2 }}
+                    placeholder="Web Link URL (e.g. https://...)"
+                    value={stepLinkUrl}
+                    onChange={(e) => setStepLinkUrl(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="modalInput"
+                    style={{ fontSize: '0.8125rem', flex: 1 }}
+                    placeholder="Link Title (Optional)"
+                    value={stepLinkTitle}
+                    onChange={(e) => setStepLinkTitle(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Direct File Upload Dropzone */}
@@ -483,7 +570,7 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
-    type: initialData?.type || initialData?.serviceType || '',
+    serviceType: initialData?.serviceType || initialData?.type || '',
   });
   const [steps, setSteps] = useState(
     initialData && Array.isArray(initialData.steps) ? initialData.steps : []
@@ -495,11 +582,11 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
       setFormData({
         name: initialData.name || '',
         description: initialData.description || '',
-        type: initialData.type || initialData.serviceType || '',
+        serviceType: initialData.serviceType || initialData.type || '',
       });
       setSteps(Array.isArray(initialData.steps) ? initialData.steps : []);
     } else {
-      setFormData({ name: '', description: '', type: '' });
+      setFormData({ name: '', description: '', serviceType: '' });
       setSteps([]);
     }
   }, [initialData]);
@@ -519,10 +606,10 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
     e.preventDefault();
     if (!formData.name.trim() || !formData.description.trim() || isLoading) return;
 
-    // Send both type and serviceType for backend compatibility
     const payload = {
-      ...formData,
-      serviceType: formData.type.trim() || 'General',
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      serviceType: (formData.serviceType || '').trim() || 'General',
       steps
     };
     onSubmit(payload);
@@ -549,10 +636,10 @@ export default function WorkflowForm({ onSubmit, onCancel, initialData = null, i
           <label className="form-label">Workflow / Service Type (Optional)</label>
           <input
             type="text"
-            name="type"
+            name="serviceType"
             className="modalInput"
             placeholder="e.g., PSA, Passport, Visa, onboarding"
-            value={formData.type}
+            value={formData.serviceType}
             disabled={isLoading}
             onChange={handleInputChange}
           />
