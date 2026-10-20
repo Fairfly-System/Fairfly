@@ -350,79 +350,101 @@ export default function RequestTracker({ hideHeader = false }) {
     }
   };
 
+  // Presentation-only helpers for the route visual
+  const timeline = Array.isArray(trackingData?.timeline) ? trackingData.timeline : [];
+  const currentIdx = timeline.findIndex((n) => n.isCurrent);
+  const reachedIdx = Math.max(currentIdx, timeline.map((n) => Boolean(n.isCompleted)).lastIndexOf(true), 0);
+  const routeProgress = timeline.length > 1 ? reachedIdx / (timeline.length - 1) : 0;
+  const hasReceipt = Boolean(
+    trackingData && (trackingData.receipt || trackingData.serviceCode || trackingData.quotation?.paymentStatus === 'PAID')
+  );
+  const foundTypeLabel =
+    trackingData?.foundType === 'quotation'
+      ? 'Quotation proposal'
+      : trackingData?.foundType === 'inquiry'
+        ? 'Inquiry intake'
+        : 'Active fulfillment';
+  const statusIcon =
+    trackingData?.statusType === 'success'
+      ? 'fa-solid fa-circle-check'
+      : trackingData?.statusType === 'warning'
+        ? 'fa-solid fa-clock'
+        : trackingData?.statusType === 'danger'
+          ? 'fa-solid fa-circle-xmark'
+          : 'fa-solid fa-spinner fa-spin';
+
   return (
     <>
-      <div className="request-tracker-container">
+      <div className="rt">
 
-        {/* Section Header */}
+        {/* Section Header (used when embedded outside the dedicated page) */}
         {!hideHeader && (
-          <div className="tracker-header">
-            <div className="tracker-badge">
-              <span className="tracker-badge-dot" />
-              <i className="fa-solid fa-magnifying-glass-location" />
-              <span>Real-Time Request Tracker</span>
-            </div>
-            <h2 className="tracker-title">
-              Track Your Travel Request <br />
-              <span className="tracker-title-accent">Without Logging In</span>
+          <div className="rt-head">
+            <span className="rt-head-index">[ Track ] Real-time request tracker</span>
+            <h2 className="rt-head-title">
+              Track your travel request <span className="rt-head-accent">without logging in.</span>
             </h2>
-            <p className="tracker-subtitle">
+            <p className="rt-head-sub">
               Enter your official Service Tracking ID (e.g. SRV-2026-XXXXXX) to view live milestone updates from our branch operators.
             </p>
           </div>
         )}
 
-        {/* Search Card */}
-        <div className="tracker-search-card">
-          <form className="tracker-search-form" onSubmit={handleTrackSubmit}>
-            <div className="tracker-input-wrapper">
-              <i className="fa-solid fa-barcode tracker-input-icon"></i>
-              <input
-                type="text"
-                className="tracker-input"
-                placeholder="Enter Service Tracking ID (e.g. SRV-2026-000123)..."
-                value={trackingInput}
-                disabled={isLoading}
-                onChange={(e) => setTrackingInput(e.target.value)}
-              />
-              {trackingInput && (
-                <button
-                  type="button"
-                  className="tracker-clear-btn"
-                  title="Clear input"
-                  onClick={() => setTrackingInput('')}
-                >
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
-              )}
-            </div>
+        {/* Check-in style search */}
+        <div className="rt-search">
+          <form className="rt-form" onSubmit={handleTrackSubmit}>
+            <label className="rt-field">
+              <span className="rt-field-label">Service tracking ID</span>
+              <span className="rt-field-row">
+                <i className="fa-solid fa-barcode rt-field-icon" aria-hidden="true"></i>
+                <input
+                  type="text"
+                  className="rt-input"
+                  placeholder="SRV-2026-000123"
+                  value={trackingInput}
+                  disabled={isLoading}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(e) => setTrackingInput(e.target.value)}
+                />
+                {trackingInput && (
+                  <button
+                    type="button"
+                    className="rt-clear"
+                    aria-label="Clear input"
+                    onClick={() => setTrackingInput('')}
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                )}
+              </span>
+            </label>
 
             <button
               type="submit"
-              className="tracker-submit-btn"
+              className="rt-submit"
               disabled={isLoading || !trackingInput.trim()}
             >
               {isLoading ? (
                 <>
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                  <span>Searching...</span>
+                  <span>Searching</span>
+                  <i className="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
                 </>
               ) : (
                 <>
-                  <i className="fa-solid fa-magnifying-glass"></i>
-                  <span>Track Status</span>
+                  <span>Track status</span>
+                  <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
                 </>
               )}
             </button>
           </form>
 
-          {/* Quick Examples & Helpers */}
-          <div className="tracker-hints">
-            <div className="tracker-chips-row">
-              <span>Sample Tracking IDs:</span>
+          <div className="rt-hints">
+            <div className="rt-samples">
+              <span className="rt-samples-label">Try a sample</span>
               <button
                 type="button"
-                className="tracker-hint-chip"
+                className="rt-sample"
                 onClick={() => handleSampleClick('SRV-2026-000123')}
                 title="Click to fill sample Service Tracking ID"
               >
@@ -430,283 +452,246 @@ export default function RequestTracker({ hideHeader = false }) {
               </button>
               <button
                 type="button"
-                className="tracker-hint-chip"
+                className="rt-sample"
                 onClick={() => handleSampleClick('SRV-2026-784291')}
                 title="Click to fill sample Service Tracking ID"
               >
                 SRV-2026-784291
               </button>
             </div>
-            <span>No account required • Instant live sync</span>
+            <span className="rt-hint-note">
+              <span className="rt-live-dot" aria-hidden="true" />
+              No account required &middot; Instant live sync
+            </span>
           </div>
 
-          {/* Error Message Alert */}
           {errorMessage && (
-            <div className="tracker-error-alert" role="alert">
-              <i className="fa-solid fa-circle-exclamation"></i>
-              <div>
-                <strong>Notice:</strong> {errorMessage}
-              </div>
+            <div className="rt-error" role="alert">
+              <span className="rt-error-code">Notice</span>
+              <p>{errorMessage}</p>
             </div>
           )}
         </div>
 
-        {/* Real-Time Result Card */}
+        {/* Real-time result: boarding pass */}
         {trackingData && (
-          <div className="tracker-result-card">
+          <article className="rt-pass" aria-live="polite">
 
-            {/* Result Header */}
-            <div className="result-header">
-              <div className="result-title-group">
-                <div className="result-ref-row">
-                  <span className="result-ref-code">REF: {trackingData.trackingReference}</span>
-                  {trackingData.serviceCode && (
-                    <span className="result-ref-code" style={{ background: '#dcfce7', color: '#15803d' }}>
-                      CODE: {trackingData.serviceCode}
-                    </span>
-                  )}
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', fontWeight: 600 }}>
-                    • {trackingData.foundType === 'quotation' ? 'Quotation Proposal' : trackingData.foundType === 'inquiry' ? 'Inquiry Intake' : 'Active Fulfillment'}
-                  </span>
-                </div>
-                <h3 className="result-service-title">{trackingData.serviceTitle}</h3>
+            <header className="rt-pass-head">
+              <div className="rt-pass-refs">
+                <span>REF {trackingData.trackingReference}</span>
+                {trackingData.serviceCode && (
+                  <span className="rt-pass-code">CODE {trackingData.serviceCode}</span>
+                )}
+                <span className="rt-pass-type">{foundTypeLabel}</span>
               </div>
-
-              <div className={`result-status-pill ${trackingData.statusType}`}>
-                <i className={
-                  trackingData.statusType === 'success'
-                    ? 'fa-solid fa-circle-check'
-                    : trackingData.statusType === 'warning'
-                      ? 'fa-solid fa-clock'
-                      : trackingData.statusType === 'danger'
-                        ? 'fa-solid fa-circle-xmark'
-                        : 'fa-solid fa-spinner fa-spin'
-                }></i>
+              <span className={`rt-status rt-status-${trackingData.statusType || 'primary'}`}>
+                <i className={statusIcon} aria-hidden="true"></i>
                 <span>{trackingData.status}</span>
-              </div>
+              </span>
+            </header>
+
+            <div className="rt-pass-title-row">
+              <h3 className="rt-pass-title">{trackingData.serviceTitle}</h3>
+              {trackingData.statusDescription && (
+                <p className="rt-pass-desc">{trackingData.statusDescription}</p>
+              )}
             </div>
 
-            {/* Meta Info Grid */}
-            <div className="result-meta-grid">
-              <div className="meta-item">
-                <span className="meta-label">Handling Branch</span>
-                <span className="meta-value">
-                  <i className="fa-solid fa-building-flag" style={{ marginRight: '0.375rem', color: 'var(--purple)' }}></i>
-                  {trackingData.branchName}
-                </span>
+            <dl className="rt-fields">
+              <div>
+                <dt>Handling branch</dt>
+                <dd>{trackingData.branchName}</dd>
               </div>
-
-              <div className="meta-item">
-                <span className="meta-label">Customer Reference</span>
-                <span className="meta-value">
-                  <i className="fa-solid fa-user-check" style={{ marginRight: '0.375rem', color: 'var(--green)' }}></i>
-                  {trackingData.clientName}
-                </span>
+              <div>
+                <dt>Customer</dt>
+                <dd>{trackingData.clientName}</dd>
               </div>
-
-              <div className="meta-item">
-                <span className="meta-label">Date Submitted</span>
-                <span className="meta-value">
-                  <i className="fa-solid fa-calendar-day" style={{ marginRight: '0.375rem', color: 'var(--text-light)' }}></i>
-                  {formatDate(trackingData.dateInitiated)}
-                </span>
+              <div>
+                <dt>Date submitted</dt>
+                <dd>{formatDate(trackingData.dateInitiated)}</dd>
               </div>
-
-              <div className="meta-item">
-                <span className="meta-label">Current Phase</span>
-                <span className="meta-value">
-                  Stage {trackingData.currentStage} of {trackingData.totalStages}
-                </span>
+              <div>
+                <dt>Current phase</dt>
+                <dd className="rt-fields-accent">
+                  Stage {trackingData.currentStage} of {trackingData.totalStages || timeline.length}
+                </dd>
               </div>
-            </div>
+            </dl>
 
-            {/* Official E-Receipt Callout Card (ADF-07-002) */}
-            {(trackingData.receipt || trackingData.serviceCode || trackingData.quotation?.paymentStatus === 'PAID') && (
-              <div className="receipt-callout-card">
-                <div className="receipt-callout-left">
-                  <div className="receipt-callout-badge">
-                    <i className="fa-solid fa-receipt"></i>
-                    <span>OFFICIAL E-RECEIPT ISSUED</span>
-                  </div>
-                  <div className="receipt-callout-details">
-                    <span className="receipt-callout-no">
-                      Receipt No: <strong>{trackingData.receipt?.receiptNo || 'Official (Authenticated)'}</strong>
-                    </span>
-                    {trackingData.serviceCode && (
-                      <span className="receipt-callout-code">
-                        Service Tracking Code: <code>{trackingData.serviceCode}</code>
-                      </span>
-                    )}
-                    {trackingData.receipt?.amount && (
-                      <span className="receipt-callout-amount">
-                        Amount Paid: <strong>{formatCurrency(trackingData.receipt.amount)}</strong> via {formatPaymentChannel(trackingData.receipt.paymentMethod, trackingData.receipt.provider) || 'Verified Payment'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn-view-receipt-modal"
-                  onClick={handleOpenReceiptModal}
-                  disabled={isLoadingReceipt}
-                >
-                  {isLoadingReceipt ? (
-                    <>
-                      <i className="fa-solid fa-spinner fa-spin"></i>
-                      <span>Loading Receipt...</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-file-invoice-dollar"></i>
-                      <span>View Official E-Receipt</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {/* 5-Stage Visual Stepper */}
-            <div className="stepper-section">
-              <div className="stepper-title">
-                <i className="fa-solid fa-bars-progress" style={{ color: 'var(--purple)' }}></i>
-                <span>Lifecycle Progression</span>
-              </div>
-
-              <div className="stepper-track">
-                {trackingData.timeline.map((node) => {
-                  const nodeClass = node.isCompleted ? 'completed' : node.isCurrent ? 'current' : 'pending';
+            {/* 5-stage route */}
+            <section className="rt-route" aria-label="Lifecycle progression">
+              <span className="rt-label">Lifecycle progression</span>
+              <ol className="rt-route-track" style={{ '--rt-progress': routeProgress, '--rt-n': Math.max(timeline.length, 1) }}>
+                {timeline.map((node) => {
+                  const nodeClass = node.isCompleted ? 'is-done' : node.isCurrent ? 'is-current' : 'is-pending';
                   return (
-                    <div className={`stepper-node ${nodeClass}`} key={node.stageNumber}>
-                      <div className="stepper-circle">
+                    <li className={`rt-stop ${nodeClass}`} key={node.stageNumber}>
+                      <span className="rt-stop-dot">
                         {node.isCompleted ? (
-                          <i className="fa-solid fa-check"></i>
-                        ) : node.isCurrent ? (
-                          <i className="fa-solid fa-spinner fa-spin"></i>
+                          <i className="fa-solid fa-check" aria-hidden="true"></i>
                         ) : (
-                          node.stageNumber
+                          String(node.stageNumber).padStart(2, '0')
                         )}
-                      </div>
-                      <span className="stepper-node-title">{node.title}</span>
-                      <span className="stepper-node-desc">{node.desc}</span>
-                    </div>
+                      </span>
+                      <span className="rt-stop-title">{node.title}</span>
+                      <span className="rt-stop-desc">{node.desc}</span>
+                    </li>
                   );
                 })}
-              </div>
-            </div>
+              </ol>
+            </section>
 
-            {/* Quotation Details Card (if quotation available) */}
-            {trackingData.quotation && (
-              <div className="quotation-callout-card">
-                <div className="quote-row-header">
-                  <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-light)', textTransform: 'uppercase' }}>
-                      Official Quotation Issued
-                    </span>
-                    <h4 style={{ margin: '0.125rem 0 0', color: 'var(--text-dark)' }}>
-                      Quote No: {trackingData.quotation.quoteNo || trackingData.trackingReference}
-                    </h4>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-light)', textTransform: 'uppercase' }}>
-                      Quoted Total
-                    </span>
-                    <div className="quote-amount">
-                      {formatCurrency(trackingData.quotation.totalAmount)}
+            {/* Official E-Receipt stub (ADF-07-002) */}
+            {hasReceipt && (
+              <div className="rt-receipt">
+                <div className="rt-receipt-main">
+                  <span className="rt-label rt-label-accent">
+                    <i className="fa-solid fa-receipt" aria-hidden="true"></i> Official e-receipt issued
+                  </span>
+                  <dl className="rt-receipt-fields">
+                    <div>
+                      <dt>Receipt no.</dt>
+                      <dd>{trackingData.receipt?.receiptNo || 'Official (Authenticated)'}</dd>
                     </div>
-                  </div>
+                    {trackingData.serviceCode && (
+                      <div>
+                        <dt>Tracking code</dt>
+                        <dd className="rt-mono">{trackingData.serviceCode}</dd>
+                      </div>
+                    )}
+                    {trackingData.receipt?.amount && (
+                      <div>
+                        <dt>Amount paid</dt>
+                        <dd>
+                          {formatCurrency(trackingData.receipt.amount)}
+                          <span className="rt-receipt-via">
+                            via {formatPaymentChannel(trackingData.receipt.paymentMethod, trackingData.receipt.provider) || 'Verified Payment'}
+                          </span>
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
                 </div>
-
-                {trackingData.quotation.inclusions && (
-                  <div>
-                    <strong style={{ fontSize: '0.8125rem', color: 'var(--text-dark)' }}>Package Inclusions:</strong>
-                    <p className="quote-inclusions-text">{trackingData.quotation.inclusions}</p>
-                  </div>
-                )}
-
-                {trackingData.quotation.tourDates && (
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-dark)' }}>
-                    <strong>Scheduled Itinerary:</strong> {trackingData.quotation.tourDates}
-                  </div>
-                )}
+                <div className="rt-receipt-stub">
+                  <span className="rt-barcode" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="rt-btn rt-btn-ink"
+                    onClick={handleOpenReceiptModal}
+                    disabled={isLoadingReceipt}
+                  >
+                    {isLoadingReceipt ? (
+                      <>
+                        <span>Loading receipt</span>
+                        <i className="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                      </>
+                    ) : (
+                      <>
+                        <span>View e-receipt</span>
+                        <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Detailed Procedure Milestones (if active steps available) */}
-            {trackingData.steps && trackingData.steps.length > 0 && (
-              <div className="steps-details-section">
-                <div className="stepper-title" style={{ marginBottom: '1rem' }}>
-                  <i className="fa-solid fa-list-check" style={{ color: 'var(--purple)' }}></i>
-                  <span>Procedure Milestone Verification</span>
+            {/* Quotation details */}
+            {trackingData.quotation && (
+              <section className="rt-quote">
+                <div className="rt-quote-head">
+                  <div>
+                    <span className="rt-label">Official quotation issued</span>
+                    <h4 className="rt-quote-no">
+                      Quote No. {trackingData.quotation.quoteNo || trackingData.trackingReference}
+                    </h4>
+                  </div>
+                  <div className="rt-quote-total">
+                    <span className="rt-label">Quoted total</span>
+                    <span className="rt-quote-amount">{formatCurrency(trackingData.quotation.totalAmount)}</span>
+                  </div>
                 </div>
 
-                <div className="steps-list">
+                {(trackingData.quotation.inclusions || trackingData.quotation.tourDates) && (
+                  <dl className="rt-quote-body">
+                    {trackingData.quotation.inclusions && (
+                      <div>
+                        <dt>Package inclusions</dt>
+                        <dd className="rt-quote-inclusions">{trackingData.quotation.inclusions}</dd>
+                      </div>
+                    )}
+                    {trackingData.quotation.tourDates && (
+                      <div>
+                        <dt>Scheduled itinerary</dt>
+                        <dd>{trackingData.quotation.tourDates}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
+              </section>
+            )}
+
+            {/* Procedure milestones */}
+            {trackingData.steps && trackingData.steps.length > 0 && (
+              <section className="rt-steps">
+                <span className="rt-label">Procedure milestone verification</span>
+                <ol className="rt-steps-list">
                   {trackingData.steps.map((st) => {
                     const isStepCompleted = (st.status || '').toLowerCase() === 'completed';
                     const isStepProcessing = (st.status || '').toLowerCase().includes('process');
-                    const rowClass = isStepCompleted ? 'completed' : isStepProcessing ? 'processing' : '';
-                    const badgeClass = isStepCompleted ? 'completed' : isStepProcessing ? 'processing' : 'pending';
+                    const rowClass = isStepCompleted ? 'is-done' : isStepProcessing ? 'is-processing' : 'is-pending';
 
                     return (
-                      <div className={`step-row-card ${rowClass}`} key={st.stepNumber}>
-                        <div className="step-row-num">
-                          {isStepCompleted ? <i className="fa-solid fa-check"></i> : st.stepNumber}
-                        </div>
-                        <div className="step-row-content">
-                          <span className="step-row-title">{st.title}</span>
-                          {st.description && <span className="step-row-desc">{st.description}</span>}
+                      <li className={`rt-step ${rowClass}`} key={st.stepNumber}>
+                        <span className="rt-step-num">
+                          {isStepCompleted ? (
+                            <i className="fa-solid fa-check" aria-hidden="true"></i>
+                          ) : (
+                            String(st.stepNumber).padStart(2, '0')
+                          )}
+                        </span>
+                        <div className="rt-step-body">
+                          <span className="rt-step-title">{st.title}</span>
+                          {st.description && <span className="rt-step-desc">{st.description}</span>}
                           {st.completedAt && (
-                            <span style={{ fontSize: '0.6875rem', color: '#15803d', fontWeight: 600 }}>
-                              <i className="fa-regular fa-clock" style={{ marginRight: '0.25rem' }}></i>
-                              Completed on {formatDate(st.completedAt)}
-                            </span>
+                            <span className="rt-step-done">Completed {formatDate(st.completedAt)}</span>
                           )}
                         </div>
-                        <span className={`step-row-badge ${badgeClass}`}>
-                          {st.status || 'Pending'}
-                        </span>
-                      </div>
+                        <span className="rt-step-badge">{st.status || 'Pending'}</span>
+                      </li>
                     );
                   })}
-                </div>
-              </div>
+                </ol>
+              </section>
             )}
 
-            {/* Footer Actions */}
-            <div className="result-footer-actions">
-              <button
-                type="button"
-                className="btn-track-reset"
-                onClick={handleReset}
-              >
-                <i className="fa-solid fa-arrow-left"></i>
-                <span>Track Another Code</span>
+            {/* Footer actions */}
+            <footer className="rt-pass-foot">
+              <button type="button" className="rt-textbtn" onClick={handleReset}>
+                <i className="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                <span>Track another code</span>
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {(trackingData.receipt || trackingData.serviceCode || trackingData.quotation?.paymentStatus === 'PAID') && (
+              <div className="rt-pass-foot-actions">
+                {hasReceipt && (
                   <button
                     type="button"
-                    className="btn-track-receipt-btn"
+                    className="rt-btn rt-btn-ghost"
                     onClick={handleOpenReceiptModal}
                     title="View printable E-Receipt"
                   >
-                    <i className="fa-solid fa-receipt"></i>
-                    <span>Official E-Receipt</span>
+                    <i className="fa-solid fa-receipt" aria-hidden="true"></i>
+                    <span>Official e-receipt</span>
                   </button>
                 )}
-
-                <a
-                  href="/login"
-                  className="btn-track-cta"
-                  title="Sign in to your client account for full features"
-                >
-                  <i className="fa-solid fa-right-to-bracket"></i>
-                  <span>Client Login</span>
+                <a href="/login" className="rt-btn rt-btn-ink" title="Sign in to your client account for full features">
+                  <span>Client login</span>
+                  <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
                 </a>
               </div>
-            </div>
-
-          </div>
+            </footer>
+          </article>
         )}
 
       </div>

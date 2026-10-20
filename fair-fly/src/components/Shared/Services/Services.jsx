@@ -473,87 +473,107 @@ export default function Services() {
     navigate(`/login?serviceId=${encodeURIComponent(service.id)}&serviceName=${encodeURIComponent(service.name)}`);
   };
 
+  const pad = (n) => String(n).padStart(2, '0');
+
   return (
-    <section id="services" className="landing-services-section">
-      <div className="landing-services-container">
-        {/* Section Header */}
-        <div className="landing-services-header">
-          <div className="services-badge">
-            <i className="fa-solid fa-briefcase"></i>
-            <span>Verified Operator Services</span>
+    <section id="services" className="svc" aria-labelledby="svc-title">
+      <div className="svc-shell">
+        {/* Page header */}
+        <header className="svc-head">
+          <div className="svc-head-copy">
+            <span className="svc-index">[ 01 ] Service catalog</span>
+            <h1 id="svc-title" className="svc-title">
+              Every document, ticket and tour,{' '}
+              <span className="svc-title-accent">filed at one counter.</span>
+            </h1>
           </div>
-          <h2 className="landing-services-title">Available Travel & Document Services</h2>
-          <p className="landing-services-sub">
-            Standardized, verified processing handled directly by our certified FairFly franchise operators and branch network.
-          </p>
-        </div>
+          <div className="svc-head-aside">
+            <p className="svc-head-note">
+              Standardized, verified processing handled directly by our certified FairFly franchise
+              operators and branch network.
+            </p>
+            <dl className="svc-head-stats">
+              <div>
+                <dt>Services on file</dt>
+                <dd>{pad(allServices.length)}</dd>
+              </div>
+              <div>
+                <dt>Categories</dt>
+                <dd>{pad(Math.max(categoryTabs.length - 1, 0))}</dd>
+              </div>
+            </dl>
+          </div>
+        </header>
 
-        {/* Filter Toolbar: Category Dropdown & Search Bar */}
-        <div className="services-toolbar">
-          {/* Category Filter Dropdown */}
-          <div className="services-category-select-wrapper">
-            <i className="fa-solid fa-layer-group select-icon" aria-hidden="true"></i>
-            <select
-              className="services-category-select"
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
-              aria-label="Filter services by category"
-            >
-              {categoryTabs.map((tab) => (
-                <option key={tab.id} value={tab.id}>
-                  {tab.label} ({tab.count})
-                </option>
-              ))}
-            </select>
-            <i className="fa-solid fa-chevron-down select-arrow-icon" aria-hidden="true"></i>
+        {/* Filter toolbar: category filters & search */}
+        <div className="svc-toolbar">
+          <div className="svc-filters" role="group" aria-label="Filter services by category">
+            {categoryTabs.map((tab) => {
+              const isActive = activeCategory === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`svc-filter ${isActive ? 'is-active' : ''}`}
+                  aria-pressed={isActive}
+                  onClick={() => setActiveCategory(tab.id)}
+                >
+                  <span>{tab.label}</span>
+                  <span className="svc-filter-count">{pad(tab.count)}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Search Box */}
-          <div className="services-search-wrapper">
-            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+          <label className="svc-search">
+            <span className="svc-sr">Search services</span>
+            <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
             <input
               type="text"
-              className="services-search-input"
+              className="svc-search-input"
               placeholder="Search passport, visa, PSA, flights..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              aria-label="Search services"
             />
             {searchTerm && (
               <button
                 type="button"
-                className="search-clear-btn"
+                className="svc-search-clear"
                 onClick={() => setSearchTerm('')}
                 aria-label="Clear search"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
             )}
-          </div>
+          </label>
         </div>
 
-        {/* Services Cards Grid */}
-        <div className="landing-services-grid">
-          {filteredServices.length === 0 ? (
-            <div className="services-empty-state">
-              <div className="empty-icon-wrap">
-                <i className="fa-solid fa-filter-circle-xmark"></i>
-              </div>
-              <h3>No matching services found</h3>
-              <p>Try searching for a different keyword or choose another category filter.</p>
-              <button
-                type="button"
-                className="btn-reset-filters"
-                onClick={() => {
-                  setActiveCategory('all');
-                  setSearchTerm('');
-                }}
-              >
-                <i className="fa-solid fa-rotate-left"></i> Reset Filters
-              </button>
-            </div>
-          ) : (
-            filteredServices.map((service) => {
+        <p className="svc-readout" aria-live="polite">
+          Showing <strong>{pad(filteredServices.length)}</strong> of {pad(allServices.length)}
+          {searchTerm.trim() && <> &middot; matching &ldquo;{searchTerm.trim()}&rdquo;</>}
+        </p>
+
+        {/* Services grid */}
+        {filteredServices.length === 0 ? (
+          <div className="svc-empty">
+            <span className="svc-empty-code">[ 00 ] No results</span>
+            <h3 className="svc-empty-title">No matching services found</h3>
+            <p>Try searching for a different keyword or choose another category filter.</p>
+            <button
+              type="button"
+              className="svc-empty-reset"
+              onClick={() => {
+                setActiveCategory('all');
+                setSearchTerm('');
+              }}
+            >
+              <i className="fa-solid fa-rotate-left" aria-hidden="true"></i>
+              <span>Reset filters</span>
+            </button>
+          </div>
+        ) : (
+          <div className="svc-grid">
+            {filteredServices.map((service, idx) => {
               const reqCount = Array.isArray(service.requirements) ? service.requirements.length : 0;
               const turnaround = formatProcessingTime(service.processingTime);
               const priceDisplay = formatPriceDisplay(service.price);
@@ -561,7 +581,8 @@ export default function Services() {
               return (
                 <article
                   key={service.id}
-                  className="landing-service-card"
+                  className="svc-card"
+                  style={{ '--i': Math.min(idx, 8) }}
                   onClick={() => setSelectedService(service)}
                   role="button"
                   tabIndex={0}
@@ -573,68 +594,45 @@ export default function Services() {
                   }}
                   aria-label={`View details for ${service.name}`}
                 >
-                  {/* Uniform Cover Image Banner: Real cover image or FairFly Brand Logo */}
-                  <div className={`service-card-media ${!service.coverImage ? 'service-card-media-logo' : ''}`}>
+                  <div className="svc-card-top">
+                    <span className="svc-card-code">SV-{pad(idx + 1)}</span>
+                    {service.category && <span className="svc-card-cat">{service.category}</span>}
+                  </div>
+
+                  {/* Cover image, or an icon plate when no cover exists */}
+                  <div className="svc-card-media">
                     {service.coverImage ? (
                       <img
                         src={service.coverImage}
-                        alt={service.name}
-                        className="service-card-img"
+                        alt=""
+                        className="svc-card-img"
                         loading="lazy"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
-                          const logoEl = e.currentTarget.parentElement?.querySelector('.service-card-logo-backdrop');
-                          if (logoEl) logoEl.style.display = 'flex';
+                          const plateEl = e.currentTarget.parentElement?.querySelector('.svc-card-plate');
+                          if (plateEl) plateEl.style.display = 'flex';
                         }}
                       />
                     ) : null}
                     <div
-                      className="service-card-logo-backdrop"
+                      className="svc-card-plate"
                       style={{ display: service.coverImage ? 'none' : 'flex' }}
+                      aria-hidden="true"
                     >
-                      <img
-                        src="/FairflyLogo.png"
-                        alt="FairFly"
-                        className="service-card-brand-logo"
-                      />
+                      <i className={service.icon || 'fa-solid fa-briefcase'}></i>
                     </div>
-                    {service.category && (
-                      <span className="service-card-category-pill">
-                        {service.category}
-                      </span>
-                    )}
                   </div>
 
-                  {/* Clean, spacious card body */}
-                  <div className="service-card-body">
-                    <h3 className="service-card-title">{service.name}</h3>
+                  <div className="svc-card-body">
+                    <h3 className="svc-card-title">{service.name}</h3>
+                    <p className="svc-card-desc">{service.description}</p>
 
-                    {/* Subtle 1-line metadata */}
-                    <div className="service-card-meta">
-                      <span className="service-card-meta-item">
-                        <i className="fa-regular fa-clock"></i>
-                        <span>{turnaround}</span>
-                      </span>
-                      {reqCount > 0 && (
-                        <>
-                          <span className="service-card-meta-dot">•</span>
-                          <span className="service-card-meta-item">
-                            <i className="fa-regular fa-file-lines"></i>
-                            <span>{reqCount} {reqCount === 1 ? 'doc required' : 'docs required'}</span>
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    <p className="service-card-description">{service.description}</p>
-
-                    {/* Service Tags */}
                     {Array.isArray(service.tags) && service.tags.length > 0 && (
-                      <div className="service-card-tags">
-                        {service.tags.map((tag, idx) => (
+                      <div className="svc-card-tags">
+                        {service.tags.map((tag, tagIdx) => (
                           <span
-                            key={idx}
-                            className="service-tag-pill"
+                            key={tagIdx}
+                            className="svc-card-tag"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSearchTerm(tag);
@@ -648,32 +646,32 @@ export default function Services() {
                     )}
                   </div>
 
-                  {/* Clean footer: Starting price on left, single CTA on right */}
-                  <div className="service-card-footer">
-                    <div className="service-card-price">
-                      <span className="service-card-price-label">Starting at</span>
-                      <span className="service-card-price-amount">{priceDisplay}</span>
+                  <dl className="svc-card-meta">
+                    <div>
+                      <dt>Turnaround</dt>
+                      <dd>{turnaround}</dd>
                     </div>
+                    <div>
+                      <dt>Documents</dt>
+                      <dd>{reqCount > 0 ? pad(reqCount) : '--'}</dd>
+                    </div>
+                    <div>
+                      <dt>From</dt>
+                      <dd className="svc-card-price">{priceDisplay}</dd>
+                    </div>
+                  </dl>
 
-                    <button
-                      type="button"
-                      className="service-card-action-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedService(service);
-                      }}
-                    >
-                      <span>View Details</span>
-                      <i className="fa-solid fa-arrow-right"></i>
-                    </button>
-                  </div>
+                  <span className="svc-card-cta" aria-hidden="true">
+                    View details
+                    <i className="fa-solid fa-arrow-right"></i>
+                  </span>
                 </article>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
 
-        {/* Airbnb / E-commerce Style Detail Modal */}
+        {/* Detail modal */}
         <ServiceDetailModal
           isOpen={Boolean(selectedService)}
           service={selectedService}

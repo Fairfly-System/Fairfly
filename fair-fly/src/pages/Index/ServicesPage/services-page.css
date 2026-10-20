@@ -1,16 +1,157 @@
 /* ==========================================================================
    FairFly Dedicated Services Catalog Page
+   Page shell and closing band. Catalog and SOP styles live with their
+   components (services.css, service-guidelines.css).
    ========================================================================== */
 
 .services-page-wrapper {
+  --sp-ink: #0F172A;
+  --sp-line: #E2E8F0;
+  --sp-indigo-dark: var(--purple-dark, #4338CA);
+  --sp-orange: var(--orange, #F97316);
+  --sp-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
   min-height: 100vh;
-  background-color: var(--bg, #f8fafc);
+  background-color: var(--bg, #F8FAFC);
   display: flex;
   flex-direction: column;
+  overflow-x: clip;
   animation: pageFadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Main Content Area */
 .services-page-main {
   flex: 1;
+}
+
+.sp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* --- Closing band --------------------------------------------------------- */
+
+.sp-next-shell {
+  width: 100%;
+  max-width: 84rem;
+  margin: 0 auto;
+  padding: clamp(3.5rem, 7vw, 5.5rem) clamp(1.25rem, 4vw, 3rem);
+}
+
+.sp-next-index {
+  font-family: var(--sp-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light, #64748B);
+}
+
+.sp-next-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--sp-ink);
+}
+
+.sp-next-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 17rem;
+  padding: 2rem clamp(1.5rem, 3vw, 2.5rem);
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--sp-line);
+  color: var(--sp-ink);
+  text-decoration: none;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.sp-next-card + .sp-next-card { border-left: 1px solid var(--sp-line); }
+
+.sp-next-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #F1F5F9;
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 0.5s var(--sp-ease);
+}
+
+.sp-next-card:hover::before { transform: scaleY(1); }
+
+.sp-next-card-dark {
+  background: var(--sp-indigo-dark);
+  color: #FFFFFF;
+  border-bottom-color: var(--sp-indigo-dark);
+}
+
+.sp-next-card-dark::before { background: #3730A3; }
+
+.sp-next-code {
+  font-family: var(--sp-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--sp-orange);
+}
+
+.sp-next-card-dark .sp-next-code { color: var(--orange-light, #FB923C); }
+
+.sp-next-title {
+  max-width: 20ch;
+  font-family: var(--font-heading, 'Fredoka', sans-serif);
+  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.sp-next-desc {
+  max-width: 30rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-mid, #475569);
+}
+
+.sp-next-card-dark .sp-next-desc { color: rgba(238, 242, 255, 0.78); }
+
+.sp-next-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sp-next-link i {
+  font-size: 0.8em;
+  transition: transform 0.3s var(--sp-ease);
+}
+
+.sp-next-card:hover .sp-next-link i { transform: translateX(0.3rem); }
+
+.sp-next-card:focus-visible {
+  outline: 2px solid var(--purple, #5558E3);
+  outline-offset: 2px;
+}
+
+@media (max-width: 48rem) {
+  .sp-next-grid { grid-template-columns: 1fr; }
+  .sp-next-card + .sp-next-card { border-left: none; }
+  .sp-next-card { min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-next-card::before,
+  .sp-next-link i { transition: none; }
 }

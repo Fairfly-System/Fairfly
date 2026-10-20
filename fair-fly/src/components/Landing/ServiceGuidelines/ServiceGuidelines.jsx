@@ -141,83 +141,92 @@ export default function ServiceGuidelines() {
   const activeService = servicesData.find((s) => s.id === activeTab) || servicesData[0];
 
   return (
-    <section id="service-guidelines" className="sg-section">
-      <div className="sg-container">
-        
-        <div className="sg-header">
-          <div className="sg-eyebrow">
-            <span className="sg-eyebrow-accent" />
-            <span>Operational SOP manual · Slides 14-17</span>
+    <section id="service-guidelines" className="sg" aria-labelledby="sg-title">
+      <div className="sg-shell">
+        <header className="sg-head">
+          <div>
+            <span className="sg-index">[ 02 ] Standard operating procedure</span>
+            <h2 id="sg-title" className="sg-title">
+              Every service flies the same route,{' '}
+              <span className="sg-title-accent">every single time.</span>
+            </h2>
           </div>
-          <h2 className="sg-title">
-            Standardized step-by-step <br />
-            <span className="sg-title-accent">Service processing guidelines.</span>
-          </h2>
-          <p className="sg-subtitle">
-            Every service in the FairFly ecosystem follows strict, ISO-compliant workflows to guarantee error-free
-            execution, predictable turnaround times, and consistent operator profit margins.
+          <p className="sg-note">
+            Every service in the FairFly ecosystem follows strict, ISO-compliant workflows to guarantee
+            error-free execution, predictable turnaround times, and consistent operator profit margins.
           </p>
-        </div>
+        </header>
 
-        {/* Sharp Rectangular Service Tabs */}
-        <div className="sg-tabs" role="tablist" aria-label="Service Processing Categories">
-          {servicesData.map((service) => (
-            <button
-              key={service.id}
-              role="tab"
-              aria-selected={activeTab === service.id}
-              className={`sg-tab-btn ${activeTab === service.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(service.id)}
-            >
-              <i className={service.icon}></i>
-              <span>{service.name}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Active Service Workflow Display */}
-        <div className="sg-workflow-panel">
-          <div className="sg-workflow-header">
-            <div className="sg-header-meta">
-              <span className="sg-category-tag">[ {activeService.category} ]</span>
-              <h3 className="sg-workflow-title">{activeService.name}</h3>
-              <p className="sg-workflow-summary">{activeService.summary}</p>
-            </div>
-            
-            {/* Financial Economics Strip */}
-            <div className="sg-economics-strip">
-              <div className="sg-econ-item">
-                <span className="sg-econ-label">HEAD OFFICE COST</span>
-                <span className="sg-econ-val">{activeService.costOfService}</span>
-              </div>
-              <div className="sg-econ-item">
-                <span className="sg-econ-label">CLIENT PRICE</span>
-                <span className="sg-econ-val">{activeService.customerPrice}</span>
-              </div>
-              <div className="sg-econ-item highlight">
-                <span className="sg-econ-label">OPERATOR PROFIT MARGIN</span>
-                <span className="sg-econ-val margin-val">{activeService.margin}</span>
-              </div>
-            </div>
+        <div className="sg-layout">
+          {/* Service selector, styled as a departure board */}
+          <div className="sg-tabs" role="tablist" aria-label="Service processing categories" aria-orientation="vertical">
+            {servicesData.map((service, idx) => {
+              const isActive = activeTab === service.id;
+              return (
+                <button
+                  key={service.id}
+                  id={`sg-tab-${service.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls="sg-panel"
+                  className={`sg-tab ${isActive ? 'is-active' : ''}`}
+                  onClick={() => setActiveTab(service.id)}
+                >
+                  <span className="sg-tab-code">{String(idx + 1).padStart(2, '0')}</span>
+                  <span className="sg-tab-name">
+                    <i className={service.icon} aria-hidden="true"></i>
+                    {service.name}
+                  </span>
+                  <span className="sg-tab-steps">{service.steps.length} steps</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Sequential Process Steps Grid */}
-          <div className="sg-steps-grid">
-            {activeService.steps.map((step, idx) => (
-              <div key={idx} className="sg-step-card">
-                <div className="sg-step-top">
-                  <span className="sg-step-num">[ STEP {step.num} ]</span>
-                  <div className="sg-step-icon">
-                    <i className={step.icon}></i>
+          {/* Active service workflow */}
+          <div
+            id="sg-panel"
+            key={activeService.id}
+            className="sg-panel"
+            role="tabpanel"
+            aria-labelledby={`sg-tab-${activeService.id}`}
+          >
+            <div className="sg-panel-head">
+              <span className="sg-panel-cat">[ {activeService.category} ]</span>
+              <h3 className="sg-panel-title">{activeService.name}</h3>
+              <p className="sg-panel-summary">{activeService.summary}</p>
+            </div>
+
+            <dl className="sg-econ">
+              <div>
+                <dt>Head office cost</dt>
+                <dd>{activeService.costOfService}</dd>
+              </div>
+              <div>
+                <dt>Client price</dt>
+                <dd>{activeService.customerPrice}</dd>
+              </div>
+              <div className="sg-econ-margin">
+                <dt>Operator margin</dt>
+                <dd>{activeService.margin}</dd>
+              </div>
+            </dl>
+
+            <ol className="sg-steps">
+              {activeService.steps.map((step, idx) => (
+                <li key={step.num} className="sg-step" style={{ '--i': idx }}>
+                  <span className="sg-step-num">{step.num}</span>
+                  <div className="sg-step-body">
+                    <h4 className="sg-step-title">{step.title}</h4>
+                    <p className="sg-step-desc">{step.desc}</p>
                   </div>
-                </div>
-                <h4 className="sg-step-title">{step.title}</h4>
-                <p className="sg-step-desc">{step.desc}</p>
-              </div>
-            ))}
+                  <i className={`${step.icon} sg-step-icon`} aria-hidden="true"></i>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
-
       </div>
     </section>
   );

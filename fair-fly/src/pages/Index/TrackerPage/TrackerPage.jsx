@@ -3,6 +3,59 @@ import { Link } from 'react-router';
 import RequestTracker from '../../../components/Landing/RequestTracker/RequestTracker';
 import './tracker-page.css';
 
+const codeParts = [
+  { seg: 'SRV', label: 'Service prefix', desc: 'Issued once payment or booking is confirmed.' },
+  { seg: '2026', label: 'Filing year', desc: 'The year your request was opened.' },
+  { seg: '000123', label: 'Your sequence', desc: 'Unique to your request at the branch.' },
+];
+
+const guides = [
+  {
+    code: 'QR',
+    icon: 'fa-solid fa-qrcode',
+    title: 'Official E-Receipt QR Code',
+    body: (
+      <>
+        Scan the QR code printed on your official FairFly E-Receipt using any smartphone camera to automatically load
+        this tracking page with your status.
+      </>
+    ),
+  },
+  {
+    code: 'SRV',
+    icon: 'fa-solid fa-barcode',
+    title: 'Service Tracking Code',
+    body: (
+      <>
+        Found directly below the QR code on your confirmed payment receipt. Format: <code>SRV-2026-XXXXXX</code>.
+      </>
+    ),
+  },
+  {
+    code: 'LIVE',
+    icon: 'fa-solid fa-list-check',
+    title: 'Real-Time Milestone Tracking',
+    body: (
+      <>
+        Once payment or booking is confirmed, monitor embassy appointments, document filings, and ticketing
+        step-by-step using your <code>SRV-2026-XXXXXX</code> code.
+      </>
+    ),
+  },
+  {
+    code: 'HELP',
+    icon: 'fa-solid fa-phone-volume',
+    title: 'Direct Branch Support',
+    body: (
+      <>
+        Need human assistance with your application? Contact our Baliuag Head Office directly at{' '}
+        <a href="tel:+63448133801">+63 (44) 813 3801</a> or email{' '}
+        <a href="mailto:fairflytravel19@yahoo.com">fairflytravel19@yahoo.com</a>.
+      </>
+    ),
+  },
+];
+
 export default function TrackerPage() {
   useEffect(() => {
     document.title = 'Track Request | FairFly Travel & Tours';
@@ -11,80 +64,84 @@ export default function TrackerPage() {
 
   return (
     <div className="tracker-page-root">
-      {/* Page Hero Header */}
-      <div className="tracker-page-hero">
-        <div className="tracker-page-hero-container">
-          <div className="tracker-hero-eyebrow">
-            <span>CENTRALIZED PUBLIC SERVICE TRACKING SYSTEM</span>
+      {/* Page hero */}
+      <header className="tp-hero">
+        <div className="tp-shell tp-hero-grid">
+          <div className="tp-hero-copy">
+            <span className="tp-index">[ 01 ] Public service tracker</span>
+            <h1 className="tp-title">
+              Where is your request <span className="tp-title-accent">right now?</span>
+            </h1>
+            <p className="tp-lede">
+              Verify milestone progress, document processing status, and official payment receipts for your DFA
+              Passport filing, PSA certificates, embassy visas, flights, and holiday tours. Instant lookup, zero
+              login required.
+            </p>
           </div>
 
-          <h1 className="tracker-page-title">
-            REAL-TIME <span className="title-brand-fair">SERVICE</span> &{' '}
-            <span className="title-brand-fly">TRACKING</span> PORTAL
-          </h1>
-
-          <p className="tracker-page-subtitle">
-            Verify milestone progress, document processing status, and official payment receipts for your DFA Passport filing, PSA certificates, embassy visas, flights, and holiday tours—instant lookup with zero login required.
-          </p>
+          {/* Anatomy of a tracking code */}
+          <aside className="tp-anatomy" aria-label="How to read your tracking code">
+            <div className="tp-anatomy-head">
+              <span>
+                <i className="fa-solid fa-barcode" aria-hidden="true"></i> Reading your code
+              </span>
+              <span className="tp-anatomy-sub">E-Receipt &middot; below QR</span>
+            </div>
+            <p className="tp-anatomy-code" aria-hidden="true">
+              {codeParts.map((part, i) => (
+                <React.Fragment key={part.seg}>
+                  {i > 0 && <span className="tp-anatomy-dash">-</span>}
+                  <span className={`tp-anatomy-seg tp-anatomy-seg-${i + 1}`}>{part.seg}</span>
+                </React.Fragment>
+              ))}
+            </p>
+            <ol className="tp-anatomy-list">
+              {codeParts.map((part, i) => (
+                <li key={part.seg} className={`tp-anatomy-item tp-anatomy-item-${i + 1}`}>
+                  <span className="tp-anatomy-key">{part.seg}</span>
+                  <span className="tp-anatomy-label">{part.label}</span>
+                  <span className="tp-anatomy-desc">{part.desc}</span>
+                </li>
+              ))}
+            </ol>
+          </aside>
         </div>
-      </div>
+      </header>
 
-      {/* Main Tracker Container */}
-      <div className="tracker-page-content-wrapper">
+      {/* Main tracker */}
+      <main className="tp-shell tp-main">
         <RequestTracker hideHeader={true} />
-      </div>
+      </main>
 
-      {/* Guidance and Assistance Grid */}
-      <div className="tracker-info-section">
-        <div className="tracker-info-container">
-          <div className="tracker-info-header">
-            <span className="info-header-tag">[ TRACKING GUIDELINES & ASSISTANCE ]</span>
-            <h3 className="info-header-title">Need help finding your reference code?</h3>
-          </div>
-
-          <div className="tracker-guide-grid">
-            <div className="tracker-guide-card">
-              <div className="guide-card-icon">
-                <i className="fa-solid fa-qrcode"></i>
-              </div>
-              <h4>Official E-Receipt QR Code</h4>
-              <p>
-                Scan the QR code printed on your official FairFly E-Receipt using any smartphone camera to automatically load this tracking page with your status.
-              </p>
+      {/* Guidance and assistance */}
+      <section className="tp-guide" aria-labelledby="tp-guide-title">
+        <div className="tp-shell">
+          <header className="tp-guide-head">
+            <div>
+              <span className="tp-index">[ 02 ] Tracking guidelines &amp; assistance</span>
+              <h2 id="tp-guide-title" className="tp-guide-title">Need help finding your reference code?</h2>
             </div>
+            <Link to="/services" className="tp-textlink">
+              Browse the services catalog
+              <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </Link>
+          </header>
 
-            <div className="tracker-guide-card">
-              <div className="guide-card-icon">
-                <i className="fa-solid fa-barcode"></i>
-              </div>
-              <h4>Service Tracking Code (SRV-...)</h4>
-              <p>
-                Found directly below the QR code on your confirmed payment receipt. Format: <code>SRV-2026-XXXXXX</code>.
-              </p>
-            </div>
-
-            <div className="tracker-guide-card">
-              <div className="guide-card-icon">
-                <i className="fa-solid fa-list-check"></i>
-              </div>
-              <h4>Real-Time Milestone Tracking</h4>
-              <p>
-                Once payment or booking is confirmed, monitor embassy appointments, document filings, and ticketing step-by-step using your <code>SRV-2026-XXXXXX</code> code.
-              </p>
-            </div>
-
-            <div className="tracker-guide-card">
-              <div className="guide-card-icon">
-                <i className="fa-solid fa-phone-volume"></i>
-              </div>
-              <h4>Direct Branch Support</h4>
-              <p>
-                Need human assistance with your application? Contact our Baliuag Head Office directly at <strong>+63 (44) 813 3801</strong> or email <strong>fairflytravel19@yahoo.com</strong>.
-              </p>
-            </div>
-          </div>
+          <ol className="tp-guide-grid">
+            {guides.map((guide, i) => (
+              <li key={guide.code} className="tp-guide-item">
+                <div className="tp-guide-top">
+                  <span className="tp-guide-num">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="tp-guide-code">{guide.code}</span>
+                </div>
+                <i className={`${guide.icon} tp-guide-icon`} aria-hidden="true"></i>
+                <h3 className="tp-guide-item-title">{guide.title}</h3>
+                <p className="tp-guide-body">{guide.body}</p>
+              </li>
+            ))}
+          </ol>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
