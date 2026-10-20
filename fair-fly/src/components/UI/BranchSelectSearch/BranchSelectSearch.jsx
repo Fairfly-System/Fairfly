@@ -23,6 +23,7 @@ export default function BranchSelectSearch({
   label = 'Preferred Processing Branch',
   required = false,
   placeholder = 'Search branch by name, city or location...',
+  disabled = false,
   className = ''
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,6 +71,7 @@ export default function BranchSelectSearch({
   }, [branches, debouncedQuery]);
 
   const handleSelect = (branch) => {
+    if (disabled) return;
     const uid = branch.uid || branch.id;
     if (onSelectBranch) {
       onSelectBranch(uid, branch);
@@ -86,6 +88,7 @@ export default function BranchSelectSearch({
   };
 
   const toggleDropdown = () => {
+    if (disabled) return;
     setIsOpen((prev) => {
       const next = !prev;
       if (next) {
@@ -105,7 +108,7 @@ export default function BranchSelectSearch({
   return (
     <div
       ref={containerRef}
-      className={`branch-select-search-container ${isOpen ? 'is-open' : ''} ${className}`.trim()}
+      className={`branch-select-search-container ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`.trim()}
     >
       {label && (
         <label className="branch-search-label">
@@ -115,11 +118,13 @@ export default function BranchSelectSearch({
 
       {/* Main Trigger Display */}
       <div
-        className={`branch-search-trigger ${selectedBranch ? 'has-selection' : ''}`}
+        className={`branch-search-trigger ${selectedBranch ? 'has-selection' : ''} ${disabled ? 'disabled' : ''}`}
         onClick={toggleDropdown}
         role="button"
-        tabIndex={0}
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
         onKeyDown={(e) => {
+          if (disabled) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             toggleDropdown();
@@ -127,7 +132,7 @@ export default function BranchSelectSearch({
         }}
       >
         <div className="branch-trigger-icon">
-          <i className="fa-solid fa-building-circle-check"></i>
+          <i className={disabled ? 'fa-solid fa-lock' : 'fa-solid fa-building-circle-check'}></i>
         </div>
 
         <div className="branch-trigger-text">
@@ -153,10 +158,16 @@ export default function BranchSelectSearch({
         </div>
 
         <div className="branch-trigger-actions">
-          {selectedBranch && (
+          {selectedBranch && !disabled && (
             <span className="branch-change-btn">Change</span>
           )}
-          <i className={`fa-solid fa-chevron-${isOpen ? 'up' : 'down'} branch-trigger-chevron`}></i>
+          {disabled ? (
+            <span className="branch-locked-indicator" title="Branch is locked to this exclusive service">
+              <i className="fa-solid fa-lock" style={{ fontSize: '0.85rem', color: 'var(--text-light, #94a3b8)' }}></i>
+            </span>
+          ) : (
+            <i className={`fa-solid fa-chevron-${isOpen ? 'up' : 'down'} branch-trigger-chevron`}></i>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-const { db, admin } = require('../config/firebase');
+const { db, admin, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notificationService');
 const { ID_PREFIXES, generatePrefixedId } = require('../utils/idGenerator');
 
@@ -284,11 +284,93 @@ const recordDownload = async (req, res) => {
   }
 };
 
+/**
+ * Stream/download a resource file directly with attachment disposition
+ */
+const downloadResourceFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const docRef = db.collection(COLLECTIONS.RESOURCES).doc(id);
+    const existing = await docRef.get();
+
+    if (!existing.exists) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    const resource = existing.data();
+    if (!resource.fileUrl) {
+      return res.status(400).json({ error: 'No file URL associated with this resource' });
+    }
+
+    // Increment downloadCount asynchronously
+    docRef.update({
+      downloadCount: admin.firestore.FieldValue.increment(1),
+      lastDownloadedAt: new Date().toISOString()
+    }).catch((err) => console.warn('[Resource] Failed to increment download count:', err.message));
+
+    const safeFileName = (resource.fileName || resource.title || 'resource-material')
+      .replace(/[/\\?%*:|"<>]/g, '_');
+
+    res.setHeader('Content-Type', resource.fileType || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(safeFileName)}"; filename*=UTF-8''${encodeURIComponent(safeFileName)}`
+    );
+
+    // 1. Try streaming directly from storage bucket if path is present or can be extracted
+    let storagePath = resource.storagePath || null;
+    if (!storagePath && resource.fileUrl) {
+      const match = resource.fileUrl.match(/\/o\/([^?]+)/);
+      if (match) {
+        storagePath = decodeURIComponent(match[1]);
+      }
+    }
+
+    if (storagePath && bucket) {
+      const file = bucket.file(storagePath);
+      const [exists] = await file.exists();
+      if (exists) {
+        return file
+          .createReadStream()
+          .on('error', (err) => {
+            console.error('[Resource] Storage stream error:', err);
+            if (!res.headersSent) {
+              res.status(500).json({ error: 'Failed to stream resource file' });
+            }
+          })
+          .pipe(res);
+      }
+    }
+
+    // 2. Fallback: fetch directly from fileUrl and pipe to response
+    const fetchRes = await fetch(resource.fileUrl);
+    if (!fetchRes.ok) {
+      throw new Error(`Failed to fetch file from storage: ${fetchRes.statusText}`);
+    }
+
+    const { Readable } = require('stream');
+    return Readable.fromWeb(fetchRes.body)
+      .on('error', (err) => {
+        console.error('[Resource] Remote stream error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to stream remote file' });
+        }
+      })
+      .pipe(res);
+  } catch (error) {
+    console.error('Error downloading resource file:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+    }
+  }
+};
+
 module.exports = {
   createResource,
   getResources,
   getResourceById,
   updateResource,
   deleteResource,
-  recordDownload
+  recordDownload,
+  downloadResourceFile
 };

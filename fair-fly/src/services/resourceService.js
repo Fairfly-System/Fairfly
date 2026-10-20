@@ -91,3 +91,68 @@ export function recordResourceDownload(token, id, successCallback, errorCallback
     errorCallback
   );
 }
+
+/**
+ * Triggers a direct browser file download for a resource.
+ * Fetches the binary content from the authenticated backend streaming endpoint
+ * and instantiates a same-origin Blob URL, guaranteeing the browser triggers
+ * an actual file download dialog instead of opening in a new tab.
+ *
+ * @param {string} token - User auth Bearer token
+ * @param {Object} resource - Resource object { id, title, fileName, fileExtension, fileUrl }
+ * @returns {Promise<boolean>}
+ */
+export async function downloadResourceFile(token, resource) {
+  if (!resource || !resource.id) {
+    throw new Error('Resource is required for download.');
+  }
+
+  const filename = resource.fileName || resource.title || 'resource-material';
+  let response;
+
+  // 1. Try authenticated backend file stream endpoint
+  try {
+    response = await fetch(`${API_BASE_URL}/api/resources/${resource.id}/file`, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  } catch (netErr) {
+    console.warn('[ResourceService] Backend file stream fetch failed, trying direct URL:', netErr);
+  }
+
+  // 2. Direct fallback if backend stream was not reachable
+  if (!response || !response.ok) {
+    if (resource.fileUrl) {
+      try {
+        response = await fetch(resource.fileUrl);
+      } catch (directErr) {
+        console.warn('[ResourceService] Direct fileUrl fetch failed:', directErr);
+      }
+    }
+  }
+
+  if (!response || !response.ok) {
+    throw new Error(`Download failed with status ${response ? response.status : 'network error'}`);
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+
+  // Ensure file extension is preserved
+  const hasExt = filename.includes('.');
+  const fallbackExt = resource.fileExtension ? `.${resource.fileExtension.replace(/^\./, '')}` : '';
+  link.download = hasExt ? filename : `${filename}${fallbackExt}`;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(() => {
+    window.URL.revokeObjectURL(blobUrl);
+  }, 2000);
+
+  return true;
+}
+

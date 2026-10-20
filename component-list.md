@@ -45,6 +45,7 @@
    - [ClientEditModal & ClientEditForm](#clienteditmodal--clienteditform)
    - [ServiceModal & ServiceForm](#servicemodal--serviceform)
    - [WorkflowModal & WorkflowForm](#workflowmodal--workflowform)
+   - [WorkflowDetailModal](#workflowdetailmodal)
    - [ServiceRequirementsModal](#servicerequirementsmodal)
    - [ServiceWorkflowsModal](#serviceworkflowsmodal)
    - [QuickLinkModal & QuickLinkForm](#quicklinkmodal--quicklinkform)
@@ -564,6 +565,23 @@
 - **Location:** [`src/components/Admin/Modals/WorkflowModal/WorkflowModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowModal.jsx)
 - **Functionality:** Create and edit multi-step workflow templates with reorderable steps, attached links, and reference documents.
 - **Props:** `{ isOpen, onClose, editingTemplate, initialData, onSubmit, isLoading }`
+
+---
+
+### `WorkflowDetailModal`
+- **Location:** [`src/components/Admin/Modals/WorkflowDetailModal/WorkflowDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowDetailModal/WorkflowDetailModal.jsx)
+- **Functionality:** Read-only inspection modal displaying complete workflow overview (scope/ownership badge, creation & updated dates, description) and sequential pipeline timeline with step numbers, descriptions, attached external quick links, and attached reference documents (with 1-click Lightbox image preview and PDF/document links).
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `isOpen` | `boolean` | — | Yes | Modal visibility state |
+  | `onClose` | `Function` | — | Yes | Modal close handler |
+  | `workflow` | `Object` | `null` | Yes | Workflow template record object |
+  | `canManage` | `boolean` | `false` | No | Whether the user has edit/delete permissions for this workflow |
+  | `isOperator` | `boolean` | `false` | No | Whether current user is a branch operator |
+  | `branchName` | `string` | `null` | No | Human-readable name of owning branch if applicable |
+  | `onEdit` | `Function` | `undefined` | No | Callback to switch to edit modal: `(workflow) => void` |
+  | `onDuplicate` | `Function` | `undefined` | No | Callback to duplicate workflow: `(workflow) => void` |
 
 ---
 

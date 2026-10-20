@@ -130,6 +130,11 @@ function hasExecutableAttachment(steps) {
 
 const createTemplate = async (req, res) => {
   try {
+    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    if (isOperator && !req.userDetails?.isQualified) {
+      return res.status(403).json({ error: 'Forbidden: Only qualified operators are permitted to create workflow templates.' });
+    }
+
     const templateData = req.body;
     if (!templateData || !templateData.name || !templateData.description || !templateData.steps) {
       return res.status(400).json({ error: 'Name, description, and steps are required' });
@@ -145,13 +150,19 @@ const createTemplate = async (req, res) => {
 
     const resolvedType = (templateData.serviceType || templateData.type || 'General').trim();
 
+    const operatorBranchName = req.userDetails?.branchName || req.userDetails?.branchLocation || null;
+
     const sanitizedData = {
       ...templateData,
       serviceType: resolvedType,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: templateData.status || 'active',
-      version: 1
+      version: 1,
+      createdBy: req.user.uid,
+      createdByRole: req.userDetails?.role || 'admin',
+      branchUid: isOperator ? req.user.uid : (templateData.branchUid || null),
+      branchName: isOperator ? operatorBranchName : (templateData.branchName || null)
     };
     delete sanitizedData.type;
 
@@ -170,6 +181,11 @@ const updateTemplate = async (req, res) => {
 
     if (!id) return res.status(400).json({ error: 'Template ID is required' });
 
+    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    if (isOperator && !req.userDetails?.isQualified) {
+      return res.status(403).json({ error: 'Forbidden: Only qualified operators are permitted to update workflow templates.' });
+    }
+
     if (updates.steps && hasExecutableAttachment(updates.steps)) {
       return res.status(400).json({ error: 'Executable files (.exe, .bat, .sh, etc.) are prohibited for security.' });
     }
@@ -178,12 +194,26 @@ const updateTemplate = async (req, res) => {
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Template not found' });
 
+    if (isOperator) {
+      const isOwner = (existing.branchUid && existing.branchUid === req.user.uid) ||
+                      (existing.createdBy && existing.createdBy === req.user.uid);
+      if (!isOwner) {
+        return res.status(403).json({ error: 'Forbidden: Operators can only update workflow templates created by their branch.' });
+      }
+    }
+
     const sanitizedUpdates = { ...updates };
     if (updates.serviceType !== undefined || updates.type !== undefined) {
       const resolvedType = (updates.serviceType || updates.type || existing.serviceType || existing.type || 'General').trim();
       sanitizedUpdates.serviceType = resolvedType;
       sanitizedUpdates.type = resolvedType;
     }
+
+    // Strip protected ownership metadata to prevent privilege tampering
+    delete sanitizedUpdates.createdBy;
+    delete sanitizedUpdates.createdByRole;
+    delete sanitizedUpdates.branchUid;
+    delete sanitizedUpdates.branchName;
 
     await updateToDatabase(dbPath, {
       ...sanitizedUpdates,
@@ -202,9 +232,22 @@ const deleteTemplate = async (req, res) => {
     const { id } = req.params;
     if (!id) return res.status(400).json({ error: 'Template ID is required' });
 
+    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    if (isOperator && !req.userDetails?.isQualified) {
+      return res.status(403).json({ error: 'Forbidden: Only qualified operators are permitted to delete workflow templates.' });
+    }
+
     const dbPath = `${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`;
     const existing = await getFromDatabase(dbPath);
     if (!existing) return res.status(404).json({ error: 'Template not found' });
+
+    if (isOperator) {
+      const isOwner = (existing.branchUid && existing.branchUid === req.user.uid) ||
+                      (existing.createdBy && existing.createdBy === req.user.uid);
+      if (!isOwner) {
+        return res.status(403).json({ error: 'Forbidden: Operators can only delete workflow templates created by their branch.' });
+      }
+    }
 
     await deleteFromDatabase(dbPath);
 
@@ -228,9 +271,26 @@ const bulkDeleteTemplates = async (req, res) => {
       return res.status(400).json({ error: 'ids array is required' });
     }
 
+    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    if (isOperator && !req.userDetails?.isQualified) {
+      return res.status(403).json({ error: 'Forbidden: Only qualified operators are permitted to delete workflow templates.' });
+    }
+
     const existingRecords = await Promise.all(
       ids.map(id => getFromDatabase(`${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`))
     );
+
+    if (isOperator) {
+      const unauthorized = existingRecords.some(rec => {
+        if (!rec) return false;
+        const isOwner = (rec.branchUid && rec.branchUid === req.user.uid) ||
+                        (rec.createdBy && rec.createdBy === req.user.uid);
+        return !isOwner;
+      });
+      if (unauthorized) {
+        return res.status(403).json({ error: 'Forbidden: Operators can only delete workflow templates created by their branch.' });
+      }
+    }
 
     await Promise.all(
       ids.map((id) => deleteFromDatabase(`${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`))
@@ -245,6 +305,56 @@ const bulkDeleteTemplates = async (req, res) => {
     return res.status(200).json({ message: `${ids.length} workflow templates deleted successfully`, count: ids.length });
   } catch (error) {
     console.error('Error bulk deleting workflow templates:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const duplicateTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Template ID is required' });
+
+    const isOperator = req.userDetails?.role === 'operator' || req.userDetails?.role === 'branch_operator';
+    if (isOperator && !req.userDetails?.isQualified) {
+      return res.status(403).json({ error: 'Forbidden: Only qualified operators are permitted to duplicate workflow templates.' });
+    }
+
+    const dbPath = `${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`;
+    const sourceTemplate = await getFromDatabase(dbPath);
+    if (!sourceTemplate) {
+      return res.status(404).json({ error: 'Workflow template not found' });
+    }
+
+    const operatorBranchName = req.userDetails?.branchName || req.userDetails?.branchLocation || null;
+
+    // Use custom copy name from body if provided, otherwise default to '${source.name} (Copy)'
+    const copyName = (req.body && req.body.name && typeof req.body.name === 'string' && req.body.name.trim())
+      ? req.body.name.trim()
+      : `${sourceTemplate.name || 'Workflow'} (Copy)`;
+
+    const duplicatedData = {
+      name: copyName,
+      description: sourceTemplate.description || '',
+      serviceType: sourceTemplate.serviceType || sourceTemplate.type || 'General',
+      steps: Array.isArray(sourceTemplate.steps) ? sourceTemplate.steps : [],
+      status: 'active',
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: req.user.uid,
+      createdByRole: req.userDetails?.role || 'admin',
+      branchUid: isOperator ? req.user.uid : null,
+      branchName: isOperator ? operatorBranchName : null
+    };
+
+    if (sourceTemplate.category) {
+      duplicatedData.category = sourceTemplate.category;
+    }
+
+    const docId = await addToDatabase(COLLECTIONS.WORKFLOW_TEMPLATES, duplicatedData, ID_PREFIXES.WORKFLOW_TEMPLATE);
+    return res.status(201).json({ id: docId, message: 'Template duplicated successfully' });
+  } catch (error) {
+    console.error('Error duplicating workflow template:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -404,6 +514,7 @@ module.exports = {
   updateTemplate,
   deleteTemplate,
   bulkDeleteTemplates,
+  duplicateTemplate,
   getInstances,
   getInstanceById,
   createInstance,

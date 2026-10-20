@@ -3,8 +3,10 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { firestore } from '../../../../firebase';
 import { useToast } from '../../../UI/toast/ToastProvider';
 import useDebounce from '../../../../hooks/useDebounce';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../../utils/phoneUtils';
 
 const OPERATORS_PAGE_SIZE = 5;
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export default function AdminForm({ onSubmit, isLoading, initialData }) {
   const { addToast } = useToast();
@@ -97,7 +99,8 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
 
   const isFormValid = Boolean(
     username.trim() &&
-    (initialData || (email.trim() && password && password.length >= 6))
+    (initialData || (email.trim() && password && STRONG_PASSWORD_REGEX.test(password))) &&
+    (!phone || isValidPhilippinePhone(phone))
   );
 
   const handleSubmit = (e) => {
@@ -113,15 +116,20 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
       return;
     }
 
-    if (!initialData && (!password || password.length < 6)) {
-      addToast('Password must be at least 6 characters', 'warning');
+    if (!initialData && (!password || !STRONG_PASSWORD_REGEX.test(password))) {
+      addToast('Password must be 8+ chars with uppercase, lowercase & number', 'warning');
+      return;
+    }
+
+    if (phone.trim() && !isValidPhilippinePhone(phone)) {
+      addToast('Phone number must follow Philippine format: 09XXXXXXXXX (11 digits)', 'warning');
       return;
     }
 
     const payload = {
       username: username.trim(),
       fullName: fullName.trim() || username.trim(),
-      phone: phone.trim(),
+      phone: sanitizePhilippinePhone(phone),
       status: status,
       assignedOperators: assignedOperators
     };
@@ -194,7 +202,7 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
             <input
               type="password"
               className="form-input"
-              placeholder="Minimum 6 characters"
+              placeholder="8+ chars with upper, lower & number"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -223,9 +231,10 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
           <input
             type="tel"
             className="form-input"
-            placeholder="0912 345 6789"
+            placeholder="09XXXXXXXXX"
+            maxLength={PH_PHONE_MAX_LENGTH}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(sanitizePhilippinePhone(e.target.value))}
             disabled={isLoading}
           />
         </div>

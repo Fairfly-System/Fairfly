@@ -3,6 +3,7 @@ import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import { useLightbox, isImageUrl } from '../../UI/ImageLightbox/ImageLightbox';
 import { usePdfModal, isPdfUrl } from '../../Shared/PdfDocument/PdfDocumentView';
+import { formatPaymentChannel } from '../../../utils/paymentUtils';
 import './history-detail-modal.css';
 
 function formatDate(val) {
@@ -22,9 +23,10 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
   const { openLightbox } = useLightbox();
   const { openPdfModal } = usePdfModal();
 
-  const isService = type === 'service' || Boolean(data?.serviceType && (data?.steps || data?.totalSteps || data?.price));
-  const isCancelled = (data?.status || '').toLowerCase() === 'cancelled';
-  const isCompleted = (data?.status || '').toLowerCase() === 'completed';
+  const isPayment = type === 'payment';
+  const isService = !isPayment && (type === 'service' || Boolean(data?.serviceType && (data?.steps || data?.totalSteps || data?.price)));
+  const isCancelled = (data?.status || '').toLowerCase() === 'cancelled' || (data?.status || '').toLowerCase() === 'refunded';
+  const isCompleted = (data?.status || '').toLowerCase() === 'completed' || (data?.status || '').toLowerCase() === 'paid';
 
   const reqRefId = isService ? data?.submittedRequirementsId : null;
   const { requirements: submittedDocs, loading: reqsLoading } = useSubmittedRequirements(reqRefId);
@@ -73,11 +75,15 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
   // Safe early return after all hooks are evaluated
   if (!isOpen || !data) return null;
 
-  const modalTitle = isService
+  const modalTitle = isPayment
+    ? 'Official Payment & Settlement Details'
+    : isService
     ? (isCancelled ? 'Cancelled Service Record & Refund' : 'Completed Service Fulfillment')
     : 'Appointment History Details';
 
-  const modalSubtitle = isService
+  const modalSubtitle = isPayment
+    ? `Verified financial transaction for ${data.clientName || 'Client'} (${data.receiptNo || data.id})`
+    : isService
     ? `Detailed audit trail for ${data.serviceType || 'Service'} (${data.id || 'N/A'})`
     : `Historical consultation record for ${data.clientName || 'Client'}`;
 
@@ -95,19 +101,25 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
         {/* Top Banner */}
         <div className="op-history-top-banner">
           <div className="op-history-banner-left">
-            <div className={`op-history-icon-bubble ${isCancelled ? 'cancelled' : isCompleted ? 'completed' : ''}`}>
-              <i className={`fa-solid ${isService
+            <div className={`op-history-icon-bubble ${isCancelled ? 'cancelled' : isCompleted || isPayment ? 'completed' : ''}`}>
+              <i className={`fa-solid ${isPayment
+                  ? 'fa-receipt'
+                  : isService
                   ? (isCancelled ? 'fa-ban' : isCompleted ? 'fa-circle-check' : 'fa-list-check')
                   : 'fa-calendar-check'
                 }`}></i>
             </div>
             <div>
               <h3 className="op-history-banner-title">
-                {isService ? (data.serviceType || 'Service Fulfillment') : (data.serviceType || data.service || 'Appointment Consultation')}
+                {isPayment
+                  ? (data.serviceTitle || data.serviceType || 'Payment Transaction')
+                  : isService
+                  ? (data.serviceType || 'Service Fulfillment')
+                  : (data.serviceType || data.service || 'Appointment Consultation')}
               </h3>
               <div className="op-history-banner-sub">
-                <span>Record ID:</span>
-                <span className="op-history-id-code">{data.id}</span>
+                <span>{isPayment ? 'Receipt / Ref:' : 'Record ID:'}</span>
+                <span className="op-history-id-code">{data.receiptNo || data.id}</span>
               </div>
             </div>
           </div>
@@ -205,7 +217,89 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
         )}
 
         {/* 2-Column Overview Grids */}
-        {isService ? (
+        {isPayment ? (
+          <div className="op-history-grid">
+            {/* Client Profile */}
+            <div className="op-history-card-panel">
+              <div className="op-history-panel-header">
+                <i className="fa-solid fa-user-circle"></i>
+                <span>Client Information</span>
+              </div>
+              <div className="op-detail-rows">
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Client Name:</span>
+                  <span className="op-detail-value font-bold">{data.clientName || 'Valued Client'}</span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Email:</span>
+                  <span className="op-detail-value">{data.clientEmail || 'N/A'}</span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Phone:</span>
+                  <span className="op-detail-value">{data.clientPhone || 'N/A'}</span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Client UID:</span>
+                  <span className="op-detail-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {data.clientUid || 'Direct Counter Client'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial & Settlement Overview */}
+            <div className="op-history-card-panel">
+              <div className="op-history-panel-header">
+                <i className="fa-solid fa-receipt"></i>
+                <span>Financial & Settlement</span>
+              </div>
+              <div className="op-detail-rows">
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Amount Paid:</span>
+                  <span className="op-detail-value" style={{ color: '#166534', fontWeight: 700, fontSize: '1rem' }}>
+                    {formatCurrency(data.amount)}
+                  </span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Payment Method:</span>
+                  <span className="op-detail-value">
+                    <span style={{ fontWeight: 600, color: '#4338ca' }}>
+                      {formatPaymentChannel(data.paymentMethodType || data.paymentMethod, data.provider)}
+                    </span>
+                  </span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Official Receipt No:</span>
+                  <span className="op-detail-value" style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--purple-dark)' }}>
+                    {data.receiptNo || 'RCT-N/A'}
+                  </span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">System Payment ID:</span>
+                  <span className="op-detail-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {data.id}
+                  </span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Quotation Ref:</span>
+                  <span className="op-detail-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {data.quotationId || 'Direct Settlement'}
+                  </span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Service Fulfillment ID:</span>
+                  <span className="op-detail-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {data.fulfillmentId || 'N/A'}
+                  </span>
+                </div>
+                <div className="op-detail-row">
+                  <span className="op-detail-label">Date Settled:</span>
+                  <span className="op-detail-value">{formatDate(data.paidAt || data.createdAt)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : isService ? (
           <div className="op-history-grid">
             {/* Client Profile */}
             <div className="op-history-card-panel">
@@ -572,7 +666,18 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
         )}
 
         {/* Footer */}
-        <div className="op-history-modal-footer">
+        <div className="op-history-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+          {isPayment && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}
+              onClick={() => openPdfModal({ type: 'receipt', data })}
+            >
+              <i className="fa-solid fa-file-invoice"></i>
+              <span>View Official E-Receipt (PDF)</span>
+            </button>
+          )}
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close
           </button>

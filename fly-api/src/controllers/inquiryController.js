@@ -150,6 +150,22 @@ const createInquiry = async (req, res) => {
     let effectiveBranchUid = branchUid || req.userDetails?.branchUid || (isOperatorUser ? req.user?.uid : null);
     let effectiveBranchName = branchName || req.userDetails?.branchName || null;
 
+    // Defense-in-depth: For branch-exclusive services, strictly lock assignment to the creating branch
+    if (serviceId) {
+      try {
+        const serviceDoc = await getFromDatabase(`${COLLECTIONS.SERVICES}/${serviceId}`);
+        if (serviceDoc && serviceDoc.isBranchExclusive) {
+          const exclusiveBranchUid = serviceDoc.branchUid || serviceDoc.createdByOperatorId || null;
+          if (exclusiveBranchUid) {
+            effectiveBranchUid = exclusiveBranchUid;
+            effectiveBranchName = serviceDoc.branchName || effectiveBranchName;
+          }
+        }
+      } catch (sErr) {
+        console.warn('[Inquiry] Error inspecting service for branch exclusivity:', sErr.message);
+      }
+    }
+
     if (effectiveBranchUid && !effectiveBranchName) {
       try {
         const branchUser = await getFromDatabase(`users/${effectiveBranchUid}`);

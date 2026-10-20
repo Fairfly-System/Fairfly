@@ -84,9 +84,10 @@ const createPendingRegistration = async ({
     return { status: 400, error: 'Please provide a valid phone number.' };
   }
 
-  const phoneRegex = /^[0-9+\s-]{8,15}$/;
-  if (!phoneRegex.test(phone.trim())) {
-    return { status: 400, error: 'Please enter a valid phone number format (8-15 digits).' };
+  const sanitizedPhone = phone.trim().replace(/[\s-]/g, '');
+  const phPhoneRegex = /^09\d{9}$/;
+  if (!phPhoneRegex.test(sanitizedPhone)) {
+    return { status: 400, error: 'Please enter a valid Philippine mobile number (11 digits starting with 09, e.g. 09XXXXXXXXX).' };
   }
 
   if (!password || typeof password !== 'string') {
@@ -160,7 +161,7 @@ const createPendingRegistration = async ({
     lastName: resolvedLastName,
     fullName: resolvedFullName,
     email: normalizedEmail,
-    phone: phone.trim(),
+    phone: sanitizedPhone,
     password, // temporary server-side storage until verification completes
     idType: idType.trim(),
     idFrontUrl: idFrontUrl.trim(),

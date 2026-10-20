@@ -106,7 +106,7 @@ export default function PuzzleHouse({ onPieceClick, activePillar }) {
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
 
@@ -344,12 +344,12 @@ export default function PuzzleHouse({ onPieceClick, activePillar }) {
 
     // --- Animation Loop ---
     let animationFrameId;
-    let clock = new THREE.Clock();
+    const startTime = performance.now();
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      const elapsedTime = clock.getElapsedTime();
+      const elapsedTime = (performance.now() - startTime) / 1000;
 
       // Smooth damped rotation towards cursor target + gentle idle breathing float
       const idleSway = Math.sin(elapsedTime * 0.8) * 0.025;

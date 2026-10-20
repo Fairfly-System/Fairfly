@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { createInquiry } from '../../../services/inquiryService';
 import BranchSelectSearch from '../../UI/BranchSelectSearch/BranchSelectSearch';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../utils/phoneUtils';
 import '../ClientInquiryModal/client-inquiry-modal.css';
 import './client-service-request-modal.css';
 
@@ -212,7 +213,29 @@ export default function ClientServiceRequestModal({
   const effectiveLockedBranchUid = isBranchExclusive ? selectedService.branchUid : lockedBranchUid;
   const effectiveLockedBranchName = isBranchExclusive ? (selectedService.branchName || 'Assigned Branch') : lockedBranchName;
 
-  // Auto-lock branch UID if service is branch exclusive or prop provided
+  // Filter available branch list: when service is branch-exclusive, strictly allow ONLY the creating branch
+  const displayedBranches = useMemo(() => {
+    if (effectiveLockedBranchUid) {
+      const matched = branchesList.filter(
+        (b) => (b.uid || b.id) === effectiveLockedBranchUid
+      );
+      if (matched.length > 0) return matched;
+      return [
+        {
+          uid: effectiveLockedBranchUid,
+          id: effectiveLockedBranchUid,
+          branchName: effectiveLockedBranchName || 'Assigned Branch',
+          name: effectiveLockedBranchName || 'Assigned Branch',
+          address: selectedService?.branchLocation || selectedService?.location || '',
+          location: selectedService?.branchLocation || selectedService?.location || '',
+          email: ''
+        }
+      ];
+    }
+    return branchesList;
+  }, [branchesList, effectiveLockedBranchUid, effectiveLockedBranchName, selectedService]);
+
+  // Auto-lock and synchronize branch UID whenever effectiveLockedBranchUid is active
   useEffect(() => {
     if (effectiveLockedBranchUid) {
       setSelectedBranchUid(effectiveLockedBranchUid);
@@ -233,7 +256,7 @@ export default function ClientServiceRequestModal({
       hasValidName &&
       hasValidEmail &&
       cellphone.trim() &&
-      specifiedRequirements.trim()
+      isValidPhilippinePhone(cellphone)
     );
   }, [
     selectedServiceId,
@@ -245,8 +268,7 @@ export default function ClientServiceRequestModal({
     firstName,
     lastName,
     email,
-    cellphone,
-    specifiedRequirements
+    cellphone
   ]);
 
   if (!isOpen) return null;
@@ -292,20 +314,17 @@ export default function ClientServiceRequestModal({
       return;
     }
 
-    if (!cellphone.trim()) {
-      addToast('Please provide a cellphone number', 'warning');
-      return;
-    }
-
-    if (!specifiedRequirements.trim()) {
-      addToast('Please enter your specified requirements or service details', 'warning');
+    if (!cellphone.trim() || !isValidPhilippinePhone(cellphone)) {
+      addToast('Please enter a valid Philippine mobile number (11 digits, e.g. 09XXXXXXXXX)', 'warning');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const matchedBranch = branchesList.find((b) => (b.uid || b.id) === selectedBranchUid);
+      const finalBranchUid = effectiveLockedBranchUid || selectedBranchUid;
+      const matchedBranch = displayedBranches.find((b) => (b.uid || b.id) === finalBranchUid) || branchesList.find((b) => (b.uid || b.id) === finalBranchUid);
+      const finalBranchName = effectiveLockedBranchName || (matchedBranch ? (matchedBranch.branchName || matchedBranch.name) : 'Branch Operator');
 
       const resolvedClientName = clientType === 'company'
         ? companyName.trim()
@@ -336,8 +355,8 @@ export default function ClientServiceRequestModal({
         specifiedRequirements: specifiedRequirements.trim(),
         clientRemarks: remarks.trim(),
         notes: remarks.trim(),
-        branchUid: selectedBranchUid,
-        branchName: matchedBranch ? (matchedBranch.branchName || matchedBranch.name) : 'Branch Operator',
+        branchUid: finalBranchUid,
+        branchName: finalBranchName,
         clientUid: user?.uid || null,
         isWalkIn: false,
         status: 'submitted'
@@ -373,7 +392,7 @@ export default function ClientServiceRequestModal({
       onClose={onClose}
       maxWidth="72rem"
       width="95%"
-      title="Submit Service Inquiry (SAF-01-002)"
+      title="Submit Service Inquiry"
       subtitle="Intake client specifications and requirements for your selected service"
       isLoading={isSubmitting}
     >
@@ -582,9 +601,10 @@ export default function ClientServiceRequestModal({
                   id="req-cellphone"
                   type="tel"
                   className="input-base"
-                  placeholder="0912 345 6789"
+                  placeholder="09XXXXXXXXX"
+                  maxLength={PH_PHONE_MAX_LENGTH}
                   value={cellphone}
-                  onChange={(e) => setCellphone(e.target.value)}
+                  onChange={(e) => setCellphone(sanitizePhilippinePhone(e.target.value))}
                   required
                 />
               </div>
@@ -643,9 +663,9 @@ export default function ClientServiceRequestModal({
               {/* Debounced Franchise Search */}
               <div className="inquiry-field-group col-span-2">
                 <BranchSelectSearch
-                  branches={branchesList}
-                  selectedBranchUid={selectedBranchUid}
-                  onSelectBranch={(uid) => setSelectedBranchUid(uid)}
+                  branches={displayedBranches}
+                  selectedBranchUid={effectiveLockedBranchUid || selectedBranchUid}
+                  onSelectBranch={(uid) => !effectiveLockedBranchUid && setSelectedBranchUid(uid)}
                   isLoading={loadingOptions}
                   label="Preferred Processing Branch *"
                   placeholder="Search branch by name, city or location..."
@@ -653,8 +673,8 @@ export default function ClientServiceRequestModal({
                   required
                 />
                 {effectiveLockedBranchUid && (
-                  <span className="client-req-branch-hint" style={{ marginTop: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--purple-dark, #4338ca)' }}>
-                    <i className="fa-solid fa-lock"></i> Exclusively serviced by {effectiveLockedBranchName}
+                  <span className="client-req-branch-hint" style={{ marginTop: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--purple-dark, #4338ca)', fontWeight: 600 }}>
+                    <i className="fa-solid fa-lock"></i> Exclusively serviced by {effectiveLockedBranchName} (Branch Exclusive)
                   </span>
                 )}
               </div>
@@ -812,7 +832,7 @@ export default function ClientServiceRequestModal({
           {/* Section 3: Specified Requirements of Client */}
           <div className="inquiry-section">
             <h3 className="inquiry-section-title">
-              <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span className="req-star">*</span>
+              <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-light, #64748b)' }}>(Optional)</span>
             </h3>
             <p className="inquiry-field-hint" style={{ fontSize: '0.8125rem', color: 'var(--text-light, #64748b)', margin: 0 }}>
               Specify your itinerary, target travel dates, destinations, number of passengers, passport expediting specifics, or special requests.
@@ -823,7 +843,6 @@ export default function ClientServiceRequestModal({
               placeholder={`• Target dates or departure month\n• Special accommodation or vehicle preference\n• Specific document assistance needed`}
               value={specifiedRequirements}
               onChange={(e) => setSpecifiedRequirements(e.target.value)}
-              required
             ></textarea>
           </div>
 

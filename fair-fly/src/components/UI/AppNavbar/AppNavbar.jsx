@@ -179,7 +179,7 @@ export default function AppNavbar({
               title="View & Edit Profile"
               style={{ textDecoration: 'none', color: 'inherit' }}
             >
-              Welcome, <strong>{userDetails?.name || user?.displayName || user?.email?.split('@')[0] || 'Client'}</strong>
+              Welcome, <strong>{userDetails?.name?.split(' ')[0] || user?.displayName || user?.email?.split('@')[0] || 'Client'}</strong>
             </NavLink>
           )}
 

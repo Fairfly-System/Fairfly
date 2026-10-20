@@ -365,7 +365,7 @@ export default function QuotationDetailPage() {
     if (isArchived) {
       return [
         {
-          label: 'Export to PDF (ADF-07-001)',
+          label: 'Export to PDF',
           icon: 'fa-solid fa-file-pdf',
           onClick: () => setShowPdfModal(true),
           className: 'btn-secondary',
@@ -403,7 +403,7 @@ export default function QuotationDetailPage() {
 
     return [
       {
-        label: 'Export to PDF (ADF-07-001)',
+        label: 'Export to PDF',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-secondary',
@@ -411,7 +411,7 @@ export default function QuotationDetailPage() {
       },
       ...(isPaid ? [
         {
-          label: 'View E-Receipt (ADF-07-002)',
+          label: 'View E-Receipt',
           icon: 'fa-solid fa-receipt',
           onClick: handleOpenReceipt,
           className: 'btn-secondary',
@@ -631,7 +631,7 @@ export default function QuotationDetailPage() {
                 to={`/operator/inquiry-forms/${quotation.inquiryId}`}
                 className="quote-inquiry-bar-link"
               >
-                View Inquiry Form (SAF-01-002) →
+                View Inquiry Form →
               </Link>
             </div>
           )}
@@ -754,8 +754,8 @@ export default function QuotationDetailPage() {
 
               <div className="panel-details-list">
                 <div className="detail-item">
-                  <span className="detail-label">Document Code</span>
-                  <span className="detail-value text-mono font-bold text-purple">{quotation.code || 'ADF-07-001'}</span>
+                  <span className="detail-label">Reference No.</span>
+                  <span className="detail-value text-mono font-bold text-purple">{quotation.quoteNo || quotation.code || 'Official'}</span>
                 </div>
 
                 <div className="detail-item">
@@ -1096,7 +1096,7 @@ export default function QuotationDetailPage() {
                   style={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                 >
                   <i className="fa-solid fa-receipt"></i>
-                  <span>View & Print Official E-Receipt (ADF-07-002)</span>
+                  <span>View & Print Official E-Receipt</span>
                 </button>
               </div>
             </article>

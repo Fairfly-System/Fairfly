@@ -120,7 +120,7 @@ export function NotificationProvider({ children }) {
         }
 
         if (notifType) {
-          if (tabSlug.includes(notifType) || (notifType === 'service' && tabSlug.includes('workflow'))) return true;
+          if (tabSlug.includes(notifType)) return true;
           if (notifType === 'franchise' && tabSlug.includes('franchise')) return true;
           if (notifType === 'appointment' && tabSlug.includes('appointment')) return true;
           if (notifType === 'ticket' && tabSlug.includes('ticket')) return true;

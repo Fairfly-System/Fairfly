@@ -392,7 +392,7 @@ export default function HistoryContent() {
                             type="button"
                             className="icon-btn pdf"
                             onClick={() => setPdfModalData(inq)}
-                            title="Export PDF (SAF-01)"
+                            title="Export PDF"
                           >
                             <i className="fa-solid fa-file-pdf"></i>
                           </button>

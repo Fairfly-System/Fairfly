@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
@@ -70,28 +70,60 @@ export default function AdminInquiryDetailPage() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
 
-  // Directly subscribe to the specific inquiry document
+  // Directly subscribe to the specific inquiry document with resilient fallback
   useEffect(() => {
     if (!id) {
       setLoading(false);
       return;
     }
+    let isMounted = true;
+
     const unsub = onSnapshot(
       doc(firestore, 'inquiries', id),
-      (docSnap) => {
+      async (docSnap) => {
+        if (!isMounted) return;
         if (docSnap.exists()) {
           setInquiry({ id: docSnap.id, ...docSnap.data() });
+          setLoading(false);
         } else {
-          setInquiry(null);
+          // If direct document ID not found, attempt fallback by stripped prefix or controlNo
+          try {
+            const altId = id.startsWith('INQ-') ? id.replace(/^INQ-/, '') : `INQ-${id}`;
+            const altSnap = await getDoc(doc(firestore, 'inquiries', altId));
+            if (!isMounted) return;
+            if (altSnap.exists()) {
+              setInquiry({ id: altSnap.id, ...altSnap.data() });
+              setLoading(false);
+              return;
+            }
+
+            // Fallback 2: Check by controlNo
+            const qSnap = await getDocs(query(collection(firestore, 'inquiries'), where('controlNo', '==', id)));
+            if (!isMounted) return;
+            if (!qSnap.empty) {
+              const matched = qSnap.docs[0];
+              setInquiry({ id: matched.id, ...matched.data() });
+            } else {
+              setInquiry(null);
+            }
+          } catch (e) {
+            console.warn('[AdminInquiryDetailPage] Fallback lookup error:', e);
+            if (isMounted) setInquiry(null);
+          } finally {
+            if (isMounted) setLoading(false);
+          }
         }
-        setLoading(false);
       },
       (err) => {
         console.warn('[AdminInquiryDetailPage] Document error:', err);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     );
-    return () => unsub();
+
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, [id]);
 
   const parsedData = useMemo(() => {
@@ -99,6 +131,11 @@ export default function AdminInquiryDetailPage() {
   }, [inquiry]);
 
   const isArchived = Boolean(inquiry?.archived);
+
+  const isConfirmed = useMemo(() => {
+    const st = (inquiry?.status || '').toLowerCase();
+    return ['accepted', 'confirmed', 'completed', 'paid', 'active', 'fulfilled', 'closed'].includes(st);
+  }, [inquiry]);
 
   const handleArchive = async () => {
     if (!inquiry) return;
@@ -145,7 +182,7 @@ export default function AdminInquiryDetailPage() {
     if (isArchived) {
       return [
         {
-          label: 'Export to PDF (SAF-01-002)',
+          label: 'Export to PDF',
           icon: 'fa-solid fa-file-pdf',
           onClick: () => setShowPdfModal(true),
           className: 'btn-secondary',
@@ -164,7 +201,7 @@ export default function AdminInquiryDetailPage() {
 
     return [
       {
-        label: 'Export to PDF (SAF-01-002)',
+        label: 'Export to PDF',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-primary',
@@ -363,7 +400,7 @@ export default function AdminInquiryDetailPage() {
                 Specified Requirements of Client
               </span>
               <span className="inquiry-saf-badge">
-                SAF-01-002 Col 2
+                Requirements
               </span>
             </h2>
             <div className="inquiry-specs-box">
@@ -377,7 +414,7 @@ export default function AdminInquiryDetailPage() {
           <div className="details-grid-2">
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-regular fa-comment-dots"></i> Client Remarks & Notes (SAF-01-002 Col 3)
+                <i className="fa-regular fa-comment-dots"></i> Client Remarks & Notes
               </h2>
               <p className="inquiry-text inquiry-preline-text">
                 {parsedData.remarksText}

@@ -6,6 +6,7 @@ import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import { createInquiry } from '../../../services/inquiryService';
 import BranchSelectSearch from '../../UI/BranchSelectSearch/BranchSelectSearch';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../utils/phoneUtils';
 import './client-inquiry-modal.css';
 
 const OFFICIAL_SERVICES = [
@@ -150,11 +151,11 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       hasValidName &&
       hasValidEmail &&
       cellphone.trim() &&
+      isValidPhilippinePhone(cellphone) &&
       selectedServices.length > 0 &&
-      specifiedRequirements.trim() &&
       (!branchesList.length || selectedBranchUid)
     );
-  }, [clientType, companyName, contactPersonFirstName, contactPersonLastName, firstName, lastName, cellphone, email, selectedServices, specifiedRequirements, branchesList, selectedBranchUid]);
+  }, [clientType, companyName, contactPersonFirstName, contactPersonLastName, firstName, lastName, cellphone, email, selectedServices, branchesList, selectedBranchUid]);
 
   if (!isOpen) return null;
 
@@ -195,16 +196,12 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       addToast('Please provide a valid email address (mandatory)', 'warning');
       return;
     }
-    if (!cellphone.trim()) {
-      addToast('Please provide a cellphone number', 'warning');
+    if (!cellphone.trim() || !isValidPhilippinePhone(cellphone)) {
+      addToast('Please enter a valid Philippine mobile number (11 digits, e.g. 09XXXXXXXXX)', 'warning');
       return;
     }
     if (selectedServices.length === 0) {
       addToast('Please select at least one service category', 'warning');
-      return;
-    }
-    if (!specifiedRequirements.trim()) {
-      addToast('Please describe what you want in the Specified Requirements section', 'warning');
       return;
     }
 
@@ -274,7 +271,6 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
         <div className="modal-title-with-badge">
           <i className="fa-solid fa-file-signature modal-title-icon inquiry-modal-title-icon"></i>
           <span>Official Service Inquiry Form</span>
-          <span className="form-standard-tag">SAF-01-002</span>
         </div>
       }
       size="large"
@@ -286,7 +282,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
           <i className="fa-solid fa-circle-info"></i>
           <div>
             <strong>Describe What You Want:</strong> Fill out your travel or document specifications below.
-            Our branch operators will calculate pricing, assemble tour dates and inclusions, and send an official Quotation (ADF-07-001) for your approval.
+            Our branch operators will calculate pricing, assemble tour dates and inclusions, and send an official Quotation for your approval.
           </div>
         </div>
 
@@ -479,9 +475,10 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
                 id="cellphone"
                 type="tel"
                 className="input-base"
-                placeholder="0912 345 6789"
+                placeholder="09XXXXXXXXX"
+                maxLength={PH_PHONE_MAX_LENGTH}
                 value={cellphone}
-                onChange={(e) => setCellphone(e.target.value)}
+                onChange={(e) => setCellphone(sanitizePhilippinePhone(e.target.value))}
                 required
               />
             </div>
@@ -555,7 +552,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
         {/* Section 3: Specified Requirements of Client */}
         <div className="inquiry-section">
           <h3 className="inquiry-section-title">
-            <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span className="req-star">*</span>
+            <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-light, #64748b)' }}>(Optional)</span>
           </h3>
           <p className="inquiry-field-hint">
             Specify what you need for this service (e.g. destinations, expected dates, number of vehicles, hotel preference, specific document types, custom tour highlights).
@@ -566,7 +563,6 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
             placeholder={'• (1) Unit Tourist Bus (49 Regular seats, audio/video entertainment)\n• 3D/2N Tour: QC - Bolinao - Alaminos - QC\n• Target Travel Dates: April 29 to May 1\n• Need lodging recommendations in Bolinao'}
             value={specifiedRequirements}
             onChange={(e) => setSpecifiedRequirements(e.target.value)}
-            required
           ></textarea>
         </div>
 

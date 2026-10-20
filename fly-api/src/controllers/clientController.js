@@ -12,7 +12,7 @@ const {
 } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 
-const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || process.env.CLIENT_URL || 'https://fairfly-1e83b.web.app';
 
 const COLLECTIONS = {
   USERS: 'users',
@@ -26,15 +26,78 @@ const COLLECTIONS = {
  */
 const getClients = async (req, res) => {
   try {
-    const { page, limit, status } = req.query;
+    const { page, limit, status, search } = req.query;
     let queryRef = db.collection(COLLECTIONS.USERS).where('role', '==', 'client');
 
     if (status && status !== 'all') {
       queryRef = queryRef.where('status', '==', status);
     }
 
+    // Global client counts across statuses (costs 0 document reads with Firestore count aggregation)
+    let counts = { total: 0, pending: 0, active: 0, deactivated: 0, rejected: 0 };
+    try {
+      const baseClientsQuery = db.collection(COLLECTIONS.USERS).where('role', '==', 'client');
+      const [totalSnap, pendingSnap, activeSnap, deactivatedSnap, rejectedSnap] = await Promise.all([
+        baseClientsQuery.count().get(),
+        baseClientsQuery.where('status', '==', 'Pending').count().get(),
+        baseClientsQuery.where('status', '==', 'Active').count().get(),
+        baseClientsQuery.where('status', '==', 'Deactivated').count().get(),
+        baseClientsQuery.where('status', '==', 'Rejected').count().get(),
+      ]);
+      counts = {
+        total: totalSnap.data().count,
+        pending: pendingSnap.data().count,
+        active: activeSnap.data().count,
+        deactivated: deactivatedSnap.data().count,
+        rejected: rejectedSnap.data().count,
+      };
+    } catch (countErr) {
+      console.warn('Notice calculating client summary counts:', countErr.message);
+    }
+
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
+
+    // If search term is present, perform keyword matching across client attributes
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      const snapshot = await queryRef.get();
+      let docs = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          uid: doc.id,
+          ...data,
+          status: data.status || 'Active',
+        };
+      });
+
+      docs = docs.filter((c) =>
+        (c.fullName && c.fullName.toLowerCase().includes(q)) ||
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.toLowerCase().includes(q)) ||
+        (c.address && c.address.toLowerCase().includes(q)) ||
+        (c.idType && c.idType.toLowerCase().includes(q))
+      );
+
+      docs.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+      if (pageNum || limitNum) {
+        const p = pageNum || 1;
+        const l = limitNum || 10;
+        return res.status(200).json({
+          data: docs.slice((p - 1) * l, p * l),
+          total: docs.length,
+          counts,
+          page: p,
+          limit: l,
+          totalPages: Math.ceil(docs.length / l),
+        });
+      }
+
+      return res.status(200).json(docs);
+    }
 
     if (pageNum || limitNum) {
       const p = pageNum || 1;
@@ -65,6 +128,7 @@ const getClients = async (req, res) => {
         return res.status(200).json({
           data: docs.slice((p - 1) * l, p * l),
           total: docs.length,
+          counts,
           page: p,
           limit: l,
           totalPages: Math.ceil(docs.length / l),
@@ -84,6 +148,7 @@ const getClients = async (req, res) => {
       return res.status(200).json({
         data: clients,
         total: total || clients.length,
+        counts,
         page: p,
         limit: l,
         totalPages: Math.ceil((total || clients.length) / l),

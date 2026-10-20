@@ -10,6 +10,26 @@ import { uploadFileToBackend } from '../../../utils/fileUploadApi';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './quotation-attach-requirements-modal.css';
 
+// Strict extension and accept configurations aligned with backend fileSecurity.js
+const ALLOWED_DOC_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+const DOC_ACCEPT_STRING = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+const IMAGE_ACCEPT_STRING = '.jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif';
+
+const isImageRequirement = (type) => {
+  const t = String(type || '').toLowerCase().trim();
+  return t === 'image' || t === 'photo';
+};
+
+const isDocRequirement = (type) => {
+  const t = String(type || '').toLowerCase().trim();
+  return t === 'file' || t === 'document' || t === 'doc';
+};
+
+const isFileRequirement = (type) => isImageRequirement(type) || isDocRequirement(type);
+
 export default function QuotationAttachRequirementsModal({
   isOpen,
   onClose,
@@ -76,7 +96,8 @@ export default function QuotationAttachRequirementsModal({
     if (serviceSchema.length > 0) {
       return serviceSchema.map((item, idx) => {
         const name = typeof item === 'string' ? item.trim() : (item.name || item.title || `Requirement ${idx + 1}`).trim();
-        const inputType = typeof item === 'object' ? item.inputType || 'text' : 'text';
+        const rawType = typeof item === 'object' ? item.inputType || item.type || 'text' : 'text';
+        const inputType = String(rawType).toLowerCase().trim();
         const isRequired = typeof item === 'object' ? item.required !== false : true;
         return { name, inputType, required: isRequired };
       });
@@ -99,7 +120,8 @@ export default function QuotationAttachRequirementsModal({
 
     return cleanFallback.map((item, idx) => {
       const name = typeof item === 'string' ? item.trim() : (item.name || item.title || `Requirement ${idx + 1}`).trim();
-      const inputType = typeof item === 'object' ? item.inputType || 'text' : 'text';
+      const rawType = typeof item === 'object' ? item.inputType || item.type || 'text' : 'text';
+      const inputType = String(rawType).toLowerCase().trim();
       const isRequired = typeof item === 'object' ? item.required !== false : true;
       return { name, inputType, required: isRequired };
     });
@@ -165,7 +187,7 @@ export default function QuotationAttachRequirementsModal({
         const hasFile = Boolean(state.file || state.existingFile?.url);
         const hasText = Boolean(state.textValue && state.textValue.trim());
 
-        if (item.inputType === 'image' || item.inputType === 'file') {
+        if (isFileRequirement(item.inputType)) {
           if (!hasFile) return false;
         } else {
           if (!hasText && !hasFile) return false;
@@ -178,6 +200,30 @@ export default function QuotationAttachRequirementsModal({
   const handleFileChange = (idx, file) => {
     if (!file) return;
 
+    const item = requirementItems[idx];
+    const isImg = isImageRequirement(item?.inputType);
+    const isDoc = isDocRequirement(item?.inputType);
+    const fileName = (file.name || '').toLowerCase();
+
+    // Validate eligible file extensions on client selection
+    if (isImg) {
+      const isAllowed = ALLOWED_IMAGE_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+      if (!isAllowed) {
+        addToast(`Please select an eligible image file (${ALLOWED_IMAGE_EXTENSIONS.join(', ')})`, 'warning');
+        const inputEl = document.getElementById(`client-file-${idx}`);
+        if (inputEl) inputEl.value = '';
+        return;
+      }
+    } else if (isDoc) {
+      const isAllowed = ALLOWED_DOC_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+      if (!isAllowed) {
+        addToast(`Please select an eligible document file (${ALLOWED_DOC_EXTENSIONS.join(', ')})`, 'warning');
+        const inputEl = document.getElementById(`client-file-${idx}`);
+        if (inputEl) inputEl.value = '';
+        return;
+      }
+    }
+
     // Check size limit: 25MB (matching backend upload limit)
     if (file.size > 25 * 1024 * 1024) {
       addToast('File exceeds 25MB size limit', 'warning');
@@ -186,7 +232,7 @@ export default function QuotationAttachRequirementsModal({
       return;
     }
 
-    setInputs(prev => ({
+    setInputs((prev) => ({
       ...prev,
       [idx]: {
         ...(prev[idx] || {}),
@@ -232,38 +278,38 @@ export default function QuotationAttachRequirementsModal({
       const folderRef = quotation?.submittedRequirementsId || `quote_${quotation.id}_${Date.now()}`;
       const targetFolder = `service_requirements/${folderRef}`;
 
-      // Upload newly attached files to Firebase Storage
-      const compiledReqs = await Promise.all(
-        requirementItems.map(async (item, idx) => {
-          const state = inputs[idx] || {};
-          let fileMeta = state.existingFile || null;
+      // Upload newly attached files sequentially to prevent serverless concurrency spikes
+      const compiledReqs = [];
+      for (let idx = 0; idx < requirementItems.length; idx++) {
+        const item = requirementItems[idx];
+        const state = inputs[idx] || {};
+        let fileMeta = state.existingFile || null;
 
-          if (state.file) {
-            try {
-              const uploadRes = await uploadFileToBackend(state.file, targetFolder, userToken);
-              if (uploadRes?.url) {
-                fileMeta = {
-                  url: uploadRes.url,
-                  fileName: uploadRes.fileName || state.file.name,
-                  fileSize: uploadRes.fileSize || state.file.size,
-                  storagePath: uploadRes.storagePath || ''
-                };
-              }
-            } catch (upErr) {
-              console.error(`Upload error for requirement ${item.name}:`, upErr);
-              throw upErr;
+        if (state.file) {
+          try {
+            const uploadRes = await uploadFileToBackend(state.file, targetFolder, userToken);
+            if (uploadRes?.url) {
+              fileMeta = {
+                url: uploadRes.url,
+                fileName: uploadRes.fileName || state.file.name,
+                fileSize: uploadRes.fileSize || state.file.size,
+                storagePath: uploadRes.storagePath || ''
+              };
             }
+          } catch (upErr) {
+            console.error(`Upload error for requirement ${item.name}:`, upErr);
+            throw upErr;
           }
+        }
 
-          return {
-            name: item.name,
-            inputType: item.inputType,
-            required: item.required,
-            value: state.textValue ? state.textValue.trim() : '',
-            file: fileMeta
-          };
-        })
-      );
+        compiledReqs.push({
+          name: item.name,
+          inputType: item.inputType,
+          required: item.required,
+          value: state.textValue ? state.textValue.trim() : '',
+          file: fileMeta
+        });
+      }
 
       // Submit requirements to quotation backend route
       submitQuotationRequirements(
@@ -362,13 +408,13 @@ export default function QuotationAttachRequirementsModal({
                   </div>
 
                   {/* File / Image Upload Input */}
-                  {(inputType === 'image' || inputType === 'file') ? (
+                  {isFileRequirement(inputType) ? (
                     <div className="attach-req-file-zone">
                       {/* Show currently existing uploaded file */}
                       {hasExisting && !state.file && (
                         <div className="attach-existing-file-pill">
                           <i className="fa-solid fa-file-check text-green"></i>
-                          <span className="file-name">{state.existingFile.fileName || 'Attached Document'}</span>
+                          <span className="file-name">{state.existingFile.fileName || (isImageRequirement(inputType) ? 'Attached Photo' : 'Attached Document')}</span>
                           <span className="file-tag">Current Attachment</span>
                         </div>
                       )}
@@ -378,7 +424,7 @@ export default function QuotationAttachRequirementsModal({
                         <input
                           type="file"
                           id={`client-file-${idx}`}
-                          accept={inputType === 'image' ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.gif,image/*'}
+                          accept={isImageRequirement(inputType) ? IMAGE_ACCEPT_STRING : DOC_ACCEPT_STRING}
                           className="attach-hidden-file-input"
                           onChange={(e) => handleFileChange(idx, e.target.files[0])}
                           disabled={isSubmitting}
@@ -386,12 +432,16 @@ export default function QuotationAttachRequirementsModal({
 
                         {!state.file ? (
                           <label htmlFor={`client-file-${idx}`} className="btn btn-secondary btn-sm attach-file-btn">
-                            <i className="fa-solid fa-cloud-arrow-up"></i>
-                            <span>{hasExisting ? 'Replace Document' : 'Upload Document'}</span>
+                            <i className={isImageRequirement(inputType) ? 'fa-solid fa-camera' : 'fa-solid fa-cloud-arrow-up'}></i>
+                            <span>
+                              {hasExisting
+                                ? (isImageRequirement(inputType) ? 'Replace Photo' : 'Replace Document')
+                                : (isImageRequirement(inputType) ? 'Upload Photo' : 'Upload Document')}
+                            </span>
                           </label>
                         ) : (
                           <div className="attach-new-file-selected">
-                            <i className="fa-solid fa-paperclip"></i>
+                            <i className={isImageRequirement(inputType) ? 'fa-solid fa-image' : 'fa-solid fa-paperclip'}></i>
                             <span className="file-name-txt" title={state.file.name}>{state.file.name}</span>
                             <span className="file-size-txt">({(state.file.size / 1024).toFixed(0)} KB)</span>
                             <label htmlFor={`client-file-${idx}`} className="attach-change-file-btn" title="Choose a different file">

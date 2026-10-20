@@ -28,8 +28,9 @@ const createAdmin = async (req, res) => {
       return res.status(400).json({ error: 'Email, password, and username/name are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!strongPasswordRegex.test(password)) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, and a number' });
     }
 
     const displayName = (fullName || name || username || '').trim();

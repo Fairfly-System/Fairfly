@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import '../modal.css'
+import '../modal.css';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../../utils/phoneUtils';
+
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export default function OperatorForm({ onSubmit, isLoading, initialData }) {
   const isEditMode = Boolean(initialData && initialData.id);
@@ -15,9 +18,10 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
   const isFormValid = Boolean(
     formData.branchName.trim() &&
     formData.contactNumber.trim() &&
+    isValidPhilippinePhone(formData.contactNumber) &&
     formData.address.trim() &&
     formData.email.trim() &&
-    (isEditMode || formData.password.trim())
+    (isEditMode || (formData.password.trim() && STRONG_PASSWORD_REGEX.test(formData.password)))
   );
 
   const handleSubmit = (e) => {
@@ -56,13 +60,14 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
         <div className="formGroup">
           <label className="form-label">Contact Number *</label>
           <input
-            type="text"
+            type="tel"
             className="modalInput"
-            placeholder="e.g., +63 912 345 6789"
+            placeholder="09XXXXXXXXX"
+            maxLength={PH_PHONE_MAX_LENGTH}
             value={formData.contactNumber}
             disabled={isLoading}
             required
-            onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, contactNumber: sanitizePhilippinePhone(e.target.value) })}
           />
         </div>
       </div>
@@ -101,7 +106,7 @@ export default function OperatorForm({ onSubmit, isLoading, initialData }) {
             <input
               type="text"
               className="modalInput"
-              placeholder="Create a password"
+              placeholder="8+ chars with upper, lower & number"
               value={formData.password}
               disabled={isLoading}
               required

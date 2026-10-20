@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuthContext } from '../../../../context/AuthContext';
 import { uploadFileToBackend } from '../../../../utils/fileUploadApi';
 import { useToast } from '../../../UI/toast/ToastProvider';
+import { useLightbox, isImageUrl } from '../../../UI/ImageLightbox/ImageLightbox';
 import './resource-modal.css';
 
 const CATEGORIES = [
@@ -50,6 +51,7 @@ function getFileTypeIcon(ext) {
 export default function ResourceForm({ onSubmit, isLoading, initialData, onCancel }) {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
+  const { openLightbox } = useLightbox();
   const fileInputRef = useRef(null);
 
   const [title, setTitle] = useState(initialData?.title || '');
@@ -69,6 +71,22 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
   const [existingFileUrl, setExistingFileUrl] = useState(initialData?.fileUrl || '');
   const [existingFileName, setExistingFileName] = useState(initialData?.fileName || '');
   const [existingFileSize, setExistingFileSize] = useState(initialData?.fileSize || 0);
+
+  // Local object URL for previewing newly selected image before upload
+  const [localBlobUrl, setLocalBlobUrl] = useState(null);
+
+  useEffect(() => {
+    if (selectedFile && selectedFile.type?.startsWith('image/')) {
+      const url = URL.createObjectURL(selectedFile);
+      setLocalBlobUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setLocalBlobUrl(null);
+  }, [selectedFile]);
+
+  const currentFileName = selectedFile ? selectedFile.name : existingFileName;
+  const isImageFile = isImageUrl(existingFileUrl, currentFileName) || Boolean(selectedFile?.type?.startsWith('image/'));
+  const previewImageUrl = localBlobUrl || existingFileUrl;
 
   // Handle Tag Input
   const handleAddTag = (rawTag) => {
@@ -207,18 +225,39 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
         {selectedFile || existingFileUrl ? (
           <div className="resource-file-preview">
             <div className="resource-preview-left">
-              <div className="resource-preview-icon">
+              <div
+                className={`resource-preview-icon ${isImageFile ? 'is-image' : ''}`}
+                style={isImageFile && previewImageUrl ? { cursor: 'pointer' } : {}}
+                onClick={() => {
+                  if (isImageFile && previewImageUrl) {
+                    openLightbox({
+                      url: previewImageUrl,
+                      title: title || currentFileName || 'Resource Picture',
+                      subtitle: `${category} · ${currentFileName || 'Image'}`
+                    });
+                  }
+                }}
+                title={isImageFile && previewImageUrl ? 'Click to view picture in Lightbox' : undefined}
+              >
+                {isImageFile && previewImageUrl && (
+                  <img
+                    src={previewImageUrl}
+                    alt="Preview"
+                    className="resource-preview-img-thumb"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
                 <i
                   className={getFileTypeIcon(
-                    selectedFile
-                      ? selectedFile.name.split('.').pop()
-                      : existingFileName.split('.').pop()
+                    currentFileName ? currentFileName.split('.').pop() : ''
                   )}
                 ></i>
               </div>
               <div className="resource-preview-details">
-                <span className="resource-preview-name">
-                  {selectedFile ? selectedFile.name : existingFileName}
+                <span className="resource-preview-name" title={currentFileName}>
+                  {currentFileName}
                 </span>
                 <span className="resource-preview-size">
                   {formatFileSize(selectedFile ? selectedFile.size : existingFileSize)}
@@ -226,20 +265,38 @@ export default function ResourceForm({ onSubmit, isLoading, initialData, onCance
               </div>
             </div>
 
-            <button
-              type="button"
-              className="icon-btn delete"
-              title="Replace file"
-              onClick={() => {
-                setSelectedFile(null);
-                setExistingFileUrl('');
-                setExistingFileName('');
-                setExistingFileSize(0);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }}
-            >
-              <i className="fa-solid fa-trash"></i>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              {isImageFile && previewImageUrl && (
+                <button
+                  type="button"
+                  className="icon-btn view"
+                  title="View Picture in Lightbox"
+                  onClick={() =>
+                    openLightbox({
+                      url: previewImageUrl,
+                      title: title || currentFileName || 'Resource Picture',
+                      subtitle: `${category} · ${currentFileName || 'Image'}`
+                    })
+                  }
+                >
+                  <i className="fa-solid fa-eye"></i>
+                </button>
+              )}
+              <button
+                type="button"
+                className="icon-btn delete"
+                title="Replace file"
+                onClick={() => {
+                  setSelectedFile(null);
+                  setExistingFileUrl('');
+                  setExistingFileName('');
+                  setExistingFileSize(0);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              >
+                <i className="fa-solid fa-trash"></i>
+              </button>
+            </div>
           </div>
         ) : (
           <div

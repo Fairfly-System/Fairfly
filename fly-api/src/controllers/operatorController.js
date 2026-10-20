@@ -26,6 +26,11 @@ const createOperator = async (req, res) => {
 
   try {
     const operatorData = req.body;
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!operatorData.password || !strongPasswordRegex.test(operatorData.password)) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, and a number' });
+    }
+
     try {
       const generatedUid = generatePrefixedId(ID_PREFIXES.OPERATOR);
       const userRecord = await admin.auth().createUser({

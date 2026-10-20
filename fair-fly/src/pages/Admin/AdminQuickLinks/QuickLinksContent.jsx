@@ -43,10 +43,13 @@ export default function QuickLinksContent() {
         (link.title || '').toLowerCase().includes(q) ||
         (link.url || '').toLowerCase().includes(q);
 
-      const matchesCategory =
-        categoryFilter === 'all' ||
-        (link.category || '').toLowerCase().replace(/\s+/g, '') ===
-        categoryFilter.toLowerCase().replace(/\s+/g, '');
+      const linkCat = (link.category || '').toLowerCase().replace(/[^a-z]/g, '');
+      const filterCat = categoryFilter.toLowerCase().replace(/[^a-z]/g, '');
+
+      let matchesCategory = categoryFilter === 'all' || linkCat === filterCat;
+      if (!matchesCategory && filterCat.includes('visa')) {
+        matchesCategory = linkCat.includes('visa') || linkCat.includes('embassy');
+      }
 
       return matchesSearch && matchesCategory;
     },
@@ -96,12 +99,27 @@ export default function QuickLinksContent() {
         key: 'category',
         header: 'Category',
         render: (link) => {
-          const categoryClass = `category-${(link.category || 'other')
-            .toLowerCase()
-            .replace(/\s+/g, '')}`;
+          const raw = String(link.category || '').toLowerCase().replace(/[^a-z]/g, '');
+          let badgeClass = 'other';
+          let label = link.category || 'Other';
+
+          if (raw.includes('airline')) {
+            badgeClass = 'airlines';
+            label = 'Airlines';
+          } else if (raw.includes('hotel')) {
+            badgeClass = 'hotels';
+            label = 'Hotels';
+          } else if (raw.includes('gov')) {
+            badgeClass = 'government';
+            label = 'Government';
+          } else if (raw.includes('visa') || raw.includes('embassy')) {
+            badgeClass = 'visaandembassy';
+            label = 'Visa & Embassy';
+          }
+
           return (
-            <span className={`quicklink-badge ${categoryClass}`}>
-              {link.category || 'Other'}
+            <span className={`quicklink-badge category-${badgeClass}`}>
+              {label}
             </span>
           );
         },

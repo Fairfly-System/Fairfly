@@ -1,15 +1,15 @@
 const { admin, db } = require('../config/firebase');
-const { 
-  createPaymongoCheckoutSession, 
-  getPaymongoCheckoutSession, 
-  verifyWebhookSignature 
+const {
+  createPaymongoCheckoutSession,
+  getPaymongoCheckoutSession,
+  verifyWebhookSignature
 } = require('../services/paymongoService');
 const { buildFulfillmentPayload } = require('./quotationController');
 const { buildReceiptPayload } = require('../services/receiptService');
-const { 
-  createNotification, 
-  notifyBranch, 
-  notifyAdmins 
+const {
+  createNotification,
+  notifyBranch,
+  notifyAdmins
 } = require('../services/notificationService');
 const { ID_PREFIXES, generatePrefixedId, generateReceiptNo, generateServiceCode } = require('../utils/idGenerator');
 const { logFromRequest } = require('../services/operatorLoggerService');
@@ -57,13 +57,13 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
     // 1. IDEMPOTENCY GUARD: If payment was already finalized as PAID, exit cleanly with existing fulfillmentId & receipt
     if (paymentData.status === 'PAID' && paymentData.fulfillmentId) {
       console.log(`[Payment Idempotency] Payment ${paymentId} already marked PAID. Fulfillment ID: ${paymentData.fulfillmentId}`);
-      return { 
-        alreadyProcessed: true, 
-        fulfillmentId: paymentData.fulfillmentId, 
+      return {
+        alreadyProcessed: true,
+        fulfillmentId: paymentData.fulfillmentId,
         serviceCode: paymentData.serviceCode || null,
         receiptId: paymentData.receiptId || null,
         receiptNo: paymentData.receiptNo || null,
-        paymentData 
+        paymentData
       };
     }
 
@@ -114,15 +114,22 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
           statsUpdate[`operators.${targetOperatorId}.branchName`] = paymentData.branchName || quotationData.branchName;
         }
       }
-      transaction.set(systemStatsRef, statsUpdate, { merge: true });
+      transaction.update(systemStatsRef, statsUpdate);
+      if (targetOperatorId && targetOperatorId !== 'OP-ACCOUNT') {
+        const userRef = db.collection(COLLECTIONS.USERS).doc(targetOperatorId);
+        transaction.update(userRef, {
+          totalRevenue: admin.firestore.FieldValue.increment(paymentAmount),
+          updatedAt: now
+        });
+      }
 
-      return { 
-        alreadyProcessed: true, 
-        fulfillmentId: quotationData.activeServiceId, 
+      return {
+        alreadyProcessed: true,
+        fulfillmentId: quotationData.activeServiceId,
         serviceCode: quotationData.serviceCode || null,
         receiptId: quotationData.receiptId || null,
         receiptNo: quotationData.receiptNo || null,
-        paymentData 
+        paymentData
       };
     }
 
@@ -161,9 +168,11 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
     transaction.set(activeServiceRef, fulfillmentPayload);
     transaction.set(receiptRef, receiptPayload);
 
+    const resolvedMethod = providerData.paymentMethod || paymentData.paymentMethodType || (paymentData.provider === 'cash' ? 'Cash' : 'Online (PayMongo)');
     transaction.update(quotationRef, {
       status: 'PAID',
       paymentStatus: 'PAID',
+      paymentMethod: resolvedMethod,
       activeServiceId: fulfillmentId,
       serviceCode: serviceCode,
       receiptId: receiptId,
@@ -217,17 +226,24 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
         statsUpdate[`operators.${targetOperatorId}.branchName`] = paymentData.branchName || quotationData.branchName;
       }
     }
-    transaction.set(systemStatsRef, statsUpdate, { merge: true });
+    transaction.update(systemStatsRef, statsUpdate);
+    if (targetOperatorId && targetOperatorId !== 'OP-ACCOUNT') {
+      const userRef = db.collection(COLLECTIONS.USERS).doc(targetOperatorId);
+      transaction.update(userRef, {
+        totalRevenue: admin.firestore.FieldValue.increment(paymentAmount),
+        updatedAt: now
+      });
+    }
 
-    return { 
-      alreadyProcessed: false, 
-      fulfillmentId, 
-      serviceCode, 
-      receiptId, 
-      receiptNo, 
+    return {
+      alreadyProcessed: false,
+      fulfillmentId,
+      serviceCode,
+      receiptId,
+      receiptNo,
       receipt: receiptPayload,
       receiptData: receiptPayload,
-      paymentData: { ...paymentData, quotationData } 
+      paymentData: { ...paymentData, quotationData }
     };
   });
 
@@ -529,7 +545,7 @@ const createCheckoutSession = async (req, res) => {
     const paymentId = generatePrefixedId(ID_PREFIXES.PAYMENT);
     const now = new Date().toISOString();
 
-    const frontendBaseUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const frontendBaseUrl = (process.env.CLIENT_BASE_URL || 'https://fairfly-1e83b.web.app').replace(/\/$/, '');
     const successUrl = isOperator
       ? `${frontendBaseUrl}/operator/quotations/${quotationId}?payment_status=success&payment_id=${paymentId}`
       : `${frontendBaseUrl}/client/tracking?payment_status=success&payment_id=${paymentId}&quotation_id=${quotationId}`;
@@ -863,8 +879,32 @@ const getPayments = async (req, res) => {
 
     if (userRole === 'client') {
       queryRef = queryRef.where('clientUid', '==', req.user.uid);
+      if (status && status !== 'all') {
+        queryRef = queryRef.where('status', '==', status);
+      }
+      const snapshot = await queryRef.get();
+      const payments = [];
+      snapshot.forEach(d => payments.push(formatPaymentDoc(d)));
+      payments.sort((a, b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0));
+      const maxResults = limit ? parseInt(limit, 10) : 50;
+      return res.status(200).json(payments.slice(0, maxResults));
     } else if (userRole === 'operator' || userRole === 'branch_operator') {
-      queryRef = queryRef.where('operatorId', '==', req.user.uid);
+      const [byOperator, byBranch] = await Promise.all([
+        db.collection(COLLECTIONS.PAYMENTS).where('operatorId', '==', req.user.uid).get(),
+        db.collection(COLLECTIONS.PAYMENTS).where('branchUid', '==', req.user.uid).get()
+      ]);
+      const map = new Map();
+      byOperator.forEach(d => map.set(d.id, formatPaymentDoc(d)));
+      byBranch.forEach(d => map.set(d.id, formatPaymentDoc(d)));
+      let payments = Array.from(map.values());
+
+      if (status && status !== 'all') {
+        payments = payments.filter(p => p.status === status);
+      }
+
+      payments.sort((a, b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0));
+      const maxResults = limit ? parseInt(limit, 10) : 100;
+      return res.status(200).json(payments.slice(0, maxResults));
     }
 
     if (status && status !== 'all') {
@@ -875,7 +915,7 @@ const getPayments = async (req, res) => {
     const payments = [];
     snapshot.forEach(d => payments.push(formatPaymentDoc(d)));
 
-    payments.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    payments.sort((a, b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0));
 
     const maxResults = limit ? parseInt(limit, 10) : 50;
     return res.status(200).json(payments.slice(0, maxResults));

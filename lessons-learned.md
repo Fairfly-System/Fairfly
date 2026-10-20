@@ -1,6 +1,133 @@
 # Lessons Learned
 # A File for Agents to write their mistakes so that next runs can prevent doing the same thing (Automatic Improvement)
 
+## [2026-10-19] Cross-Origin Ignored HTML `download` Attribute Leading to Tab Navigation
+- **Problem**: In the Operator and Admin Resources pages, clicking the "Download" button on materials/files did not download the file to the user's computer; instead, it opened the file in a new browser tab.
+- **Root Cause**:
+  1. The code previously generated dynamic anchor tags pointing directly to Firebase Storage: `<a href={resource.fileUrl} target="_blank" download={resource.fileName}>`.
+  2. According to the HTML5 specification, the `download` attribute is strictly ignored by browsers for cross-origin URLs (e.g. from `fairfly-1e83b.web.app` to `firebasestorage.googleapis.com`).
+  3. Consequently, the anchor tag fell back to standard link navigation behavior, opening the resource inline in a new tab because `target="_blank"` was set.
+- **Prevention**:
+  1. Never rely on `<a href={crossOriginUrl} download>` for downloading files from external CDNs, Firebase Storage, or Google Cloud Storage.
+  2. Provide an authenticated backend streaming endpoint (e.g. `GET /api/resources/:id/file`) that sets `Content-Disposition: attachment; filename="..."` and streams the file binary.
+  3. On the frontend, fetch the file binary as a Blob (`await response.blob()`), generate a same-origin Blob URL (`window.URL.createObjectURL(blob)`), and trigger download via anchor click. Because Blob URLs are same-origin, browsers honor the `download` attribute and save the file directly to the user's Downloads folder without opening new tabs.
+
+---
+
+
+## [2026-10-19] Missing React Hook Import (`useMemo`) Leading to Runtime ReferenceError
+- **Problem**: In `ClientAppointmentForm.jsx`, adding `useMemo` to memoize filtered branch options for branch-exclusive services caused a runtime exception `ReferenceError: useMemo is not defined` when the appointment form modal opened.
+- **Root Cause**:
+  1. The hook `useMemo` was added to component body logic (`const displayedBranches = useMemo(...)`), but the top-level React import remained `import React, { useState, useEffect } from 'react';`.
+  2. Because the build was performed with standard Vite/Rolldown minification without strict linter gates on undeclared global variables, the undeclared variable slipped past bundling and triggered a runtime error upon modal instantiation.
+- **Prevention**:
+  1. Whenever introducing a React hook (`useMemo`, `useCallback`, `useRef`, etc.) into an existing component, immediately verify that the hook is explicitly named in the top-level `import React, { ... } from 'react';` statement.
+  2. Perform an automated static scan across the project after modifying components to ensure all used hooks are declared and imported from `'react'`.
+
+---
+
+
+## [2026-10-18] CSS Grid Intrinsic Content Width Blowout on Dual File Upload Slots
+- **Problem**: When a user selected an ID image on the registration page (`/register`) or ID re-upload page (`/reupload-id`), the uploaded slot (Front Side) expanded horizontally to take up ~75% of the form width, crushing the second upload slot (Back Side) down into a narrow sliver where helper text wrapped into 7 lines.
+- **Root Cause**:
+  1. **CSS Grid `1fr` Default Track Sizing**: In CSS Grid, track sizing specified as `1fr` is implicitly `minmax(auto, 1fr)`. If a child element contains wide intrinsic content (such as long file names or horizontal flex rows), `minmax(auto, 1fr)` allows intrinsic content to expand the track beyond equal 50% distribution.
+  2. **Missing `min-width: 0` on Grid Items**: In flex/grid layouts, children default to `min-width: auto`. Without `min-width: 0`, flex child text truncators (`overflow: hidden; text-overflow: ellipsis;`) cannot trigger text truncation because the flex container never shrinks below its content width.
+  3. **Horizontal Layout in Narrow Column**: The uploaded card component attempted a 3-column horizontal row (`[thumbnail] [filename/status] [action buttons]`) inside a narrow ~210px container, which forced minimum width expansion.
+- **Prevention**:
+  1. Always declare CSS Grid columns with explicit zero-minimum tracks: `grid-template-columns: repeat(2, minmax(0, 1fr));` instead of plain `grid-template-columns: 1fr 1fr;`.
+  2. Always add `min-width: 0; box-sizing: border-box;` to all direct children of CSS Grid tracks to ensure text ellipsis and truncation work as expected.
+  3. For compact split file uploads, use an ID-card aspect ratio with vertical layering (overlaying status badge, action buttons, and filename scrim on top of an absolute background preview image) rather than wide horizontal row layouts.
+  4. Ensure the empty dropzone and uploaded card share the exact same fixed height (`7.75rem` / `124px`) to guarantee zero vertical or horizontal layout shifts when files are selected or removed.
+
+## [2026-10-18] Substring Matching Collision in Payment Channel Detection ('gcash' contains 'cash')
+- **Problem**: When clients or operators completed an online payment through PayMongo using GCash, the Official E-Receipt PDF ribbon displayed `Payment Channel: Direct Cash (Counter Receipt)` and the Operator Payment History table badge displayed `Cash (Counter)` with a green paper money icon instead of the electronic `GCash (PayMongo)` badge.
+- **Root Cause**:
+  1. The receipt data normalization logic (`PdfDocumentView.jsx`) and payment history table (`OperatorHistory.jsx`) evaluated `rawMethod.toLowerCase().includes('cash')` to identify direct counter cash payments.
+  2. Because the word `'cash'` is a direct substring of the mobile wallet brand `'gcash'` (`g` + `cash`), `'gcash'.toLowerCase().includes('cash')` evaluated to `true`.
+  3. Consequently, any payment processed through the Philippines' most popular mobile wallet (GCash) was erroneously categorized and rendered as physical direct cash.
+- **Prevention**:
+  1. Never use naive substring checks like `.includes('cash')` on payment method or channel strings.
+  2. Implement an explicit negative guard: if `method.toLowerCase().includes('gcash')`, immediately return false for cash checks before inspecting cash patterns.
+  3. Use dedicated, shared payment channel formatting utilities (`formatPaymentChannel`, `isCashPayment`, `formatPaymentMethodPill`) that map specific channel codes (`gcash`, `paymaya`, `card`, `qrph`, `grab_pay`, `billease`, `dob`) to authoritative labels (`GCash (PayMongo)`, `Maya (PayMongo)`, `QR Ph (PayMongo)`, etc.).
+
+## [2026-10-18] Allowed Fields Whitelist Synchronization Between Split-Field Frontend Forms and Zero-Trust Middleware
+- **Problem**: New clients attempting to register on the deployed site (`/register`) encountered a blocking toast error: `Bad Request: Invalid fields in request body (firstName, middleInitial, lastName)` triggered by `POST /api/auth/register-initiate 400 (Bad Request)`.
+- **Root Cause**:
+  1. The client signup form (`Register.jsx`) submits granular name fields (`firstName`, `middleInitial`, `lastName`, `fullName`) so user profiles in Firestore store individual name parts alongside the combined display name.
+  2. While the backend verification controller (`verificationService.js`) had already implemented support for `firstName`, `middleInitial`, and `lastName`, the route definition in `authRoutes.js` guarded the route using `allowedFields(REGISTER_ALLOWED_FIELDS)`.
+  3. `REGISTER_ALLOWED_FIELDS` previously only whitelisted `fullName`, causing the strict zero-trust middleware to immediately block the request with HTTP 400 before the controller could process it.
+- **Prevention**:
+  1. When decomposing composite inputs (such as names, addresses, or identification parts) into granular subfields on frontend intake forms, always verify and synchronize the backend `allowedFields` whitelist on all entry routes (`/register`, `/register-initiate`).
+  2. Keep route authorization and allowed-field declarations strictly isolated per user role (`operatorRoutes.js`, `adminRoutes.js`, `authRoutes.js`) so that adjusting client registration payload fields never introduces side effects or regressions into administrative user creation flows.
+
+## [2026-10-18] Operational Lifecycle vs Financial Transaction Ledger Disconnect
+- **Problem**: Operators attempting to reconcile their branch Total Revenue by summing rows in Service History found a discrepancy. When ongoing services were still in progress on the dashboard, their revenue was counted in the branch KPI card but their rows were not yet present in Service History. Because recent in-progress services were paid in cash, this created the illusion that cash payments were excluded from history.
+- **Root Cause**:
+  1. Conflating **Operational Service Fulfillment Lifecycle** (In-Progress vs Completed vs Cancelled) with **Financial Transaction Settlement** (Payment Received vs Refunded).
+  2. Payments are recognized immediately upon payment confirmation (Cash or QR), but services only move to Service History once all checklist steps are completed.
+  3. The Operator portal previously lacked a dedicated Payment / Transaction History tab, forcing operators to look at Service History as an impromptu financial ledger.
+- **Prevention**:
+  1. Always provide a dedicated, first-class Financial Payment History tab whenever financial KPIs (such as Total Revenue) are displayed in the portal.
+  2. Enable direct reconciliation by showing receipt numbers, payment methods (Cash vs Electronic), amounts, and 1-click official E-Receipts.
+  3. Keep Service History focused on operational fulfillment quality, procedure completion dates, and client file attachments.
+
+---
+
+## [2026-10-18] Strict File Input Filtering, Regional Function Routing, and Safe Response Parsing on 503s
+- **Problem**: When clients or operators submitted service requirements with mixed data types (Document, Image, Text, Number, Date), the Document file picker displayed images instead of exclusively showing documents. Additionally, during multi-file uploads, users intermittently hit `503 Service Unavailable`, which caused unhandled `SyntaxError: Unexpected token 'S', "Service Unavailable" is not valid JSON` crashes. Furthermore, console warnings alerted about deprecated `THREE.Clock` and `THREE.PCFSoftShadowMap`.
+- **Root Cause**:
+  1. **Permissive Fallback Accept String**: `QuotationAttachRequirementsModal.jsx` had a fallback accept string containing both document formats AND image formats (`image/*, .jpg, .jpeg, ...`). Consequently, the OS File Explorer allowed users to select images for Document fields.
+  2. **Firebase Hosting Regional Rewrite Mismatch**: The `/api/**` rewrite in `firebase.json` was missing `"region": "asia-southeast1"`. Edge hosting proxies defaulted to `us-central1`, intermittently causing 503 gateway errors during serverless function invocations.
+  3. **Blind `response.json()` Parsing**: `uploadFileViaApi` called `await response.json()` without inspecting the response `Content-Type` or status code, crashing on HTML/plain-text error pages returned by Cloud Functions or proxies during cold starts.
+  4. **Parallel Stream Bursts**: Dispatching simultaneous multipart uploads via `Promise.all` overwhelmed single-instance cold starts on serverless functions.
+- **Prevention**:
+  1. Strictly isolate `accept` attributes by requirement datatype: Document inputs must exclusively accept `.pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx` and never include `image/*`. Photo inputs must exclusively accept `.jpg, .jpeg, .png, .webp, .gif`.
+  2. Always declare `"region": "<region>"` on Cloud Function rewrites in `firebase.json` whenever functions are deployed outside `us-central1`.
+  3. Never call `response.json()` without validating that `response.ok` or checking `response.headers.get('content-type')?.includes('application/json')`. Fall back cleanly to `response.text()` with descriptive error formatting.
+  4. Use sequential uploads or bounded concurrency pools for multi-file form uploads rather than unconstrained `Promise.all`.
+
+---
+
+## [2026-10-18] Revenue Aggregation Desync: Refund Decrements, Map Dot-Notation in `.set()`, and Secondary Counters
+- **Problem**: Admin System KPI Card showed ₱47,988, Admin Operator Detail Analytics showed ₱45,688, and the Operator Portal showed ₱62,388, causing user confusion and audit discrepancies across three portals.
+- **Root Cause**:
+  1. **Missing Refund Decrement**: When a service was cancelled and refunded (`cancelActiveService`), `payment.status` was updated to `'REFUNDED'`, but `system_stats/revenue.totalRevenue` and `paidCount` were never decremented. The refunded ₱2,300 remained in the pre-aggregated system total ($45,688 + 2,300 = 47,988$).
+  2. **Firestore `.set(..., { merge: true })` Literal Dot Keys**: `paymentController` used string keys with dots (`operators.${id}.totalRevenue`) inside `.set(ref, data, { merge: true })`. Firestore does not parse dots into nested maps when passed to `.set()`; it creates literal root fields with dots in their names. Dot-notation field path parsing only applies to `.update()`.
+  3. **Duplicate / Secondary Metric Counter Drift**: `activeServiceController` incremented `user.totalRevenue` upon procedure checklist completion, while `paymentController` also tracked revenue from payments. Historical test executions accumulated in the operator user document (`completedServicesCount: 6`, `totalRevenue: 62388`) and were never cleaned up when orphaned payments and active services were purged.
+- **Prevention**:
+  1. Every state transition that reverts or refunds money must atomically decrement financial aggregation documents and operator counters with the exact negative refund amount (`admin.firestore.FieldValue.increment(-refundAmount)`).
+  2. Use `transaction.update(ref, { ['path.to.field']: increment(...) })` rather than `.set()` when updating nested document paths via string notation in Firestore.
+  3. Maintain a single source of truth for revenue across the entire platform. Operator layouts should subscribe to the same authoritative aggregation document (`system_stats/revenue.operators[uid]`) rather than un-audited mutable counters on the user document.
+  4. Cleanup scripts that purge test or orphaned records must audit and resync all dependent tables and counters (`users`, `system_stats`), not just the primary collection.
+
+## [2026-10-18] Undeclared JSX Variables & Identifier ReferenceErrors Causing React Blank Screen Crashes
+- **Problem**: Navigating to an inquiry in the Admin Portal (e.g. `/admin/inquiry-history/INQ-...`) rendered a completely blank white screen.
+- **Root Cause**: In [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx), the JSX evaluated `{isConfirmed && !isArchived && (`, but `isConfirmed` had never been declared in component scope or imported. This threw an uncaught `ReferenceError: isConfirmed is not defined` during render. Because React 18 unmounts the component tree on unhandled render errors, the entire viewport went blank.
+- **Prevention**:
+  1. Always verify that all identifiers evaluated in JSX expressions (flags, helper functions, state variables) are explicitly declared, typed, and memoized in component scope.
+  2. Implement route-level Error Boundaries (`ErrorBoundary`) around detail views so that runtime rendering glitches display a friendly retry/error fallback UI instead of crashing the entire page to a blank screen.
+  3. Support flexible entity ID lookups in document subscribers (e.g. both direct document auto-ID and prefixed/control-number variants like `INQ-...`) with fallback queries so valid links always resolve.
+
+## [2026-10-18] Production URL Sanitation: Never Rely on Localhost Default Fallbacks for Redirects & QR Codes
+- **Problem**: Default fallback logic across backend controllers (`paymentController.js`, `clientController.js`, `receiptService.js`) and frontend configs fell back to `http://localhost:5173` or `http://localhost:5001` when environment variables were missing or evaluated. If triggered, PayMongo checkout redirects, client approval verification emails, and QR code tracking links directed users to localhost.
+- **Root Cause**: Fallback expressions like `process.env.FRONTEND_URL || 'http://localhost:5173'` were left over from initial local development templates. Additionally, comma-separated lists in `.env` variables break URL constructors (`new URL(rawUrl)`) and downstream redirect headers.
+- **Prevention**:
+  1. Production configuration fallbacks must always default to the official deployed production domains (`https://fairfly-1e83b.web.app`), never `localhost`.
+  2. Maintain strictly a single clean URL per environment variable (`FRONTEND_URL`, `CLIENT_BASE_URL`, `VITE_API_BASE_URL`) without comma-delimited strings.
+
+
+
+## [2026-10-18] Status Bar and KPI Metrics Wiping on Table Filter Selection
+- **Problem**: In the Admin Client Management module, when administrators clicked filter chips (e.g. "All Accounts", "Pending Approval", "Active", "Deactivated"), the Status Bar (`AlertBar`) reset and flickered to "Loading client records...", KPI summary cards reset to 0 or only reflected the filtered slice, and filter chip badges changed inappropriately.
+- **Root Cause**:
+  1. `alertBarProps` in [`ClientsContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientsContent.jsx) had an unconditional `if (loading) return { message: 'Loading client records...', type: 'info' };`. Because `statusFilter` was passed to `loadClients` which called `setLoading(true)`, selecting any filter immediately wiped the AlertBar.
+  2. The counts used for `alertBarProps`, `KpiCard`s, and `FilterChipGroup` were derived from `clients` (the paginated/filtered response of the active filter) instead of persistent global counts across all statuses. Clicking "Active" caused `pendingClients` to drop to 0, clearing the high-priority pending verification warning from the status bar.
+  3. `<KpiCard>` components bound their `isLoading` state to the transient table loading state, causing them to flicker and flash skeleton placeholders during filter switches.
+- **Prevention**:
+  1. Decouple top-level system status bars and KPI metrics from transient table filter and page states. Top-level status banners should reflect overall system health / account state, not mirror the filtered table subset.
+  2. Maintain a separate `counts` state aggregated globally (via Firestore `getCountFromServer` or backend server aggregation counts in `getClients`).
+  3. Separate initial page load state (`initialLoading`) from table row query state (`tableLoading`), ensuring KPI cards and status banners stay stable while the table updates.
+
 ## [2026-10-18] Tenant Branch Identity Governance: Branch Names Must Be Immutable to Operators and Admin-Exclusive
 - **Problem**: Operators were previously able to edit their assigned branch name in the Operator Profile View, creating the risk of unauthorized branch rebranding, naming drift, and desynchronization with official franchise records and client receipts.
 - **Root Cause**:
@@ -236,4 +363,24 @@
   1. Frontend status mappers only matched a subset of positive lifecycle states (`accepted`, `confirmed`, `completed`, `active`), omitting `'paid'` and `'fulfilled'`. Any unmatched status fell back to `'status-pill-pending'` (yellow) on list views or `'neutral'` (gray) on detail layouts.
   2. Status strings were displayed raw (`form.status`) without string sanitation or underscore replacement.
 - **Prevention**: Always build centralized or comprehensive status mapper utilities that account for the full entity lifecycle (`submitted`, `quotation_created`, `quotation_sent`, `accepted`, `paid`, `completed`, `fulfilled`, `rejected`, `cancelled`, `archived`). Sanitize display strings with `.replace(/_/g, ' ')` before rendering in badges.
+
+## [2026-10-18] Hardcoded Mock Fallbacks Causing Cross-Portal Data Mismatches & Tab Count Bleed
+- **Problem**: 
+  1. Operator QuickLinks displayed four links under Visa ("US Embassy Manila", "VFS Global", "BLS International", "Japan Visa") that did not exist in Firestore or on the Admin QuickLinks management page.
+  2. When switching tabs in the Operator QuickLinks or Workflows tab strip, the `(n)` count badge on ALL tab headers changed simultaneously to mirror whichever tab was currently open.
+- **Root Cause**:
+  1. `OperatorQuickLinks.jsx` defined a hardcoded mock object `DEFAULT_LINKS` and fell back to it whenever a category had 0 database documents (`if (filtered.length > 0) ... return DEFAULT_LINKS[active]`). This created "phantom" records on the operator side that the Admin could neither view, edit, nor delete in Firestore.
+  2. The tab strip rendered `{tab} ({activeCategoryLinks.length})` inside the `TABS.map(...)` iteration. This referenced the item count of the *active* tab across every button, rather than computing counts per tab category independently.
+- **Prevention**:
+## [2026-10-19] Allowed Fields Rejection During Record Duplication (Destructuring Full Database Objects)
+- **Problem**: When operators or admins attempted to duplicate a workflow template (from either their own branch, other branches, or Head Office global templates), the operation failed with `Bad Request: Invalid fields in request body (createdBy, createdByRole, branchUid)`.
+- **Root Cause**:
+  1. **Full Database Object Forwarding**: The frontend `handleDuplicate` function used destructuring (`const { id, createdAt, updatedAt, version, status, ...rest } = tmpl;`) and sent `{ ...rest, name: `${tmpl.name} (Copy)` }` directly to `POST /api/workflow/templates`.
+  2. Because `tmpl` originated from Firestore, it retained system-managed ownership metadata (`createdBy`, `createdByRole`, `branchUid`, `branchName`).
+  3. The zero-trust `allowedFields(WORKFLOW_TEMPLATE_FIELDS)` middleware strictly rejected these untrusted ownership fields before reaching the controller.
+- **Prevention**:
+  1. **Dedicated Backend Duplication Endpoints**: Implement dedicated duplication endpoints (`POST /api/workflows/:id/duplicate`) that fetch source records directly from the database server-side, clone the content, and assign ownership authoritatively to the acting user's session without exposing or accepting client-spoofed foreign keys.
+  2. **Strict Payload Construction on Frontend**: Never use wide spread destructuring (`{ ...rest }`) on database entity objects when creating new records. Explicitly construct payloads containing only valid schema-whitelisted specification fields (`name`, `description`, `serviceType`, `steps`, `status`).
+
+
 

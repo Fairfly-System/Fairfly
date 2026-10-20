@@ -8,6 +8,7 @@ import { useToast } from '../../UI/toast/ToastProvider';
 import { fetchFranchiseApplicationSchema } from '../../../services/franchiseService';
 import { generateFranchiseId } from '../../../utils/idGenerator';
 import { uploadFileToBackend } from '../../../utils/fileUploadApi';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../utils/phoneUtils';
 
 // PSGC Cloud API — fetches Philippine standard geographic data
 const PSGC_BASE = 'https://psgc.cloud/api';
@@ -232,8 +233,7 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
         break;
       }
       case 'phoneNumber': {
-        const phoneRe = /^[0-9+\s\-]{8,15}$/;
-        if (!phoneRe.test(value)) setError(field, 'Invalid phone number');
+        if (!isValidPhilippinePhone(value)) setError(field, 'Must be 11 digits starting with 09 (e.g. 09XXXXXXXXX)');
         else clearError(field);
         break;
       }
@@ -557,9 +557,10 @@ export default function FranchiseApplicationForm({ isOpen, onClose }) {
               <input
                 id="faf-phone"
                 type="tel"
-                placeholder="+63 912 345 6789"
+                placeholder="09XXXXXXXXX"
+                maxLength={PH_PHONE_MAX_LENGTH}
                 value={formData.phoneNumber}
-                onChange={(e) => handleChange('phoneNumber', e.target.value)}
+                onChange={(e) => handleChange('phoneNumber', sanitizePhilippinePhone(e.target.value))}
                 required
               />
               {errors.phoneNumber && <p className="error">{errors.phoneNumber}</p>}

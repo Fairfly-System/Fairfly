@@ -182,6 +182,16 @@
   accent-color: var(--purple-dark, #5558E3);
 }
 
+.data-table-checkbox.checkbox-disabled,
+.data-table-checkbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+tr.table-row-unselectable {
+  opacity: 0.96;
+}
+
 /* Highlight Selected Rows */
 tr.table-row-selected td {
   background-color: var(--selection-bg, rgba(107, 111, 245, 0.045)) !important;

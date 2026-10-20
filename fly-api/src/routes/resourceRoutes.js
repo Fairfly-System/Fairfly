@@ -7,7 +7,8 @@ const {
   getResourceById,
   updateResource,
   deleteResource,
-  recordDownload
+  recordDownload,
+  downloadResourceFile
 } = require('../controllers/resourceController');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
@@ -32,6 +33,7 @@ router.use(verifyFirebaseToken);
 
 // Accessible by Admins and Operators
 router.get('/', performanceProfiler('GET /resources', requireRole(['admin', 'operator']), apiRateLimiter, getResources));
+router.get('/:id/file', performanceProfiler('GET /resources/:id/file', requireRole(['admin', 'operator']), apiRateLimiter, downloadResourceFile));
 router.get('/:id', performanceProfiler('GET /resources/:id', requireRole(['admin', 'operator']), apiRateLimiter, getResourceById));
 router.post('/:id/download', performanceProfiler('POST /resources/:id/download', requireRole(['admin', 'operator']), apiRateLimiter, recordDownload));
 

@@ -55,7 +55,7 @@ export default function QuotationDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Official Service Quotation Details"
-      subtitle={`Form ADF-07-001 · Reference ${quotation.quoteNo || quotation.id}`}
+      subtitle={`Reference ${quotation.quoteNo || quotation.id}`}
       size="large"
     >
       <div className="quotation-detail-content">
@@ -162,7 +162,7 @@ export default function QuotationDetailModal({
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
             <i
-              className={`fa-solid ${reqStatus === 'approved' ? 'fa-shield-check' : reqStatus === 'submitted' ? 'fa-clock-rotate-left' : reqStatus === 'changes_requested' ? 'fa-triangle-exclamation' : 'fa-clipboard-list'}`}
+              className={`fa-solid ${reqStatus === 'approved' ? 'fa-shield-halved' : reqStatus === 'submitted' ? 'fa-clock-rotate-left' : reqStatus === 'changes_requested' ? 'fa-triangle-exclamation' : 'fa-clipboard-list'}`}
               style={{
                 fontSize: '1.25rem',
                 marginTop: '0.15rem',

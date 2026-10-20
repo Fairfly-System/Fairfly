@@ -49,7 +49,7 @@ export default function TrackerPage() {
               </div>
               <h4>Official E-Receipt QR Code</h4>
               <p>
-                Scan the QR code printed on your official FairFly E-Receipt (Form ADF-07-002) using any smartphone camera to automatically load this tracking page with your status.
+                Scan the QR code printed on your official FairFly E-Receipt using any smartphone camera to automatically load this tracking page with your status.
               </p>
             </div>
 

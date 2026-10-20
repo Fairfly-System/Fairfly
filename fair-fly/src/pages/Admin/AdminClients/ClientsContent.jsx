@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
@@ -26,7 +28,8 @@ export default function ClientsContent() {
   const { addToast } = useToast();
 
   const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -46,6 +49,42 @@ export default function ClientsContent() {
 
   const [totalClientsCount, setTotalClientsCount] = useState(0);
 
+  // Global KPI counts across all client statuses
+  const [counts, setCounts] = useState({
+    total: 0,
+    pending: 0,
+    active: 0,
+    deactivated: 0,
+    rejected: 0,
+  });
+
+  // Fetch KPI status aggregations (persistent counts across filter selection)
+  const fetchKpiCounts = useCallback(async () => {
+    try {
+      const col = collection(firestore, 'users');
+      const [totalSnap, pendingSnap, activeSnap, deactivatedSnap, rejectedSnap] = await Promise.all([
+        getCountFromServer(query(col, where('role', '==', 'client'))),
+        getCountFromServer(query(col, where('role', '==', 'client'), where('status', '==', 'Pending'))),
+        getCountFromServer(query(col, where('role', '==', 'client'), where('status', '==', 'Active'))),
+        getCountFromServer(query(col, where('role', '==', 'client'), where('status', '==', 'Deactivated'))),
+        getCountFromServer(query(col, where('role', '==', 'client'), where('status', '==', 'Rejected'))),
+      ]);
+      setCounts({
+        total: totalSnap.data().count,
+        pending: pendingSnap.data().count,
+        active: activeSnap.data().count,
+        deactivated: deactivatedSnap.data().count,
+        rejected: rejectedSnap.data().count,
+      });
+    } catch (e) {
+      console.warn('[ClientsContent] Count notice:', e.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchKpiCounts();
+  }, [fetchKpiCounts]);
+
   // Fetch client list via GET API with server pagination
   const loadClients = useCallback(() => {
     if (!userToken) return;
@@ -54,7 +93,8 @@ export default function ClientsContent() {
       {
         page: currentPage,
         limit: pageSize,
-        status: statusFilter !== 'all' ? statusFilter : undefined
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        search: debouncedSearch ? debouncedSearch.trim() : undefined,
       },
       (res) => {
         if (Array.isArray(res)) {
@@ -63,15 +103,23 @@ export default function ClientsContent() {
         } else if (res && Array.isArray(res.data)) {
           setClients(res.data);
           setTotalClientsCount(res.total || 0);
+          if (res.counts) {
+            setCounts((prev) => ({ ...prev, ...res.counts }));
+          }
         }
       },
       (error) => {
         console.error('Error fetching clients:', error);
         addToast(error?.message || 'Failed to load client accounts', 'error');
       },
-      setLoading
+      (loadingState) => {
+        setTableLoading(loadingState);
+        if (!loadingState) {
+          setInitialLoading(false);
+        }
+      }
     );
-  }, [userToken, currentPage, pageSize, statusFilter, addToast]);
+  }, [userToken, currentPage, pageSize, statusFilter, debouncedSearch, addToast]);
 
   useEffect(() => {
     loadClients();
@@ -96,6 +144,7 @@ export default function ClientsContent() {
         setIsEditModalOpen(false);
         setEditingClient(null);
         loadClients();
+        fetchKpiCounts();
       },
       (error) => {
         console.error('Error updating client:', error);
@@ -152,6 +201,7 @@ export default function ClientsContent() {
           addToast(`Client marked as ${confirmState.newStatus}`, 'success');
           setConfirmState(null);
           loadClients();
+          fetchKpiCounts();
         },
         (error) => {
           console.error('Error toggling client status:', error);
@@ -167,6 +217,7 @@ export default function ClientsContent() {
           addToast('Client account deleted successfully', 'success');
           setConfirmState(null);
           loadClients();
+          fetchKpiCounts();
         },
         (error) => {
           console.error('Error deleting client:', error);
@@ -184,6 +235,7 @@ export default function ClientsContent() {
           setSelectedIds([]);
           setConfirmState(null);
           loadClients();
+          fetchKpiCounts();
         },
         (error) => {
           console.error('Error bulk activating clients:', error);
@@ -201,6 +253,7 @@ export default function ClientsContent() {
           setSelectedIds([]);
           setConfirmState(null);
           loadClients();
+          fetchKpiCounts();
         },
         (error) => {
           console.error('Error bulk deactivating clients:', error);
@@ -217,6 +270,7 @@ export default function ClientsContent() {
           setSelectedIds([]);
           setConfirmState(null);
           loadClients();
+          fetchKpiCounts();
         },
         (error) => {
           console.error('Error bulk deleting clients:', error);
@@ -227,12 +281,12 @@ export default function ClientsContent() {
     }
   };
 
-  // KPI Calculations
-  const totalClients = totalClientsCount || clients.length;
-  const pendingClients = clients.filter((c) => c.status === 'Pending' || c.approvalStatus === 'Pending').length;
-  const activeClients = clients.filter((c) => c.status === 'Active' && c.approvalStatus !== 'Pending').length;
-  const deactivatedClients = clients.filter((c) => c.status === 'Deactivated').length;
-  const rejectedClients = clients.filter((c) => c.status === 'Rejected' || c.approvalStatus === 'Rejected').length;
+  // KPI Calculations (Persistent across filter changes)
+  const totalClients = counts.total || totalClientsCount || clients.length;
+  const pendingClients = counts.pending;
+  const activeClients = counts.active;
+  const deactivatedClients = counts.deactivated;
+  const rejectedClients = counts.rejected;
 
   // Filter & Search Logic
   const filteredClients = useMemo(() => {
@@ -263,14 +317,14 @@ export default function ClientsContent() {
     });
   }, [clients, debouncedSearch, statusFilter]);
 
-  // Pagination Slice: When search is empty, backend already returns the requested page slice
+  // Paginated client records: Use server paginated response directly when available
   const paginatedClients = useMemo(() => {
-    if (!debouncedSearch) {
+    if (clients.length <= pageSize && totalClientsCount > 0) {
       return clients;
     }
     const start = (currentPage - 1) * pageSize;
     return filteredClients.slice(start, start + pageSize);
-  }, [clients, debouncedSearch, filteredClients, currentPage, pageSize]);
+  }, [clients, filteredClients, currentPage, pageSize, totalClientsCount]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -422,9 +476,11 @@ export default function ClientsContent() {
     }
   ], [isSubmitting, isConfirmLoading]);
 
-  // Alert Bar message
+  // Alert Bar message - Displays overall system client status without resetting on filter change
   const alertBarProps = useMemo(() => {
-    if (loading) return { message: 'Loading client records...', type: 'info' };
+    if (initialLoading && totalClients === 0 && clients.length === 0) {
+      return { message: 'Loading client records...', type: 'info' };
+    }
     if (totalClients === 0) {
       return { message: 'No client accounts have been registered yet.', type: 'info' };
     }
@@ -444,7 +500,7 @@ export default function ClientsContent() {
       message: `All ${totalClients} registered client accounts are active. Client passwords and emails are protected and cannot be modified by administrators.`,
       type: 'success'
     };
-  }, [loading, totalClients, pendingClients, activeClients, deactivatedClients]);
+  }, [initialLoading, totalClients, pendingClients, activeClients, deactivatedClients, clients.length]);
 
   return (
     <div className="admin-clients-page">
@@ -471,7 +527,7 @@ export default function ClientsContent() {
           iconColor="#6b21a8"
           badge="All"
           badgeType="neutral"
-          isLoading={loading}
+          isLoading={initialLoading}
         />
 
         <KpiCard
@@ -482,7 +538,7 @@ export default function ClientsContent() {
           iconColor="#d97706"
           badge={pendingClients > 0 ? `${pendingClients} Pending` : 'All Clear'}
           badgeType={pendingClients > 0 ? 'warn' : 'ok'}
-          isLoading={loading}
+          isLoading={initialLoading}
         />
 
         <KpiCard
@@ -493,7 +549,7 @@ export default function ClientsContent() {
           iconColor="#16a34a"
           badge={totalClients > 0 ? `${Math.round((activeClients / totalClients) * 100)}%` : '0%'}
           badgeType="ok"
-          isLoading={loading}
+          isLoading={initialLoading}
         />
 
         <KpiCard
@@ -504,7 +560,7 @@ export default function ClientsContent() {
           iconColor="#ef4444"
           badge={deactivatedClients > 0 ? `${deactivatedClients} Inactive` : 'None'}
           badgeType={deactivatedClients > 0 ? 'warn' : 'ok'}
-          isLoading={loading}
+          isLoading={initialLoading}
         />
       </div>
 
@@ -554,7 +610,7 @@ export default function ClientsContent() {
           data={paginatedClients}
           selectable={true}
           selectedIds={selectedIds}
-          isLoading={loading}
+          isLoading={tableLoading}
           disabled={isConfirmLoading || isSubmitting}
           onSelectionChange={setSelectedIds}
           onBulkEnable={(ids) =>
@@ -601,7 +657,7 @@ export default function ClientsContent() {
         {/* Pagination Component */}
         <Pagination
           currentPage={currentPage}
-          totalItems={debouncedSearch ? filteredClients.length : (totalClientsCount || clients.length)}
+          totalItems={totalClientsCount || filteredClients.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}

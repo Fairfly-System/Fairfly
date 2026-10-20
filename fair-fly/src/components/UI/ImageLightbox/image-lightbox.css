@@ -3,14 +3,14 @@
   position: fixed;
   inset: 0;
   z-index: 99991;
-  background-color: rgba(11, 15, 25, 0.336);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background-color: rgba(11, 15, 25, 0.45);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  animation: ffLightboxFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: ffLightboxFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   user-select: none;
   overflow: hidden;
 }
@@ -18,12 +18,10 @@
 @keyframes ffLightboxFadeIn {
   from {
     opacity: 0;
-    backdrop-filter: blur(0px);
   }
 
   to {
     opacity: 1;
-    backdrop-filter: blur(3px);
   }
 }
 

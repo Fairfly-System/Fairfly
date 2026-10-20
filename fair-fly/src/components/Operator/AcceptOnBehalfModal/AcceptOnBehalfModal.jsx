@@ -92,7 +92,7 @@ export default function AcceptOnBehalfModal({
           <div className="accept-summary-header">
             <div>
               <span className="accept-quote-pill">
-                <i className="fa-solid fa-file-invoice"></i> {quotation.quoteNo || 'ADF-07-001'}
+                <i className="fa-solid fa-file-invoice"></i> {quotation.quoteNo || 'Quotation'}
               </span>
               <h3 className="accept-service-title">{quotation.serviceTitle || 'Custom Service Package'}</h3>
               <div className="accept-client-info">
@@ -188,7 +188,7 @@ export default function AcceptOnBehalfModal({
             disabled={isSubmitting}
           />
           <span className="accept-checkbox-text">
-            I verify that the client has reviewed and explicitly authorized acceptance of this quotation and consented to the total rate, inclusions, exclusions, and payment terms (ADF-07-001).
+            I verify that the client has reviewed and explicitly authorized acceptance of this quotation and consented to the total rate, inclusions, exclusions, and payment terms.
           </span>
         </label>
 

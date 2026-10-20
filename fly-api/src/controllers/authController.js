@@ -599,6 +599,33 @@ const updateProfile = async (req, res) => {
       sanitizedUpdates.branchName = trimmed;
     }
 
+    // First Name, Middle Name, Last Name handling
+    if (updates.firstName !== undefined) {
+      const trimmed = updates.firstName.trim();
+      if (!trimmed && !isOperator) {
+        return res.status(400).json({ error: 'First name cannot be empty.' });
+      }
+      sanitizedUpdates.firstName = trimmed;
+    }
+
+    if (updates.middleName !== undefined) {
+      const trimmed = updates.middleName.trim();
+      sanitizedUpdates.middleName = trimmed;
+      sanitizedUpdates.middleInitial = trimmed;
+    } else if (updates.middleInitial !== undefined) {
+      const trimmed = updates.middleInitial.trim();
+      sanitizedUpdates.middleInitial = trimmed;
+      sanitizedUpdates.middleName = trimmed;
+    }
+
+    if (updates.lastName !== undefined) {
+      const trimmed = updates.lastName.trim();
+      if (!trimmed && !isOperator) {
+        return res.status(400).json({ error: 'Last name cannot be empty.' });
+      }
+      sanitizedUpdates.lastName = trimmed;
+    }
+
     // Name handling
     if (updates.fullName !== undefined) {
       const trimmed = updates.fullName.trim();
@@ -622,6 +649,12 @@ const updateProfile = async (req, res) => {
       }
       sanitizedUpdates.fullName = trimmed;
       sanitizedUpdates.name = trimmed;
+    } else if (sanitizedUpdates.firstName && sanitizedUpdates.lastName) {
+      const derived = [sanitizedUpdates.firstName, sanitizedUpdates.middleName || sanitizedUpdates.middleInitial, sanitizedUpdates.lastName].filter(Boolean).join(' ');
+      sanitizedUpdates.fullName = derived;
+      if (!isOperator) {
+        sanitizedUpdates.name = derived;
+      }
     }
 
     // Phone / Contact number handling
@@ -697,8 +730,11 @@ const changePassword = async (req, res) => {
       return res.status(400).json({ error: 'New password is required.' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!strongPasswordRegex.test(newPassword)) {
+      return res.status(400).json({
+        error: 'New password must be at least 8 characters and include uppercase, lowercase, and a number.'
+      });
     }
 
     if (newPassword !== confirmPassword) {

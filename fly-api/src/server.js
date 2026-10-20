@@ -18,7 +18,8 @@ const PORT = process.env.APP_PORT || 5001;
 const allowedOrigins = [
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(u => u.trim().replace(/\/+$/, '')) : []),
   'https://fairfly-1e83b.web.app',
-  'https://fairfly-1e83b.firebaseapp.com'
+  'https://fairfly-1e83b.firebaseapp.com',
+  'https://app-k6x2ipem2lrpxjijg5rpvcjh2nmfewdx6e2b2mk6dkidrt2s4qra.makeproxy-c.figma.site'
 ].filter(Boolean);
 
 // Security headers middleware
@@ -40,7 +41,10 @@ const corsMiddleware = cors({
     }
 
     const cleanOrigin = origin.trim().replace(/\/+$/, '');
-    if (allowedOrigins.includes(cleanOrigin)) {
+    if (
+      allowedOrigins.includes(cleanOrigin) ||
+      /^https:\/\/[a-z0-9-]+\.makeproxy-[a-z0-9]+\.figma\.site$/i.test(cleanOrigin)
+    ) {
       return callback(null, true);
     }
 

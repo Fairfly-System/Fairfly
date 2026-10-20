@@ -12,6 +12,26 @@ import { usePdfModal, isPdfUrl } from '../../Shared/PdfDocument/PdfDocumentView'
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import './quotation-requirements-review.css';
 
+// Strict extension and accept configurations aligned with backend fileSecurity.js
+const ALLOWED_DOC_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+const DOC_ACCEPT_STRING = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+const IMAGE_ACCEPT_STRING = '.jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif';
+
+const isImageRequirement = (type) => {
+  const t = String(type || '').toLowerCase().trim();
+  return t === 'image' || t === 'photo';
+};
+
+const isDocRequirement = (type) => {
+  const t = String(type || '').toLowerCase().trim();
+  return t === 'file' || t === 'document' || t === 'doc';
+};
+
+const isFileRequirement = (type) => isImageRequirement(type) || isDocRequirement(type);
+
 export default function QuotationRequirementsReview({
   quotation,
   onReviewUpdated,
@@ -208,8 +228,36 @@ export default function QuotationRequirementsReview({
 
   const handleWalkinFileChange = (idx, file) => {
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      addToast('File size exceeds 10MB limit', 'warning');
+
+    const item = mergedList[idx];
+    const rawType = item?.inputType || 'text';
+    const isImg = isImageRequirement(rawType);
+    const isDoc = isDocRequirement(rawType);
+    const fileName = (file.name || '').toLowerCase();
+
+    // Validate eligible file extensions on selection
+    if (isImg) {
+      const isAllowed = ALLOWED_IMAGE_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+      if (!isAllowed) {
+        addToast(`Please select an eligible image file (${ALLOWED_IMAGE_EXTENSIONS.join(', ')})`, 'warning');
+        const inputEl = document.getElementById(`walkin-file-${idx}`);
+        if (inputEl) inputEl.value = '';
+        return;
+      }
+    } else if (isDoc) {
+      const isAllowed = ALLOWED_DOC_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+      if (!isAllowed) {
+        addToast(`Please select an eligible document file (${ALLOWED_DOC_EXTENSIONS.join(', ')})`, 'warning');
+        const inputEl = document.getElementById(`walkin-file-${idx}`);
+        if (inputEl) inputEl.value = '';
+        return;
+      }
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      addToast('File size exceeds 25MB limit', 'warning');
+      const inputEl = document.getElementById(`walkin-file-${idx}`);
+      if (inputEl) inputEl.value = '';
       return;
     }
     setWalkinInputs(prev => ({
@@ -229,37 +277,40 @@ export default function QuotationRequirementsReview({
     setIsSubmittingWalkin(true);
 
     try {
-      const compiledReqs = await Promise.all(
-        mergedList.map(async (item, idx) => {
-          const state = walkinInputs[idx] || {};
-          let fileMeta = state.existingFile || null;
+      // Upload walk-in files sequentially to prevent serverless concurrency spikes
+      const compiledReqs = [];
+      const targetFolder = `service_requirements/${quotation.submittedRequirementsId || ('operator_' + Date.now())}`;
 
-          if (state.file) {
-            try {
-              const targetFolder = `service_requirements/${quotation.submittedRequirementsId || ('operator_' + Date.now())}`;
-              const upRes = await uploadFileToBackend(state.file, targetFolder, userToken);
-              if (upRes?.url) {
-                fileMeta = {
-                  url: upRes.url,
-                  fileName: upRes.fileName || state.file.name,
-                  fileSize: upRes.fileSize || state.file.size,
-                  storagePath: upRes.storagePath || ''
-                };
-              }
-            } catch (upErr) {
-              console.error(`Error uploading walk-in requirement file for ${item.name}:`, upErr);
+      for (let idx = 0; idx < mergedList.length; idx++) {
+        const item = mergedList[idx];
+        const state = walkinInputs[idx] || {};
+        let fileMeta = state.existingFile || null;
+
+        if (state.file) {
+          try {
+            const upRes = await uploadFileToBackend(state.file, targetFolder, userToken);
+            if (upRes?.url) {
+              fileMeta = {
+                url: upRes.url,
+                fileName: upRes.fileName || state.file.name,
+                fileSize: upRes.fileSize || state.file.size,
+                storagePath: upRes.storagePath || ''
+              };
             }
+          } catch (upErr) {
+            console.error(`Error uploading walk-in requirement file for ${item.name}:`, upErr);
+            throw upErr;
           }
+        }
 
-          return {
-            name: item.name,
-            inputType: item.inputType,
-            required: item.required,
-            value: state.textValue ? state.textValue.trim() : '',
-            file: fileMeta
-          };
-        })
-      );
+        compiledReqs.push({
+          name: item.name,
+          inputType: item.inputType,
+          required: item.required,
+          value: state.textValue ? state.textValue.trim() : '',
+          file: fileMeta
+        });
+      }
 
       submitQuotationRequirements(
         userToken,
@@ -344,7 +395,7 @@ export default function QuotationRequirementsReview({
       {/* Approval Metadata Callout */}
       {reqStatus === 'approved' && (
         <div className="quotation-reqs-approved-callout">
-          <i className="fa-solid fa-shield-check"></i>
+          <i className="fa-solid fa-shield-halved"></i>
           <span>
             Verified and approved by {quotation.requirementsApprovedBy || 'Operator'}{' '}
             {quotation.requirementsApprovedAt ? `on ${new Date(quotation.requirementsApprovedAt).toLocaleString()}` : ''}. Client is authorized to accept quotation.
@@ -610,12 +661,12 @@ export default function QuotationRequirementsReview({
                       <span className="req-pill req-pill-type">{inputType.toUpperCase()}</span>
                     </div>
 
-                    {(inputType === 'image' || inputType === 'file') ? (
+                    {isFileRequirement(inputType) ? (
                       <div className="walkin-file-row">
                         {inputState.existingFile?.url && !inputState.file && (
                           <div className="walkin-existing-file">
                             <i className="fa-solid fa-file-circle-check text-green"></i>
-                            <span>Attached: <strong>{inputState.existingFile.fileName || 'Document'}</strong></span>
+                            <span>Attached: <strong>{inputState.existingFile.fileName || (isImageRequirement(inputType) ? 'Photo' : 'Document')}</strong></span>
                           </div>
                         )}
 
@@ -623,14 +674,18 @@ export default function QuotationRequirementsReview({
                           <input
                             type="file"
                             id={`walkin-file-${idx}`}
-                            accept={inputType === 'image' ? 'image/*' : '.pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx'}
+                            accept={isImageRequirement(inputType) ? IMAGE_ACCEPT_STRING : DOC_ACCEPT_STRING}
                             className="walkin-hidden-input"
                             onChange={(e) => handleWalkinFileChange(idx, e.target.files[0])}
                             disabled={isSubmittingWalkin}
                           />
                           <label htmlFor={`walkin-file-${idx}`} className="btn btn-secondary btn-sm">
-                            <i className="fa-solid fa-cloud-arrow-up"></i>
-                            <span>{inputState.file ? inputState.file.name : 'Choose File to Upload'}</span>
+                            <i className={isImageRequirement(inputType) ? 'fa-solid fa-camera' : 'fa-solid fa-cloud-arrow-up'}></i>
+                            <span>
+                              {inputState.file
+                                ? inputState.file.name
+                                : (isImageRequirement(inputType) ? 'Choose Photo to Upload' : 'Choose Document to Upload')}
+                            </span>
                           </label>
                         </div>
                       </div>

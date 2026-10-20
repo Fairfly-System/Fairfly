@@ -71,14 +71,26 @@ const buildReceiptPayload = async ({
   const effectiveServiceCode = serviceCode || quotation?.serviceCode || payment?.serviceCode || generateServiceCode();
 
   // Stable production-configured tracker URL for QR generation on frontend
-  const frontendBaseUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const frontendBaseUrl = (process.env.FRONTEND_URL || 'https://fairfly-1e83b.web.app').replace(/\/$/, '');
   const qrTrackingUrl = `${frontendBaseUrl}/track?trackingId=${encodeURIComponent(effectiveServiceCode)}`;
 
   const totalAmountNum = Number(payment?.amount || quotation?.totalAmount || quotation?.rate || 0);
   const rawPaymentMethod = payment?.paymentMethodType || payment?.provider || (payment?.isWalkInCash ? 'Cash' : 'Online');
-  const normalizedPaymentMethod = (typeof rawPaymentMethod === 'string' && rawPaymentMethod.toLowerCase() === 'cash')
-    ? 'Cash'
-    : (rawPaymentMethod || 'Online (PayMongo)');
+  const formatBackendMethod = (method, provider) => {
+    if (provider === 'cash') return 'Cash';
+    if (!method) return 'Online (PayMongo)';
+    const s = String(method).toLowerCase().trim();
+    if (s === 'gcash' || s.includes('gcash')) return 'GCash (PayMongo)';
+    if (s === 'paymaya' || s === 'maya' || s.includes('maya')) return 'Maya (PayMongo)';
+    if (s === 'card' || s.includes('card') || s === 'credit_card' || s === 'debit_card') return 'Card (PayMongo)';
+    if (s === 'qrph' || s === 'qr_ph' || s.includes('qrph')) return 'QR Ph (PayMongo)';
+    if (s === 'grab_pay' || s === 'grabpay' || s.includes('grab')) return 'GrabPay (PayMongo)';
+    if (s === 'billease') return 'BillEase (PayMongo)';
+    if (s === 'dob') return 'Online Banking (PayMongo)';
+    if (s === 'cash' || s.startsWith('direct cash') || s.startsWith('cash ')) return 'Cash';
+    return method;
+  };
+  const normalizedPaymentMethod = formatBackendMethod(rawPaymentMethod, payment?.provider);
 
   return {
     receiptNo: effectiveReceiptNo,

@@ -3,10 +3,11 @@ import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import PageHeader from '../../../components/UI/PageHeader/PageHeader';
-import { fetchResources, recordResourceDownload } from '../../../services/resourceService';
+import { fetchResources, recordResourceDownload, downloadResourceFile } from '../../../services/resourceService';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import './operator-resources.css';
 
 const CATEGORIES = [
@@ -55,8 +56,10 @@ export default function OperatorResources() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const { openPdfModal } = usePdfModal();
+  const { openLightbox } = useLightbox();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const [activeCategory, setActiveCategory] = useState('All Materials');
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,6 +125,14 @@ export default function OperatorResources() {
       addToast('No preview available for this file.', 'warning');
       return;
     }
+    if (isImageUrl(resource.fileUrl, resource.fileName)) {
+      openLightbox({
+        url: resource.fileUrl,
+        title: resource.title || resource.fileName || 'Resource Picture',
+        subtitle: `${resource.category || 'Resource Material'} · ${resource.fileName || 'Image'}`
+      });
+      return;
+    }
     if (isPdfUrl(resource.fileUrl, resource.fileName)) {
       openPdfModal({
         type: 'file',
@@ -134,23 +145,28 @@ export default function OperatorResources() {
   };
 
   const handleDownload = async (resource) => {
-    try {
-      // Record download in backend
-      recordResourceDownload(userToken, resource.id, () => {}, (e) => console.warn('Download record warning:', e));
-      addToast(`Downloading "${resource.title}"...`, 'info');
+    if (!resource || !resource.id || downloadingId) return;
 
-      // Trigger download
-      const link = document.createElement('a');
-      link.href = resource.fileUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.download = resource.fileName || 'resource';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    try {
+      setDownloadingId(resource.id);
+      addToast(`Preparing download for "${resource.title}"...`, 'info');
+
+      // Trigger direct download without opening new tabs
+      await downloadResourceFile(userToken, resource);
+
+      // Optimistically increment download count locally
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resource.id ? { ...r, downloadCount: (r.downloadCount || 0) + 1 } : r
+        )
+      );
+
+      addToast(`Downloaded "${resource.title}" successfully.`, 'success');
     } catch (error) {
       console.error('Download error:', error);
       addToast(toFriendlyMessage(error, 'Download could not be completed. Please try again.'), 'error');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -319,10 +335,12 @@ export default function OperatorResources() {
                     <button
                       type="button"
                       className="op-download-btn"
+                      disabled={downloadingId === item.id}
                       onClick={() => handleDownload(item)}
+                      title={downloadingId === item.id ? 'Downloading...' : 'Download Material'}
                     >
-                      <i className="fa-solid fa-download"></i>
-                      <span>Download</span>
+                      <i className={downloadingId === item.id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-download'}></i>
+                      <span>{downloadingId === item.id ? 'Downloading...' : 'Download'}</span>
                     </button>
                   </div>
                 </div>

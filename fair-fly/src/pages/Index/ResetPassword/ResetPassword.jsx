@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router";
-import { Mail, ArrowLeft, RotateCw, AlertCircle, CheckCircle2, Building, ShieldCheck, HelpCircle } from "lucide-react";
+import { Link, useSearchParams } from "react-router";
+import { Mail, ArrowLeft, RotateCw, AlertCircle, CheckCircle2, Building, ShieldCheck, HelpCircle, Lock, Eye, EyeOff } from "lucide-react";
+import { verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
+import { auth } from "../../../firebase";
 import "./reset-password.css";
 import logo from "/FairflyLogo.png";
 import { useToast } from "../../../components/UI/toast/ToastProvider";
@@ -9,6 +11,21 @@ import toFriendlyMessage from "../../../utils/friendlyErrors";
 
 export default function ResetPassword() {
   const { addToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const oobCode = searchParams.get("oobCode");
+
+  // Mode: if oobCode is present, we are in "confirm-reset" mode
+  const [isResetMode, setIsResetMode] = useState(Boolean(oobCode));
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [codeVerifying, setCodeVerifying] = useState(Boolean(oobCode));
+  const [codeError, setCodeError] = useState("");
+
+  // New Password Form state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
 
   const [accountType, setAccountType] = useState("client"); // 'client' | 'operator'
   const [email, setEmail] = useState("");
@@ -18,6 +35,40 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
+  // If oobCode is present, verify code with Firebase on mount
+  useEffect(() => {
+    if (!oobCode) {
+      setIsResetMode(false);
+      return;
+    }
+
+    let isMounted = true;
+    setCodeVerifying(true);
+    verifyPasswordResetCode(auth, oobCode)
+      .then((userEmail) => {
+        if (!isMounted) return;
+        setVerifiedEmail(userEmail);
+        setIsResetMode(true);
+        setCodeVerifying(false);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error("verifyPasswordResetCode error:", err);
+        setCodeError(
+          err.code === "auth/expired-action-code"
+            ? "This password reset link has expired. Please request a new one."
+            : err.code === "auth/invalid-action-code"
+            ? "This password reset link is invalid or has already been used."
+            : "Could not verify reset link. Please request a new one."
+        );
+        setCodeVerifying(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [oobCode]);
 
   // Handle resend countdown timer (60s)
   useEffect(() => {
@@ -105,6 +156,41 @@ export default function ResetPassword() {
     handleSubmit();
   };
 
+  const handleConfirmResetSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setError("");
+
+    const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!strongPassword.test(newPassword)) {
+      setError("Must be 8+ chars with uppercase, lowercase & number");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await confirmPasswordReset(auth, oobCode, newPassword);
+      setIsLoading(false);
+      setPasswordResetSuccess(true);
+      addToast("Your password has been reset successfully!", "success");
+    } catch (err) {
+      setIsLoading(false);
+      console.error("confirmPasswordReset error:", err);
+      const msg =
+        err.code === "auth/expired-action-code"
+          ? "This password reset link has expired. Please request a new one."
+          : err.code === "auth/invalid-action-code"
+          ? "This reset link is invalid or has already been used."
+          : err.message || "Failed to update password.";
+      setError(msg);
+      addToast(msg, "error");
+    }
+  };
+
   return (
     <div className="auth-split-layout reset-split-page">
       {/* 50% Left Side: Visual Showcase */}
@@ -129,11 +215,15 @@ export default function ResetPassword() {
           <div className="auth-showcase-main">
             <div className="auth-showcase-badge">
               <ShieldCheck size={14} />
-              <span>{accountType === "operator" ? "Franchise Security Protocol" : "Client Account Recovery"}</span>
+              <span>{isResetMode ? "Password Security Standards" : accountType === "operator" ? "Franchise Security Protocol" : "Client Account Recovery"}</span>
             </div>
 
             <h2 className="auth-showcase-title">
-              {accountType === "operator" ? (
+              {isResetMode ? (
+                <>
+                  Set Your New <span className="auth-showcase-title-highlight">Secure Password</span>.
+                </>
+              ) : accountType === "operator" ? (
                 <>
                   Operator <span className="auth-showcase-title-highlight">Identity Verification</span>
                 </>
@@ -145,7 +235,9 @@ export default function ResetPassword() {
             </h2>
 
             <p className="auth-showcase-desc">
-              {accountType === "operator"
+              {isResetMode
+                ? "Your new password must follow the registration security requirements: at least 8 characters including uppercase, lowercase, and a number."
+                : accountType === "operator"
                 ? "Franchise operator credential updates require Super Admin verification. Once approved by Head Office, a secure single-use reset link is issued directly to your verified email."
                 : "Regain immediate access to your flight itineraries, visa applications, and traveler records. Verified client accounts receive a time-limited reset link directly to their registered email."}
             </p>
@@ -157,7 +249,7 @@ export default function ResetPassword() {
               </div>
               <div className="auth-benefit-item">
                 <i className="fa-solid fa-circle-check"></i>
-                <span>Protected against credential tampering & enumeration</span>
+                <span>Enforced 8+ char alphanumeric complexity</span>
               </div>
               <div className="auth-benefit-item">
                 <i className="fa-solid fa-circle-check"></i>
@@ -197,7 +289,186 @@ export default function ResetPassword() {
             <span className="auth-mobile-name">Fairfly</span>
           </div>
 
-          {isSuccess ? (
+          {isResetMode ? (
+            /* Set New Password Mode (from oobCode) */
+            codeVerifying ? (
+              <div className="reset-success-card">
+                <div style={{ textAlign: "center", padding: "2rem 0" }}>
+                  <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: "2rem", color: "var(--purple)" }}></i>
+                  <p style={{ marginTop: "1rem", color: "#64748b" }}>Verifying security reset token...</p>
+                </div>
+              </div>
+            ) : codeError ? (
+              <div className="reset-success-card">
+                <div className="reset-success-icon-badge" style={{ background: "#fee2e2", color: "#dc2626" }}>
+                  <AlertCircle size={28} />
+                </div>
+                <div className="auth-form-header">
+                  <h1>Reset Link Invalid</h1>
+                  <p>{codeError}</p>
+                </div>
+                <div className="reset-actions-group">
+                  <Link
+                    to="/forgot-password"
+                    onClick={() => {
+                      setIsResetMode(false);
+                      setCodeError("");
+                    }}
+                    className="auth-submit-btn reset-return-btn"
+                  >
+                    <span>Request New Reset Link</span>
+                  </Link>
+                </div>
+              </div>
+            ) : passwordResetSuccess ? (
+              <div className="reset-success-card">
+                <div className="reset-success-icon-badge">
+                  <CheckCircle2 size={28} />
+                </div>
+                <div className="auth-form-header">
+                  <h1>Password Reset Complete</h1>
+                  <p>Your account password has been successfully updated according to registration standards.</p>
+                </div>
+                <div className="reset-actions-group">
+                  <Link to="/login" className="auth-submit-btn reset-return-btn">
+                    <i className="fa-solid fa-right-to-bracket"></i>
+                    <span>Sign In to Your Account</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="reset-form-container">
+                <div className="auth-form-header">
+                  <div className="reset-header-icon-badge">
+                    <Lock size={22} />
+                  </div>
+                  <h1>Set New Password</h1>
+                  <p>
+                    {verifiedEmail ? (
+                      <>Creating a new secure password for <strong>{verifiedEmail}</strong>.</>
+                    ) : (
+                      "Enter your new password below."
+                    )}
+                  </p>
+                </div>
+
+                <form onSubmit={handleConfirmResetSubmit} className="auth-form" noValidate>
+                  <div className="auth-input-group">
+                    <label className="auth-input-label" htmlFor="new-password">
+                      New Password <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <div className="auth-input-wrapper">
+                      <Lock className="auth-input-icon" size={18} />
+                      <input
+                        id="new-password"
+                        type={showNewPassword ? "text" : "password"}
+                        className="auth-input"
+                        placeholder="Must be 8+ chars with uppercase, lowercase & number"
+                        value={newPassword}
+                        onChange={(e) => {
+                          setNewPassword(e.target.value);
+                          if (error) setError("");
+                        }}
+                        autoComplete="new-password"
+                        required
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        className="auth-toggle-pwd"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        aria-label="Toggle password visibility"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center" }}
+                      >
+                        {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="auth-input-group">
+                    <label className="auth-input-label" htmlFor="confirm-new-password">
+                      Confirm New Password <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <div className="auth-input-wrapper">
+                      <Lock className="auth-input-icon" size={18} />
+                      <input
+                        id="confirm-new-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        className="auth-input"
+                        placeholder="Re-enter your new password"
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value);
+                          if (error) setError("");
+                        }}
+                        autoComplete="new-password"
+                        required
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        className="auth-toggle-pwd"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label="Toggle password visibility"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex", alignItems: "center" }}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="auth-field-error" role="alert" style={{ marginBottom: "0.75rem" }}>
+                      <AlertCircle size={14} />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  {/* Password Requirements Checklist matching Registration */}
+                  <div className="reset-notice-card" style={{ display: "flex", flexDirection: "column", gap: "0.35rem", padding: "0.85rem 1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.8125rem", color: newPassword.length >= 8 ? "#16a34a" : "#64748b" }}>
+                      <i className={`fa-solid ${newPassword.length >= 8 ? "fa-circle-check" : "fa-circle-dot"}`} style={{ color: newPassword.length >= 8 ? "#16a34a" : "#94a3b8" }}></i>
+                      <span>At least 8 characters in length</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.8125rem", color: /[A-Z]/.test(newPassword) ? "#16a34a" : "#64748b" }}>
+                      <i className={`fa-solid ${/[A-Z]/.test(newPassword) ? "fa-circle-check" : "fa-circle-dot"}`} style={{ color: /[A-Z]/.test(newPassword) ? "#16a34a" : "#94a3b8" }}></i>
+                      <span>Contains uppercase letter (A-Z)</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.8125rem", color: /[a-z]/.test(newPassword) ? "#16a34a" : "#64748b" }}>
+                      <i className={`fa-solid ${/[a-z]/.test(newPassword) ? "fa-circle-check" : "fa-circle-dot"}`} style={{ color: /[a-z]/.test(newPassword) ? "#16a34a" : "#94a3b8" }}></i>
+                      <span>Contains lowercase letter (a-z)</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.8125rem", color: /\d/.test(newPassword) ? "#16a34a" : "#64748b" }}>
+                      <i className={`fa-solid ${/\d/.test(newPassword) ? "fa-circle-check" : "fa-circle-dot"}`} style={{ color: /\d/.test(newPassword) ? "#16a34a" : "#94a3b8" }}></i>
+                      <span>Contains at least one number (0-9)</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.8125rem", color: newPassword && confirmPassword && newPassword === confirmPassword ? "#16a34a" : "#64748b" }}>
+                      <i className={`fa-solid ${newPassword && confirmPassword && newPassword === confirmPassword ? "fa-circle-check" : "fa-circle-dot"}`} style={{ color: newPassword && confirmPassword && newPassword === confirmPassword ? "#16a34a" : "#94a3b8" }}></i>
+                      <span>Passwords match</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="auth-submit-btn"
+                    disabled={isLoading || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword) || newPassword !== confirmPassword}
+                  >
+                    {isLoading ? (
+                      <>
+                        <i className="fa-solid fa-spinner fa-spin"></i>
+                        <span>Updating Password...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-shield-halved"></i>
+                        <span>Reset Password</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )
+          ) : isSuccess ? (
             /* Success State */
             <div className="reset-success-card">
               <div className="reset-success-icon-badge">
