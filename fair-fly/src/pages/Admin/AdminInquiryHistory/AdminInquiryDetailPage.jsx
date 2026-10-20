@@ -181,14 +181,29 @@ export default function AdminInquiryDetailPage() {
     ];
   }, [inquiry, isArchived, isArchiving, isRestoring]);
 
-  const isConfirmed = ['confirmed', 'accepted', 'quotation_created'].includes((inquiry?.status || '').toLowerCase());
+  const getAdminInquiryStatusType = () => {
+    const st = (inquiry?.status || '').toLowerCase();
+    if (['accepted', 'confirmed', 'completed', 'active', 'paid', 'fulfilled', 'closed', 'resolved'].includes(st)) {
+      return 'success';
+    }
+    if (['quotation_created', 'quotation_sent', 'quoted', 'in-progress', 'in_progress', 'ongoing'].includes(st)) {
+      return 'purple';
+    }
+    if (['submitted', 'pending', 'waiting', 'in-review', 'in_review'].includes(st)) {
+      return 'warning';
+    }
+    if (['rejected', 'cancelled', 'disabled'].includes(st)) {
+      return 'danger';
+    }
+    return 'neutral';
+  };
 
   return (
     <RecordDetailLayout
       title={inquiry?.fullName || inquiry?.clientName || 'Inquiry Record Profile'}
       subtitle={inquiry?.serviceType || 'Service Inquiry'}
-      status={isArchived ? 'ARCHIVED' : (inquiry?.status || 'SUBMITTED').toUpperCase()}
-      statusType={isArchived ? 'neutral' : (isConfirmed ? 'success' : 'warning')}
+      status={isArchived ? 'ARCHIVED' : (inquiry?.status || 'SUBMITTED').replace(/_/g, ' ').toUpperCase()}
+      statusType={isArchived ? 'neutral' : getAdminInquiryStatusType()}
       breadcrumbs={breadcrumbs}
       backTo="/admin/inquiry-history"
       backLabel="Back to Inquiry History"
@@ -271,7 +286,7 @@ export default function AdminInquiryDetailPage() {
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Cellphone Number</span>
-                  <span className="detail-value">{inquiry.phoneNumber || inquiry.cellphone || 'N/A'}</span>
+                  <span className="detail-value">{inquiry.cellphone || inquiry.phoneNumber || 'N/A'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Telephone No.</span>

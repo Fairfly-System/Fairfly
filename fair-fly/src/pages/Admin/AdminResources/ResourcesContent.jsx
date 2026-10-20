@@ -11,6 +11,7 @@ import ResourceModal from '../../../components/Admin/Modals/ResourceModal/Resour
 import { fetchResources, createResource, updateResource, deleteResource, recordResourceDownload } from '../../../services/resourceService';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import './admin-resources.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -48,6 +49,7 @@ function getCategoryClass(cat) {
 export default function ResourcesContent() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
+  const { openPdfModal } = usePdfModal();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -224,19 +226,49 @@ export default function ResourcesContent() {
       {
         key: 'title',
         header: 'Material / Document',
-        render: (r) => (
-          <div className="resource-row-title-cell">
-            <div className="resource-file-avatar">
-              <i className={getFileTypeIcon(r.fileExtension || r.fileName?.split('.').pop())}></i>
+        render: (r) => {
+          const isPdf = isPdfUrl(r.fileUrl, r.fileName);
+          return (
+            <div className="resource-title-cell">
+              <div
+                className={`resource-type-icon ${getCategoryClass(r.category)}`}
+                style={isPdf ? { cursor: 'pointer' } : {}}
+                onClick={() => {
+                  if (isPdf) {
+                    openPdfModal({
+                      type: 'file',
+                      url: r.fileUrl,
+                      title: r.title || r.fileName || 'Resource Document'
+                    });
+                  }
+                }}
+                title={isPdf ? 'Click to preview PDF' : undefined}
+              >
+                <i className={getFileTypeIcon(r.fileExtension || r.fileName?.split('.').pop())}></i>
+              </div>
+              <div className="resource-title-meta">
+                <span
+                  className="resource-title-text"
+                  style={isPdf ? { cursor: 'pointer' } : {}}
+                  onClick={() => {
+                    if (isPdf) {
+                      openPdfModal({
+                        type: 'file',
+                        url: r.fileUrl,
+                        title: r.title || r.fileName || 'Resource Document'
+                      });
+                    }
+                  }}
+                >
+                  {r.title}
+                </span>
+                <span className="resource-filename-text">
+                  {r.fileName} • {formatFileSize(r.fileSize)}
+                </span>
+              </div>
             </div>
-            <div className="resource-title-meta">
-              <span className="resource-title-text">{r.title}</span>
-              <span className="resource-filename-text">
-                {r.fileName} • {formatFileSize(r.fileSize)}
-              </span>
-            </div>
-          </div>
-        )
+          );
+        }
       },
       {
         key: 'category',
@@ -308,6 +340,20 @@ export default function ResourcesContent() {
         className: 'actions-col',
         render: (r) => (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+            {isPdfUrl(r.fileUrl, r.fileName) && (
+              <button
+                type="button"
+                className="icon-btn view"
+                title="Preview PDF Document"
+                onClick={() => openPdfModal({
+                  type: 'file',
+                  url: r.fileUrl,
+                  title: r.title || r.fileName || 'Resource Document'
+                })}
+              >
+                <i className="fa-solid fa-eye"></i>
+              </button>
+            )}
             <button
               type="button"
               className="icon-btn view"

@@ -53,7 +53,8 @@ async function cascadeRemoveWorkflowFromServices(workflowIds) {
 
 const getTemplates = async (req, res) => {
   try {
-    const { status, type, limit } = req.query;
+    const { status, type, serviceType, limit } = req.query;
+    const requestedType = serviceType || type;
 
     const options = {
       filters: [],
@@ -61,11 +62,30 @@ const getTemplates = async (req, res) => {
     };
 
     if (status) options.filters.push({ field: 'status', value: status });
-    if (type) options.filters.push({ field: 'type', value: type });
+    if (requestedType) {
+      options.filters.push({ field: 'serviceType', value: requestedType });
+    }
     if (limit) options.limit = parseInt(limit, 10);
 
-    const templates = await queryDatabaseAdvanced(COLLECTIONS.WORKFLOW_TEMPLATES, options);
-    return res.status(200).json(templates);
+    let templates = await queryDatabaseAdvanced(COLLECTIONS.WORKFLOW_TEMPLATES, options);
+
+    // Fallback if legacy templates only have 'type' field
+    if (requestedType && templates.length === 0) {
+      const legacyOptions = {
+        filters: options.filters.filter(f => f.field !== 'serviceType'),
+        orderBy: options.orderBy
+      };
+      legacyOptions.filters.push({ field: 'type', value: requestedType });
+      templates = await queryDatabaseAdvanced(COLLECTIONS.WORKFLOW_TEMPLATES, legacyOptions);
+    }
+
+    const normalized = templates.map(t => ({
+      ...t,
+      serviceType: t.serviceType || t.type || 'General',
+      type: t.type || t.serviceType || 'General'
+    }));
+
+    return res.status(200).json(normalized);
   } catch (error) {
     console.error('Error getting workflow templates:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -80,7 +100,12 @@ const getTemplateById = async (req, res) => {
     const template = await getFromDatabase(`${COLLECTIONS.WORKFLOW_TEMPLATES}/${id}`);
     if (!template) return res.status(404).json({ error: 'Template not found' });
 
-    return res.status(200).json({ id, ...template });
+    return res.status(200).json({
+      id,
+      ...template,
+      serviceType: template.serviceType || template.type || 'General',
+      type: template.type || template.serviceType || 'General'
+    });
   } catch (error) {
     console.error('Error getting workflow template:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -123,12 +148,12 @@ const createTemplate = async (req, res) => {
     const sanitizedData = {
       ...templateData,
       serviceType: resolvedType,
-      type: resolvedType,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: templateData.status || 'active',
       version: 1
     };
+    delete sanitizedData.type;
 
     const docId = await addToDatabase(COLLECTIONS.WORKFLOW_TEMPLATES, sanitizedData, ID_PREFIXES.WORKFLOW_TEMPLATE);
     return res.status(201).json({ id: docId, message: 'Template created successfully' });

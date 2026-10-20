@@ -365,10 +365,10 @@ export default function ClientsContent() {
       render: (row) =>
         row.createdAt
           ? new Date(row.createdAt).toLocaleDateString(undefined, {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            })
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })
           : '—'
     },
     {
@@ -450,7 +450,7 @@ export default function ClientsContent() {
     <div className="admin-clients-page">
       <Breadcrumbs
         items={[
-          { label: 'Admin Portal', to: '/admin' },
+          { label: 'Dashboard', to: '/admin' },
           { label: 'Client Management', active: true }
         ]}
       />
@@ -458,8 +458,7 @@ export default function ClientsContent() {
       <PageHeader
         title="Client Accounts"
         subtitle="Manage customer profiles, contact info, and account access across FairFly"
-        badge={`${totalClients} Client${totalClients !== 1 ? 's' : ''}`}
-        badgeType="neutral"
+        illustrationSrc="/pageImages/admin/clients.png"
       />
 
       {/* KPI Cards — Horizontal Flex Grid */}

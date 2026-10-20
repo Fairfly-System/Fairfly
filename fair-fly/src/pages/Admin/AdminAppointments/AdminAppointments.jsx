@@ -18,12 +18,14 @@ import OperatorModal from '../../../components/Admin/Modals/OperatorModal/Operat
 
 import { updateAppointmentStatus } from '../../../services/appointmentService';
 import { createOperator } from '../../../services/adminService';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 
 import './admin-appointments.css';
 
 export default function AdminAppointments() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
+  const { openPdfModal } = usePdfModal();
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -573,22 +575,45 @@ export default function AdminAppointments() {
                 </h4>
                 <div className="admin-appt-proofs-grid">
                   {selectedAppt.proofOfCapability.map((doc, idx) => (
-                    <a
-                      key={idx}
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="admin-appt-proof-card"
-                      title={doc.name}
-                    >
-                      <i className="fa-regular fa-file-pdf admin-appt-proof-icon"></i>
-                      <div className="admin-appt-proof-info">
-                        <span className="admin-appt-proof-name">{doc.name}</span>
-                        <span className="admin-appt-proof-meta">
-                          {doc.size ? `${(doc.size / 1024).toFixed(0)} KB` : 'Document'} · Open File
-                        </span>
-                      </div>
-                    </a>
+                    isPdfUrl(doc.url, doc.name) ? (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => openPdfModal({
+                          type: 'file',
+                          url: doc.url,
+                          title: doc.name || 'Capability Proof Document'
+                        })}
+                        className="admin-appt-proof-card"
+                        title={doc.name}
+                        style={{ textAlign: 'left', background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
+                        <i className="fa-regular fa-file-pdf admin-appt-proof-icon"></i>
+                        <div className="admin-appt-proof-info">
+                          <span className="admin-appt-proof-name">{doc.name}</span>
+                          <span className="admin-appt-proof-meta">
+                            {doc.size ? `${(doc.size / 1024).toFixed(0)} KB` : 'Document'} · View PDF
+                          </span>
+                        </div>
+                      </button>
+                    ) : (
+                      <a
+                        key={idx}
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="admin-appt-proof-card"
+                        title={doc.name}
+                      >
+                        <i className="fa-regular fa-file-pdf admin-appt-proof-icon"></i>
+                        <div className="admin-appt-proof-info">
+                          <span className="admin-appt-proof-name">{doc.name}</span>
+                          <span className="admin-appt-proof-meta">
+                            {doc.size ? `${(doc.size / 1024).toFixed(0)} KB` : 'Document'} · Open File
+                          </span>
+                        </div>
+                      </a>
+                    )
                   ))}
                 </div>
               </>

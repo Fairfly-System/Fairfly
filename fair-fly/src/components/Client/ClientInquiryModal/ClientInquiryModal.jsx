@@ -222,13 +222,7 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       clientType,
       companyName: clientType === 'company' ? companyName.trim() : '',
       clientName: resolvedClientName,
-      firstName: (clientType === 'company' ? contactPersonFirstName : firstName).trim(),
-      middleInitial: (clientType === 'company' ? contactPersonMiddleInitial : middleInitial).trim(),
-      lastName: (clientType === 'company' ? contactPersonLastName : lastName).trim(),
       contactPerson: resolvedContactPerson,
-      contactPersonFirstName: (clientType === 'company' ? contactPersonFirstName : firstName).trim(),
-      contactPersonMiddleInitial: (clientType === 'company' ? contactPersonMiddleInitial : middleInitial).trim(),
-      contactPersonLastName: (clientType === 'company' ? contactPersonLastName : lastName).trim(),
       population: population.trim(),
       address: address.trim(),
       telNo: telNo.trim(),
@@ -241,10 +235,10 @@ export default function ClientInquiryModal({ isOpen, onClose, onInquirySubmitted
       servicesOffered: selectedServices,
       serviceType: selectedServices.join(', '),
       specifiedRequirements: specifiedRequirements.trim(),
-      remarks: remarks.trim(),
+      clientRemarks: remarks.trim(),
+      notes: remarks.trim(),
       formNo: 'SAF-01-002',
       isWalkIn: false,
-      workflow: 'online',
       status: 'submitted'
     };
 

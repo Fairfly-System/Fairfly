@@ -39,7 +39,6 @@ async function logOperatorAction({
     const logId = generatePrefixedId(ID_PREFIXES.OPERATOR_LOG);
 
     const logEntry = {
-      id: logId,
       operatorId,
       operatorEmail: operatorEmail || 'unknown',
       branchName: branchName || 'Branch Office',
@@ -54,7 +53,7 @@ async function logOperatorAction({
     };
 
     await db.collection(COLLECTION).doc(logId).set(logEntry);
-    return logEntry;
+    return { id: logId, ...logEntry };
   } catch (error) {
     // Non-blocking safety net: logging should never fail the parent business mutation
     console.error('[operatorLogger] Failed to write operator log entry:', error.message);

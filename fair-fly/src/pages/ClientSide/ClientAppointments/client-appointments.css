@@ -236,7 +236,8 @@
   border: 1px solid transparent;
 }
 
-.appointment-status-pill.confirmed {
+.appointment-status-pill.confirmed,
+.appointment-status-pill.completed {
   background: var(--complete-green-light, #F0FDF4);
   color: var(--complete-green-dark, #15803D);
   border-color: rgba(22, 163, 74, 0.25);

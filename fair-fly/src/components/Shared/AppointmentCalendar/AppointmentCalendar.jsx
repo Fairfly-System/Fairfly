@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './AppointmentCalendar.css';
 
 const MONTH_NAMES = [
@@ -107,12 +107,21 @@ export default function AppointmentCalendar({
     }
   }, [currentDate, viewMode]);
 
+  const lastEmittedRangeRef = useRef({ startDateStr: '', endDateStr: '', viewMode: '' });
+
   // Inform parent of date range changes if callback provided
   useEffect(() => {
-    if (onDateRangeChange) {
+    if (!onDateRangeChange) return;
+    const { startDateStr, endDateStr } = dateRange;
+    if (
+      lastEmittedRangeRef.current.startDateStr !== startDateStr ||
+      lastEmittedRangeRef.current.endDateStr !== endDateStr ||
+      lastEmittedRangeRef.current.viewMode !== viewMode
+    ) {
+      lastEmittedRangeRef.current = { startDateStr, endDateStr, viewMode };
       onDateRangeChange({
-        startDateStr: dateRange.startDateStr,
-        endDateStr: dateRange.endDateStr,
+        startDateStr,
+        endDateStr,
         viewMode
       });
     }
@@ -161,7 +170,15 @@ export default function AppointmentCalendar({
   const appointmentsByDate = useMemo(() => {
     const map = {};
     filteredAppointments.forEach((appt) => {
-      const d = appt.preferredDate || appt.appointmentDate || appt.date;
+      let d = appt.preferredDate || appt.appointmentDate || appt.date;
+      if (!d && appt.scheduledAt) {
+        try {
+          const dt = new Date(appt.scheduledAt);
+          // Manila is UTC+8
+          const manila = new Date(dt.getTime() + 8 * 60 * 60 * 1000);
+          d = toISODateString(manila);
+        } catch (e) {}
+      }
       if (!d) return;
       if (!map[d]) map[d] = [];
       map[d].push(appt);
@@ -169,6 +186,9 @@ export default function AppointmentCalendar({
 
     Object.keys(map).forEach((dateKey) => {
       map[dateKey].sort((a, b) => {
+        if (a.scheduledAt && b.scheduledAt) {
+          return new Date(a.scheduledAt) - new Date(b.scheduledAt);
+        }
         const timeA = a.startTime || a.preferredTime || a.time || '';
         const timeB = b.startTime || b.preferredTime || b.time || '';
         return timeA.localeCompare(timeB);

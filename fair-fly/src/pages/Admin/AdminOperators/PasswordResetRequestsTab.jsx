@@ -147,17 +147,17 @@ export default function PasswordResetRequestsTab() {
     const s = (status || "").toUpperCase();
     switch (s) {
       case "PENDING":
-        return <span className="badge badge-warning"><i className="fa-solid fa-clock"></i> Pending Review</span>;
+        return <span className="status-pill status-pill-pending"><i className="fa-solid fa-clock"></i> Pending Review</span>;
       case "APPROVED":
-        return <span className="badge badge-success"><i className="fa-solid fa-circle-check"></i> Approved</span>;
+        return <span className="status-pill status-pill-active"><i className="fa-solid fa-circle-check"></i> Approved</span>;
       case "REJECTED":
-        return <span className="badge badge-danger"><i className="fa-solid fa-circle-xmark"></i> Rejected</span>;
+        return <span className="status-pill status-pill-disabled"><i className="fa-solid fa-circle-xmark"></i> Rejected</span>;
       case "COMPLETED":
-        return <span className="badge badge-info"><i className="fa-solid fa-check-double"></i> Completed</span>;
+        return <span className="status-pill status-pill-completed"><i className="fa-solid fa-check-double"></i> Completed</span>;
       case "EXPIRED":
-        return <span className="badge badge-secondary"><i className="fa-solid fa-hourglass-end"></i> Expired</span>;
+        return <span className="status-pill status-pill-neutral"><i className="fa-solid fa-hourglass-end"></i> Expired</span>;
       default:
-        return <span className="badge">{status}</span>;
+        return <span className="status-pill status-pill-neutral">{status}</span>;
     }
   };
 

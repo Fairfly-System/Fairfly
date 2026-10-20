@@ -413,17 +413,38 @@ tbody tr.selected:hover td {
 .status-pill-completed,
 .status-pill--completed,
 .status-pill-success,
-.status-pill--success {
+.status-pill--success,
+.status-pill-closed,
+.status-pill--closed,
+.status-pill-resolved,
+.status-pill--resolved,
+.status-pill-confirmed,
+.status-pill--confirmed,
+.status-pill-accepted,
+.status-pill--accepted,
+.status-pill-paid,
+.status-pill--paid,
+.status-pill-fulfilled,
+.status-pill--fulfilled,
+.status-active {
   background-color: var(--complete-green-light);
   color: var(--complete-green-dark);
+  border-color: #86efac;
 }
 
 .status-pill-pending,
 .status-pill--pending,
 .status-pill-warning,
-.status-pill--warning {
+.status-pill--warning,
+.status-pill-waiting,
+.status-pill--waiting,
+.status-pill-in-review,
+.status-pill--in-review,
+.status-pill-submitted,
+.status-pill--submitted {
   background-color: var(--warning-yellow-light);
   color: #B78103;
+  border-color: #fde68a;
 }
 
 .status-pill-disabled,
@@ -431,15 +452,77 @@ tbody tr.selected:hover td {
 .status-pill-inactive,
 .status-pill--inactive,
 .status-pill-error,
-.status-pill--error {
+.status-pill--error,
+.status-pill-danger,
+.status-pill--danger,
+.status-pill-cancelled,
+.status-pill--cancelled,
+.status-pill-rejected,
+.status-pill--rejected {
   background-color: var(--error-red-light);
   color: var(--error-red-dark);
+  border-color: #fca5a5;
 }
 
 .status-pill-info,
-.status-pill--info {
+.status-pill--info,
+.status-pill-ongoing,
+.status-pill--ongoing,
+.status-pill-open,
+.status-pill--open,
+.status-pill-in-progress,
+.status-pill--in-progress,
+.status-pill-quoted,
+.status-pill--quoted,
+.status-pill-quotation_created,
+.status-pill--quotation_created,
+.status-pill-quotation-created,
+.status-pill--quotation-created,
+.status-pill-quotation_sent,
+.status-pill--quotation_sent,
+.status-pill-quotation-sent,
+.status-pill--quotation-sent {
   background-color: var(--purple-light-2);
   color: var(--purple-dark);
+  border-color: #c7d2fe;
+}
+
+.status-pill-neutral,
+.status-pill--neutral {
+  background-color: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* Generic Fallback Badges */
+.badge-success {
+  background-color: var(--complete-green-light) !important;
+  color: var(--complete-green-dark) !important;
+  border: 1px solid #86efac !important;
+}
+
+.badge-warning {
+  background-color: var(--warning-yellow-light) !important;
+  color: #B78103 !important;
+  border: 1px solid #fde68a !important;
+}
+
+.badge-danger {
+  background-color: var(--error-red-light) !important;
+  color: var(--error-red-dark) !important;
+  border: 1px solid #fca5a5 !important;
+}
+
+.badge-info {
+  background-color: var(--purple-light-2) !important;
+  color: var(--purple-dark) !important;
+  border: 1px solid #c7d2fe !important;
+}
+
+.badge-secondary {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
 }
 
 /* Global Table Action Icon Buttons */

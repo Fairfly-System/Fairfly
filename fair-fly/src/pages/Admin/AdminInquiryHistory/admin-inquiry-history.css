@@ -399,19 +399,30 @@
   letter-spacing: 0.03em;
 }
 
-.inquiry-status-pill.confirmed {
-  background-color: #dcfce7;
-  color: #15803d;
+.inquiry-status-pill.confirmed,
+.inquiry-status-pill.completed,
+.inquiry-status-pill.closed,
+.inquiry-status-pill.accepted {
+  background-color: var(--complete-green-light, #dcfce7);
+  color: var(--complete-green-dark, #15803d);
 }
 
 .inquiry-status-pill.pending {
-  background-color: #fef9c3;
+  background-color: var(--warning-yellow-light, #fef9c3);
   color: #a16207;
 }
 
-.inquiry-status-pill.cancelled {
-  background-color: #fee2e2;
-  color: #b91c1c;
+.inquiry-status-pill.cancelled,
+.inquiry-status-pill.rejected {
+  background-color: var(--error-red-light, #fee2e2);
+  color: var(--error-red-dark, #b91c1c);
+}
+
+.inquiry-status-pill.quoted,
+.inquiry-status-pill.ongoing,
+.inquiry-status-pill.in-progress {
+  background-color: var(--purple-light-2, #e0e7ff);
+  color: var(--purple-dark, #4338ca);
 }
 
 .inquiry-status-pill-padded {

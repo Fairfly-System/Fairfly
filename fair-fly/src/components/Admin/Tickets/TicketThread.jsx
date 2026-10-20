@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useAuthContext } from '../../../context/AuthContext';
 import './tickets.css';
@@ -16,7 +16,46 @@ export default function TicketThread({
   const [replyText, setReplyText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [participants, setParticipants] = useState(() => ticket?.participants || {});
+  const [subcollectionMessages, setSubcollectionMessages] = useState(null);
   const fetchedIdsRef = useRef(new Set());
+
+  // Subscribe to real-time messages subcollection: tickets/{ticket.id}/messages
+  useEffect(() => {
+    if (!ticket?.id) return;
+    try {
+      const messagesRef = collection(firestore, 'tickets', ticket.id, 'messages');
+      const q = query(messagesRef, orderBy('createdAt', 'asc'));
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            setSubcollectionMessages(list);
+          }
+        },
+        (err) => {
+          console.warn('[TicketThread] Subcollection onSnapshot notice:', err.message);
+        }
+      );
+      return () => unsub();
+    } catch (e) {
+      console.warn('[TicketThread] Subcollection listener setup notice:', e.message);
+    }
+  }, [ticket?.id]);
+
+  // Unified thread: prioritize subcollection messages with fallback/merge for legacy tickets
+  const messages = useMemo(() => {
+    if (subcollectionMessages && subcollectionMessages.length > 0) {
+      if (Array.isArray(ticket?.messages) && ticket.messages.length > 0) {
+        const map = new Map();
+        ticket.messages.forEach((m) => map.set(m.id || `${m.createdAt}_${m.message}`, m));
+        subcollectionMessages.forEach((m) => map.set(m.id || `${m.createdAt}_${m.message}`, m));
+        return Array.from(map.values()).sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      }
+      return subcollectionMessages;
+    }
+    return ticket?.messages || [];
+  }, [subcollectionMessages, ticket?.messages]);
 
   // Merge server-provided participants when ticket prop updates
   useEffect(() => {
@@ -75,7 +114,6 @@ export default function TicketThread({
   useEffect(() => {
     if (!ticket) return;
 
-    const messages = ticket.messages || [];
     const missingIds = [];
 
     if (ticket.operatorId && !participants[ticket.operatorId] && !fetchedIdsRef.current.has(ticket.operatorId)) {
@@ -83,7 +121,7 @@ export default function TicketThread({
       fetchedIdsRef.current.add(ticket.operatorId);
     }
 
-    messages.forEach((msg) => {
+    (messages || []).forEach((msg) => {
       if (msg.senderId && !participants[msg.senderId] && !fetchedIdsRef.current.has(msg.senderId)) {
         missingIds.push(msg.senderId);
         fetchedIdsRef.current.add(msg.senderId);
@@ -139,7 +177,7 @@ export default function TicketThread({
     };
 
     resolveParticipants();
-  }, [ticket, participants]);
+  }, [ticket, messages, participants]);
 
   if (!ticket) {
     return (
@@ -180,8 +218,6 @@ export default function TicketThread({
     if (isLoading) return;
     await onStatusChange(ticket.id, 'Ongoing');
   };
-
-  const messages = ticket.messages || [];
 
   // Derive operator display details
   const opInfo = participants[ticket.operatorId] || {};

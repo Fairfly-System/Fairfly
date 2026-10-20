@@ -67,8 +67,11 @@ export default function AddServiceModal({ onClose }) {
 
     const selectedObj = adminServices.find((s) => s.id === form.serviceId);
     const payload = {
-      ...form,
+      clientName: form.clientName.trim(),
+      serviceId: form.serviceId,
       serviceType: selectedObj ? selectedObj.name : form.serviceType,
+      priorityType: form.priority?.toLowerCase().includes('high') ? 'high' : 'normal',
+      source: form.source,
       workflowIds: selectedObj?.workflowIds || [],
     };
 

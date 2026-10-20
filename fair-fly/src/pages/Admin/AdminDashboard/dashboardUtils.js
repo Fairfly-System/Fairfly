@@ -62,10 +62,21 @@ export function formatReportPeriod(analytics) {
 }
 
 export function toRevenueChartData(revenueTrend = []) {
-  return revenueTrend.map(({ label, revenue }) => ({
-    month: label,
-    revenue: Number(revenue || 0),
-  }));
+  return revenueTrend.map(({ label, revenue }) => {
+    let formattedLabel = label;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(label)) {
+      const d = new Date(label + 'T00:00:00Z');
+      formattedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    } else if (/^\d{4}-\d{2}$/.test(label)) {
+      const d = new Date(label + '-01T00:00:00Z');
+      formattedLabel = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+    }
+    return {
+      month: formattedLabel,
+      rawLabel: label,
+      revenue: Number(revenue || 0),
+    };
+  });
 }
 
 export function escapeCsvValue(value) {

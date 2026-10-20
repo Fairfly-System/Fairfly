@@ -269,5 +269,18 @@ service cloud.firestore {
         || (isOperator() && resource.data.operatorId == request.auth.uid);
       allow create, update, delete: if false;
     }
+
+    // ── System Stats & Aggregations ───────────────────────────────
+    // Strictly backend server-only mutations via Firebase Admin SDK.
+    // Admins can read system statistics for real-time KPI metrics.
+    match /system_stats/{statId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /systemStats/{statId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
   }
 }
+

@@ -175,7 +175,7 @@ async function runTests() {
   assert.strictEqual(receiptData1.amount, 24500);
   assert.strictEqual(receiptData1.status, 'PAID');
   assert(receiptData1.qrTrackingUrl.includes(cashResData.serviceCode), 'QR tracking URL must contain serviceCode');
-  assert(receiptData1.qrCodeDataUrl.startsWith('data:image/png;base64,'), 'QR data URL must be valid base64 image');
+  assert.strictEqual(receiptData1.qrCodeDataUrl, undefined, 'Base64 QR blob must be omitted from Firestore document for bandwidth efficiency');
   console.log('✓ Firestore state verified: activeServices + receipts + quotations atomically consistent');
 
   // -----------------------------------------------------------------------------------
@@ -231,8 +231,8 @@ async function runTests() {
   };
   await db.collection(COLLECTIONS.QUOTATIONS).doc(quoteId2).set(quotation2);
 
+  const paymentId2 = `PAY-PM-${Date.now()}`;
   const paymentRecord2 = {
-    id: `PAY-PM-${Date.now()}`,
     quotationId: quoteId2,
     clientUid: testClientUid,
     branchUid: testBranchUid,
@@ -243,10 +243,10 @@ async function runTests() {
     status: 'PENDING',
     createdAt: now
   };
-  await db.collection(COLLECTIONS.PAYMENTS).doc(paymentRecord2.id).set(paymentRecord2);
+  await db.collection(COLLECTIONS.PAYMENTS).doc(paymentId2).set(paymentRecord2);
 
   // Trigger backend payment finalization (simulating verified webhook/verification)
-  const pmResult = await finalizeSuccessfulPayment(paymentRecord2.id, {
+  const pmResult = await finalizeSuccessfulPayment(paymentId2, {
     paymentId: `pay_pm_test_${Date.now()}`,
     paymentMethod: 'PayMongo QR Ph'
   });
@@ -262,7 +262,7 @@ async function runTests() {
   console.log(`✓ E-Receipt Issued: ${pmResult.receiptNo} | Service Code: ${pmResult.serviceCode}`);
 
   // Test PayMongo idempotent callback repetition
-  const repeatedPmResult = await finalizeSuccessfulPayment(paymentRecord2.id, {
+  const repeatedPmResult = await finalizeSuccessfulPayment(paymentId2, {
     paymentId: `pay_pm_test_repeat`,
     paymentMethod: 'PayMongo QR Ph'
   });

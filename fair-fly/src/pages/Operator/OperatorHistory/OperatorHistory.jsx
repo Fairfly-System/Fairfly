@@ -148,9 +148,10 @@ export default function OperatorHistory() {
         header: 'Status',
         render: (item) => {
           const s = (item.status || '').toLowerCase();
-          const isComp = s === 'completed';
-          const isCanc = s === 'cancelled';
-          const isConf = s === 'confirmed';
+          const isComp = ['completed', 'accepted', 'paid', 'fulfilled'].includes(s);
+          const isCanc = ['cancelled', 'rejected'].includes(s);
+          const isConf = ['confirmed', 'active'].includes(s);
+          const isInfo = ['quoted', 'ongoing', 'in-progress'].includes(s);
           return (
             <span
               className={`status-pill ${
@@ -160,9 +161,10 @@ export default function OperatorHistory() {
                   ? 'status-pill-disabled'
                   : isConf
                   ? 'status-pill-active'
+                  : isInfo
+                  ? 'status-pill-info'
                   : 'status-pill-pending'
               }`}
-              style={isCanc ? { background: '#fee2e2', color: '#b91c1c', borderColor: '#f87171' } : undefined}
             >
               {item.status}
             </span>

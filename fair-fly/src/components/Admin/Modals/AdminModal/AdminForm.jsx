@@ -121,7 +121,6 @@ export default function AdminForm({ onSubmit, isLoading, initialData }) {
     const payload = {
       username: username.trim(),
       fullName: fullName.trim() || username.trim(),
-      name: fullName.trim() || username.trim(),
       phone: phone.trim(),
       status: status,
       assignedOperators: assignedOperators

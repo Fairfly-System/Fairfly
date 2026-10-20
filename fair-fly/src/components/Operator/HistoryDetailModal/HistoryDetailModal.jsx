@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useSubmittedRequirements } from '../../../hooks/useSubmittedRequirements';
 import { useLightbox, isImageUrl } from '../../UI/ImageLightbox/ImageLightbox';
+import { usePdfModal, isPdfUrl } from '../../Shared/PdfDocument/PdfDocumentView';
 import './history-detail-modal.css';
 
 function formatDate(val) {
@@ -19,6 +20,7 @@ function formatCurrency(val) {
 
 export default function HistoryDetailModal({ isOpen, onClose, data, type = 'service' }) {
   const { openLightbox } = useLightbox();
+  const { openPdfModal } = usePdfModal();
 
   const isService = type === 'service' || Boolean(data?.serviceType && (data?.steps || data?.totalSteps || data?.price));
   const isCancelled = (data?.status || '').toLowerCase() === 'cancelled';
@@ -116,21 +118,18 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
                   ? 'status-pill-completed'
                   : isCancelled
                     ? 'status-pill-disabled'
+                    : (data.status || '').toLowerCase() === 'pending'
+                    ? 'status-pill-pending'
                     : 'status-pill-active'
                 }`}
-              style={{
-                background: isCancelled ? '#fee2e2' : undefined,
-                color: isCancelled ? '#b91c1c' : undefined,
-                borderColor: isCancelled ? '#f87171' : undefined
-              }}
             >
               <i className={`fa-solid ${isCompleted ? 'fa-check' : isCancelled ? 'fa-xmark' : 'fa-clock'}`} style={{ marginRight: '0.3rem' }}></i>
               {data.status || (isCancelled ? 'Cancelled' : isCompleted ? 'Completed' : 'Recorded')}
             </span>
 
-            {data.priority && (
-              <span className={`op-priority ${data.priorityType || 'normal'}`}>
-                {data.priority}
+            {(data.priority || data.priorityType) && (
+              <span className={`op-priority ${data.priorityType || (data.priority?.toLowerCase().includes('high') ? 'high' : 'normal')}`}>
+                {data.priority || (data.priorityType === 'high' ? 'High Priority' : 'Normal Priority')}
               </span>
             )}
           </div>
@@ -451,16 +450,32 @@ export default function HistoryDetailModal({ isOpen, onClose, data, type = 'serv
                               )}
                             </div>
                           </div>
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="op-history-doc-download-btn"
-                            title="Open / Download Document"
-                          >
-                            <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                            <span>View Document</span>
-                          </a>
+                          {isPdfUrl(fileUrl, fileName) ? (
+                            <button
+                              type="button"
+                              className="op-history-doc-download-btn"
+                              title="View PDF Document"
+                              onClick={() => openPdfModal({
+                                type: 'file',
+                                url: fileUrl,
+                                title: fileName || 'Requirement Document'
+                              })}
+                            >
+                              <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                              <span>View PDF</span>
+                            </button>
+                          ) : (
+                            <a
+                              href={fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="op-history-doc-download-btn"
+                              title="Open / Download Document"
+                            >
+                              <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                              <span>View Document</span>
+                            </a>
+                          )}
                         </div>
                       )}
 

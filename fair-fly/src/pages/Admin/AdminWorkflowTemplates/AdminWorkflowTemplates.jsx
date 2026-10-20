@@ -133,7 +133,7 @@ export default function AdminWorkflowTemplates() {
         header: 'Service Type',
         render: (tmpl) => (
           <span className="workflow-badge">
-            {tmpl.serviceType || 'General'}
+            {tmpl.serviceType || tmpl.type || 'General'}
           </span>
         ),
       },

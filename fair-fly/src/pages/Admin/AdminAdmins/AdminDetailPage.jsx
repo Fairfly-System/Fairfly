@@ -169,7 +169,7 @@ export default function AdminDetailPage() {
       title={adminData?.fullName || adminData?.username || 'Administrator Details'}
       subtitle={adminData?.email || 'admin@fairfly.com'}
       status={adminData?.status ? adminData.status.toUpperCase() : 'ACTIVE'}
-      statusType={adminData?.status === 'Inactive' ? 'inactive' : 'active'}
+      statusType={adminData?.status === 'Inactive' ? 'danger' : 'success'}
       breadcrumbs={breadcrumbs}
       backTo="/admin/admins"
       backLabel="Back to Administrators"

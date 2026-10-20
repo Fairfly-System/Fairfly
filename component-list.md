@@ -833,3 +833,37 @@
   | :--- | :--- | :--- | :--- | :--- |
   | `onPieceClick` | `Function` | `undefined` | No | Callback invoked when a 3D block or pillar chip is clicked `(pillarId) => void` |
   | `activePillar` | `string` | `undefined` | No | Controlled active pillar id to highlight (`roof`, `chimney`, `blueWall`, `purpleWall`, `greenBase`, `orangeBase`) |
+
+---
+
+### `ProfilePage`
+- **Location:** [`src/pages/Shared/Profile/ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx)
+- **Style File:** [`src/pages/Shared/Profile/profile.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/profile.css)
+- **Functionality:** System-wide, role-adaptive user profile presentation and management. Displays tailored profile information for Admin, Operator, and Client roles:
+  - Header card featuring initials avatar, role badge (`status-pill`), quick contact details, and actions for "Edit Information" and "Change Password".
+  - Two structured tabs:
+    1. **Overview & Personal Info:** Contact details, system role & status metadata, and role-specific scopes (admin governance, operator qualification status, client government ID verification).
+    2. **Security & Password:** Dedicated multi-step password change workflow (Step 1: Firebase Auth reauthentication verification; Step 2: New password form; Step 3: Server-mediated password update).
+- **Appropriate Use:** Rendering the `/profile` page for authenticated users across `/admin/profile`, `/operator/profile`, and `/client/profile`.
+- **Props:** None (reads session from `useAuthContext`).
+
+---
+
+### `ProfileEditModal`
+- **Location:** [`src/components/Shared/ProfileEditModal/ProfileEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ProfileEditModal/ProfileEditModal.jsx)
+- **Functionality:** Reusable dialog for editing a user's basic personal and contact information. Features:
+  - Role-adaptive inputs: Full Name (Admin/Client), Branch Name & Representative Name (Operator), Contact Phone, and Address.
+  - Read-only email address input with explanatory label.
+  - Form validation preventing empty required fields.
+  - Integration with `BaseModal` and design system button utilities.
+- **Appropriate Use:** Profile self-editing modal triggered from `ProfilePage`.
+- **Props:**
+  | Prop | Type | Default | Required | Description |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `isOpen` | `boolean` | `false` | Yes | Controls modal visibility |
+  | `onClose` | `Function` | `undefined` | Yes | Callback to dismiss modal |
+  | `initialData` | `Object` | `null` | Yes | Current user document data |
+  | `role` | `string` | `'client'` | Yes | User role (`'admin'`, `'operator'`, or `'client'`) |
+  | `onSave` | `Function` | `undefined` | Yes | Callback `(formData) => void` on save |
+  | `isLoading` | `boolean` | `false` | No | Disables inputs and renders spinner during update |
+

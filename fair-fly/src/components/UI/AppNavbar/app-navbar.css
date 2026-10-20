@@ -191,6 +191,30 @@
   color: var(--text-mid);
 }
 
+/* ── Profile Action Button in Navbar ───────────────────────────── */
+.app-nav-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  text-decoration: none;
+  padding: 0.5625rem 0.875rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.app-nav-profile-btn:hover,
+.app-nav-profile-btn.active {
+  color: var(--purple-dark);
+  background-color: var(--purple-light-2);
+}
+
+.app-nav-profile-btn i {
+  font-size: 0.9375rem;
+}
+
 .app-nav-logout {
   display: flex;
   align-items: center;

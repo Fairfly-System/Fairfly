@@ -45,6 +45,18 @@ export function fetchTicketById(token, id, successCallback, errorCallback, setIs
   );
 }
 
+export function fetchTicketMessages(token, id, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/tickets/${id}/messages`,
+    'GET',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
 export function createTicket(token, ticketData, successCallback, errorCallback, setIsLoading) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   return ApiCaller(

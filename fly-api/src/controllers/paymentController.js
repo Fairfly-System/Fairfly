@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+const { admin, db } = require('../config/firebase');
 const { 
   createPaymongoCheckoutSession, 
   getPaymongoCheckoutSession, 
@@ -20,7 +20,8 @@ const COLLECTIONS = {
   INQUIRIES: 'inquiries',
   ACTIVE_SERVICES: 'activeServices',
   RECEIPTS: 'receipts',
-  USERS: 'users'
+  USERS: 'users',
+  SYSTEM_STATS: 'system_stats'
 };
 
 /**
@@ -93,6 +94,28 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
         paidAt: paymentData.paidAt || now,
         updatedAt: now
       });
+
+      // Atomically update platform & operator revenue stats
+      const paymentAmount = Number(paymentData.amount || 0);
+      const targetOperatorId = paymentData.operatorId || quotationData.operatorId || quotationData.branchUid;
+      const systemStatsRef = db.collection(COLLECTIONS.SYSTEM_STATS).doc('revenue');
+      const statsUpdate = {
+        totalRevenue: admin.firestore.FieldValue.increment(paymentAmount),
+        paidCount: admin.firestore.FieldValue.increment(1),
+        currency: 'PHP',
+        lastPaymentId: paymentId,
+        updatedAt: now
+      };
+      if (targetOperatorId) {
+        statsUpdate[`operators.${targetOperatorId}.totalRevenue`] = admin.firestore.FieldValue.increment(paymentAmount);
+        statsUpdate[`operators.${targetOperatorId}.paidCount`] = admin.firestore.FieldValue.increment(1);
+        statsUpdate[`operators.${targetOperatorId}.operatorId`] = targetOperatorId;
+        if (paymentData.branchName || quotationData.branchName) {
+          statsUpdate[`operators.${targetOperatorId}.branchName`] = paymentData.branchName || quotationData.branchName;
+        }
+      }
+      transaction.set(systemStatsRef, statsUpdate, { merge: true });
+
       return { 
         alreadyProcessed: true, 
         fulfillmentId: quotationData.activeServiceId, 
@@ -174,6 +197,27 @@ const finalizeSuccessfulPayment = async (paymentId, providerData = {}) => {
       paidAt: now,
       updatedAt: now
     });
+
+    // 6. Atomically update platform & operator revenue stats in dedicated aggregation document
+    const paymentAmount = Number(paymentData.amount || 0);
+    const targetOperatorId = paymentData.operatorId || quotationData.operatorId || quotationData.branchUid;
+    const systemStatsRef = db.collection(COLLECTIONS.SYSTEM_STATS).doc('revenue');
+    const statsUpdate = {
+      totalRevenue: admin.firestore.FieldValue.increment(paymentAmount),
+      paidCount: admin.firestore.FieldValue.increment(1),
+      currency: 'PHP',
+      lastPaymentId: paymentId,
+      updatedAt: now
+    };
+    if (targetOperatorId) {
+      statsUpdate[`operators.${targetOperatorId}.totalRevenue`] = admin.firestore.FieldValue.increment(paymentAmount);
+      statsUpdate[`operators.${targetOperatorId}.paidCount`] = admin.firestore.FieldValue.increment(1);
+      statsUpdate[`operators.${targetOperatorId}.operatorId`] = targetOperatorId;
+      if (paymentData.branchName || quotationData.branchName) {
+        statsUpdate[`operators.${targetOperatorId}.branchName`] = paymentData.branchName || quotationData.branchName;
+      }
+    }
+    transaction.set(systemStatsRef, statsUpdate, { merge: true });
 
     return { 
       alreadyProcessed: false, 
@@ -341,7 +385,6 @@ const recordCashPayment = async (req, res) => {
     const operatorName = req.userDetails?.name || req.userDetails?.fullName || 'Branch Operator';
 
     const paymentDocData = {
-      id: paymentId,
       quotationId,
       quoteNo: quotation.quoteNo || '',
       inquiryId: quotation.inquiryId || null,
@@ -349,13 +392,11 @@ const recordCashPayment = async (req, res) => {
       clientName: quotation.clientName || 'Walk-in Client',
       clientEmail: quotation.clientEmail || '',
       operatorId: req.user.uid,
-      receivedByOperatorId: req.user.uid,
       receivedByOperatorName: operatorName,
       branchName: quotation.branchName || req.userDetails?.branchName || 'Branch Office',
       serviceTitle: quotation.serviceTitle || 'Custom Service',
       serviceId: quotation.serviceId || null,
       amount: totalAmount,
-      amountInCentavos: Math.round(totalAmount * 100),
       currency: 'PHP',
       provider: 'cash',
       providerReferenceId: `CASH-${Date.now()}`,
@@ -369,7 +410,6 @@ const recordCashPayment = async (req, res) => {
       paidAt: null,
       createdAt: now,
       updatedAt: now,
-      isWalkInCash: true,
       remarks: typeof remarks === 'string' && remarks.trim() ? remarks.trim() : 'Direct cash payment received at branch'
     };
 
@@ -517,7 +557,6 @@ const createCheckoutSession = async (req, res) => {
 
     // 7. Store new payment record in Firestore with state PAYMENT_PENDING
     const paymentDocData = {
-      id: paymentId,
       quotationId,
       quoteNo: quotation.quoteNo || '',
       inquiryId: quotation.inquiryId || null,
@@ -529,7 +568,6 @@ const createCheckoutSession = async (req, res) => {
       serviceTitle: quotation.serviceTitle || 'Custom Service',
       serviceId: quotation.serviceId || null,
       amount: totalAmount,
-      amountInCentavos: Math.round(totalAmount * 100),
       currency: 'PHP',
       provider: 'paymongo',
       providerReferenceId: checkoutSession.id,
@@ -762,6 +800,25 @@ const handlePaymongoWebhook = async (req, res) => {
 };
 
 /**
+ * Normalizes payment document for backward-compatible consumption.
+ */
+const formatPaymentDoc = (docSnap) => {
+  if (!docSnap) return null;
+  const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap;
+  if (!data) return null;
+  const docId = docSnap.id || data.id || null;
+  const amountVal = Number(data.amount || 0);
+
+  return {
+    ...data,
+    id: docId,
+    amountInCentavos: data.amountInCentavos !== undefined ? data.amountInCentavos : Math.round(amountVal * 100),
+    isWalkInCash: data.isWalkInCash !== undefined ? data.isWalkInCash : (data.provider === 'cash'),
+    receivedByOperatorId: data.receivedByOperatorId || data.operatorId || null
+  };
+};
+
+/**
  * Get payment details by ID
  * GET /api/payments/:id
  */
@@ -787,7 +844,7 @@ const getPaymentById = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: You can only view payments for your branch.' });
     }
 
-    return res.status(200).json({ id: doc.id, ...data });
+    return res.status(200).json(formatPaymentDoc(doc));
   } catch (error) {
     console.error('Error in getPaymentById:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -816,7 +873,7 @@ const getPayments = async (req, res) => {
 
     const snapshot = await queryRef.get();
     const payments = [];
-    snapshot.forEach(d => payments.push({ id: d.id, ...d.data() }));
+    snapshot.forEach(d => payments.push(formatPaymentDoc(d)));
 
     payments.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
@@ -828,6 +885,68 @@ const getPayments = async (req, res) => {
   }
 };
 
+/**
+ * Authoritative recalculation of system_stats/revenue from verified PAID payments
+ * POST /api/payments/sync-revenue-stats
+ * Guarded by requireRole('admin')
+ */
+const syncRevenueStats = async (req, res) => {
+  try {
+    const [paidPaymentsSnap, operatorsSnap] = await Promise.all([
+      db.collection(COLLECTIONS.PAYMENTS).where('status', '==', 'PAID').get(),
+      db.collection(COLLECTIONS.USERS).where('role', '==', 'operator').get()
+    ]);
+
+    const operatorsMap = {};
+    operatorsSnap.forEach(doc => {
+      const data = doc.data();
+      operatorsMap[doc.id] = {
+        operatorId: doc.id,
+        branchName: data.branchName || data.name || data.fullName || 'Branch',
+        email: data.email || '',
+        totalRevenue: 0,
+        paidCount: 0
+      };
+    });
+
+    let total = 0;
+    let count = 0;
+    paidPaymentsSnap.forEach(doc => {
+      const p = doc.data();
+      const amount = Number(p.amount || 0);
+      total += amount;
+      count++;
+      const opId = p.operatorId || p.branchUid;
+      if (opId && operatorsMap[opId]) {
+        operatorsMap[opId].totalRevenue += amount;
+        operatorsMap[opId].paidCount += 1;
+      }
+    });
+
+    const now = new Date().toISOString();
+    const systemStatsRef = db.collection(COLLECTIONS.SYSTEM_STATS).doc('revenue');
+    await systemStatsRef.set({
+      totalRevenue: total,
+      paidCount: count,
+      currency: 'PHP',
+      operators: operatorsMap,
+      updatedAt: now,
+      syncedBy: req.user?.uid || 'system'
+    });
+
+    return res.status(200).json({
+      success: true,
+      totalRevenue: total,
+      paidCount: count,
+      operators: operatorsMap,
+      updatedAt: now
+    });
+  } catch (error) {
+    console.error('Error in syncRevenueStats:', error);
+    return res.status(500).json({ error: 'Failed to sync revenue stats: ' + error.message });
+  }
+};
+
 module.exports = {
   createCheckoutSession,
   recordCashPayment,
@@ -835,5 +954,6 @@ module.exports = {
   handlePaymongoWebhook,
   getPaymentById,
   getPayments,
-  finalizeSuccessfulPayment
+  finalizeSuccessfulPayment,
+  syncRevenueStats
 };

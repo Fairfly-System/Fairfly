@@ -2,10 +2,11 @@ import './admin-layout.css';
 import { Outlet, useLocation } from 'react-router';
 import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { firestore } from '../../../firebase';
-import { collection, onSnapshot, query, where, limit, getCountFromServer } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, limit, getCountFromServer } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
+import { formatCurrency } from '../AdminDashboard/dashboardUtils';
 
 const baseAdminLinks = [
   { to: '/admin', end: true, icon: 'fa-solid fa-arrow-trend-up', label: 'Analytics' },
@@ -54,6 +55,8 @@ export default function AdminLayout() {
   }, [isSuperAdmin]);
 
   // Services & User KPIs
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [revenueLoading, setRevenueLoading] = useState(true);
   const [activeServices, setActiveServices] = useState(0);
   const [disabledServices, setDisabledServices] = useState(0);
   const [clients, setClients] = useState(0);
@@ -147,7 +150,7 @@ export default function AdminLayout() {
       }
       const lastSeenStr = user?.uid ? localStorage.getItem(`fairfly_admin_last_announcements_seen_${user.uid}`) : null;
       const lastSeenTime = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
-      
+
       const unread = snapshot.docs.filter((doc) => {
         const d = doc.data();
         if (d.authorUid === user?.uid) return false;
@@ -158,7 +161,7 @@ export default function AdminLayout() {
     }, () => setAnnouncementsCount(0));
 
     // 2.2 Messages (Unread messages for this admin)
-    let unsubMessages = () => {};
+    let unsubMessages = () => { };
     if (user?.uid) {
       const qMessages = query(
         collection(firestore, 'conversations'),
@@ -284,6 +287,25 @@ export default function AdminLayout() {
       setPendingInquiries(unread.length);
     }, () => setPendingInquiries(0));
 
+    // 2.8 Total Revenue (Optimized Realtime Single-Document Aggregation)
+    const revenueDocRef = doc(firestore, 'system_stats', 'revenue');
+    const unsubPayments = onSnapshot(
+      revenueDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setTotalRevenue(Number(data.totalRevenue || 0));
+        } else {
+          setTotalRevenue(0);
+        }
+        setRevenueLoading(false);
+      },
+      (err) => {
+        console.warn('AdminLayout system_stats subscription notice:', err?.message);
+        setRevenueLoading(false);
+      }
+    );
+
     return () => {
       clearInterval(interval);
       unsubAnnouncements();
@@ -293,6 +315,7 @@ export default function AdminLayout() {
       unsubFranchise();
       unsubAppointments();
       unsubInquiries();
+      unsubPayments();
     };
   }, [user?.uid, isSuperAdmin, assignedOperators, location.pathname]);
 
@@ -339,12 +362,13 @@ export default function AdminLayout() {
           {/* ── Revenue ── */}
           <KpiCard
             title="Total Revenue"
-            value="—"
-            detail="Revenue tracking not yet configured"
+            value={formatCurrency(totalRevenue)}
+            detail="Across all received payments"
             icon="fa-solid fa-peso-sign"
             iconColor="#16a34a"
-            badge="Placeholder"
-            badgeType="neutral"
+            badge="All-time"
+            badgeType="ok"
+            isLoading={revenueLoading}
           />
 
           {/* ── Active Services ── */}

@@ -6,6 +6,7 @@ import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import { fetchResources, recordResourceDownload } from '../../../services/resourceService';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
 import './operator-resources.css';
 
 const CATEGORIES = [
@@ -53,6 +54,7 @@ function formatFileSize(bytes) {
 export default function OperatorResources() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
+  const { openPdfModal } = usePdfModal();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -120,6 +122,14 @@ export default function OperatorResources() {
       addToast('No preview available for this file.', 'warning');
       return;
     }
+    if (isPdfUrl(resource.fileUrl, resource.fileName)) {
+      openPdfModal({
+        type: 'file',
+        url: resource.fileUrl,
+        title: resource.title || resource.fileName || 'Resource Document'
+      });
+      return;
+    }
     window.open(resource.fileUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -127,7 +137,6 @@ export default function OperatorResources() {
     try {
       // Record download in backend
       recordResourceDownload(userToken, resource.id, () => {}, (e) => console.warn('Download record warning:', e));
-
       addToast(`Downloading "${resource.title}"...`, 'info');
 
       // Trigger download

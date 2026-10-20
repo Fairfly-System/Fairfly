@@ -115,6 +115,28 @@ async function compileWorkflowStepsForService(serviceId, serviceType, providedWo
 }
 
 /**
+ * Normalizes activeService document for backward-compatible consumption.
+ */
+const formatActiveServiceDoc = (doc) => {
+  if (!doc) return null;
+  const data = typeof doc.data === 'function' ? doc.data() : doc;
+  if (!data) return null;
+  const docId = doc.id || data.id;
+  const stepsArr = Array.isArray(data.steps) ? data.steps : [];
+  const priorityType = data.priorityType || ((data.priority || '').toLowerCase().includes('high') ? 'high' : 'normal');
+
+  return {
+    ...data,
+    id: docId,
+    serviceUID: data.serviceUID || data.serviceId || null,
+    operatorId: data.operatorId || data.branchUid || null,
+    priorityType,
+    priority: data.priority || (priorityType === 'high' ? 'High Priority' : 'Normal Priority'),
+    totalSteps: data.totalSteps !== undefined ? data.totalSteps : stepsArr.length
+  };
+};
+
+/**
  * Get active services fulfillment list (supporting active and history views)
  */
 const getActiveServices = async (req, res) => {
@@ -173,7 +195,7 @@ const getActiveServices = async (req, res) => {
       results = results.slice(0, parseInt(limit, 10));
     }
 
-    return res.status(200).json(results);
+    return res.status(200).json(results.map(formatActiveServiceDoc));
   } catch (error) {
     console.error('Error fetching active services:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -267,22 +289,18 @@ const createActiveService = async (req, res) => {
       clientEmail: clientEmail ? clientEmail.trim() : '',
       clientPhone: clientPhone ? clientPhone.trim() : '',
       serviceId: serviceId || null,
-      serviceUID: serviceId || null,
       serviceType: finalServiceTitle,
       price,
       submittedRequirementsId: effectiveSubmittedReqId,
       source: req.body.source || (req.user?.uid ? 'Client Portal' : 'Walk-in'),
-      priority: priority || 'Normal Priority',
       priorityType: (priority || '').toLowerCase().includes('high') ? 'high' : 'normal',
       status: status || 'Pending',
       currentStepIndex: 0,
-      totalSteps: compiledSteps.length,
       startedAt: now,
       completedAt: null,
       steps: compiledSteps,
       createdAt: now,
       updatedAt: now,
-      operatorId: targetBranchUid,
       branchUid: targetBranchUid,
       branchName: resolvedBranchName || 'Branch Operator',
       additionalNotes: additionalNotes ? additionalNotes.trim() : ''

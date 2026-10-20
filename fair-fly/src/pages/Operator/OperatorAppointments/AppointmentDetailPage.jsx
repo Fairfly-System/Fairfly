@@ -146,11 +146,11 @@ export default function AppointmentDetailPage() {
               <div className="panel-details-list">
                 <div className="detail-item">
                   <span className="detail-label">Preferred Date</span>
-                  <span className="detail-value">{appointment.preferredDate || appointment.date || 'N/A'}</span>
+                  <span className="detail-value">{appointment.preferredDate || appointment.date || (appointment.scheduledAt ? new Date(appointment.scheduledAt).toLocaleDateString() : 'N/A')}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Preferred Time</span>
-                  <span className="detail-value">{appointment.preferredTime || appointment.time || 'N/A'}</span>
+                  <span className="detail-value">{appointment.preferredTime || appointment.time || (appointment.scheduledAt ? new Date(appointment.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A')}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Requested At</span>

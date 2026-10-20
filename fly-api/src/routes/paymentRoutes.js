@@ -6,7 +6,8 @@ const {
   verifyPayment, 
   handlePaymongoWebhook, 
   getPaymentById, 
-  getPayments 
+  getPayments,
+  syncRevenueStats
 } = require('../controllers/paymentController');
 const { verifyFirebaseToken, requireRole } = require('../middleware/auth');
 const { apiRateLimiter, publicRateLimiter } = require('../middleware/rateLimiter');
@@ -44,6 +45,18 @@ router.post(
     allowedFields(['quotationId', 'remarks']),
     apiRateLimiter,
     recordCashPayment
+  )
+);
+
+// Admin triggers authoritative recalculation/sync of system_stats/revenue from payments collection
+router.post(
+  '/sync-revenue-stats',
+  performanceProfiler(
+    'POST /payments/sync-revenue-stats',
+    verifyFirebaseToken,
+    requireRole('admin'),
+    apiRateLimiter,
+    syncRevenueStats
   )
 );
 

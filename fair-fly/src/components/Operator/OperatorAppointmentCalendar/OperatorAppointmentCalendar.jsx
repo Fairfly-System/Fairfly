@@ -49,18 +49,15 @@ function formatHumanDate(str) {
 export default function OperatorAppointmentCalendar({ userToken, userUid, onStatusUpdated }) {
   const { addToast } = useToast();
 
-  // Calendar view mode: 'month' or 'week'
-  const [viewMode, setViewMode] = useState('month');
-
-  // Currently viewed anchor date
-  const [currentDate, setCurrentDate] = useState(() => new Date());
-
   // Filter by status: 'all', 'Pending', 'Confirmed', 'Cancelled'
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Loaded appointments state
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Active date range emitted by the inner AppointmentCalendar
+  const [activeDateRange, setActiveDateRange] = useState(null);
 
   // In-memory cache by periodKey: { [periodKey]: appointmentsArray }
   const cacheRef = useRef({});
@@ -72,69 +69,26 @@ export default function OperatorAppointmentCalendar({ userToken, userUid, onStat
   // Calculate today ISO string
   const todayStr = useMemo(() => toISODateString(new Date()), []);
 
-  // Compute visible date bounds based on viewMode and currentDate
-  const dateRange = useMemo(() => {
-    if (viewMode === 'month') {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      // First day of current month
-      const firstOfMonth = new Date(year, month, 1);
-      const startDayOfWeek = firstOfMonth.getDay(); // 0 is Sun
-
-      // Grid start date (Sunday of the first week row)
-      const startDate = new Date(year, month, 1 - startDayOfWeek);
-
-      // Last day of current month
-      const lastOfMonth = new Date(year, month + 1, 0);
-      const endDayOfWeek = lastOfMonth.getDay();
-
-      // Grid end date (Saturday of the last week row)
-      const endDate = new Date(year, month + 1, 6 - endDayOfWeek);
-
-      return {
-        startDateStr: toISODateString(startDate),
-        endDateStr: toISODateString(endDate),
-        displayTitle: `${MONTH_NAMES[month]} ${year}`
-      };
-    } else {
-      // Week View
-      const curr = new Date(currentDate);
-      const day = curr.getDay();
-      const sunday = new Date(curr);
-      sunday.setDate(curr.getDate() - day);
-
-      const saturday = new Date(sunday);
-      saturday.setDate(sunday.getDate() + 6);
-
-      const sunMonth = MONTH_NAMES[sunday.getMonth()].slice(0, 3);
-      const satMonth = MONTH_NAMES[saturday.getMonth()].slice(0, 3);
-      const yearStr = saturday.getFullYear();
-
-      let displayTitle = '';
-      if (sunday.getMonth() === saturday.getMonth()) {
-        displayTitle = `${sunMonth} ${sunday.getDate()} – ${saturday.getDate()}, ${yearStr}`;
-      } else {
-        displayTitle = `${sunMonth} ${sunday.getDate()} – ${satMonth} ${saturday.getDate()}, ${yearStr}`;
+  // Synchronize visible date bounds from AppointmentCalendar
+  const handleDateRangeChange = useCallback(({ startDateStr, endDateStr, viewMode }) => {
+    setActiveDateRange((prev) => {
+      if (prev && prev.startDateStr === startDateStr && prev.endDateStr === endDateStr && prev.viewMode === viewMode) {
+        return prev;
       }
-
-      return {
-        startDateStr: toISODateString(sunday),
-        endDateStr: toISODateString(saturday),
-        displayTitle
-      };
-    }
-  }, [currentDate, viewMode]);
+      return { startDateStr, endDateStr, viewMode };
+    });
+  }, []);
 
   // Fetch appointments for the active date range with period caching
   const loadAppointments = useCallback((forceRefresh = false) => {
-    if (!userToken) return;
+    if (!userToken || !activeDateRange) return;
 
-    const { startDateStr, endDateStr } = dateRange;
+    const { startDateStr, endDateStr } = activeDateRange;
     const cacheKey = `${startDateStr}_${endDateStr}_${userUid || ''}`;
 
     if (!forceRefresh && cacheRef.current[cacheKey]) {
       setAppointments(cacheRef.current[cacheKey]);
+      setIsLoading(false);
       return;
     }
 
@@ -156,9 +110,9 @@ export default function OperatorAppointmentCalendar({ userToken, userUid, onStat
         addToast(toFriendlyMessage(err, 'Failed to retrieve appointments for this period.'), 'error');
         setIsLoading(false);
       },
-      () => {}
+      () => setIsLoading(false)
     );
-  }, [userToken, userUid, dateRange, addToast]);
+  }, [userToken, userUid, activeDateRange, addToast]);
 
   useEffect(() => {
     loadAppointments();
@@ -203,18 +157,7 @@ export default function OperatorAppointmentCalendar({ userToken, userUid, onStat
         appointments={appointments}
         onSelectAppointment={(appt) => setSelectedAppointment(appt)}
         isLoading={isLoading}
-        onDateRangeChange={({ startDateStr, endDateStr }) => {
-          if (startDateStr !== dateRange.startDateStr || endDateStr !== dateRange.endDateStr) {
-            fetchAppointments(
-              userToken,
-              { startDate: startDateStr, endDate: endDateStr },
-              (data) => {
-                const list = Array.isArray(data) ? data : (data?.data || []);
-                setAppointments(list);
-              }
-            );
-          }
-        }}
+        onDateRangeChange={handleDateRangeChange}
         onRefresh={handleRefresh}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}

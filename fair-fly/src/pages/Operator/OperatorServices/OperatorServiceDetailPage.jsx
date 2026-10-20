@@ -101,8 +101,8 @@ export default function OperatorServiceDetailPage() {
 
   const isOwnBranchService = Boolean(
     service &&
-      user &&
-      (service.createdByOperatorId === user.uid || service.branchUid === user.uid)
+    user &&
+    (service.createdByOperatorId === user.uid || service.branchUid === user.uid)
   );
 
   const canManageService = isQualified && isOwnBranchService;
@@ -312,8 +312,8 @@ export default function OperatorServiceDetailPage() {
         isOwnBranchService
           ? `Branch Exclusive • ${userDetails?.branchName || 'My Branch'}`
           : service?.isBranchExclusive
-          ? `Branch Exclusive • ${service.branchName || 'Partner Branch'}`
-          : 'Standard Global Service'
+            ? `Branch Exclusive • ${service.branchName || 'Partner Branch'}`
+            : 'Standard Global Service'
       }
       status={service?.status}
       statusType={service?.status === 'Active' ? 'success' : 'danger'}
@@ -572,7 +572,7 @@ export default function OperatorServiceDetailPage() {
                   <i className="fa-solid fa-diagram-project"></i> Workflow Checklist Stages ({attachedWorkflows.length > 0 ? attachedWorkflows.length : (service.steps?.length ? 1 : 0)})
                 </h2>
                 {attachedWorkflows.length > 0 && (
-                  <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>
+                  <span className="status-pill status-pill-active" style={{ fontSize: '0.75rem' }}>
                     {totalStepsCount} Total Stage{totalStepsCount !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -587,12 +587,12 @@ export default function OperatorServiceDetailPage() {
                           <i className="fa-solid fa-diagram-project" style={{ color: 'var(--purple)' }}></i>
                           <h3 className="attached-workflow-title">{wf.name}</h3>
                           {wf.serviceType && (
-                            <span className="status-pill" style={{ fontSize: '0.6875rem' }}>
+                            <span className="status-pill status-pill-info" style={{ fontSize: '0.6875rem' }}>
                               {wf.serviceType}
                             </span>
                           )}
                         </div>
-                        <span className="status-pill status-active" style={{ fontSize: '0.6875rem' }}>
+                        <span className="status-pill status-pill-active" style={{ fontSize: '0.6875rem' }}>
                           {Array.isArray(wf.steps) ? wf.steps.length : 0} Stage{Array.isArray(wf.steps) && wf.steps.length === 1 ? '' : 's'}
                         </span>
                       </div>

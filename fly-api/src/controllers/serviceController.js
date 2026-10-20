@@ -40,8 +40,7 @@ const createService = async (req, res) => {
       }
     }
 
-    const createdByOperatorId = isOperator ? req.user.uid : (serviceData.createdByOperatorId || null);
-    const branchUid = isOperator ? req.user.uid : (serviceData.branchUid || null);
+    const branchUid = isOperator ? req.user.uid : (serviceData.branchUid || serviceData.createdByOperatorId || null);
     const branchName = isOperator
       ? (req.userDetails?.branchName || req.userDetails?.name || 'Branch Operator')
       : (serviceData.branchName || null);
@@ -53,7 +52,6 @@ const createService = async (req, res) => {
 
     const docId = await addToDatabase(COLLECTIONS.SERVICES, {
       ...serviceData,
-      createdByOperatorId,
       branchUid,
       branchName,
       isBranchExclusive,
@@ -119,7 +117,9 @@ const updateService = async (req, res) => {
       if (!req.userDetails?.isQualified) {
         return res.status(403).json({ error: 'Forbidden: Only qualified operators can update services' });
       }
-      if (existing.createdByOperatorId !== req.user.uid) {
+      const branchMatch = (existing.branchUid && existing.branchUid === req.user.uid) || 
+        (existing.createdByOperatorId && existing.createdByOperatorId === req.user.uid);
+      if (!branchMatch) {
         return res.status(403).json({ error: 'Forbidden: You can only edit services created by your branch' });
       }
     }
@@ -227,7 +227,9 @@ const deleteService = async (req, res) => {
 
     const isOperator = req.userDetails?.role === 'operator';
     if (isOperator) {
-      if (existing.createdByOperatorId !== req.user.uid) {
+      const branchMatch = (existing.branchUid && existing.branchUid === req.user.uid) || 
+        (existing.createdByOperatorId && existing.createdByOperatorId === req.user.uid);
+      if (!branchMatch) {
         return res.status(403).json({ error: 'Forbidden: You can only delete services created by your branch' });
       }
     }
@@ -447,12 +449,20 @@ const getServices = async (req, res) => {
       staticDataCache.set(CACHE_KEYS.SERVICES, servicesList, 300);
     }
 
+    const formatService = (s) => ({
+      ...s,
+      branchUid: s.branchUid || s.createdByOperatorId || null,
+      createdByOperatorId: s.createdByOperatorId || s.branchUid || null
+    });
+
     if (branchUid) {
-      const filtered = servicesList.filter((s) => !s.isBranchExclusive || s.branchUid === branchUid);
+      const filtered = servicesList
+        .filter((s) => !s.isBranchExclusive || s.branchUid === branchUid || s.createdByOperatorId === branchUid)
+        .map(formatService);
       return res.status(200).json(filtered);
     }
 
-    return res.status(200).json(servicesList);
+    return res.status(200).json(servicesList.map(formatService));
   } catch (error) {
     console.error('Error fetching services:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -472,7 +482,12 @@ const getServiceById = async (req, res) => {
       return res.status(404).json({ error: 'Service not found' });
     }
 
-    return res.status(200).json({ id, ...service });
+    return res.status(200).json({
+      id,
+      ...service,
+      branchUid: service.branchUid || service.createdByOperatorId || null,
+      createdByOperatorId: service.createdByOperatorId || service.branchUid || null
+    });
   } catch (error) {
     console.error('Error getting service by ID:', error);
     return res.status(500).json({ error: 'Internal Server Error' });

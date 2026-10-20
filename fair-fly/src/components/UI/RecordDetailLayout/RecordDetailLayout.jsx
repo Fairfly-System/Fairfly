@@ -102,15 +102,23 @@ export default function RecordDetailLayout({
   }
 
   const getStatusClass = () => {
-    switch (statusType) {
+    const st = (statusType || '').toLowerCase();
+    switch (st) {
       case 'success':
+      case 'active':
         return 'status-pill-active';
       case 'warning':
+      case 'pending':
         return 'status-pill-pending';
       case 'danger':
+      case 'disabled':
+      case 'inactive':
+      case 'error':
         return 'status-pill-disabled';
       case 'info':
+      case 'purple':
         return 'status-pill-info';
+      case 'neutral':
       default:
         return 'status-pill-neutral';
     }

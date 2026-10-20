@@ -46,7 +46,6 @@ const createResource = async (req, res) => {
       fileName: fileName || 'resource-file',
       fileSize: Number(fileSize) || 0,
       fileType: fileType || 'application/octet-stream',
-      fileExtension: fileExtension || (fileName ? fileName.split('.').pop().toLowerCase() : ''),
       visibility: visibility || 'all',
       downloadCount: 0,
       uploadedByUid: req.user.uid,
@@ -59,7 +58,11 @@ const createResource = async (req, res) => {
     const docId = generatePrefixedId(ID_PREFIXES.RESOURCE);
     const docRef = db.collection(COLLECTIONS.RESOURCES).doc(docId);
     await docRef.set(newResource);
-    const createdData = { id: docId, ...newResource };
+    const createdData = { 
+      id: docId, 
+      ...newResource, 
+      fileExtension: (newResource.fileName && newResource.fileName.includes('.') ? newResource.fileName.split('.').pop().toLowerCase() : '') 
+    };
 
     // Dispatch notifications to operators if visibility allows
     if (visibility !== 'admin') {
@@ -114,7 +117,11 @@ const getResources = async (req, res) => {
     }
 
     const snapshot = await queryRef.get();
-    let resources = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let resources = snapshot.docs.map(doc => {
+      const data = doc.data();
+      const derivedExt = data.fileExtension || (data.fileName && data.fileName.includes('.') ? data.fileName.split('.').pop().toLowerCase() : '');
+      return { id: doc.id, ...data, fileExtension: derivedExt };
+    });
 
     // Client-side sort by createdAt desc
     resources.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -175,7 +182,9 @@ const getResourceById = async (req, res) => {
       return res.status(404).json({ error: 'Resource not found' });
     }
 
-    const data = { id: doc.id, ...doc.data() };
+    const rawData = doc.data();
+    const derivedExt = rawData.fileExtension || (rawData.fileName && rawData.fileName.includes('.') ? rawData.fileName.split('.').pop().toLowerCase() : '');
+    const data = { id: doc.id, ...rawData, fileExtension: derivedExt };
     return res.status(200).json(data);
   } catch (error) {
     console.error('Error getting resource by id:', error);

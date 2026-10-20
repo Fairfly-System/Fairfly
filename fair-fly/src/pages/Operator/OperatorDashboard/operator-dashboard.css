@@ -146,6 +146,12 @@
   border: 1px solid #a5b4fc;
 }
 
+.op-status-badge.pending {
+  background: var(--warning-yellow-light, #fef3c7);
+  color: #B78103;
+  border: 1px solid #fde68a;
+}
+
 
 .op-perform-procedure-btn {
   display: inline-flex;

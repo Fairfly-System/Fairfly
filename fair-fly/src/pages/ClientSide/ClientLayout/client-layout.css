@@ -19,7 +19,6 @@
 
 .client-portal-main {
   width: 100%;
-  max-width: 96rem;
   margin: 0 auto;
   padding: 2rem 2rem 4rem;
   display: flex;
@@ -35,7 +34,9 @@
   }
 }
 
-@media (max-width: 25rem) { /* 400px down to 320px */
+@media (max-width: 25rem) {
+
+  /* 400px down to 320px */
   .client-portal-main {
     padding: 1rem 0.5rem 2.5rem;
     gap: 1rem;

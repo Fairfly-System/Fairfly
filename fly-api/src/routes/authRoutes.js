@@ -8,9 +8,13 @@ const {
   verifyRegistrationCode,
   resendRegistrationCode,
   reuploadId,
-  checkAccountStatusForLogin
+  checkAccountStatusForLogin,
+  getProfile,
+  updateProfile,
+  changePassword
 } = require('../controllers/authController');
-const { publicRateLimiter } = require('../middleware/rateLimiter');
+const { publicRateLimiter, apiRateLimiter } = require('../middleware/rateLimiter');
+const { verifyFirebaseToken } = require('../middleware/auth');
 const { allowedFields } = require('../middleware/allowedFields');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 
@@ -113,6 +117,37 @@ router.post(
     publicRateLimiter,
     allowedFields(['email']),
     checkAccountStatusForLogin
+  )
+);
+
+// Authenticated user profile routes (JWT identity verified, rate-limited)
+router.get(
+  '/profile',
+  performanceProfiler('GET /auth/profile', verifyFirebaseToken, apiRateLimiter, getProfile)
+);
+
+const PROFILE_ALLOWED_FIELDS = ['fullName', 'name', 'branchName', 'phone', 'contactNumber', 'address'];
+
+router.patch(
+  '/profile',
+  performanceProfiler(
+    'PATCH /auth/profile',
+    verifyFirebaseToken,
+    apiRateLimiter,
+    allowedFields(PROFILE_ALLOWED_FIELDS),
+    updateProfile
+  )
+);
+
+// Dedicated Change Password route (fresh reauthentication verified, rate-limited)
+router.post(
+  '/change-password',
+  performanceProfiler(
+    'POST /auth/change-password',
+    verifyFirebaseToken,
+    apiRateLimiter,
+    allowedFields(['newPassword', 'confirmPassword']),
+    changePassword
   )
 );
 

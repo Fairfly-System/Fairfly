@@ -53,7 +53,6 @@ const createAdmin = async (req, res) => {
       email: email.trim().toLowerCase(),
       fullName: displayName,
       username: (username || displayName).trim(),
-      name: displayName,
       phone: phone ? phone.trim() : '',
       role: 'admin',
       isSuperAdmin: false,

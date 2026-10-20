@@ -474,7 +474,7 @@ export default function OperatorDetailPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={revenueData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eceef3" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
                     <YAxis
                       tick={{ fontSize: 12 }}
                       tickFormatter={(val) => `₱${Math.round(val / 1000)}k`}

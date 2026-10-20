@@ -324,12 +324,16 @@ export default function HistoryContent() {
                 </tr>
               ) : (
                 inquiries.map((inq) => {
-                  const statusLower = (inq.status || 'pending').toLowerCase();
+                  const statusLower = (inq.status || 'submitted').toLowerCase();
                   let statusPillClass = 'status-pill status-pill-pending';
-                  if (['confirmed', 'accepted', 'completed', 'active'].includes(statusLower)) {
+                  if (['confirmed', 'accepted', 'completed', 'active', 'closed', 'resolved', 'paid', 'fulfilled'].includes(statusLower)) {
                     statusPillClass = 'status-pill status-pill-active';
-                  } else if (['cancelled', 'rejected'].includes(statusLower)) {
+                  } else if (['cancelled', 'rejected', 'disabled'].includes(statusLower)) {
                     statusPillClass = 'status-pill status-pill-disabled';
+                  } else if (['quoted', 'in-progress', 'ongoing', 'reviewing', 'quotation_created', 'quotation_sent'].includes(statusLower)) {
+                    statusPillClass = 'status-pill status-pill-info';
+                  } else if (['submitted', 'pending', 'waiting', 'in-review'].includes(statusLower)) {
+                    statusPillClass = 'status-pill status-pill-pending';
                   }
 
                   return (
@@ -373,12 +377,12 @@ export default function HistoryContent() {
                       </td>
                       <td>
                         {inq.archived ? (
-                          <span className="status-pill status-pill-disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                          <span className="status-pill status-pill-neutral">
                             <i className="fa-solid fa-box-archive" style={{ marginRight: '0.3rem' }}></i>Archived
                           </span>
                         ) : (
-                          <span className={statusPillClass} style={{ textTransform: 'capitalize' }}>
-                            {inq.status || 'Pending'}
+                          <span className={statusPillClass}>
+                            {(inq.status || 'Submitted').replace(/_/g, ' ')}
                           </span>
                         )}
                       </td>

@@ -240,14 +240,12 @@ async function runTests() {
   // Step 10: Client payment via PayMongo simulation & fulfillment creation
   const paymentId1 = `PAY-TEST-${Date.now()}`;
   const paymentDoc1 = {
-    id: paymentId1,
     quotationId: quote1Data.id,
     quoteNo: quote1Data.quoteNo || quote1Data.id,
     inquiryId: inquiryId1,
     clientUid: testClientUid,
     clientName: 'Juan Dela Cruz',
     amount: 15000,
-    amountInCentavos: 1500000,
     status: 'PAYMENT_PENDING',
     provider: 'paymongo',
     createdAt: now

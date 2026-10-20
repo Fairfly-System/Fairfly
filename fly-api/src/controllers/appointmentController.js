@@ -24,7 +24,11 @@ const COLLECTIONS = {
  */
 function timeToMinutes(timeStr) {
   if (!timeStr || typeof timeStr !== 'string') return null;
-  const trimmed = timeStr.trim();
+  let trimmed = timeStr.trim();
+  // If timeStr is a range like "09:00 - 10:00" or "09:00-10:00", use the starting time
+  if (trimmed.includes('-') || trimmed.includes('–')) {
+    trimmed = trimmed.split(/[-–]/)[0].trim();
+  }
   // 24h format HH:mm or HH:mm:ss
   const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (match24) {
@@ -46,6 +50,75 @@ function timeToMinutes(timeStr) {
 }
 
 /**
+ * Unifies date string (YYYY-MM-DD) and time string (HH:mm or HH:mm AM/PM) into canonical ISO 8601 UTC timestamp.
+ * Assumes Philippine Standard Time (PST, Asia/Manila, UTC+8).
+ */
+function toCanonicalScheduledAt(dateStr, timeStr, explicitScheduledAt = null) {
+  if (explicitScheduledAt) {
+    const d = new Date(explicitScheduledAt);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const trimmedDate = dateStr.trim();
+  const [y, m, d] = trimmedDate.split('-').map(Number);
+  if (!y || !m || !d) return null;
+
+  const minsFromMidnight = timeToMinutes(timeStr) ?? 600; // default 10:00 AM (600 mins)
+  const hours = Math.floor(minsFromMidnight / 60);
+  const minutes = minsFromMidnight % 60;
+
+  // Manila is UTC+8 -> UTC hour is hours - 8
+  const utcMs = Date.UTC(y, m - 1, d, hours - 8, minutes, 0);
+  return new Date(utcMs).toISOString();
+}
+
+/**
+ * Formats/normalizes an appointment document on read.
+ * Guarantees that canonical scheduledAt is present alongside backward-compatible preferredDate and preferredTime.
+ */
+function formatAppointmentDoc(app) {
+  if (!app) return app;
+  let scheduledAt = app.scheduledAt || null;
+  let preferredDate = app.preferredDate || app.appointmentDate || app.date || '';
+  let preferredTime = app.preferredTime || app.time || '';
+
+  if (!scheduledAt && preferredDate) {
+    scheduledAt = toCanonicalScheduledAt(preferredDate, preferredTime);
+  }
+
+  if (scheduledAt && (!preferredDate || !preferredTime)) {
+    try {
+      const dt = new Date(scheduledAt);
+      if (!isNaN(dt.getTime())) {
+        // Manila is UTC+8
+        const manilaDate = new Date(dt.getTime() + 8 * 60 * 60 * 1000);
+        const y = manilaDate.getUTCFullYear();
+        const m = String(manilaDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(manilaDate.getUTCDate()).padStart(2, '0');
+        const hours = manilaDate.getUTCHours();
+        const mins = String(manilaDate.getUTCMinutes()).padStart(2, '0');
+
+        if (!preferredDate) preferredDate = `${y}-${m}-${day}`;
+        if (!preferredTime) {
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const h12 = hours % 12 || 12;
+          preferredTime = `${String(h12).padStart(2, '0')}:${mins} ${period}`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  return {
+    ...app,
+    scheduledAt,
+    preferredDate,
+    preferredTime,
+    branchName: app.branchName || app.preferredBranchLocation || 'Main Branch',
+    operatorId: app.operatorId || app.branchUid || ''
+  };
+}
+
+/**
  * Request an appointment (Client or Operator)
  */
 const createAppointment = async (req, res) => {
@@ -60,27 +133,55 @@ const createAppointment = async (req, res) => {
       branchName,
       preferredDate, 
       preferredTime, 
+      scheduledAt,
       serviceType, 
       purpose 
     } = req.body;
 
-    if (!clientName || !clientPhone || !preferredDate) {
+    let effectiveDate = preferredDate;
+    let effectiveTime = preferredTime;
+    if (scheduledAt && (!effectiveDate || !effectiveTime)) {
+      try {
+        const d = new Date(scheduledAt);
+        if (!isNaN(d.getTime())) {
+          const pDate = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+          const y = pDate.getUTCFullYear();
+          const m = String(pDate.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(pDate.getUTCDate()).padStart(2, '0');
+          const hours = pDate.getUTCHours();
+          const mins = String(pDate.getUTCMinutes()).padStart(2, '0');
+          if (!effectiveDate) effectiveDate = `${y}-${m}-${day}`;
+          if (!effectiveTime) {
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const h12 = hours % 12 || 12;
+            effectiveTime = `${String(h12).padStart(2, '0')}:${mins} ${period}`;
+          }
+        }
+      } catch (e) {}
+    }
+
+    const effectiveClientName = (clientName || req.userDetails?.fullName || req.userDetails?.name || '').trim();
+    const effectiveClientPhone = (clientPhone || req.userDetails?.cellphone || req.userDetails?.phoneNumber || req.userDetails?.phone || '').trim();
+
+    if (!effectiveClientName || !effectiveClientPhone || !effectiveDate) {
       return res.status(400).json({ error: 'Client name, phone number, and preferred date are required' });
     }
 
     const now = new Date().toISOString();
     const resolvedBranchLocation = preferredBranchLocation || branchName || 'Main Branch';
     const resolvedBranchUid = branchUid || '';
+    const resolvedScheduledAt = toCanonicalScheduledAt(effectiveDate, effectiveTime, scheduledAt);
 
     const newAppointment = {
       clientUid: req.user?.uid || clientUid || '',
-      clientName: clientName.trim(),
+      clientName: effectiveClientName,
       clientEmail: clientEmail ? clientEmail.trim() : (req.user?.email || ''),
-      clientPhone: clientPhone.trim(),
+      clientPhone: effectiveClientPhone,
       preferredBranchLocation: resolvedBranchLocation,
       branchUid: resolvedBranchUid,
-      preferredDate: preferredDate,
-      preferredTime: preferredTime || '10:00 AM',
+      preferredDate: effectiveDate,
+      preferredTime: effectiveTime || '10:00 AM',
+      scheduledAt: resolvedScheduledAt,
       serviceType: serviceType || 'General Consultation',
       purpose: purpose || 'Consultation & Inquiry',
       status: 'Pending',
@@ -114,11 +215,15 @@ const createAppointment = async (req, res) => {
       }).catch(e => console.warn('Appointment client receipt notification warning:', e.message));
     }
 
-    return res.status(201).json({
+    const formatted = formatAppointmentDoc({
       id: docId,
       ...newAppointment,
       branchName: resolvedBranchLocation,
-      operatorId: resolvedBranchUid,
+      operatorId: resolvedBranchUid
+    });
+
+    return res.status(201).json({
+      ...formatted,
       message: 'Appointment requested successfully'
     });
   } catch (error) {
@@ -202,11 +307,7 @@ const getAppointments = async (req, res) => {
       }
     }
 
-    const normalizedResults = results.map(app => ({
-      ...app,
-      branchName: app.branchName || app.preferredBranchLocation || 'Main Branch',
-      operatorId: app.operatorId || app.branchUid || ''
-    }));
+    const normalizedResults = results.map(formatAppointmentDoc);
     return res.status(200).json(normalizedResults);
   } catch (error) {
     console.error('Error listing appointments:', error);
@@ -385,6 +486,9 @@ const scheduleFranchiseAppointment = async (req, res) => {
     const applicantName = appDoc.fullName || [appDoc.firstName, appDoc.lastName].filter(Boolean).join(' ') || 'Applicant';
     const now = new Date().toISOString();
 
+    const resolvedScheduledAt = toCanonicalScheduledAt(resolvedDate, startTime, req.body.scheduledAt);
+    const resolvedScheduledEndAt = toCanonicalScheduledAt(resolvedDate, endTime);
+
     const newAppointment = {
       type: 'franchise_consultation',
       franchiseApplicationId,
@@ -397,6 +501,8 @@ const scheduleFranchiseAppointment = async (req, res) => {
       preferredTime: `${startTime} - ${endTime}`,
       startTime,
       endTime,
+      scheduledAt: resolvedScheduledAt,
+      scheduledEndAt: resolvedScheduledEndAt,
       serviceType: 'Franchise Consultation',
       purpose: 'Franchise Application Interview & Capability Review',
       status: 'Confirmed',
@@ -417,23 +523,41 @@ const scheduleFranchiseAppointment = async (req, res) => {
       scheduledAppointmentDate: resolvedDate,
       scheduledStartTime: startTime,
       scheduledEndTime: endTime,
+      scheduledAt: resolvedScheduledAt,
       updatedAt: now
     });
 
-    return res.status(201).json({
+    return res.status(201).json(formatAppointmentDoc({
       id: appointmentId,
       ...newAppointment,
       message: 'Franchise consultation appointment scheduled successfully'
-    });
+    }));
   } catch (error) {
     console.error('Error scheduling franchise appointment:', error);
     return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
   }
 };
 
+/**
+ * Get single appointment details by ID
+ */
+const getAppointmentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Appointment ID is required' });
+    const appDoc = await getFromDatabase(`${COLLECTIONS.APPOINTMENTS}/${id}`);
+    if (!appDoc) return res.status(404).json({ error: 'Appointment not found' });
+    return res.status(200).json(formatAppointmentDoc({ id, ...appDoc }));
+  } catch (error) {
+    console.error('Error fetching appointment by ID:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointments,
+  getAppointmentById,
   updateAppointmentStatus,
   scheduleFranchiseAppointment
 };

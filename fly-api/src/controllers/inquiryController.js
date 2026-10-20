@@ -257,22 +257,13 @@ const createInquiry = async (req, res) => {
     // When submitted through client portal (or !isStaff), it strictly defaults to online workflow.
     // Staff/operator can record a walk-in intake with isWalkIn === true.
     const isWalkIn = isStaff ? (req.body.isWalkIn === true) : false;
-    const workflow = isWalkIn ? 'walk_in' : 'online';
-
     const newInquiry = {
       clientUid: effectiveClientUid,
       isWalkIn: isWalkIn,
-      workflow: workflow,
       clientType: isCompany ? 'company' : 'individual',
       companyName: isCompany ? (companyName || resolvedName).trim() : '',
       clientName: resolvedName.trim(),
-      firstName: (firstName || contactPersonFirstName || '').trim(),
-      middleInitial: (middleInitial || contactPersonMiddleInitial || '').trim(),
-      lastName: (lastName || contactPersonLastName || '').trim(),
       contactPerson: (resolvedContactPerson || resolvedName).trim(),
-      contactPersonFirstName: (contactPersonFirstName || firstName || '').trim(),
-      contactPersonMiddleInitial: (contactPersonMiddleInitial || middleInitial || '').trim(),
-      contactPersonLastName: (contactPersonLastName || lastName || '').trim(),
       email: resolvedEmail,
       phoneNumber: resolvedPhone,
       telNo: telNo || '',
@@ -287,9 +278,8 @@ const createInquiry = async (req, res) => {
       servicePrice: servicePrice || '',
       specifiedRequirements: resolvedSpecReqs,
       submittedRequirementsId: effectiveSubmittedReqId,
-      notes: notes || remarks || clientRemarks || resolvedSpecReqs || '',
-      remarks: remarks || clientRemarks || '',
-      clientRemarks: clientRemarks || remarks || '',
+      notes: (notes || '').trim(),
+      clientRemarks: (clientRemarks || remarks || '').trim(),
       agentName: agentName || (isOperatorUser ? req.userDetails?.name : 'Online Intake'),
       agentSignature: agentSignature || '',
       agentContact: req.userDetails?.phone || req.userDetails?.phoneNumber || '',
@@ -307,7 +297,6 @@ const createInquiry = async (req, res) => {
       archivedReason: null,
       createdAt: now,
       updatedAt: now,
-      operatorId: effectiveBranchUid || (isOperatorUser ? req.user?.uid : 'system_intake'),
       confirmedQuotationId: null,
       confirmedActiveServiceId: null
     };
@@ -404,6 +393,10 @@ const getInquiries = async (req, res) => {
         phoneNumber,
         fullName: clientName,
         cellphone: phoneNumber,
+        workflow: inq.workflow || (inq.isWalkIn ? 'walk_in' : 'online'),
+        remarks: inq.remarks || inq.clientRemarks || inq.notes || '',
+        branchUid: inq.branchUid || inq.operatorId || null,
+        operatorId: inq.operatorId || inq.branchUid || null,
         archived: inq.archived === true,
         archivedAt: inq.archivedAt || null,
         archivedBy: inq.archivedBy || null,
@@ -447,7 +440,11 @@ const getInquiryById = async (req, res) => {
       clientName,
       phoneNumber,
       fullName: clientName,
-      cellphone: phoneNumber
+      cellphone: phoneNumber,
+      workflow: inquiry.workflow || (inquiry.isWalkIn ? 'walk_in' : 'online'),
+      remarks: inquiry.remarks || inquiry.clientRemarks || inquiry.notes || '',
+      branchUid: inquiry.branchUid || inquiry.operatorId || null,
+      operatorId: inquiry.operatorId || inquiry.branchUid || null
     });
   } catch (error) {
     console.error('Error getting inquiry by ID:', error);
@@ -1036,7 +1033,6 @@ const attachServiceToInquiry = async (req, res) => {
       servicePrice: servicePrice,
       status: 'submitted',
       isWalkIn: isWalkIn,
-      workflow: isWalkIn ? 'walk_in' : 'online',
       serviceAttachedAt: now,
       serviceAttachedBy: req.user.uid,
       updatedAt: now

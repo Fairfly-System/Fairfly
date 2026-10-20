@@ -120,5 +120,65 @@ export function reuploadId(payload, successCallback, errorCallback, setIsLoading
   );
 }
 
+/**
+ * Fetch profile details for currently authenticated user
+ * @param {string} token - Firebase ID token
+ * @param {function} successCallback - Success handler
+ * @param {function} errorCallback - Error handler
+ * @param {function} setIsLoading - Loading setter
+ */
+export function fetchUserProfile(token, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/profile`,
+    'GET',
+    null,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+/**
+ * Update personal profile information for currently authenticated user
+ * @param {string} token - Firebase ID token
+ * @param {object} data - { fullName, name, branchName, phone, contactNumber, address }
+ * @param {function} successCallback - Success handler
+ * @param {function} errorCallback - Error handler
+ * @param {function} setIsLoading - Loading setter
+ */
+export function updateUserProfile(token, data, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/profile`,
+    'PATCH',
+    data,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+/**
+ * Submit password change request to backend
+ * @param {string} token - Fresh Firebase ID token (post-reauthentication)
+ * @param {object} payload - { newPassword, confirmPassword }
+ * @param {function} successCallback - Success handler
+ * @param {function} errorCallback - Error handler
+ * @param {function} setIsLoading - Loading setter
+ */
+export function changePasswordApi(token, payload, successCallback, errorCallback, setIsLoading) {
+  return ApiCaller(
+    `${API_BASE_URL}/api/auth/change-password`,
+    'POST',
+    payload,
+    { Authorization: `Bearer ${token}` },
+    successCallback,
+    errorCallback,
+    setIsLoading
+  );
+}
+
+
 
 

@@ -438,7 +438,7 @@ export default function OperatorServicesContent() {
         render: (item) => {
           const count = Array.isArray(item.requirements) ? item.requirements.length : 0;
           return (
-            <span className="status-pill status-active op-status-pill-small">
+            <span className="status-pill status-pill-active op-status-pill-small">
               {count} Requirement{count !== 1 ? 's' : ''}
             </span>
           );
@@ -586,6 +586,7 @@ export default function OperatorServicesContent() {
       <PageHeader
         title="Services Catalog"
         subtitle="Browse all standard catalog services and manage custom branch-exclusive offerings"
+        illustrationSrc="/pageImages/operator/services.png"
         primaryAction={
           isQualified
             ? {

@@ -1,5 +1,559 @@
 # Update Logs
 
+## [2026-10-18] Security & RBAC Enforcement: Operator Branch Name Made Strictly Read-Only (Admin Exclusive Governance)
+
+### Overview
+Enforced zero-trust governance and strict role-based access control preventing Operators from modifying their assigned `branchName` in the Operator Side Profile View. Marked branch names as read-only with explicit UI locking indicators, while preserving sole administrative authority to assign and modify operator branch names through the Head Office Admin Portal.
+
+### Architectural & Security Implementation
+1. **Frontend Defense (`fair-fly`):**
+   - **Operator Profile Edit Modal ([`ProfileEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ProfileEditModal/ProfileEditModal.jsx)):**
+     - Made `Branch Name` strictly `readOnly` and `disabled` with disabled cursor styling and background tokens.
+     - Added a `Read-Only` status pill with a lock icon next to the Branch Name label.
+     - Added descriptive guidance text: *"Assigned by Head Office. Only administrators can alter branch names."*
+     - Separated `Authorized Representative Name` (`fullName`) so operators can update their branch representative contact person without altering branch identity.
+     - Modified `handleSubmit` to omit `branchName` from the submitted update payload when `role === 'operator' || role === 'branch_operator'`.
+     - Updated submit button disabled condition so operators are not blocked by branch name validation.
+   - **Operator Profile View ([`ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx)):**
+     - Displayed an `[Admin Managed]` locked status badge alongside the Branch Name in the Basic Information card.
+     - Displayed a `[Admin Managed (Read-Only)]` status badge in the Franchise Branch Operational Details card under Branch Governance.
+
+2. **Backend Zero-Trust Enforcement (`fly-api`):**
+   - **Profile Update Endpoint ([`authController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/authController.js)):**
+     - If an operator (`currentData.role === 'operator' || currentData.role === 'branch_operator'`) attempts to send `branchName` in `PATCH /api/auth/profile`, the request is rejected with `403 Forbidden` (`Forbidden: Operators cannot modify their assigned branch name. Only administrators can alter branch names.`).
+     - If an operator attempts to send `name` in `PATCH /api/auth/profile`, the request is likewise rejected with `403 Forbidden`.
+     - When an operator updates `fullName`, it saves to `sanitizedUpdates.fullName` (Representative Name) without overwriting `name` in Firestore or replacing `displayName` in Firebase Auth, preserving the operator's branch identity.
+   - **Admin Operator Management ([`operatorController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/operatorController.js)):**
+     - Admins retain exclusive privilege to modify operator branch names via `PATCH /api/operators/:id` (guarded by `requireSuperAdmin`).
+     - Added automated synchronization: when an administrator updates `branchName`, `sanitizedUpdates.branchName`, `sanitizedUpdates.name`, and Firebase Auth `displayName` (`admin.auth().updateUser(id, { displayName: trimmedBranch })`) are all updated in lockstep.
+
+3. **Verification:**
+   - Executed security assertion test verifying 403 Forbidden rejection when an operator attempts to submit `branchName` or `name`, and successful profile updates for authorized representative details (`fullName`, `phone`, `address`).
+   - Built frontend bundle with `npm run build` in `fair-fly` with 0 errors.
+
+---
+
+## [2026-10-18] UI/UX Bugfix: Resolution of Incorrectly Colored Badges in Operator Inquiry Forms & Intake Modules
+
+### Overview
+Identified and resolved critical status badge color misclassifications and raw snake_case string rendering in the Operator Inquiry Forms module (both the Inquiry Forms list view and the Inquiry Intake detail page), with synchronized cross-module consistency across Admin and Client inquiry views.
+
+### Root Cause
+1. **Omission of `"paid"` from Success/Active Lists:**
+   - In [`OperatorInquiryForms.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx), inquiries with status `"paid"` were not matched in the active/completed status check (`['accepted', 'confirmed', 'completed', 'active']`), causing all paid inquiries (over 23 live branch records) to erroneously fall into `'status-pill-pending'` (yellow warning).
+   - In [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx), `getStatusBadgeType()` checked only `accepted` and `confirmed` for `success`, leaving `paid`, `completed`, and `active` unhandled and falling back to `'neutral'` (colorless washed-out gray).
+2. **Raw Underscored Strings Displayed in UI:**
+   - Statuses like `quotation_created` and `quotation_sent` were rendered directly without removing underscores, showing unpolished strings like `quotation_created` or `QUOTATION_CREATED`.
+3. **Pill-Shape and Border Inconsistencies:**
+   - Certain tags (such as `.inquiry-saf-badge` in [`inquiry-form-detail.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/inquiry-form-detail.css) and `.cif-req-badge` in [`create-inquiry-form-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/create-inquiry-form-modal.css)) lacked subtle borders or had rounded-pill `border-radius: 9999px;` contrary to the FairFly rectangular crisp badge design standard (`border-radius: 0;`).
+
+### Changes Implemented
+- **Operator Inquiry Forms List ([`OperatorInquiryForms.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx)):**
+  - Added dedicated `getInquiryStatusClass` helper correctly categorizing `['accepted', 'confirmed', 'completed', 'active', 'paid', 'fulfilled', 'closed', 'resolved']` as `status-pill-active` (complete green).
+  - Added `formatInquiryStatus` helper replacing underscores with spaces (`(status || 'Submitted').replace(/_/g, ' ')`).
+  - Mapped `quotation_created`, `quotation_sent`, `quoted`, `in-progress` to `status-pill-info` (purple/indigo), and `submitted`, `pending` to `status-pill-pending` (amber yellow).
+- **Inquiry Intake Detail Page ([`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx)):**
+  - Updated `getStatusBadgeType()` to return `'success'` for `paid`, `completed`, `active`, `accepted`, `confirmed`, `'purple'` for `quotation_created`/`quotation_sent`/`quoted`, `'warning'` for `submitted`/`pending`, and `'danger'` for `rejected`/`cancelled`.
+  - Formatted detail header status prop cleanly: `(form?.status || 'SUBMITTED').replace(/_/g, ' ').toUpperCase()`.
+  - Added crisp subtle border (`border: 1px solid #ddd6fe;`) to `.inquiry-saf-badge` in [`inquiry-form-detail.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/inquiry-form-detail.css).
+- **Admin Inquiry History & Detail ([`HistoryContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx), [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx)):**
+  - Synchronized status mappings and formatted status strings to ensure system-wide parity.
+- **Client Tracking & Modals ([`client-tracking.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css), [`inquiry-detail-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/InquiryDetailModal/inquiry-detail-modal.css)):**
+  - Replaced `border-radius: 9999px;` on `.inquiry-status-pill` with rectangular `border-radius: 0;` and added `.status-paid` and `.status-fulfilled` to green tokens.
+- **Global CSS Token Fallbacks ([`index.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/index.css)):**
+  - Added `.status-pill-fulfilled`, `.status-pill-submitted`, `.status-pill-quotation_created`, `.status-pill-quotation-created`, `.status-pill-quotation_sent`, `.status-pill-quotation-sent` as defense-in-depth token selectors.
+- **Verification:**
+  - Ran `npm run build` in `fair-fly` confirming 0 errors and verified against live Firestore records.
+
+
+
+## [2026-10-18] UI/UX Standardization: System-Wide Audit & Resolution of Inconsistent and Missing Badge Colors
+
+### Overview
+Conducted an exhaustive system scan across all UI components and views in `fair-fly` for status badges, pills, and indicators. Resolved color omissions (such as uncolored/faded `Closed` status badges in Support Tickets), fixed missing CSS class variants, eliminated improper fallbacks to warning/pending yellow, and established defense-in-depth badge token styling.
+
+### Key Changes
+- **Admin Support Tickets ([`tickets.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Tickets/tickets.css))**:
+  - Replaced faded washed-out gray `#f3f4f6` styling on `.ticket-status-badge.closed` with semantic completed green: `background-color: var(--complete-green-light); color: var(--complete-green-dark); border: 1px solid #86efac;`.
+  - Added explicit styles for `.ticket-status-badge.resolved` (complete green), `.ticket-status-badge.open` and `.ticket-status-badge.ongoing` (purple/indigo), and updated `.ticket-status-badge.pending` to use design token `var(--warning-yellow-light)`.
+- **Global Status Pill Token Aliases ([`index.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/index.css))**:
+  - Expanded `.status-pill` variants to include `.status-pill-closed`, `.status-pill-resolved`, `.status-pill-confirmed`, `.status-pill-accepted`, `.status-pill-paid`, `.status-active` under complete green.
+  - Added defense-in-depth support for `.status-pill-danger`, `.status-pill--danger`, `.status-pill-cancelled`, `.status-pill-rejected` under error red.
+  - Added `.status-pill-neutral` and `.status-pill--neutral` (`#f1f5f9`, `#475569`, border `#cbd5e1`).
+  - Implemented standard fallback styles for Bootstrap-style badges (`.badge-success`, `.badge-warning`, `.badge-danger`, `.badge-info`, `.badge-secondary`).
+- **Record Detail Layout ([`RecordDetailLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/RecordDetailLayout/RecordDetailLayout.jsx))**:
+  - Broadened `getStatusClass()` to parse `active`, `inactive`, `disabled`, `purple`, `neutral`, preventing detail header badges from falling into unstyled transparent/neutral states.
+- **Service Catalogs & Workflow Modals**:
+  - Fixed typo class `status-active` to canonical `status-pill-active` in [`ServiceContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminServices/ServiceContent.jsx), [`ServiceDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminServices/ServiceDetailPage.jsx), [`OperatorServicesContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServices/OperatorServicesContent.jsx), [`OperatorServiceDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServices/OperatorServiceDetailPage.jsx), and [`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx).
+- **Password Reset Requests Tab ([`PasswordResetRequestsTab.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminOperators/PasswordResetRequestsTab.jsx))**:
+  - Converted unstyled `badge badge-*` classes to standard system status pills (`status-pill-pending`, `status-pill-active`, `status-pill-disabled`, `status-pill-completed`, `status-pill-neutral`).
+- **Appointment Portals**:
+  - Updated [`OperatorAppointments.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorAppointments/OperatorAppointments.jsx), [`ClientAppointmentsPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientAppointments/ClientAppointmentsPage.jsx), and [`client-appointments.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientAppointments/client-appointments.css) so `completed` appointments render properly in semantic green rather than erroneously falling back to warning/pending yellow.
+  - Updated [`admin-appointments.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminAppointments/admin-appointments.css) `.badge-status-completed` to complete green.
+- **Inquiry & Quotation Tracking**:
+  - Fixed [`HistoryContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx) and [`admin-inquiry-history.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/admin-inquiry-history.css) so `closed` and `quoted` inquiries render with proper semantic green and info purple rather than yellow warning.
+  - Fixed [`OperatorHistory.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx) status mapping for `paid`, `accepted`, `fulfilled`, `rejected`, and `quoted`.
+  - Added `.quote-status-pill.status-paid, .status-completed` and `.inquiry-status-pill.status-completed, .status-closed` in [`client-tracking.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css).
+- **Operator Dashboard & Inquiries**:
+  - Added `.op-status-badge.pending` styling in [`operator-dashboard.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorDashboard/operator-dashboard.css) and updated [`OperatorDashboard.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx).
+  - Dynamically styled intake status badges in [`OperatorInquiryForms.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx).
+- **Verification & Build**:
+  - Successfully verified production build with `npm run build` in `fair-fly` (0 errors).
+
+## [2026-10-18] Deployment: Re-deployed Full-Stack System to Production Firebase with Production CORS & API URL
+
+### Overview
+Reconfigured environment targets and re-deployed the entire FairFly system to production on Firebase project `fairfly-1e83b`. Directed frontend API requests to the live deployed FairFly API and updated backend CORS to allow production FairFly origins.
+
+### Key Changes
+- **Frontend Configuration ([`fair-fly/.env`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/.env))**: Updated `VITE_API_BASE_URL` to `"https://fairfly-1e83b.web.app"` so all frontend API service calls (`ApiCaller`, `uploadFileToBackend`) route directly to the deployed production backend.
+- **Backend CORS & Environment ([`fly-api/.env`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/.env))**: Set `NODE_ENV=production` and updated `FRONTEND_URL` to `"https://fairfly-1e83b.web.app,https://fairfly-1e83b.firebaseapp.com"`.
+- **Production Build**: Compiled frontend via `npm run build` in [`fair-fly`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly) without errors.
+- **Firebase Deployment**: Successfully executed `firebase deploy --non-interactive` deploying Cloud Functions (`api` on Node 22 in `asia-southeast1`), Firebase Hosting (`fair-fly/dist`), Firestore security rules & indexes, and Cloud Storage security rules.
+- **Live Verification**: Verified live HTTP 200 responses from `https://fairfly-1e83b.web.app/api/services` with `Access-Control-Allow-Origin: https://fairfly-1e83b.web.app`.
+
+## [2026-10-18] Security & Audit: Comprehensive Full-Stack Security Audit & Report PDF Generation
+
+### Overview
+Conducted an exhaustive security audit across the FairFly system codebase covering both **Frontend (`fair-fly`)** and **Backend (`fly-api`)**, along with declarative cloud database rules (`firestore.rules` and `storage.rules`). Authored and rendered a 5-page enterprise PDF report at [`Fairfly_System_Security_Audit_Report.pdf`](file:///C:/Users/Isaac/Downloads/Fair2/Fairfly/Fairfly_System_Security_Audit_Report.pdf).
+
+### Key Audit Findings & Architecture Verified
+- **Frontend Practices & Protocols**: Verified Zero-Trust design, Firebase Client Auth token lifecycle (JWT), active real-time account status kill-switch (`onSnapshot` force sign-out on account suspension), dynamic route mounting (DOM exclusion of unauthorized roles), 100% backend CUD exclusivity (elimination of client `addDoc`/`updateDoc`), zero client storage uploads (`uploadBytes` removed), and public tracking PII masking (`maskClientName`).
+- **Backend Practices & Protocols**: Verified `verifyFirebaseToken` cryptographic JWT verification, 5-minute memory role cache (`userCache`) with real-time invalidation, multi-level RBAC (`requireRole` and `requireSuperAdmin`), object-level access control (BOLA/IDOR prevention), mass-assignment protection (`allowedFields`), 5-tier file upload pipeline in `fileSecurity.js` (magic bytes, MIME normalization, script scanning), tiered rate limiting (`publicRateLimiter`, `apiRateLimiter`, `trackerRateLimiter`), PayMongo cryptographic HMAC-SHA256 webhook verification with replay protection and timing-safe equality, atomic transaction idempotency locks (`db.runTransaction`), and asynchronous tamper-proof administrative logging (`adminLogger`).
+- **Generated Report**: Successfully generated 5-page PDF via headless Microsoft Edge rendering engine (`generateSystemSecurityAuditReport.js`) with zero layout overflows and perfect pagination.
+
+## [2026-10-18] Workflow Validation: Strictly Limit to Maximum of 1 Link per Step
+
+### Overview
+Updated [`WorkflowForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowForm.jsx) to enforce that **each workflow step can have at most one web link** (either from QuickLinks or manual entry, never both simultaneously).
+
+### Key Changes
+- In `WorkflowStepsModal`, switching between `From QuickLinks` and `Manual URL` tabs automatically resets the other attachment mode's link state (`setStepLinkUrl('')`, `setStepLinkTitle('')`), preventing overlapping or multiple link values from being attached.
+- Each created step strictly records a single `{ url, title }` link object (`step.link`).
+- Verified production build compiles cleanly (`npm run build`).
+
+## [2026-10-18] Performance: Debounced Query & Infinite Scroll Pagination for QuickLink Selector
+
+### Overview
+Upgraded [`QuickLinkSelectSearch.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/QuickLinkSelectSearch/QuickLinkSelectSearch.jsx) to eliminate full collection fetches. It now implements strict **query-level batching of 5 items** combined with **300ms search debouncing** and **infinite scroll pagination** on the dropdown.
+
+### Key Changes
+- **300ms Search Debouncing**: Connected `useDebounce(searchTerm, 300)` so Firestore queries and filtering are deferred until the user pauses typing.
+- **Limit 5 Initial Batch**: Instead of fetching the entire collection at once, initial loads request strictly 5 documents using Firestore `limit(5)` ordered by `createdAt desc`.
+- **Infinite Scroll (`loadMore`)**: Listens to `onScroll` on `.quicklink-dropdown-menu`. When scrolling near the bottom (within 30px), fetches the next 5 documents using Firestore cursor pagination (`startAfter(lastDoc)` + `limit(5)`).
+- **Smooth Visual Feedback**: Added animated spinner indicator (`Loading 5 more...`) during scroll loads and an `"End of results"` marker when all available records have been reached.
+- Verified production build compiles with zero errors (`npm run build`).
+
+## [2026-10-18] Feature: QuickLinks Collection Integration in Admin Workflow Step Creation
+
+### Overview
+In the Admin Workflow Template creation/editing flow ([`WorkflowForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowForm.jsx)), added the capability to attach a web link either manually or by selecting/searching directly from the Firestore `quickLinks` collection.
+
+### Key Changes
+- Integrated [`QuickLinkSelectSearch`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/QuickLinkSelectSearch/QuickLinkSelectSearch.jsx) into `WorkflowStepsModal` within [`WorkflowForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowForm.jsx).
+- Provided an interactive mode switcher:
+  - **From QuickLinks (Default)**: Live-searches real-time links stored in the Firestore `quickLinks` collection (with defaults like DFA, PSA, Airline portals, Visa centers), auto-populating both the link URL and title.
+  - **Manual URL**: Allows typing a custom URL and custom title directly.
+- Retained support for clearing, switching, reordering, and saving steps with attached links.
+- Verified production build compiles with zero errors (`npm run build`).
+
+## [2026-10-18] UI Refinement: Operator Inquiry Forms Header Changed to Client Name
+
+### Overview
+Updated the inquiry card row header in the Operator portal's Inquiry Forms page ([`OperatorInquiryForms.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx)) and the detail header ([`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx)).
+
+### Key Changes
+- In [`OperatorInquiryForms.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/OperatorInquiryForms.jsx): Changed `.op-inquiry-card-title` from `{form.fullName || form.title || 'Client Inquiry'}` to prioritize the client's actual name (`form.clientName || form.fullName || form.companyName || form.contactPerson || form.title || 'Unnamed Client'`).
+- In [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx): Prioritized `form.clientName` as the top-level record title.
+- Rebuilt production bundle (`npm run build`) cleanly.
+
+## [2026-10-18] Security & Backend: Allow Same-Origin Firebase Hosting Rewrites in CORS Middleware
+
+### Overview
+Resolved the `"Blocked by CORS policy: Server-to-server requests are not allowed"` issue occurring on production Firebase Hosting (`fairfly-1e83b.web.app`).
+
+### Root Cause
+Under the strict CORS configuration in [`fly-api/src/server.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/server.js), requests lacking an `Origin` header were rejected as "server-to-server" calls. However, per the W3C/Fetch spec, browsers do **not** send an `Origin` header on **same-origin `GET` and `HEAD` requests** (when hitting `https://fairfly-1e83b.web.app/api/...` from `fairfly-1e83b.web.app`). Firebase Hosting then proxied these same-origin requests to Cloud Functions via rewrite rules, which caused the backend's strict `if (!origin)` check to trigger and block them.
+
+### Fix
+Updated [`server.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/server.js):
+- Checks for same-origin requests proxied through Firebase Hosting by inspecting `x-forwarded-host`.
+- If no `Origin` header is present but `x-forwarded-host` matches an authorized domain (`fairfly-1e83b.web.app`, `fairfly-1e83b.firebaseapp.com`, or `FRONTEND_URL`), the request is recognized as legitimate same-origin traffic and allowed through.
+- Pure external machine requests with no valid origin and no authorized forwarded host remain strictly blocked.
+
+## [2026-10-18] Configuration: Updated Frontend API Base URL to Production Firebase Hosting
+
+### Overview
+Updated `VITE_API_BASE_URL` in [`fair-fly/.env`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/.env) from local development (`http://localhost:5001`) to the live production Firebase Hosting URL (`https://fairfly-1e83b.web.app`).
+
+### Key Changes
+- Modified [`fair-fly/.env`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/.env): `VITE_API_BASE_URL="https://fairfly-1e83b.web.app"`.
+- Prevents the browser's "Local Network Access" / "Access other apps and services on this device" permission prompt that triggers when a public site attempts to make requests to `localhost`.
+
+## [2026-10-14] UI & Design: Themed PageHeader Illustrations for Unillustrated Views
+
+### Overview
+Generated and integrated brand-aligned SaaS vector illustrations for all `<PageHeader>` views in the system that were missing header artwork, bringing visual parity with existing pages. Converted generated images to true PNG format and placed them in the designated `public/pageImages` directories.
+
+### Key Changes
+1. **Admin Clients Page (`fair-fly/public/pageImages/admin/clients.png`)**:
+   - Designed a 16:9 modern vector illustration matching the aesthetic of `operators.png` and `tickets.png`. Features floating client profile cards with diverse avatar portraits, verified customer badges, contact details, status pills ('Active Client', 'Verified Account') in FairFly purple, royal blue, and golden amber, alongside client analytics widgets and travel motifs.
+   - Connected `illustrationSrc="/pageImages/admin/clients.png"` in [`ClientsContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientsContent.jsx).
+2. **Operator Services Catalog Page (`fair-fly/public/pageImages/operator/services.png`)**:
+   - Designed a 16:9 modern vector illustration matching `services.png` and `quotations.png`. Features service catalog offering cards (Visa Assistance, Tour Package, Flight Booking, Document Attestation) with price tags, requirements checklists, 'Branch Offering' / 'Active Catalog' badges, purple luggage suitcase, airplane taking off, passport, and globe.
+   - Connected `illustrationSrc="/pageImages/operator/services.png"` in [`OperatorServicesContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServices/OperatorServicesContent.jsx).
+3. **Announcements Page (`fair-fly/public/pageImages/shared/announcements.png`)**:
+   - Designed a 16:9 modern vector illustration matching `tickets.png` and `inquiry-forms.png`. Features a digital megaphone loudspeaker in FairFly purple emitting broadcast waves, notification bell with unread badge, pinned bulletin notices, folded paper airplane letter, and priority status pills ('Official Bulletin', 'Urgent Notice', 'Head Office Broadcast').
+   - Saved across `shared/announcements.png`, `admin/announcements.png`, and `operator/announcements.png`.
+   - Connected `illustrationSrc="/pageImages/shared/announcements.png"` in [`AnnouncementsPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Announcements/AnnouncementsPage.jsx).
+   - **Navigation Breadcrumbs**: Integrated `<Breadcrumbs items={breadcrumbItems} />` into [`AnnouncementsPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Announcements/AnnouncementsPage.jsx), routing to `{ label: 'Dashboard', to: '/admin' }` -> `{ label: 'Announcements' }` for Admin view (and dynamically routing to `/operator` when viewed in Operator portal).
+4. **Verification**:
+   - Verified that Vite production build compiles with zero errors (`npm run build`).
+
+## [2026-10-14] Security & Networking: Strict FairFly CORS Policy & Simplified .env Configuration
+
+### Overview
+1. **Strict CORS Security Enforcement ([`server.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/server.js))**:
+   - **Eliminated Server-to-Server / Origin-less Invocations**: Requests lacking an `Origin` header (such as unauthorized external scripts, curl, or automated bots attempting direct access) are strictly rejected with HTTP `403 Forbidden` (`{"error": "Blocked by CORS policy: Server-to-server requests are not allowed"}`).
+   - **Environment-Driven Whitelist (`allowedOrigins`)**: Allowed origins are read directly from `process.env.FRONTEND_URL` (supporting comma-delimited URLs) alongside the official FairFly production domains (`https://fairfly-1e83b.web.app` and `https://fairfly-1e83b.firebaseapp.com`).
+   - **Simple Local & Deployment Management**: To test locally or change URLs, simply update `FRONTEND_URL` in [`fly-api/.env`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/.env).
+   - **External Webhook Exemption**: Bypasses origin checks strictly for machine webhooks (`/api/payments/webhook` validated via PayMongo HMAC signature) and `/health` health checks.
+   - **Clean Error Handling**: Centralized error middleware gracefully intercepts CORS rejections and returns HTTP 403 JSON payloads instead of leaking 500 internal server exceptions.
+
+## [2026-10-14] UI Refinement: Admin & Operator Navbar Profile Button Removal & Universal PDF Modal Integration
+
+### Overview
+1. **Admin & Operator Navbar Refinement**: Removed both the profile action button and the mobile portal dropdown strip (`.mobile-portal-dropdown-bar`) from the Admin and Operator navbar in [`AppNavbar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx) and [`app-navbar.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/app-navbar.css). Authenticated Admins and Operators access their Profile page exclusively through the persistent desktop sidebar and off-canvas mobile drawer in [`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx).
+2. **Universal PDF Modal Display & Sticky Row Elimination**:
+   - Resolved the CSS sticky artifact where table headers and rows inside `.pdf-modal-body` and `.pdf-sheet` (e.g. Quotation `ADF-07-001`, Inquiry `SAF-01-002`, Receipt `ADF-07-002`) pinned to the top when scrolling down. Applied reset rules (`position: static !important; top: auto !important; z-index: auto !important;`).
+   - Integrated `<PdfModalProvider>` and `usePdfModal` / `isPdfUrl` throughout the entire platform to open arbitrary uploaded PDF documents in a unified in-app modal viewer rather than navigating to blank browser tabs. Connected:
+     - `OperatorResources.jsx`
+     - `AdminResources.jsx` (`ResourcesContent.jsx`)
+     - `AdminQualifications.jsx` (`AdminQualificationDetailPage.jsx`)
+     - `AdminAppointments.jsx`
+     - `FranchiseAppDetailPage.jsx`
+     - `MessagesPage.jsx`
+     - `OperatorServiceProcedure.jsx`
+     - `QuotationRequirementsReview.jsx`
+     - `ClientServiceTracker.jsx`
+     - `QuotationDetailModal.jsx`
+     - `HistoryDetailModal.jsx`
+     - `ValidIdUpload.jsx`
+
+---
+
+## [2026-10-13] Feature: System-Wide View Profile, Edit Personal Information & Secure Password Change Workflow
+
+### Overview
+Architected and implemented a complete, role-adaptive **View Profile**, **Edit Personal Information**, and **Secure Change Password** feature across the entire FairFly platform. Supports all authenticated user roles (Admin, Branch Operator, and Client) with strict adherence to Zero-Trust authorization (`req.user.uid`), transport-layer encryption (HTTPS/TLS), cryptographic fresh reauthentication checks, and FairFly SaaS design tokens (`style-guide-components.md`). Seamlessly integrated navigation entries into the desktop sidebar and mobile dropdown navigation bars.
+
+### Key Changes
+1. **Backend Endpoints & Security ([`authRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/authRoutes.js), [`authController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/authController.js))**:
+   - `GET /api/auth/profile`: Derives target user identity strictly from verified JWT (`req.user.uid`). Retrieves authoritative profile fields from Firestore `users/{uid}` and merges metadata from Firebase Auth (`emailVerified`, `creationTime`). Completely suppresses password and sensitive tokens.
+   - `PATCH /api/auth/profile`: Whitelists permitted fields (`fullName`, `name`, `branchName`, `phone`, `contactNumber`, `address`) via `allowedFields` middleware. Rejects empty names and unauthorized role/status tampering. Synchronizes `displayName` in Firebase Auth, updates Firestore with `updatedAt`, and invalidates `userCache.delete(uid)` and `staticDataCache.delete('branches-list')`.
+   - `POST /api/auth/change-password`: Implemented secure server-mediated password update. Requires fresh authentication proof (`auth_time` within 300 seconds), enforces min-6 character policy, and updates password via `admin.auth().updateUser(uid, { password })`. Completely eliminates plaintext logging and Firestore storage of passwords.
+2. **Frontend Service Layer ([`authService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/services/authService.js))**:
+   - Added `fetchUserProfile`, `updateUserProfile`, and `changePasswordApi` with Authorization Bearer token integration.
+3. **Role-Adaptive Profile Presentation & Modal ([`ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx), [`profile.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/profile.css), [`ProfileEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ProfileEditModal/ProfileEditModal.jsx))**:
+   - **Header Card**: Initials avatar, display name, role badge (`status-pill`), quick contact details, and actions for "Edit Information" and "Change Password".
+   - **Overview Tab**: Displays basic information, account metadata, and role-specific scopes (Super vs Support Admin governance; Branch Operator franchise qualification; Client government ID verification).
+   - **Security Tab**: Multi-step change password flow. Step 1 verifies current password via Firebase Auth `reauthenticateWithCredential()`. Step 2 renders new password and confirmation with visibility toggles. Step 3 submits to backend with fresh token.
+   - **ProfileEditModal**: Form dialog pre-populated with Name, Phone, and Address, with email shown as read-only.
+4. **Navigation Integration ([`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx), [`AppNavbar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppNavbar/AppNavbar.jsx), [`App.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/App.jsx))**:
+   - Made bottom `.sidebar-profile` in `AppSidebar` a clickable `<NavLink>` targeting `/${role}/profile` on desktop and mobile drawer.
+   - Added dedicated `My Profile` tab in mobile dropdown bar (`.mobile-portal-dropdown-bar`) for Admin and Operator.
+   - Cleaned up client navigation: Profile is accessed via the desktop user action button / welcome greeting and the mobile navigation drawer, removing the duplicate Profile tab from the desktop client navigation bar (`client-nav-links-desktop`).
+   - Mounted `profile` routes under `/admin`, `/operator`, and `/client` in `App.jsx`.
+5. **Catalog & Verification**:
+   - Appended `ProfilePage` and `ProfileEditModal` to [`Fairfly/component-list.md`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/component-list.md).
+   - Created test suite [`testProfileAndSecurityFlow.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testProfileAndSecurityFlow.js): **19/19 passed (100%)**.
+   - Verified regression suites: `testDisabledAccountFlow.js` (10/10 passed), `testPaymentAndResetFlows.js` (7/7 passed).
+   - Production bundle compiled cleanly via `npm run build` with 0 errors.
+
+## [2026-10-12] Data Integrity: Orphaned Records Cleanup & Platform Revenue Synchronization
+
+### Overview
+Scanned the canonical `users` collection to identify all authorized operators (`role === 'operator'`), detected and purged orphaned records in `payments`, `activeServices`, and `receipts` that referenced unrecorded or deleted operators (`USR-OPR-hLtV3RFWzgPtuIM2C9Wn`, Branch "Test"), and recalculated the authoritative `system_stats/revenue` document. Harmonized total revenue values across the Admin Header KPI card and the Analytics Performance Overview to strictly display **₱40,388**.
+
+### Key Changes
+1. **Orphaned Record Audit & Purge ([`cleanOrphanedRecords.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/cleanOrphanedRecords.js))**:
+   - Scanned `users` table: Confirmed exactly two registered operator accounts:
+     - `USR-OPR-QMgq9hEDeEGQvHKKYM8X` (Baliuag Flagship Branch)
+     - `USR-OPR-m9B5qHBCZ7nqRdn9avTm` (Apalit Regional Branch)
+   - Identified and permanently deleted orphaned records referencing `USR-OPR-hLtV3RFWzgPtuIM2C9Wn`:
+     - 1 orphaned payment: `PAY-uud2lAJJPmkLFi4wGOzd` (₱15,000)
+     - 3 orphaned active services: `SVC-70cUpmaq6QMtjHf26NFE`, `SVC-P6jntBeAMs6qRXaN9lbS`, `SVC-R61wFzcFZ904xZKQ7oyo`
+     - 77 orphaned/legacy test receipts.
+2. **Authoritative Revenue Aggregation Synchronization ([`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js), [`system_stats/revenue`])**:
+   - Re-computed `system_stats/revenue` strictly from remaining verified PAID payments belonging to recorded operators.
+   - Cleanly replaced the `operators` map without merge pollution:
+     - `totalRevenue`: ₱40,388 (Paid Count: 2)
+     - Baliuag Branch: ₱40,388 (Paid Count: 2)
+     - Apalit Branch: ₱0 (Paid Count: 0)
+   - Updated `syncRevenueStats` in `paymentController.js` to ensure only recorded operators receive credited revenue and to perform clean document sets.
+3. **Verification**:
+   - Tested `getAdminAnalytics`: Confirmed `totals.revenue === 40388` and `totals.completedServices === 1`.
+   - Verified `system_stats/revenue`: Confirmed `totalRevenue === 40388`.
+   - Both Header KPI Card and Performance Overview now seamlessly align at ₱40,388.
+
+## [2026-10-11] Bugfix: Operator Appointment Calendar Month Navigation State & Cache Synchronization
+
+### Overview
+Fixed a critical bug in the operator module where appointments displayed upon initial load disappeared when navigating to the next month and returning to the previous month. Synchronized the active date range between [`OperatorAppointmentCalendar`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/OperatorAppointmentCalendar/OperatorAppointmentCalendar.jsx) and [`AppointmentCalendar`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx), and resolved faulty cache bypass checks.
+
+### Root Cause
+1. `OperatorAppointmentCalendar` maintained its own decoupled `currentDate` and `dateRange` state which was never updated when the inner `AppointmentCalendar` changed months.
+2. In the inline `onDateRangeChange` prop, an equality guard (`if (startDateStr !== dateRange.startDateStr || endDateStr !== dateRange.endDateStr)`) was checking incoming dates against the parent's frozen initial month `dateRange`.
+3. When navigating forward (e.g. October -> November), the guard passed and loaded November. But when navigating back (November -> October), `startDateStr` matched the parent's frozen October `dateRange.startDateStr`, causing the guard condition to evaluate to `false`. As a result, no fetch occurred, the previous month cache was not restored, and the calendar was left rendering November's empty/out-of-range records for October, making all appointments disappear.
+
+### Key Changes
+1. **Synchronized Active Date Range ([`OperatorAppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/OperatorAppointmentCalendar/OperatorAppointmentCalendar.jsx))**:
+   - Replaced redundant, un-updated `currentDate` and `viewMode` state with a single `activeDateRange` state driven directly by `AppointmentCalendar`'s `onDateRangeChange` callback.
+   - Refactored `loadAppointments` to trigger on `activeDateRange` changes and reliably hit the `cacheRef` lookup (`${startDateStr}_${endDateStr}_${userUid}`).
+   - Returning to any previously visited month now instantly retrieves and renders its cached appointments without loss of data.
+2. **Redundant Emission Prevention ([`AppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx))**:
+   - Added `lastEmittedRangeRef` tracking using `useRef` to guarantee that `onDateRangeChange` only triggers when visible date bounds or `viewMode` genuinely change, preventing redundant network requests.
+3. **Verification**:
+   - Production bundle compiled cleanly via `npm run build` in 2.66s with 0 errors.
+
+### Overview
+Overhauled the public **About Us** page (`/about`) to dynamically load and display real-time authorized branch operator records from the database instead of hardcoded static data. Pruned redundant response aliases (`uid`, `name`, `location`) in the public branches endpoint, standardizing strictly on canonical fields (`id`, `branchName`, `address`, `email`, `contactNumber`, `isQualified`). Elevated the page UI into an eye-catching, modern editorial SaaS interface aligning strictly with `.agents/rules/style-guide-components.md` and FairFly design tokens.
+
+### Key Changes
+1. **Public Operator Branches Backend Cleanup ([`operatorController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/operatorController.js))**:
+   - Cleaned `fetchActiveBranchesInternal` to eliminate duplicate response fields (`uid` / `name` / `location`).
+   - Standardized strictly on canonical fields: `id` (`doc.id`), `branchName`, `address`, `email`, `contactNumber`, and `isQualified`.
+   - Preserved server-side rate limiting and 5-minute cache with automatic invalidation on any operator creation, update, or deletion.
+2. **Frontend Public Service Layer ([`branchService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/services/branchService.js))**:
+   - Created `fetchPublicBranches` utilizing `ApiCaller` to query `GET /api/operators/branches` without requiring user authentication.
+3. **Unified Our Branches Directory & Wide Card Architecture ([`About.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/About/About.jsx), [`about.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/About/about.css))**:
+   - **Unified Section**: Removed the separate "Our Authorized Branches" header in favor of a cohesive **"Our Branches"** showcase.
+   - **Full Dynamic Multi-Branch Integration**: All operator branches stored in Firestore (both Baliuag Flagship and Apalit Regional) are rendered dynamically without hardcoded static card duplication.
+   - **Identical 2-Column Wide Card Layout**: Upgraded all branch cards to adopt the exact spacious 2-column card architecture (left side: badges, branch icon, name, email subheading as an interactive `mailto:` link, and address; right side: phone with `tel:` link, operating hours, and focused "Directions" Google Maps trigger).
+   - **Action Button Streamlining**: Removed the "Franchise Inquiries" and "Explore Services" buttons from the individual branch cards per user request, keeping them clean with the "Directions" link.
+   - **Integrated Pagination**: Integrated the design system primitive [`Pagination`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/Pagination/Pagination.jsx) with auto-scroll to the top of the branches section upon page changes.
+   - **Debounced Search**: Integrated `SearchBar` allowing visitors to quickly filter branches by name, city, or address with real-time count readout ("Showing 2 active branches across the Philippines") and empty-state fallback.
+4. **Editorial SaaS Aesthetic Elevation ([`about.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/About/about.css))**:
+   - **Hero Section**: Added editorial brand badge strip (`[ 29+ YEARS INDUSTRY HERITAGE ]`, `[ ISO 9001:2000 READY ]`) and key trust metric ribbon (`29+ Years`, `100% Cloud`, `ISO 9001 SOPs`, dynamic `Active Branches` count).
+   - **Hero Photographic Background & Frosted Glass Architecture**: Resolved background image visibility issue by setting authentic travel backdrop (`/business_model_bg.jpg`) to high opacity (`0.95`) with subtle cinematic edge vignettes, while housing the hero content inside a centered frosted-glass card (`rgba(255, 255, 255, 0.88)` with `backdrop-filter: blur(16px)` and hairline borders). This guarantees crisp WCAG AAA legibility for all headings and text without washing out or obscuring the photographic banner.
+   - **Featured Head Office Card**: Positioned the Central Flagship Headquarters in Baliuag as the featured anchor card with special flagship accents and franchise action trigger.
+   - **Connect & Franchise Hub**: Replaced basic social buttons with a high-impact conversion hub featuring a direct "Inquire for Franchise" trigger launching `FranchiseApplicationForm`, alongside official Facebook, Messenger, and email channels.
+   - **Zero Emojis & Strict UI Theme Alignment**: Adhered 100% to design rules with FontAwesome vector icons, REM-based sizing, and responsive grid layout down to 320px mobile viewports.
+5. **Verification**:
+   - Production bundle compiled cleanly with `npm run build` in 2.71s with 0 errors.
+   - Browser visual inspection verified that both Firestore branches (Baliuag & Apalit) are rendered with only the clean "Directions" button on their cards.
+
+## [2026-10-11] Architecture: Phase 6 — System-wide Regression Testing and Final Verification
+
+### Overview
+Successfully executed Phase 6 of the FairFly Database Schema & Optimization plan. Completed system-wide regression testing, end-to-end user journey verification, and document size benchmarks across all application tiers (Client, Operator, Admin, and Public). Verified that 100% of Firestore documents across all 8 target collections strictly adhere to canonical schema contracts, while all backend endpoints, real-time listeners, and frontend components function flawlessly.
+
+### Key Changes & Verification Suites
+1. **System-Wide Verification Test Suite ([`testPhase6FinalVerification.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testPhase6FinalVerification.js))**:
+   - **Suite 1: Global Schema Integrity**: Audited all documents in live Firestore collections (`tickets`, `appointments`, `receipts`, `payments`, `activeServices`, `inquiries`, `quotations`, `workflowTemplates`). Verified 0 schema violations (0 Base64 blobs in receipts, 0 self-referencing IDs, 0 centavos duplicates, 0 legacy root messages arrays, 100% appointments having valid ISO `scheduledAt`).
+   - **Suite 2: Client Self-Service Flow**: Validated end-to-end inquiry submission (SAF-01-002 with `clientRemarks`, `isWalkIn: false`) and appointment scheduling with timezone-aware `scheduledAt` UTC timestamps.
+   - **Suite 3: Operator Processing & E-Receipt Issuance**: Verified quotation creation with `operatorRemarks` and `preparedByName`, state advancement, and cash payment recording with atomic generation of fulfillment (`activeServices` with derived step counts) and official E-Receipt (`receipts`).
+   - **Suite 4: Support Ticketing Architecture**: Verified root document bloat elimination (`messageCount`, `lastMessage`, no `messages` array), direct subcollection storage (`tickets/{id}/messages`), multi-role replies (Super Admin and Operator), and lightweight listing.
+   - **Suite 5: Public Tracker & Dynamic QR Code**: Verified unauthenticated public tracking lookup by service code `SRV-YYYY-XXXXXX` with client name privacy masking (`Maria S.`), strict 400 rejection on receipt numbers, and public e-receipt retrieval.
+   - **Suite 6: Storage & Bandwidth Benchmark**: Verified an astounding **97.7% reduction** in E-Receipt payload size (from ~55.5 KB to 1.28 KB per receipt) by replacing stored Base64 QR blobs with dynamic canvas/SVG generation. Measured lightweight ticket list average size at 0.36 KB per ticket.
+
+2. **Backend Enhancements**:
+   - Added and exported `getAppointmentById` in [`appointmentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/appointmentController.js) and registered `GET /api/appointments/:id` in [`appointmentRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/appointmentRoutes.js).
+   - Enhanced `createAppointment` to auto-derive split `preferredDate` and `preferredTime` when `scheduledAt` is provided directly.
+   - Enhanced `createTicket` in [`ticketController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/ticketController.js) and [`ticketRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/ticketRoutes.js) to accept `message` as an alias for `initialMessage`.
+   - Removed legacy `workflow: 'online'` write from `attachServiceToInquiry` in [`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js).
+
+3. **Platform Test Results**:
+   - `testPhase6FinalVerification.js`: **24/24 passed (100%)**.
+   - `testPhase4Refactor.js`: **47/47 passed (100%)**.
+   - `testFranchiseAppointments.js`: **21/21 passed (100%)**.
+   - `testWorkflowRemodel.js`: **All suites passed (100%)**.
+   - `testReceiptAndTrackingIntegration.js`: **All suites passed (100%)**.
+   - Frontend production build (`npm run build`): **Passed in 2.55s** with 0 errors.
+
+## [2026-10-11] Architecture: Phase 5 — Migrate Existing Firestore Documents
+
+### Overview
+Successfully executed Phase 5 of the FairFly Database Schema & Optimization plan. Executed a comprehensive, idempotent, batch-managed migration script (`migrateSchemaPhase5.js`) across all 8 target Firestore collections (`tickets`, `appointments`, `receipts`, `payments`, `activeServices`, `inquiries`, `quotations`, `workflowTemplates`). Migrated existing records to conform strictly to the canonical data contracts established in Phases 0–4 without any data loss or service disruption.
+
+### Key Changes
+1. **Migration Script Architecture ([`migrateSchemaPhase5.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/migrateSchemaPhase5.js))**:
+   - Built with `--dry-run` inspection and live batch execution modes.
+   - Batch manager strictly enforces Firestore write limits (capped at ≤350 operations per commit, safely below the 500-op limit).
+   - Designed to be 100% idempotent: subsequent executions verify existing state and perform 0 operations.
+
+2. **Collections Migrated (266 Total Operations Committed)**:
+   - **`tickets` (4 docs)**: Decoupled legacy embedded `messages: [...]` arrays into `tickets/{ticketId}/messages` subcollections. Initialized root metadata (`messageCount`, `lastMessage`, `lastMessageAt`) and deleted the bloated root array.
+   - **`appointments` (17 docs)**: Unified split `preferredDate` and `preferredTime` (including slot ranges e.g. `09:00 - 10:00`) into canonical `scheduledAt` ISO 8601 UTC timestamps normalized to Philippine Standard Time (PST, UTC+8).
+   - **`receipts` (66 docs)**: Pruned redundant self-referencing `id` and `receiptId`, heavy Base64 `qrCodeDataUrl`, static boilerplate (`businessName`, `businessTagline`, `legalNotice`, `formNo`), and redundant payment aliases (`paymentStatus`, `paymentMethodType`, `amountInCentavos`, duplicate `description`).
+   - **`payments` (83 docs)**: Pruned self-referencing `id`, redundant `amountInCentavos`, and legacy `isWalkInCash`.
+   - **`activeServices` (68 docs)**: Pruned self-referencing `id`, dead `serviceUID`, redundant `totalSteps` (derived at runtime), and redundant `operatorId` (retained `branchUid`). Normalized missing `priorityType`.
+   - **`inquiries` (42 docs)**: Pruned redundant `workflow` string (retained `isWalkIn`), fragmented name components (`firstName`, `middleInitial`, `lastName`, etc.), duplicate `operatorId`, and normalized `remarks` to canonical `clientRemarks`.
+   - **`quotations` (74 docs)**: Pruned redundant `preparedBy` (retained `preparedByName`), duplicate `operatorId` (retained `branchUid`), and normalized `remarks` to canonical `operatorRemarks`.
+   - **`workflowTemplates` (3 docs)**: Removed redundant `type` alias (retained canonical `serviceType`).
+
+3. **Verification & Idempotency**:
+   - Re-ran migration script in dry-run mode: confirmed 0 operations committed, 0 documents modified, 100% skipped.
+   - Verified 0 schema violations across all 8 collections in Firestore.
+   - All backend automated test suites passed with 100% success (`testPhase4Refactor.js` 47/47 passed, `testFranchiseAppointments.js` 21/21 passed, `testWorkflowRemodel.js` passed, `testReceiptAndTrackingIntegration.js` passed).
+   - Frontend production build (`npm run build`) passed with 0 errors in 2.75s.
+
+## [2026-10-11] Architecture: Phase 4 — Refactor Complex Data Structures and Dependent Workflows
+
+### Overview
+Successfully executed Phase 4 of the FairFly Database Schema & Optimization plan. Refactored complex nested data structures across the support ticketing system and scheduling systems:
+1. **Decoupled Support Ticket Messages Subcollection (`tickets/{ticketId}/messages`)**: Eliminated unbounded message array bloat on root ticket documents. New messages are stored in dedicated Firestore subcollections with automated real-time synchronization, lightweight ticket list querying, and seamless hybrid fallback/merging for legacy tickets.
+2. **Unified Appointment Datetime Architecture (`scheduledAt`)**: Standardized disparate split date (`preferredDate`) and time (`preferredTime`) strings onto a canonical ISO 8601 UTC timestamp (`scheduledAt`), normalized to Philippine Standard Time (PST, UTC+8, `Asia/Manila`) with bidirectional backward compatibility.
+
+### Key Changes
+1. **Support Tickets Subcollection Architecture**:
+   - **Root Document Bloat Elimination ([`ticketController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/ticketController.js))**: `createTicket` and `addMessageToThread` now save messages directly into subcollection `tickets/{ticketId}/messages`. The root document retains only high-level thread metadata (`title`, `category`, `priority`, `status`, `lastMessage`, `lastMessageAt`, `lastSenderId`, `lastSenderRole`, `messageCount`).
+   - **Direct Messages Subcollection Route ([`ticketRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/ticketRoutes.js))**: Added authenticated endpoint `GET /api/tickets/:id/messages` to stream or query thread messages directly.
+   - **Lightweight Ticket Listing**: `getTickets` strips bulky embedded message arrays from ticket list responses, returning `messageCount` and `lastMessage` for minimal payload and lightning-fast table renders.
+   - **Hybrid Backward Compatibility**: `getTicketById` and `getTicketMessages` automatically query the subcollection. If legacy embedded messages exist on the root document, they are seamlessly merged with any new subcollection messages and sorted chronologically.
+   - **Real-Time Client Subscriptions ([`TicketThread.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Tickets/TicketThread.jsx), [`ticketService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/services/ticketService.js))**: Added real-time Firestore `onSnapshot` listener to `tickets/{ticket.id}/messages` in `TicketThread.jsx`, enabling live updates between Admin and Operator without full-page reloads.
+
+2. **Appointments Datetime Unification (`scheduledAt`)**:
+   - **Timezone-Aware UTC Serialization ([`appointmentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/appointmentController.js))**: Implemented `toCanonicalScheduledAt` to convert date (`YYYY-MM-DD`) and 12h/24h time into an ISO 8601 UTC timestamp (`scheduledAt`) aligned with Philippine Standard Time (UTC+8).
+   - **Normalizer Fallback (`formatAppointmentDoc`)**: Dynamically derives `scheduledAt` for unmigrated documents lacking it, and populates `preferredDate`/`preferredTime` from `scheduledAt` for new documents to maintain 100% backward compatibility for all readers.
+   - **Franchise Consultation Scheduling**: Updated `scheduleFranchiseAppointment` to generate both `scheduledAt` and `scheduledEndAt` while strictly preserving server-side time slot collision detection.
+   - **Allowed Fields Hardening ([`appointmentRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/appointmentRoutes.js))**: Added `scheduledAt` to `APPOINTMENT_ALLOWED_FIELDS` and `SCHEDULE_FRANCHISE_ALLOWED_FIELDS`.
+   - **Frontend Form & Views Integration ([`ClientAppointmentForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx), [`AppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx), [`AppointmentDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorAppointments/AppointmentDetailPage.jsx), [`ClientAppointmentsPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientAppointments/ClientAppointmentsPage.jsx))**: Submits `scheduledAt` during booking and derives date/time display from `scheduledAt` with fallback to legacy split strings.
+
+3. **Automated Verification**:
+   - Created dedicated automated test suite [`testPhase4Refactor.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/testPhase4Refactor.js) covering all 8 core Phase 4 requirements: 47/47 tests passed (100%).
+   - All existing regression suites (`testFranchiseAppointments.js`, `testWorkflowRemodel.js`, `testReceiptAndTrackingIntegration.js`) passed with 100% success.
+   - Frontend production build (`npm run build`) passed with 0 errors in 2.27s.
+
+## [2026-10-11] Architecture: Phase 3 — Frontend UI Components and Display Logic
+
+### Overview
+Successfully executed Phase 3 of the FairFly Database Schema & Optimization plan. Updated all frontend UI presentation components, detail pages, print documents, and list dashboards to prioritize canonical schema fields while maintaining 100% backward compatibility for legacy document structures. Eliminated display redundancies (such as duplicate service headers on official e-receipts), streamlined priority derivation, and decoupled document rendering from bulky Base64 payloads.
+
+### Key Changes
+1. **Official Printable E-Receipt & PDF Renderer ([`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx))**:
+   - Standardized receipt document identity resolution to `data.id || data.receiptId || ''`, removing dependence on internal redundant `receiptId` property.
+   - Decoupled QR code tracking render from stored Base64 `qrCodeDataUrl`: dynamically builds tracking URL from canonical `receiptData.qrTrackingUrl || `${frontendBaseUrl}/track?trackingId=${encodeURIComponent(targetCode)}`` and renders high-density SVG/canvas QR dynamically.
+   - Eliminated visual duplication: checks `receiptData.description !== receiptData.serviceTitle` before rendering description to prevent duplicate stacked titles on official receipts.
+   - Added robust fallbacks for static business boilerplate constants (`legalNotice`, `formNo`, `businessName`, `businessTagline`).
+2. **Operator Service Processing & Dashboard Views ([`OperatorDashboard.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorDashboard/OperatorDashboard.jsx), [`OperatorServiceProcedure.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure.jsx), [`HistoryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx))**:
+   - Standardized priority resolution: derives canonical `priorityType` ('normal' | 'high') with fallback to string matching on legacy `priority`.
+   - Derives formatted priority display badge label: `s.priority || (priorityType === 'high' ? 'High Priority' : 'Normal Priority')`.
+   - Retained universal runtime step count derivation (`steps.length || 0`) with fallback to `totalSteps`.
+3. **Inquiry Detail Pages ([`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx), [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx))**:
+   - Standardized client name resolution to canonical `form.clientName || form.fullName || 'N/A'`.
+   - Standardized contact person resolution to canonical `form.contactPerson || form.clientName || form.fullName || 'N/A'`.
+   - Prioritized canonical phone field `cellphone || phoneNumber || 'N/A'`.
+4. **Quotation Detail Page ([`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx))**:
+   - Displays and pre-fills canonical `operatorRemarks: quotation.operatorRemarks || quotation.remarks || ''`.
+   - Prioritized canonical preparer name `quotation.preparedByName || quotation.preparedBy || ''`.
+5. **Workflow Templates & Modal Pickers ([`AdminWorkflowTemplates.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx), [`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx))**:
+   - Reads `tmpl.serviceType || tmpl.type || 'General'` and filters workflows on `wf.serviceType || wf.type || ''` for seamless compatibility across new and legacy template records.
+6. **Verification**:
+   - Frontend build (`npm run build`) completed cleanly with 0 errors in 2.21s.
+   - Backend integration test suites (`testWorkflowRemodel.js`, `testReceiptAndTrackingIntegration.js`) passed with 100% success.
+
+## [2026-10-11] Architecture: Phase 2 — Frontend Forms and Submission Logic Cleanup
+
+### Overview
+Successfully executed Phase 2 of the FairFly Database Schema & Optimization plan. Aligned all frontend forms, intake modals, creation dialogs, and submission payloads across Client, Operator, and Admin roles with the canonical data contracts established in Phase 0 and enforced by Phase 1 backend services. Eliminated client-side generation and submission of redundant fields, dual-key aliases, fragmented name parts, and duplicate text properties.
+
+### Key Changes
+1. **Operator Quotation Creation Form ([`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx))**:
+   - Standardized Section 5 payment terms and notes state to canonical `operatorRemarks`, eliminating legacy `remarks` key in form state and JSX textarea bindings.
+   - Updated pre-fill logic to resolve `clientRemarks` from `initialData.clientRemarks || initialData.remarks || initialData.notes`.
+   - Pruned submission payload to submit only `operatorRemarks` and `clientRemarks`, removing redundant `remarks`.
+2. **Client Service Inquiry Modal Intake SAF-01-002 ([`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx))**:
+   - Eliminated submission of six fragmented name keys (`firstName`, `middleInitial`, `lastName`, `contactPersonFirstName`, `contactPersonMiddleInitial`, `contactPersonLastName`), submitting only resolved canonical `clientName` and `contactPerson`.
+   - Eliminated redundant `workflow: 'online'` (retaining boolean `isWalkIn: false`).
+   - Standardized comments and instructions onto canonical `clientRemarks: remarks.trim()`.
+3. **Client Direct Service Request Modal ([`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx))**:
+   - Removed fragmented name properties and redundant `phoneNumber` (standardized on `cellphone`).
+   - Removed redundant `workflow: 'online'` and dual `remarks` (standardized on canonical `clientRemarks` and `notes`).
+4. **Operator Walk-In Inquiry Intake Form SAF-01-002 ([`CreateInquiryFormModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx))**:
+   - Removed fragmented name fields from submission payload.
+   - Standardized intake remarks onto `clientRemarks` and `notes`.
+   - Explicitly submitted canonical `isWalkIn: true`.
+5. **Operator Active Service Initializer ([`AddServiceModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/AddServiceModal/AddServiceModal.jsx))**:
+   - Replaced verbose `priority: 'Normal Priority'` string with canonical indexed `priorityType: 'normal' | 'high'`.
+6. **Administrator Provisioning Form ([`AdminForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/AdminModal/AdminForm.jsx))**:
+   - Eliminated duplicate `name` field from submission payload, submitting canonical `fullName`.
+7. **Workflow Template Modal ([`WorkflowForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowModal/WorkflowForm.jsx))**:
+   - Standardized form state, input name, and payload on canonical `serviceType`, eliminating redundant `type` key.
+8. **Resource Upload Form ([`ResourceForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ResourceModal/ResourceForm.jsx))**:
+   - Removed redundant client-sent `fileExtension` property; derived dynamically by the backend from `fileName`.
+9. **Verification**:
+   - Frontend production build (`npm run build`) completed cleanly with 0 errors in 2.40s.
+   - All automated test suites (`testWorkflowRemodel.js`, `testPaymentAndResetFlows.js`, `testReceiptAndTrackingIntegration.js`) passed with 100% success.
+
+## [2026-10-11] Architecture: Phase 1 — Backend Schema and Payload Cleanup
+
+### Overview
+Successfully executed Phase 1 of the FairFly Database Schema & Optimization plan. Transformed the backend (`fly-api`) into the authoritative source of the optimized Firestore schema. Cleaned up write payloads across controllers and services by eliminating self-referencing document IDs, redundant dual-keys, duplicate text fields, and bloated Base64 strings. Built robust backward-compatible response serialization and document normalizers so existing frontend consumers remain fully functional without disruption.
+
+### Key Changes
+1. **Elimination of Self-Referencing Document Identity Fields**:
+   - `receipts` ([`receiptService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/receiptService.js)): Removed `id: effectiveReceiptId` and `receiptId: effectiveReceiptId` from `buildReceiptPayload`. Canonical document identity is Firestore `doc.id`.
+   - `payments` ([`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js)): Removed `id: paymentId` from `recordCashPayment` and `createCheckoutSession`. Canonical document identity is Firestore `doc.id`.
+   - `operator-logs` ([`operatorLoggerService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/operatorLoggerService.js)): Removed `id: logId` from Firestore `.add()` payload in `logOperatorAction`. Retained `id: logId` in return object for callers.
+   - `activeServices` ([`quotationController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/quotationController.js)): Removed `id: activeServiceDocId` from `buildFulfillmentPayload`.
+
+2. **Official E-Receipt Optimization**:
+   - Dropped write of Base64 `qrCodeDataUrl` (saving 2KB–8KB per receipt document). Retained canonical `qrTrackingUrl` and `serviceCode`. Frontend `PdfDocumentView.jsx` dynamically generates QR codes client-side when `qrCodeDataUrl` is omitted.
+   - Dropped static boilerplate fields (`formNo`, `businessName`, `businessTagline`, `legalNotice`) from Firestore writes; provided via server-side constants `RECEIPT_CONSTANTS` in fallback normalizer `formatReceiptDoc`.
+   - Eliminated redundant keys: dropped `description` (standardized on `serviceTitle`), dropped `paymentStatus` (standardized on `status: 'PAID'`), dropped `paymentMethodType` (standardized on `paymentMethod`), and dropped `amountInCentavos` (standardized on `amount`).
+   - Normalizer `formatReceiptDoc` applied across all receipt getters (`getReceiptById`, `getReceiptByQuotationId`, `getReceiptByFulfillmentId`, `getReceiptByPaymentId`, `getReceiptByServiceCode`) to provide backward compatibility for legacy readers.
+
+3. **Backend Write Payload Pruning & Key Deduplication**:
+   - `payments`: Removed `receivedByOperatorId` in favor of canonical `operatorId`. Removed `amountInCentavos` and `isWalkInCash`. Added `formatPaymentDoc` to populate backward-compatible aliases on `GET /api/payments`.
+   - `activeServices`: Removed dead `serviceUID`, verbose `priority: 'Normal Priority'` (standardized on indexed `priorityType`), redundant `totalSteps`, and duplicate `operatorId` (retained `branchUid`). Implemented `formatActiveServiceDoc` in `getActiveServices` to provide backward-compatible properties.
+   - `quotations`: Removed duplicate `preparedBy` (standardized on `preparedByName`), duplicate `remarks` (standardized on `operatorRemarks` and `clientRemarks`), and duplicate `operatorId` (retained `branchUid`). Provided response aliases in `getQuotations`.
+   - `inquiries`: Removed redundant `workflow` (standardized on `isWalkIn`), 6 fragmented name components (`firstName`, `lastName`, etc.), duplicate `remarks`, and duplicate `operatorId`. Preserved separate `servicesOffered` array and `serviceType` headline. Provided response fallbacks in `getInquiries` and `getInquiryById`.
+   - `workflowTemplates`: Standardized on `serviceType` and removed duplicate `type` on template creation; response normalizer provides both for frontend template pickers.
+   - `users`, `pending_registrations`, and `adminController`: Standardized user name storage on `fullName` and eliminated redundant `name` write.
+   - `services`: Standardized branch identification on `branchUid` and removed duplicate `createdByOperatorId` on creation, with bidirectional fallback in service filters.
+   - `resources`: Standardized on `fileName` and dynamically derived `fileExtension` in `getResources` and `getResourceById`.
+
+4. **Automated Test Suite Verification**:
+   - Updated integration test assertions in `testPaymentAndResetFlows.js` and `testReceiptAndTrackingIntegration.js` to match optimized canonical contracts.
+   - All backend test suites passed:
+     - `testWorkflowRemodel.js`: 100% pass across online and walk-in flows.
+     - `testPaymentAndResetFlows.js`: 7/7 passed.
+     - `testReceiptAndTrackingIntegration.js`: 100% passed.
+     - `testInquiryQuotationArchivingAndRejection.js`: 7/7 passed.
+     - `testSubmittedRequirements.js`: 17/17 passed.
+     - `testFranchiseAppointments.js`: 21/21 passed.
+     - `testDisabledAccountFlow.js`: 10/10 passed.
+     - `testChatbotBackend.js`: 100% passed.
+
+### Overview
+Completed Phase 0 of the FairFly Database Schema & Optimization plan. Executed a comprehensive end-to-end repository audit across all 23 Firestore collections and subcollections in `fly-api` and `fair-fly`. Traced every field from creation, updates, and indexing down to API responses, React form states, UI detail tables, printable PDFs, and public tracking QR codes. Established the canonical data contracts, identified redundant and derived fields, and mapped consumer migration paths without altering production data or existing application behavior.
+
+### Key Audit Findings & Canonical Contracts Established
+1. **Self-Referencing Document Identity Redundancy (`id`, `receiptId`)**:
+   - `receipts`: Both `id` and `receiptId` explicitly write the Firestore document ID inside the payload (`receiptService.js:64-65`). Canonical identity is the Firestore document ID (`doc.id`).
+   - `payments`: `id: paymentId` explicitly written inside document payload (`paymentController.js:344`). Canonical identity is `doc.id`.
+   - `operator-logs`: `id: logId` written inside document payload (`operatorLoggerService.js:42`). Canonical identity is `doc.id`.
+   - `activeServices`: `buildFulfillmentPayload` writes `id: activeServiceDocId` (`quotationController.js:581`), whereas `createActiveService` does not. Canonical identity is `doc.id`.
+2. **Dual-Key & Redundant Field Mapping**:
+   - `activeServices`: `serviceUID` is a dead duplicate of `serviceId` (0 frontend readers). Canonical: `serviceId`. `priorityType` is indexed in `firestore.indexes.json` and actively queried in `OperatorDashboard.jsx`; canonical is `priorityType` ('normal' | 'high'), while verbose `priority` ('Normal Priority') will be derived. `totalSteps` is a direct derivative of `steps.length`.
+   - `quotations`: `preparedBy` duplicates `preparedByName` (`quotationController.js:258,261`). Canonical: `preparedByName` (aligns with `preparedByTitle` and `preparedByContact`). `remarks` duplicates `operatorRemarks`. Canonical: `operatorRemarks` and `clientRemarks`.
+   - `inquiries`: `workflow` ('walk_in' | 'online') duplicates `isWalkIn`. Canonical: `isWalkIn`. Six fragmented name components (`firstName`, `middleInitial`, `lastName`, etc.) duplicate `clientName` and `contactPerson`. `notes`, `remarks`, and `clientRemarks` store overlapping text. Note: `servicesOffered` (multi-select array) and `serviceType` (summary headline) serve distinct legitimate roles and are preserved.
+   - `workflowTemplates`: Writes both `serviceType` and `type` (`workflowController.js:125-126`). Canonical: `serviceType`.
+   - `users` & `pending_registrations`: Writes both `name` and `fullName` (`verificationService.js:161-162, 299-300`). Canonical: `fullName`.
+   - `services`: `createdByOperatorId` duplicates `branchUid` for branch-exclusive services. Canonical: `branchUid`.
+   - `resources`: `fileExtension` is derived from `fileName`.
+3. **Official E-Receipt Optimization**:
+   - `qrCodeDataUrl`: Base64 PNG data URL (2KB–8KB) stored in Firestore. Verified that `PdfDocumentView.jsx:205-220` already implements dynamic client-side QR generation using `receiptData.serviceCode` / `receiptData.fulfillmentId` / `receiptData.receiptNo` when `qrCodeDataUrl` is omitted.
+   - Static boilerplate (`formNo`, `businessName`, `businessTagline`, `legalNotice`): Shifted to PDF/receipt template constants with fallback for legacy docs.
+   - `description` duplicates `serviceTitle` (`PdfDocumentView.jsx:475-483` currently renders the service title twice). Canonical: `serviceTitle`.
+   - `paymentMethodType`, `paymentStatus`, `amountInCentavos` normalized to canonical `paymentMethod`, `status`, and `amount`.
+4. **Complex Structures Identified for Phase 4**:
+   - Support tickets embedded `messages` array flagged for subcollection migration (`tickets/{ticketId}/messages`).
+   - Appointment split `preferredDate`/`preferredTime` flagged for migration to unified `scheduledAt` UTC timestamp with Philippine timezone (`Asia/Manila`) policy.
+
+---
+
 ## [2026-10-11] UI/UX: Instant Tab Notification Clearing on Click (Inquiry History, Tickets, Franchise Applications)
 
 ### Overview
@@ -5247,4 +5801,112 @@ All messages are computed via `useMemo` from data already available through `use
 
 ### Breaking Changes
 - None.
+
+---
+
+## [2026-10-11] Admin Action Logs Proper Query-Level Pagination
+
+### Files Modified
+- `fair-fly/src/components/Admin/Modals/AdminLogsModal/AdminLogsModal.jsx`
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx`
+
+### Summary of Changes
+- **Eliminated Hardcoded 100-Document Batching**: Removed the unpaginated `limit(100)` Firestore snapshot listener and `allLogs` state in `AdminDashboard.jsx`.
+- **Integrated Standard Firestore Pagination**: Connected `AdminLogsModal.jsx` to `useFirestorePagination` with `collectionName: 'admin-logs'`, `orderByField: 'timestamp'`, `orderDirection: 'desc'`, and `initialPageSize: 10`, fetching only the requested page (10 items) via cursor pagination (`startAfter(cursor)`).
+- **Zero-Document Count Server Aggregation**: Integrated `getCountFromServer` for instant metadata reporting of the total logs count across all pages (369 entries) with 0 document payload transfers.
+- **Debounced Search & Action Filtering**: Integrated `useDebounce` (300ms) with `searchFilterFn` and `customFilterFn` for action types (CREATE, UPDATE, DELETE).
+- **Reusable Pagination Component**: Connected standard `<Pagination />` controls (`currentPage`, `totalItems`, `pageSize`, `onPageChange={goToPage}`, `onPageSizeChange={changePageSize}`, and `pageSizeOptions={[5, 10, 20, 50]}`).
+
+### Reason
+- User request: "Paginate the Admin Action Logs properly, do not Fetch all 100 entries of the Admin Action logs at the same time. Do pagination like the other tables".
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-10-11] Admin Total Revenue KPI Tracking & Payments Collection Cleanup
+
+### Files Modified
+- `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx`
+- `fly-api/src/scripts/cleanTestData.js`
+- `update-logs.md`
+
+### Summary of Changes
+- **Audited and Cleaned Mock Test Data**:
+  - Filtered and pruned 91 test/dummy payment documents from Firestore `payments` collection (mock operator references `operator_branch_001`, `operator_branch_valiuag_001`, `BRANCH-P6-VERIFY-001`, dummy clients `pedro penduko`, `maria clara`, `juan dela cruz`, `maria santos`, etc.).
+  - Pruned 75 dummy mock service documents in `activeServices` collection.
+  - Preserved strictly 5 legitimate payment records (`PAY-1pYKTjaRl2s6mcDAbBf8`, `PAY-2wNsyO3dIQPU5eG0w8RX`, `PAY-38dDbv9CuSVLZEBlGfg4`, `PAY-uud2lAJJPmkLFi4wGOzd`, and `PAY-W2MMf7kQTqS8Csjhz6Ij`) totaling ₱59,188.
+- **Real-Time Total Revenue KPI Tracking**:
+  - Implemented real-time `onSnapshot` listener in `AdminLayout.jsx` on `payments` collection constrained with `where('status', '==', 'PAID')`.
+  - Avoided relying on mutable or potentially stale `totalRevenue` fields in Operator user objects, ensuring the source of truth is always the cryptographically verified payment records.
+  - Linked computed revenue into `<KpiCard />` with `formatCurrency`, all-time badge (`ok`), loading state indicators, and graceful error fallbacks.
+
+### Reason
+- User request: "Now we will implement the Total Revenue Tracking in the KPI Card in the Admin Side... Do not use the total revenue in Operator User Object... query the Payment Collection as a whole... filter it out, delete test data or data that doesnt match up with completed Services".
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-10-12] Single-Document Real-time Revenue Aggregation Optimization
+
+### Files Modified
+- `firestore.rules`
+- `fly-api/src/controllers/paymentController.js`
+- `fly-api/src/routes/paymentRoutes.js`
+- `fair-fly/src/pages/Admin/AdminLayout/AdminLayout.jsx`
+- `update-logs.md`
+
+### Summary of Changes
+- **Dedicated Aggregation Document Pattern**:
+  - Replaced the full `payments` collection snapshot listener in `AdminLayout.jsx` with a single document listener on `system_stats/revenue` (`doc(firestore, 'system_stats', 'revenue')`).
+  - Reduces Firestore document reads from $N$ documents (where $N$ was every payment ever created) down to exactly **1 document read** per admin session, while retaining 100% instant push-based real-time reactivity.
+- **Atomic Backend Synchronization (`FieldValue.increment`)**:
+  - Updated `finalizeSuccessfulPayment` in `paymentController.js` to atomically increment `totalRevenue` and `paidCount` on `system_stats/revenue` within the existing ACID transaction whenever a payment (cash, online checkout, or webhook) succeeds.
+  - Added `POST /api/payments/sync-revenue-stats` endpoint guarded by `requireRole('admin')` for on-demand authoritative resynchronization from the underlying `payments` collection.
+- **Security & Rules Hardening**:
+  - Added `match /system_stats/{statId}` and `match /systemStats/{statId}` rules to `firestore.rules` permitting only `admin` reads and strictly blocking client writes (`allow write: if false`). Deployed rules directly to Firebase Cloud Firestore.
+
+### Reason
+- User request: "can we further optimize the realtime functionality, so everytime it doesnt fech the entire collection?"
+
+### Breaking Changes
+- None.
+
+---
+
+## [2026-10-12] Revenue Trend Period Granularity & Operator Revenue Table Optimization
+
+### Files Modified
+- `fly-api/src/controllers/adminAnalyticsController.js`
+- `fly-api/src/controllers/paymentController.js`
+- `fair-fly/src/pages/Admin/AdminDashboard/dashboardUtils.js`
+- `fair-fly/src/pages/Admin/AdminDashboard/AdminDashboard.jsx`
+- `fair-fly/src/pages/Admin/AdminOperators/OperatorDetailPage.jsx`
+- `firestore.indexes.json`
+- `update-logs.md`
+
+### Summary of Changes
+- **Fixed Revenue Trend Period Granularity ("This Month" vs "This Year")**:
+  - Replaced month-level grouping with daily buckets (`YYYY-MM-DD`) when `period === 'month'`, generating a continuous 31-day zero-filled progression across the month.
+  - Kept monthly buckets (`YYYY-MM`) when `period === 'year'`, generating a continuous 12-month zero-filled progression (January to December).
+  - Enhanced `toRevenueChartData` in `dashboardUtils.js` to format daily ticks cleanly as short month + day (`Oct 5`) and monthly ticks as short month (`Oct`).
+  - Added `interval="preserveStartEnd"` and `minTickGap={16}` in `AdminDashboard.jsx` and `OperatorDetailPage.jsx` to prevent overlapping X-axis labels on 31-day views.
+- **Fixed Stale Operator Revenue in Report Summary Table**:
+  - Rerouted operator revenue calculations in `adminAnalyticsController.js` away from mutable `activeServices` or stale `users.totalRevenue` objects to derive strictly from verified `payments` (`status == 'PAID'`).
+  - Corrected operator revenue display: Baliuag Branch shows verified ₱40,388 (not stale ₱59,388), and Apalit Branch shows ₱0.
+- **Minimizing Firestore Read Costs**:
+  - Maintained per-operator revenue breakdowns inside `system_stats/revenue` (`operators: { [operatorId]: { totalRevenue, paidCount, branchName } }`), atomically incremented on payment finalization.
+  - Replaced unconstrained collection `.get()` calls on `activeServices` with `.where('status', '==', 'Completed')`.
+  - Added compound index `{ status: ASCENDING, paidAt: ASCENDING }` on `payments` in `firestore.indexes.json` and deployed to Firestore.
+  - Re-deployed Cloud Function `api` in `asia-southeast1` with updated backend controller logic.
+
+### Reason
+- User request: "This month and This Year in Analytics Tab (Revenue Trend) shows the same Graph, Yearly. Also, in the Report Summary table, it still uses the can be Stale TotalRevenue for each operator in the table, suggest a new plan to fix it while also minimizing readcost".
+
+### Breaking Changes
+- None.
+
 

@@ -173,7 +173,7 @@ export default function QuotationDetailPage() {
         rate: quotation.rate !== undefined ? quotation.rate : '',
         taxAmount: quotation.taxAmount !== undefined ? quotation.taxAmount : '',
         totalAmount: quotation.totalAmount !== undefined ? quotation.totalAmount : quotation.rate || '',
-        remarks: quotation.remarks || '',
+        remarks: quotation.operatorRemarks || quotation.remarks || '',
         preparedByName: quotation.preparedByName || quotation.preparedBy || '',
         preparedByTitle: quotation.preparedByTitle || '',
         preparedByContact: quotation.preparedByContact || '',
@@ -968,7 +968,7 @@ export default function QuotationDetailPage() {
                 />
               ) : (
                 <p className="description-text quote-preline-text">
-                  {quotation.remarks || 'Standard terms and conditions apply.'}
+                  {quotation.operatorRemarks || quotation.remarks || 'Standard terms and conditions apply.'}
                 </p>
               )}
             </article>

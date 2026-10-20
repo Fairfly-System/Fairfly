@@ -68,6 +68,38 @@
   flex: 1 1 auto;
 }
 
+/* Crucial Fix: Prevent table rows and headers from sticking when scrolling past them */
+.pdf-sheet th,
+.pdf-sheet tr,
+.pdf-sheet td,
+.pdf-modal-body th,
+.pdf-modal-body tr,
+.pdf-export-modal-card th,
+.quotation-th,
+.inquiry-table th,
+.receipt-table th {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+
+/* Embedded PDF Viewer Mode */
+.pdf-modal-body--file {
+  padding: 0;
+  background-color: #0f172a;
+  height: calc(100vh - 9rem);
+  min-height: 35rem;
+  overflow: hidden;
+  display: flex;
+}
+
+.pdf-embedded-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: #ffffff;
+}
+
 /* Printable A4 Canvas Container */
 .pdf-sheet {
   background-color: #ffffff;

@@ -235,12 +235,13 @@ export default function ClientAppointmentsPage() {
         ) : (
           filteredAppointments.map((app) => {
             const statusKey = (app.status || 'pending').toLowerCase();
-            const statusClass =
-              statusKey === 'confirmed'
-                ? 'confirmed'
-                : statusKey === 'cancelled'
-                ? 'cancelled'
-                : 'pending';
+            const isConfirmed = statusKey === 'confirmed' || statusKey === 'completed';
+            const isCancelled = statusKey === 'cancelled' || statusKey === 'rejected';
+            const statusClass = isConfirmed
+              ? 'confirmed'
+              : isCancelled
+              ? 'cancelled'
+              : 'pending';
 
             const refCode = app.id ? String(app.id).substring(0, 8).toUpperCase() : 'APPT';
 
@@ -256,9 +257,9 @@ export default function ClientAppointmentsPage() {
                   <span className={`appointment-status-pill ${statusClass}`}>
                     <i
                       className={`fa-solid ${
-                        statusKey === 'confirmed'
+                        isConfirmed
                           ? 'fa-circle-check'
-                          : statusKey === 'cancelled'
+                          : isCancelled
                           ? 'fa-circle-xmark'
                           : 'fa-clock'
                       }`}
@@ -279,7 +280,7 @@ export default function ClientAppointmentsPage() {
                     <i className="fa-solid fa-calendar-day"></i>
                     <div>
                       <span className="schedule-item-label">Visit Date</span>
-                      <strong className="schedule-item-val">{app.preferredDate || 'To be scheduled'}</strong>
+                      <strong className="schedule-item-val">{app.preferredDate || (app.scheduledAt ? new Date(app.scheduledAt).toLocaleDateString() : 'To be scheduled')}</strong>
                     </div>
                   </div>
                   <div className="appointment-schedule-divider" />
@@ -287,7 +288,7 @@ export default function ClientAppointmentsPage() {
                     <i className="fa-regular fa-clock"></i>
                     <div>
                       <span className="schedule-item-label">Time Window</span>
-                      <strong className="schedule-item-val">{app.preferredTime || '10:00 AM'}</strong>
+                      <strong className="schedule-item-val">{app.preferredTime || (app.scheduledAt ? new Date(app.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM')}</strong>
                     </div>
                   </div>
                 </div>

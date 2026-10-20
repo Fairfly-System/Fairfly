@@ -256,6 +256,7 @@
   padding: 0.2rem 0.5rem;
   background: #f5f3ff;
   color: var(--purple, #7c3aed);
+  border: 1px solid #ddd6fe;
   border-radius: 0;
   font-weight: 600;
 }

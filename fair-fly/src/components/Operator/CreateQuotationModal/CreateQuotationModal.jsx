@@ -60,7 +60,6 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
     taxAmount: '',
     rateBreakdown: '',
     totalAmount: '',
-    remarks: '- Initial payment of 50% upon confirmation\n- Full payment on or before tour commencement',
     operatorRemarks: '- Initial payment of 50% upon confirmation\n- Full payment on or before tour commencement',
     clientRemarks: '',
     preparedByName: userDetails?.name || userDetails?.fullName || 'Emmanuel Manlapig',
@@ -85,7 +84,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
           clientPhone: initialData.cellphone || initialData.phoneNumber || initialData.telNo || '',
           serviceId: initialData.serviceId || '',
           serviceTitle: serviceName,
-          clientRemarks: initialData.remarks || initialData.clientRemarks || initialData.notes || '',
+          clientRemarks: initialData.clientRemarks || initialData.remarks || initialData.notes || '',
         }));
       }
     }
@@ -185,9 +184,8 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
     try {
       const payload = {
         ...formData,
-        remarks: (formData.remarks || '').trim(),
-        operatorRemarks: (formData.remarks || '').trim(),
-        clientRemarks: (formData.clientRemarks || initialData?.remarks || initialData?.clientRemarks || '').trim(),
+        operatorRemarks: (formData.operatorRemarks || '').trim(),
+        clientRemarks: (formData.clientRemarks || initialData?.clientRemarks || initialData?.remarks || '').trim(),
         submittedRequirementsId: initialData?.submittedRequirementsId || null,
         rate: Number(formData.rate) || 0,
         taxAmount: Number(formData.taxAmount) || 0,
@@ -199,6 +197,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
           ? (userDetails?.branchName || userDetails?.name || 'Branch Office')
           : (initialData?.branchName || formData.branchName || 'Branch Office'),
       };
+      delete payload.remarks;
 
       createQuotation(
         userToken,
@@ -516,9 +515,9 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
           <div className="form-column">
             <label className="form-label">Operator Remarks & Payment Terms</label>
             <textarea
-              name="remarks"
+              name="operatorRemarks"
               placeholder="- Initial payment of 50% upon confirmation&#10;- Full payment on or before tour commencement"
-              value={formData.remarks}
+              value={formData.operatorRemarks}
               onChange={handleChange}
               rows={3}
               disabled={isSubmitting}

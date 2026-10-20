@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   createAppointment,
   getAppointments,
+  getAppointmentById,
   updateAppointmentStatus,
   scheduleFranchiseAppointment
 } = require('../controllers/appointmentController');
@@ -19,7 +20,8 @@ const SCHEDULE_FRANCHISE_ALLOWED_FIELDS = [
   'startTime',
   'endTime',
   'notes',
-  'location'
+  'location',
+  'scheduledAt'
 ];
 
 const APPOINTMENT_ALLOWED_FIELDS = [
@@ -32,6 +34,7 @@ const APPOINTMENT_ALLOWED_FIELDS = [
   'branchName',
   'preferredDate',
   'preferredTime',
+  'scheduledAt',
   'serviceType',
   'purpose',
   'status'
@@ -62,6 +65,7 @@ router.post(
 );
 
 router.get('/', performanceProfiler('GET /appointments', verifyFirebaseToken, apiRateLimiter, getAppointments));
+router.get('/:id', performanceProfiler('GET /appointments/:id', verifyFirebaseToken, apiRateLimiter, getAppointmentById));
 router.patch('/:id/status', performanceProfiler('PATCH /appointments/:id/status', verifyFirebaseToken, allowedFields(['status']), apiRateLimiter, updateAppointmentStatus));
 
 module.exports = router;
