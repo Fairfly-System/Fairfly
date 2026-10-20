@@ -2,7 +2,7 @@ import './admin-layout.css';
 import { Outlet, useLocation } from 'react-router';
 import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { firestore } from '../../../firebase';
 import { collection, onSnapshot, query, where, limit, getCountFromServer } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
