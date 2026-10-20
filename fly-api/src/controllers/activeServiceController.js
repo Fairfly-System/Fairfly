@@ -23,7 +23,8 @@ const COLLECTIONS = {
   PAYMENTS: 'payments',
   QUOTATIONS: 'quotations',
   INQUIRIES: 'inquiries',
-  SUBMITTED_REQUIREMENTS: 'submitted_requirements'
+  SUBMITTED_REQUIREMENTS: 'submitted_requirements',
+  SYSTEM_STATS: 'system_stats'
 };
 
 const DEFAULT_FALLBACK_STEPS = [
@@ -416,14 +417,13 @@ const updateStepStatus = async (req, res) => {
             const userDoc = await userRef.get();
             if (userDoc.exists) {
               await userRef.update({
-                totalRevenue: admin.firestore.FieldValue.increment(num),
                 completedServicesCount: admin.firestore.FieldValue.increment(1),
                 updatedAt: now
               });
               revenueCredited = true;
             }
           } catch (branchErr) {
-            console.error('Error updating branch revenue on service completion:', branchErr);
+            console.error('Error updating branch completed count on service completion:', branchErr);
           }
         }
       }
@@ -707,6 +707,56 @@ const cancelActiveService = async (req, res) => {
         });
       } catch (inqErr) {
         console.warn(`[cancelActiveService] Error updating inquiry ${inquiryId}:`, inqErr.message);
+      }
+    }
+
+    // 7.5 Decrement system_stats/revenue and operator user revenue if refund was issued
+    if (refundAmount > 0) {
+      try {
+        const targetOpId = serviceRecord.branchUid || serviceRecord.operatorId || paymentDoc?.operatorId || paymentDoc?.branchUid;
+        const systemStatsRef = db.collection(COLLECTIONS.SYSTEM_STATS).doc('revenue');
+        
+        const statsUpdate = {
+          totalRevenue: admin.firestore.FieldValue.increment(-refundAmount),
+          paidCount: admin.firestore.FieldValue.increment(-1),
+          updatedAt: now
+        };
+        if (targetOpId && targetOpId !== 'OP-ACCOUNT') {
+          statsUpdate[`operators.${targetOpId}.totalRevenue`] = admin.firestore.FieldValue.increment(-refundAmount);
+          statsUpdate[`operators.${targetOpId}.paidCount`] = admin.firestore.FieldValue.increment(-1);
+        }
+        await systemStatsRef.update(statsUpdate).catch(async () => {
+          const snap = await systemStatsRef.get();
+          if (snap.exists) {
+            const currentData = snap.data() || {};
+            const curTotal = Math.max(0, Number(currentData.totalRevenue || 0) - refundAmount);
+            const curPaidCount = Math.max(0, Number(currentData.paidCount || 0) - 1);
+            const operators = currentData.operators || {};
+            if (targetOpId && operators[targetOpId]) {
+              operators[targetOpId].totalRevenue = Math.max(0, Number(operators[targetOpId].totalRevenue || 0) - refundAmount);
+              operators[targetOpId].paidCount = Math.max(0, Number(operators[targetOpId].paidCount || 0) - 1);
+            }
+            await systemStatsRef.set({ ...currentData, totalRevenue: curTotal, paidCount: curPaidCount, operators, updatedAt: now }, { merge: true });
+          }
+        });
+
+        // Also decrement operator user document totalRevenue
+        if (targetOpId && targetOpId !== 'OP-ACCOUNT') {
+          const userRef = db.collection(COLLECTIONS.USERS).doc(targetOpId);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            const userUpdates = {
+              totalRevenue: admin.firestore.FieldValue.increment(-refundAmount),
+              updatedAt: now
+            };
+            if (serviceRecord.revenueCredited || serviceRecord.status === 'Completed') {
+              userUpdates.completedServicesCount = admin.firestore.FieldValue.increment(-1);
+            }
+            await userRef.update(userUpdates);
+          }
+        }
+      } catch (statsErr) {
+        console.error('[cancelActiveService] Error decrementing revenue stats on refund:', statsErr);
       }
     }
 

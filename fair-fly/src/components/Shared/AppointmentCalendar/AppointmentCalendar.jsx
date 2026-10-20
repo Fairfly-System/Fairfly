@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useAuthContext } from '../../../context/AuthContext';
 import './AppointmentCalendar.css';
 
 const MONTH_NAMES = [
@@ -43,11 +44,21 @@ export default function AppointmentCalendar({
   statusFilter: controlledStatusFilter,
   onStatusFilterChange
 }) {
+  const { userDetails } = useAuthContext();
+  const effectiveRole = (role || userDetails?.role || 'operator').toLowerCase();
+  const isAdmin = effectiveRole === 'admin';
+
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [internalStatusFilter, setInternalStatusFilter] = useState('all');
 
   const activeStatusFilter = controlledStatusFilter !== undefined ? controlledStatusFilter : internalStatusFilter;
+
+  useEffect(() => {
+    if (!isAdmin && activeStatusFilter === 'Completed') {
+      handleStatusChange('all');
+    }
+  }, [isAdmin, activeStatusFilter]);
 
   const handleStatusChange = (val) => {
     if (onStatusFilterChange) {
@@ -322,7 +333,7 @@ export default function AppointmentCalendar({
                 <option value="all">All Statuses</option>
                 <option value="Pending">Pending Only</option>
                 <option value="Confirmed">Confirmed Only</option>
-                <option value="Completed">Completed Only</option>
+                {isAdmin && <option value="Completed">Completed Only</option>}
                 <option value="Cancelled">Cancelled Only</option>
               </select>
             </div>
@@ -371,10 +382,12 @@ export default function AppointmentCalendar({
           <span className="shared-legend-dot status-pending" />
           Pending
         </span>
-        <span className="shared-legend-item">
-          <span className="shared-legend-dot status-completed" />
-          Completed
-        </span>
+        {isAdmin && (
+          <span className="shared-legend-item">
+            <span className="shared-legend-dot status-completed" />
+            Completed
+          </span>
+        )}
         <span className="shared-legend-item">
           <span className="shared-legend-dot status-cancelled" />
           Cancelled

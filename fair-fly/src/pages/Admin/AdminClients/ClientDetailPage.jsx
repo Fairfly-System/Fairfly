@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { where } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../../components/UI/toast/ToastProvider';
 import RecordDetailLayout from '../../../components/UI/RecordDetailLayout/RecordDetailLayout';
 import AlertBar from '../../../components/UI/AlertBar/AlertBar';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
+import Pagination from '../../../components/UI/Pagination/Pagination';
+import PdfDocumentView from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import useFirestorePagination from '../../../hooks/useFirestorePagination';
+import useDebounce from '../../../hooks/useDebounce';
 import ClientEditModal from '../../../components/Admin/Modals/ClientEditModal/ClientEditModal';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import RejectClientModal from '../../../components/Admin/Modals/RejectClientModal/RejectClientModal';
@@ -17,6 +22,7 @@ import {
   rejectClient
 } from '../../../services/adminService';
 import './admin-clients.css';
+import '../AdminInquiryHistory/admin-inquiry-history.css';
 
 export default function ClientDetailPage() {
   const { id } = useParams();
@@ -40,6 +46,45 @@ export default function ClientDetailPage() {
   // Generic Confirmation modal
   const [confirmState, setConfirmState] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+
+  // Inquiry history scoped to this client (top N with pagination)
+  const [inquirySearch, setInquirySearch] = useState('');
+  const debouncedInquirySearch = useDebounce(inquirySearch, 300);
+  const [pdfInquiryData, setPdfInquiryData] = useState(null);
+
+  const clientInquiryFilters = useMemo(() => {
+    if (!id) return [];
+    return [where('clientUid', '==', id)];
+  }, [id]);
+
+  const inquirySearchFilterFn = useCallback((item, term) => {
+    const t = term.toLowerCase();
+    const svc = (item.serviceType || '').toLowerCase();
+    const ctrl = (item.controlNo || item.formNo || '').toLowerCase();
+    const branch = (item.branchName || item.preferredBranchLocation || '').toLowerCase();
+    return svc.includes(t) || ctrl.includes(t) || branch.includes(t);
+  }, []);
+
+  const {
+    data: clientInquiries,
+    loading: inquiriesLoading,
+    currentPage: inquiriesPage,
+    pageSize: inquiriesPageSize,
+    totalItems: inquiriesTotal,
+    goToPage: goToInquiriesPage,
+    changePageSize: changeInquiriesPageSize,
+  } = useFirestorePagination({
+    collectionName: 'inquiries',
+    filters: clientInquiryFilters,
+    filterKey: `client-inquiries-${id}`,
+    orderByField: 'createdAt',
+    orderDirection: 'desc',
+    initialPageSize: 5,
+    realtime: true,
+    enabled: Boolean(id),
+    searchTerm: debouncedInquirySearch,
+    searchFilterFn: inquirySearchFilterFn,
+  });
 
   const loadClientDetails = useCallback(() => {
     if (!userToken || !id) return;
@@ -402,6 +447,19 @@ export default function ClientDetailPage() {
                 <span className="tab-badge-verified">Verified</span>
               )}
             </button>
+            <button
+              type="button"
+              className={`client-tab-btn ${activeTab === 'inquiries' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inquiries')}
+            >
+              <i className="fa-solid fa-clipboard-list"></i>
+              Inquiry History
+              {inquiriesTotal > 0 && (
+                <span className="tab-badge-verified" style={{ background: 'var(--purple)', color: '#fff' }}>
+                  {inquiriesTotal}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* TAB 1: Account Overview */}
@@ -424,11 +482,11 @@ export default function ClientDetailPage() {
                   detail="Scheduled branch visits"
                 />
                 <KpiCard
-                  title="Support Tickets"
-                  value={client.tickets?.length || 0}
-                  icon="fa-solid fa-headset"
+                  title="Inquiry Requests"
+                  value={inquiriesTotal || 0}
+                  icon="fa-solid fa-clipboard-list"
                   iconColor="#3b82f6"
-                  detail="Customer support inquiries"
+                  detail="Submitted travel inquiries"
                 />
               </section>
 
@@ -528,12 +586,12 @@ export default function ClientDetailPage() {
                     <div className="client-activity-item">
                       <div className="client-activity-info">
                         <div className="client-activity-icon">
-                          <i className="fa-solid fa-headset"></i>
+                          <i className="fa-solid fa-clipboard-list"></i>
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-dark)' }}>Support Tickets</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-dark)' }}>Inquiry Requests</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                            {client.tickets?.length || 0} support inquiry ticket(s)
+                            {inquiriesTotal || 0} submitted service inquiry request(s)
                           </div>
                         </div>
                       </div>
@@ -848,6 +906,168 @@ export default function ClientDetailPage() {
               </div>
             </div>
           )}
+
+          {/* TAB 3: Client Inquiry History */}
+          {activeTab === 'inquiries' && (
+            <div className="card client-inquiries-card" style={{ padding: '1.5rem', marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <i className="fa-solid fa-clipboard-list text-purple"></i> Client Inquiry History
+                  </h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>
+                    All service inquiries filed by or linked to this client ({inquiriesTotal || 0} total)
+                  </p>
+                </div>
+                <div className="search-box" style={{ maxWidth: '300px' }}>
+                  <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                  <input
+                    type="text"
+                    placeholder="Search service, control no..."
+                    value={inquirySearch}
+                    onChange={(e) => setInquirySearch(e.target.value)}
+                  />
+                  {inquirySearch && (
+                    <button
+                      type="button"
+                      className="clear-search-btn"
+                      onClick={() => setInquirySearch('')}
+                      aria-label="Clear search"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Inquiries Table */}
+              <div className="inquiry-table-responsive">
+                <table className="inquiry-data-table" aria-busy={inquiriesLoading}>
+                  <thead>
+                    <tr>
+                      <th>Form / Date</th>
+                      <th>Service Inquired</th>
+                      <th>Assigned Branch</th>
+                      <th>Pax / Population</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inquiriesLoading ? (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                          <div className="empty-state-box">
+                            <i className="fa-solid fa-circle-notch fa-spin empty-icon" style={{ color: 'var(--purple)' }}></i>
+                            <p style={{ marginTop: '0.5rem' }}>Loading client inquiry records...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : clientInquiries.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                          <div className="empty-state-box">
+                            <i className="fa-solid fa-file-circle-question empty-icon"></i>
+                            <p style={{ marginTop: '0.5rem', fontWeight: 500 }}>
+                              {inquirySearch ? 'No inquiries matching your search.' : 'No service inquiries recorded for this client.'}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      clientInquiries.map((inq) => {
+                        const statusLower = (inq.status || '').toLowerCase();
+                        let statusPillClass = 'status-pill status-pill-neutral';
+                        if (['accepted', 'confirmed', 'completed', 'paid', 'active', 'fulfilled', 'closed'].includes(statusLower)) {
+                          statusPillClass = 'status-pill status-pill-active';
+                        } else if (['cancelled', 'rejected', 'disabled'].includes(statusLower)) {
+                          statusPillClass = 'status-pill status-pill-disabled';
+                        } else if (['quoted', 'in-progress', 'ongoing', 'reviewing', 'quotation_created', 'quotation_sent'].includes(statusLower)) {
+                          statusPillClass = 'status-pill status-pill-info';
+                        } else if (['submitted', 'pending', 'waiting', 'in-review'].includes(statusLower)) {
+                          statusPillClass = 'status-pill status-pill-pending';
+                        }
+
+                        return (
+                          <tr key={inq.id}>
+                            <td>
+                              <div className="inquiry-form-meta">
+                                <span className="inquiry-form-code">
+                                  <i className="fa-solid fa-file-lines"></i>
+                                  {inq.controlNo || inq.formNo || 'SAF-01'}
+                                </span>
+                                <span className="inquiry-date-sub">
+                                  <i className="fa-regular fa-calendar"></i>
+                                  {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : (inq.dateInquired || 'N/A')}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="inquiry-service-badge">
+                                <i className="fa-solid fa-briefcase"></i>
+                                {inq.serviceType || 'General Travel Service'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="branch-tag">
+                                <i className="fa-solid fa-building"></i>
+                                {inq.branchName || inq.preferredBranchLocation || 'FairFly Main'}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                                {inq.population || '1'}
+                              </span>
+                            </td>
+                            <td>
+                              {inq.archived ? (
+                                <span className="status-pill status-pill-neutral">
+                                  <i className="fa-solid fa-box-archive" style={{ marginRight: '0.3rem' }}></i>Archived
+                                </span>
+                              ) : (
+                                <span className={statusPillClass}>
+                                  {(inq.status || 'Submitted').replace(/_/g, ' ')}
+                                </span>
+                              )}
+                            </td>
+                            <td className="actions-col" style={{ textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                <button
+                                  type="button"
+                                  className="icon-btn pdf"
+                                  onClick={() => setPdfInquiryData(inq)}
+                                  title="Export PDF"
+                                >
+                                  <i className="fa-solid fa-file-pdf"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-btn view"
+                                  onClick={() => navigate(`/admin/inquiry-history/${inq.id}`)}
+                                  title="View Inquiry Record"
+                                >
+                                  <i className="fa-solid fa-eye"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={inquiriesPage}
+                totalItems={inquiriesTotal}
+                pageSize={inquiriesPageSize}
+                onPageChange={goToInquiriesPage}
+                onPageSizeChange={changeInquiriesPageSize}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -880,6 +1100,14 @@ export default function ClientDetailPage() {
         confirmIcon={confirmState?.confirmIcon}
         isDanger={confirmState?.isDanger}
         isLoading={isConfirmLoading}
+      />
+
+      {/* PDF Export Modal for Inquiries */}
+      <PdfDocumentView
+        isOpen={Boolean(pdfInquiryData)}
+        onClose={() => setPdfInquiryData(null)}
+        type="inquiry"
+        data={pdfInquiryData}
       />
     </RecordDetailLayout>
   );

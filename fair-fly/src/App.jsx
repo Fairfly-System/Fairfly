@@ -38,6 +38,7 @@ import OperatorInquiryForms from './pages/Operator/OperatorInquiryForms/Operator
 import OperatorTickets from './pages/Operator/OperatorTickets/OperatorTickets';
 import OperatorQuotations from './pages/Operator/OperatorQuotations/OperatorQuotations';
 import OperatorServiceProcedure from './pages/Operator/OperatorServiceProcedure/OperatorServiceProcedure';
+import OperatorWorkflows from './pages/Operator/OperatorWorkflows/OperatorWorkflows';
 import { useAuthContext } from './context/AuthContext';
 
 // Detail views & content components
@@ -160,7 +161,7 @@ function App() {
             <Route index element={<OperatorServicesContent />} />
             <Route path=":id" element={<OperatorServiceDetailPage />} />
           </Route>
-          <Route path="workflows" element={<Navigate to="/operator" replace />} />
+          <Route path="workflows" element={<OperatorWorkflows />} />
           <Route path="resources" element={<OperatorResources />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="messages" element={<MessagesPage />} />

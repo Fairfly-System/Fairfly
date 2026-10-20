@@ -62,7 +62,7 @@ export default function ClientDashboard() {
             </div>
             <div>
               <h2>Service Request</h2>
-              <p>Start an official service inquiry (SAF-01-002)</p>
+              <p>Start an official service inquiry</p>
             </div>
           </div>
 

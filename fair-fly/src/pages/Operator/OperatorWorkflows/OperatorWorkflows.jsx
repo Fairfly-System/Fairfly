@@ -1,4 +1,9 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
+import { useAuthContext } from '../../../context/AuthContext';
+import AdminWorkflowTemplates from '../../Admin/AdminWorkflowTemplates/AdminWorkflowTemplates';
+import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
+import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import OperatorProvider, { useOperatorContext } from '../../../context/OperatorContext';
 import Pagination from '../../../components/UI/Pagination/Pagination';
 import './operator-workflows.css';
@@ -79,6 +84,27 @@ function WorkflowContent() {
     return DEFAULT_WORKFLOWS[active] || [];
   }, [dbTemplates, active]);
 
+  // Compute individual step counts per workflow tab so swapping tabs does not alter other tabs' counts
+  const tabStepCounts = useMemo(() => {
+    const counts = {};
+    TABS.forEach((tab) => {
+      let count = 0;
+      if (dbTemplates && dbTemplates.length > 0) {
+        const match = dbTemplates.find(
+          (t) => (t.type || t.serviceType || t.name || '').toLowerCase() === tab.toLowerCase()
+        );
+        if (match && Array.isArray(match.steps) && match.steps.length > 0) {
+          count = match.steps.length;
+        }
+      }
+      if (count === 0 && DEFAULT_WORKFLOWS[tab]) {
+        count = DEFAULT_WORKFLOWS[tab].length;
+      }
+      counts[tab] = count;
+    });
+    return counts;
+  }, [dbTemplates]);
+
   const paginatedSteps = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return activeSteps.slice(start, start + pageSize).map((text, i) => ({
@@ -91,8 +117,8 @@ function WorkflowContent() {
     <div className="card op-workflows page-fade-in">
       <div className="op-workflows-header">
         <div>
-          <h2>Template-Driven Booking Workflows</h2>
-          <p>Admin-standardized step-by-step operational procedures for service processing</p>
+          <h2>Standard Operating Procedures</h2>
+          <p>Standardized step-by-step procedures for branch service fulfillment</p>
         </div>
       </div>
 
@@ -106,7 +132,7 @@ function WorkflowContent() {
               setCurrentPage(1);
             }}
           >
-            {tab} ({activeSteps.length} Steps)
+            {tab} ({tabStepCounts[tab] || 0} Steps)
           </button>
         ))}
       </div>
@@ -143,9 +169,75 @@ function WorkflowContent() {
 }
 
 export default function OperatorWorkflows() {
+  const { userDetails } = useAuthContext();
+
+  if (userDetails?.isQualified) {
+    return <AdminWorkflowTemplates />;
+  }
+
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/operator' },
+    { label: 'Workflows' },
+  ];
+
   return (
-    <OperatorProvider targetCollection="workflowTemplates">
-      <WorkflowContent />
-    </OperatorProvider>
+    <main className="operator-workflows-page page-fade-in">
+      <Breadcrumbs items={breadcrumbItems} />
+      <PageHeader
+        title="Standard Booking Workflows"
+        subtitle="Operational procedures and step-by-step service pipelines"
+        illustrationSrc="/pageImages/admin/workflow-templates.png"
+      />
+
+      <div
+        className="card"
+        style={{
+          padding: '1.25rem 1.5rem',
+          marginBottom: '1.25rem',
+          background: '#fffbeb',
+          border: '1px solid #fde68a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div
+            style={{
+              width: '2.5rem',
+              height: '2.5rem',
+              borderRadius: '50%',
+              background: '#fef3c7',
+              color: '#d97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.125rem',
+              flexShrink: 0
+            }}
+          >
+            <i className="fa-solid fa-lock"></i>
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: '#92400e' }}>
+              Workflow Creation Restricted
+            </h4>
+            <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8125rem', color: '#b45309' }}>
+              Creating and editing custom workflow templates requires <strong>Qualified Operator</strong> certification.
+            </p>
+          </div>
+        </div>
+        <Link to="/operator/services" className="btn-primary btn-sm" style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          <i className="fa-solid fa-certificate" style={{ marginRight: '0.4rem' }}></i>
+          Apply for Qualification
+        </Link>
+      </div>
+
+      <OperatorProvider targetCollection="workflowTemplates">
+        <WorkflowContent />
+      </OperatorProvider>
+    </main>
   );
 }

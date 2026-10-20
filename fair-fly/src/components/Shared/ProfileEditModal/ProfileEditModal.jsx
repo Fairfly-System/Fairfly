@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import { useToast } from '../../UI/toast/ToastProvider';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../utils/phoneUtils';
 
 /**
  * ProfileEditModal — Reusable modal for editing user's basic profile details.
@@ -17,6 +18,9 @@ export default function ProfileEditModal({
   const { addToast } = useToast();
 
   // Form states
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [fullName, setFullName] = useState('');
   const [branchName, setBranchName] = useState('');
   const [phone, setPhone] = useState('');
@@ -29,8 +33,30 @@ export default function ProfileEditModal({
       // For operators, fullName stores Authorized Representative name, whereas name/branchName is the branch
       setFullName(initialData.fullName || (isOp ? '' : initialData.name) || '');
       setBranchName(initialData.branchName || initialData.name || '');
-      setPhone(initialData.phone || initialData.contactNumber || '');
+      setPhone(sanitizePhilippinePhone(initialData.phone || initialData.contactNumber || ''));
       setAddress(initialData.address || '');
+
+      // Parse or load firstName, middleName / middleInitial, lastName
+      const rawFull = (initialData.fullName || initialData.name || '').trim();
+      const parts = rawFull.split(/\s+/).filter(Boolean);
+
+      const fName = initialData.firstName !== undefined && initialData.firstName !== null && String(initialData.firstName).trim() !== ''
+        ? String(initialData.firstName).trim()
+        : (parts.length > 0 ? parts[0] : '');
+
+      const mName = initialData.middleName !== undefined && initialData.middleName !== null && String(initialData.middleName).trim() !== ''
+        ? String(initialData.middleName).trim()
+        : (initialData.middleInitial !== undefined && initialData.middleInitial !== null && String(initialData.middleInitial).trim() !== ''
+          ? String(initialData.middleInitial).trim()
+          : (parts.length > 2 ? parts.slice(1, -1).join(' ') : ''));
+
+      const lName = initialData.lastName !== undefined && initialData.lastName !== null && String(initialData.lastName).trim() !== ''
+        ? String(initialData.lastName).trim()
+        : (parts.length > 1 ? parts[parts.length - 1] : '');
+
+      setFirstName(fName);
+      setMiddleName(mName);
+      setLastName(lName);
     }
   }, [initialData, isOpen, role]);
 
@@ -38,23 +64,53 @@ export default function ProfileEditModal({
     e.preventDefault();
     const isOp = role === 'operator' || role === 'branch_operator';
 
-    if (!isOp && !fullName.trim()) {
-      addToast('Full name cannot be empty', 'warning');
+    if (isOp) {
+      if (!fullName.trim()) {
+        addToast('Representative name cannot be empty', 'warning');
+        return;
+      }
+    } else {
+      if (!firstName.trim()) {
+        addToast('First name is required', 'warning');
+        return;
+      }
+      if (firstName.trim().length < 2) {
+        addToast('First name must be at least 2 characters', 'warning');
+        return;
+      }
+      if (!lastName.trim()) {
+        addToast('Last name is required', 'warning');
+        return;
+      }
+      if (lastName.trim().length < 2) {
+        addToast('Last name must be at least 2 characters', 'warning');
+        return;
+      }
+    }
+
+    if (phone.trim() && !isValidPhilippinePhone(phone)) {
+      addToast('Phone number must follow Philippine format: 09XXXXXXXXX (11 digits)', 'warning');
       return;
     }
 
+    const sanitizedPhone = sanitizePhilippinePhone(phone);
     const payload = {};
     if (isOp) {
       // NOTE: Branch name is strictly read-only and managed exclusively by Head Office Administrators.
       // Deliberately omit branchName from update payload to preserve admin-assigned identity.
       if (fullName.trim()) payload.fullName = fullName.trim();
-      payload.phone = phone.trim();
-      payload.contactNumber = phone.trim();
+      payload.phone = sanitizedPhone;
+      payload.contactNumber = sanitizedPhone;
       payload.address = address.trim();
     } else {
-      payload.fullName = fullName.trim();
-      payload.name = fullName.trim();
-      payload.phone = phone.trim();
+      const derivedFullName = [firstName.trim(), middleName.trim(), lastName.trim()].filter(Boolean).join(' ');
+      payload.firstName = firstName.trim();
+      payload.middleName = middleName.trim();
+      payload.middleInitial = middleName.trim();
+      payload.lastName = lastName.trim();
+      payload.fullName = derivedFullName;
+      payload.name = derivedFullName;
+      payload.phone = sanitizedPhone;
       payload.address = address.trim();
     }
 
@@ -70,7 +126,7 @@ export default function ProfileEditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Edit Personal Information"
-      maxWidth="38rem"
+      maxWidth="40rem"
     >
       <form className="form-column" onSubmit={handleSubmit} style={{ gap: '1.25rem' }}>
         <p style={{ fontSize: '0.875rem', color: 'var(--text-mid)', margin: 0 }}>
@@ -150,20 +206,56 @@ export default function ProfileEditModal({
             </div>
           </div>
         ) : (
-          <div className="form-column">
-            <label className="form-label" htmlFor="profile-full-name">
-              Full Name <span style={{ color: 'var(--error-red)' }}>*</span>
-            </label>
-            <input
-              id="profile-full-name"
-              type="text"
-              className="form-input"
-              placeholder="e.g. Maria Clara Santos"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+          <div className="form-grid-3">
+            <div className="form-column">
+              <label className="form-label" htmlFor="profile-first-name">
+                First Name <span style={{ color: 'var(--error-red)' }}>*</span>
+              </label>
+              <input
+                id="profile-first-name"
+                type="text"
+                className="form-input"
+                placeholder="Juan"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                disabled={isLoading}
+                autoComplete="given-name"
+              />
+            </div>
+
+            <div className="form-column">
+              <label className="form-label" htmlFor="profile-middle-name">
+                Middle Name / M.I.
+              </label>
+              <input
+                id="profile-middle-name"
+                type="text"
+                className="form-input"
+                placeholder="D."
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+                disabled={isLoading}
+                autoComplete="additional-name"
+              />
+            </div>
+
+            <div className="form-column">
+              <label className="form-label" htmlFor="profile-last-name">
+                Last Name <span style={{ color: 'var(--error-red)' }}>*</span>
+              </label>
+              <input
+                id="profile-last-name"
+                type="text"
+                className="form-input"
+                placeholder="Dela Cruz"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                disabled={isLoading}
+                autoComplete="family-name"
+              />
+            </div>
           </div>
         )}
 
@@ -193,9 +285,10 @@ export default function ProfileEditModal({
               id="profile-phone"
               type="tel"
               className="form-input"
-              placeholder="+63 912 345 6789"
+              placeholder="09XXXXXXXXX"
+              maxLength={PH_PHONE_MAX_LENGTH}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(sanitizePhilippinePhone(e.target.value))}
               disabled={isLoading}
             />
           </div>
@@ -229,7 +322,7 @@ export default function ProfileEditModal({
           <button
             type="submit"
             className="btn-primary"
-            disabled={isLoading || (!isOperator && !fullName.trim())}
+            disabled={isLoading || (isOperator ? !fullName.trim() : (!firstName.trim() || !lastName.trim()))}
           >
             {isLoading ? (
               <>

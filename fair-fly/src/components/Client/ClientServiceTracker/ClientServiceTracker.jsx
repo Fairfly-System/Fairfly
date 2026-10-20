@@ -297,7 +297,7 @@ export default function ClientServiceTracker({ service, onOpenReceipt }) {
             className="service-steps-show"
             onClick={() => onOpenReceipt(service)}
             style={{ marginLeft: 'auto', background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}
-            title="View and download official ADF-07-002 E-Receipt"
+            title="View and download official E-Receipt"
           >
             <i className="fa-solid fa-receipt"></i>
             <span>Official E-Receipt</span>

@@ -182,7 +182,7 @@ export default function InquiryFormDetailPage() {
     if (isArchived) {
       return [
         {
-          label: 'Export to PDF (SAF-01-002)',
+          label: 'Export to PDF',
           icon: 'fa-solid fa-file-pdf',
           onClick: () => setShowPdfModal(true),
           className: 'btn-secondary',
@@ -201,7 +201,7 @@ export default function InquiryFormDetailPage() {
 
     return [
       {
-        label: 'Export to PDF (SAF-01-002)',
+        label: 'Export to PDF',
         icon: 'fa-solid fa-file-pdf',
         onClick: () => setShowPdfModal(true),
         className: 'btn-secondary',
@@ -401,7 +401,7 @@ export default function InquiryFormDetailPage() {
                   <p className="inquiry-confirmed-sub">
                     {hasActiveService
                       ? 'This inquiry has been accepted and converted into an active tracking service with sequential milestones.'
-                      : 'An official quotation (ADF-07-001) has been created from this inquiry.'}
+                      : 'An official quotation has been created from this inquiry.'}
                   </p>
                 </div>
               </div>
@@ -413,7 +413,7 @@ export default function InquiryFormDetailPage() {
                     className="btn btn-secondary inquiry-action-link"
                   >
                     <i className="fa-solid fa-file-invoice-dollar inquiry-icon-purple"></i>
-                    <span>View Quotation (ADF-07-001)</span>
+                    <span>View Quotation</span>
                   </Link>
                 )}
 
@@ -468,7 +468,7 @@ export default function InquiryFormDetailPage() {
             {/* Service & Branch Attribution Card */}
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-solid fa-file-invoice"></i> Service & Intake Meta (SAF-01-002)
+                <i className="fa-solid fa-file-invoice"></i> Service & Intake Details
               </h2>
               <div className="panel-details-list">
                 <div className="detail-item">
@@ -516,7 +516,7 @@ export default function InquiryFormDetailPage() {
             </article>
           </div>
 
-          {/* Specified Requirements of Client (SAF-01-002 Section 2) */}
+          {/* Specified Requirements of Client */}
           <article className="card detail-panel">
             <h2 className="panel-title inquiry-panel-title-row">
               <span>
@@ -524,7 +524,7 @@ export default function InquiryFormDetailPage() {
                 Specified Requirements
               </span>
               <span className="inquiry-saf-badge">
-                SAF-01-002 Col 2
+                Requirements
               </span>
             </h2>
             <div className="inquiry-specs-box">
@@ -540,7 +540,7 @@ export default function InquiryFormDetailPage() {
           <div className="details-grid-2">
             <article className="card detail-panel">
               <h2 className="panel-title">
-                <i className="fa-regular fa-comment-dots"></i> Client Remarks & Notes (SAF-01-002 Col 3)
+                <i className="fa-regular fa-comment-dots"></i> Client Remarks & Notes
               </h2>
               <p className="inquiry-text inquiry-preline-text">
                 {parsedData.remarksText}

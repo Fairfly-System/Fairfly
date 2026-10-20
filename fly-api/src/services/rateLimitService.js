@@ -77,14 +77,18 @@ class RateLimitService {
 }
 
 // Instantiate specific limiters:
-// 1. Tracker / Public Read Limiter: 180 requests per 1 minute (supports real-time tracking, background polling, sample tests)
-const trackerLimiter = new RateLimitService(180, 60000);
+// High-Capacity / Presentation Limits (configured high to prevent any 429 errors during live demonstrations and testing):
+// 1. Tracker / Public Read Limiter: 10,000 requests per 1 minute (supports real-time tracking, background polling, sample tests)
+const trackerLimit = parseInt(process.env.TRACKER_RATE_LIMIT, 10) || 10000;
+const trackerLimiter = new RateLimitService(trackerLimit, 60000);
 
-// 2. Public Limiter: 60 requests per 1 minute (for landing page forms, public inquiries, appointments)
-const publicLimiter = new RateLimitService(60, 60000);
+// 2. Public Limiter: 5,000 requests per 1 minute (for landing page forms, public inquiries, appointments)
+const publicLimit = parseInt(process.env.PUBLIC_RATE_LIMIT, 10) || 5000;
+const publicLimiter = new RateLimitService(publicLimit, 60000);
 
-// 3. API Limiter: 300 requests per 1 minute (for authenticated client/operator/admin actions and dashboard operations)
-const apiLimiter = new RateLimitService(300, 60000);
+// 3. API Limiter: 20,000 requests per 1 minute (for authenticated client/operator/admin actions and dashboard operations)
+const apiLimit = parseInt(process.env.API_RATE_LIMIT, 10) || 20000;
+const apiLimiter = new RateLimitService(apiLimit, 60000);
 
 module.exports = {
   RateLimitService,
@@ -92,3 +96,4 @@ module.exports = {
   publicLimiter,
   apiLimiter
 };
+

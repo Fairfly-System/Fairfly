@@ -10,6 +10,7 @@ import './data-table.css';
  * @param {Object[]} data - Array of row objects to render
  * @param {string} [keyField='id'] - Unique ID property of each row object
  * @param {boolean} [selectable=false] - Whether to render checkboxes and enable row selection
+ * @param {Function} [isRowSelectable] - Optional predicate (row, index) => boolean to determine if a row can be checked
  * @param {Array} [selectedIds=[]] - Controlled array of selected item keyField values
  * @param {Function} [onSelectionChange] - Callback when selection changes: (newSelectedIds) => void
  * @param {Function} [onBulkDelete] - Callback when Bulk Delete action is clicked: (selectedIds) => void
@@ -28,6 +29,7 @@ export default function DataTable({
   data = [],
   keyField = 'id',
   selectable = false,
+  isRowSelectable,
   selectedIds = [],
   onSelectionChange,
   onBulkDelete,
@@ -45,20 +47,25 @@ export default function DataTable({
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;
 
+  const selectableData = isRowSelectable
+    ? data.filter((row, idx) => isRowSelectable(row, idx))
+    : data;
+
   const allSelected =
-    data.length > 0 && data.every((row) => selectedSet.has(row[keyField]));
+    selectableData.length > 0 &&
+    selectableData.every((row) => selectedSet.has(row[keyField]));
 
   const isIndeterminate =
-    data.some((row) => selectedSet.has(row[keyField])) && !allSelected;
+    selectableData.some((row) => selectedSet.has(row[keyField])) && !allSelected;
 
   const handleSelectAll = (e) => {
     if (!onSelectionChange || disabled) return;
     if (e.target.checked) {
-      const allPageIds = data.map((row) => row[keyField]);
-      const newSelected = Array.from(new Set([...selectedIds, ...allPageIds]));
+      const allSelectableIds = selectableData.map((row) => row[keyField]);
+      const newSelected = Array.from(new Set([...selectedIds, ...allSelectableIds]));
       onSelectionChange(newSelected);
     } else {
-      const pageIdSet = new Set(data.map((row) => row[keyField]));
+      const pageIdSet = new Set(selectableData.map((row) => row[keyField]));
       const newSelected = selectedIds.filter((id) => !pageIdSet.has(id));
       onSelectionChange(newSelected);
     }
@@ -233,6 +240,7 @@ export default function DataTable({
               data.map((row, rowIndex) => {
                 const rowId = row[keyField];
                 const isSelected = selectedSet.has(rowId);
+                const isRowAllowed = isRowSelectable ? isRowSelectable(row, rowIndex) : true;
                 const extraRowClass =
                   typeof rowClassName === 'function'
                     ? rowClassName(row, rowIndex)
@@ -241,16 +249,19 @@ export default function DataTable({
                 return (
                   <tr
                     key={rowId || rowIndex}
-                    className={`${isSelected ? 'table-row-selected' : ''} ${extraRowClass}`}
+                    className={`${isSelected ? 'table-row-selected' : ''} ${!isRowAllowed ? 'table-row-unselectable' : ''} ${extraRowClass}`}
                   >
                     {selectable && (
                       <td className="select-col">
-                        <label className="data-table-checkbox">
+                        <label
+                          className={`data-table-checkbox ${!isRowAllowed ? 'checkbox-disabled' : ''}`}
+                          title={!isRowAllowed ? 'This item cannot be selected' : undefined}
+                        >
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            disabled={disabled}
-                            onChange={() => handleSelectRow(rowId)}
+                            disabled={disabled || !isRowAllowed}
+                            onChange={() => isRowAllowed && handleSelectRow(rowId)}
                             aria-label={`Select row ${rowId || rowIndex + 1}`}
                           />
                         </label>

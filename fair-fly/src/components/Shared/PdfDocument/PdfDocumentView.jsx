@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, createContext, useContext, useCallb
 import { createPortal } from 'react-dom';
 import html2pdf from 'html2pdf.js';
 import QRCode from 'qrcode';
+import { formatPaymentChannel } from '../../../utils/paymentUtils';
 import './pdf-document.css';
 
 /**
@@ -151,9 +152,7 @@ function normalizeReceiptPdfData(data) {
 
   const totalAmountNum = Number(data.amount || data.totalAmount || data.rate || 0);
   const rawMethod = data.paymentMethod || data.paymentMethodType || (data.provider === 'cash' ? 'Cash' : 'Online (PayMongo)');
-  const normalizedMethod = (typeof rawMethod === 'string' && rawMethod.toLowerCase().includes('cash'))
-    ? 'Direct Cash (Counter Receipt)'
-    : (rawMethod || 'Online Payment Gateway');
+  const normalizedMethod = formatPaymentChannel(rawMethod, data.provider);
 
   const resolvedQuoteNo = data.quoteNo || data.quotation?.quoteNo || (data.quotationId ? (String(data.quotationId).startsWith('QT-') ? String(data.quotationId) : `QT-${String(data.quotationId).substring(0, 8)}`) : '');
   const resolvedPaymentId = data.paymentId || data.paymentRef || data.providerPaymentId || (data.receiptNo ? `PAY-${data.receiptNo.replace('RCT-', '')}` : '');
@@ -239,7 +238,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
       if (receiptData.qrCodeDataUrl) {
         setGeneratedQr(receiptData.qrCodeDataUrl);
       } else {
-        const frontendBaseUrl = window.location.origin || 'http://localhost:5173';
+        const frontendBaseUrl = window.location.origin || 'https://fairfly-1e83b.web.app';
         const targetCode = receiptData.serviceCode || receiptData.fulfillmentId || receiptData.receiptNo;
         const trackingUrl = receiptData.qrTrackingUrl || `${frontendBaseUrl}/track?trackingId=${encodeURIComponent(targetCode)}`;
         
@@ -294,6 +293,23 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
 
   const handleDownloadPdf = async () => {
     if (isFile && resolvedFileUrl) {
+      try {
+        const res = await fetch(resolvedFileUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileTitle.toLowerCase().endsWith('.pdf') ? fileTitle : `${fileTitle}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+          return;
+        }
+      } catch (err) {
+        console.warn('[PdfDocumentView] Blob fetch failed, falling back to direct link:', err);
+      }
       const link = document.createElement('a');
       link.href = resolvedFileUrl;
       link.download = fileTitle.toLowerCase().endsWith('.pdf') ? fileTitle : `${fileTitle}.pdf`;
@@ -409,10 +425,11 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
               type="button"
               className="btn btn-secondary"
               onClick={onClose}
-              style={{ padding: '0.45rem 0.65rem' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.85rem', fontSize: '0.8125rem' }}
               aria-label="Close Preview"
             >
               <i className="fa-solid fa-xmark"></i>
+              <span>Close</span>
             </button>
           </div>
         </div>
@@ -614,7 +631,7 @@ export default function PdfDocumentView({ isOpen, onClose, type = 'quotation', d
 
                 {/* Legal Certification Notice & Official Seal */}
                 <div className="receipt-legal-notice">
-                  <i className="fa-solid fa-shield-check" style={{ color: '#16a34a' }}></i>
+                  <i className="fa-solid fa-shield-halved" style={{ color: '#16a34a' }}></i>
                   <span>{receiptData.legalNotice || 'This official e-receipt confirms the authorized processing and settlement of the designated FairFly travel and tour services under the FairFly System.'}</span>
                 </div>
 

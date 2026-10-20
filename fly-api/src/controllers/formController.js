@@ -35,7 +35,7 @@ const INQUIRY_SECTIONS = [
     { id: 'servicesOffered', label: 'Services Offered', type: 'checkboxGroup', required: true, reserved: true, options: ['NSO', 'Passport', 'VISA Assistance', 'Package Tour', 'Ticket', 'Others'] }
   ] },
   { id: 'requirements', title: 'Specified Requirements', fields: [
-    { id: 'specifiedRequirements', label: 'Specified Requirements of Client', type: 'textarea', required: true, reserved: true },
+    { id: 'specifiedRequirements', label: 'Specified Requirements of Client', type: 'textarea', required: false, reserved: true },
     { id: 'remarks', label: 'Remarks & Special Instructions', type: 'textarea', required: false, anchorKey: 'remarks' }
   ] },
   { id: 'custom_fields', title: 'Additional Information', fields: [

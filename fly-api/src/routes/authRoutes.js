@@ -19,7 +19,11 @@ const { allowedFields } = require('../middleware/allowedFields');
 const { performanceProfiler } = require('../middleware/performanceProfiler');
 
 const REGISTER_ALLOWED_FIELDS = [
+  'firstName',
+  'middleInitial',
+  'lastName',
   'fullName',
+  'name',
   'email',
   'phone',
   'password',
@@ -126,7 +130,18 @@ router.get(
   performanceProfiler('GET /auth/profile', verifyFirebaseToken, apiRateLimiter, getProfile)
 );
 
-const PROFILE_ALLOWED_FIELDS = ['fullName', 'name', 'branchName', 'phone', 'contactNumber', 'address'];
+const PROFILE_ALLOWED_FIELDS = [
+  'fullName',
+  'name',
+  'firstName',
+  'middleName',
+  'middleInitial',
+  'lastName',
+  'branchName',
+  'phone',
+  'contactNumber',
+  'address'
+];
 
 router.patch(
   '/profile',

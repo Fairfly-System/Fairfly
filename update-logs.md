@@ -1,5 +1,598 @@
 # Update Logs
 
+## [2026-10-19] UI Fix: Global Footer Logo Absolute Asset Path Resolution
+
+### Overview
+Resolved an issue where the FairFly brand logo failed to render in the global footer bar on client-side routes (e.g., `/client/tracking`, `/client/services`, `/client/profile`) when deployed:
+
+1. **Root Cause Analysis:**
+   - In [`Footer.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Footer/Footer.jsx), the logo image was referenced using a relative path (`src='FairflyLogo.png'`) without a leading root slash.
+   - On nested routes such as `/client/*`, browsers resolved this relative URL to `/client/FairflyLogo.png`, which resulted in an HTTP 404 error on production deployments.
+
+2. **Resolution:**
+   - Updated [`Footer.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/Footer/Footer.jsx) to reference the root-relative asset path `src="/FairflyLogo.png"`, matching all other navbar, portal, and PDF document logo references throughout the application.
+   - Added `alt="FairFly Logo"` for improved accessibility and updated the enclosing link to `href="/"`.
+
+---
+
+## [2026-10-19] Client & Admin Profile: First Name, Middle Name, and Last Name Field Partitioning
+
+### Overview
+Updated the Client Profile Edit modal and backend profile endpoints to replace the monolithic "Full Name" input with structured "First Name", "Middle Name / M.I.", and "Last Name" fields matching the User Registration format:
+
+1. **Frontend Modal Partitioning ([`ProfileEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ProfileEditModal/ProfileEditModal.jsx)):**
+   - Replaced single `Full Name` text input for clients and administrators with a responsive 3-column layout (`.form-grid-3`):
+     - **First Name \***: Required field (`firstName`, placeholder "Juan", min 2 characters).
+     - **Middle Name / M.I.**: Optional field (`middleName` / `middleInitial`, placeholder "D.").
+     - **Last Name \***: Required field (`lastName`, placeholder "Dela Cruz", min 2 characters).
+   - Intelligently parses existing `fullName` on load into `firstName`, `middleName`, and `lastName` if fragmented fields were not yet populated.
+   - Automatically derives unified `fullName` and `name` strings to preserve seamless compatibility across existing system records and invoices.
+
+2. **Profile Overview Display ([`ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx)):**
+   - Added structured rows for First Name, Middle Name / M.I., and Last Name under the Full Name entry in the Basic Contact Information overview card for clients and administrators.
+
+3. **Backend Route & Controller Updates ([`authRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/authRoutes.js) & [`authController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/authController.js)):**
+   - Expanded `PROFILE_ALLOWED_FIELDS` in `authRoutes.js` to whitelist `firstName`, `middleName`, `middleInitial`, and `lastName`, preventing `400 Bad Request` mass assignment rejection.
+   - Updated `updateProfile` in `authController.js` to sanitize and persist structured name fields, automatically derive `fullName` and `name`, and synchronize `displayName` to Firebase Auth.
+
+---
+
+## [2026-10-19] Payments & Webhooks: PayMongo Automated Webhook Registration & Production Activation
+
+### Overview
+Automated the full registration and activation of PayMongo Webhooks for FairFly, bridging the asynchronous payment settlement path and ensuring that payments are captured even if clients close their browsers, disconnect, or fail to return to the merchant:
+
+1. **Automated Webhook Registration on PayMongo:**
+   - Registered endpoint `https://fairfly-1e83b.web.app/api/payments/webhook` via PayMongo Webhooks API (`POST /v1/webhooks`).
+   - Enabled event listeners: `checkout_session.payment.paid` and `payment.paid`.
+   - Captured webhook resource `hook_UapKJDvzMTLjNNwcfJmp3aXo` in active status (`enabled`).
+
+2. **Environment & Security Secrets Configuration:**
+   - Added `PAYMONGO_WEBHOOK_SECRET=whsk_7e1bwrqvpAVHrtrk9B4NV16d` into [`fly-api/.env`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/.env).
+   - Validated that `verifyWebhookSignature` in [`paymongoService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/paymongoService.js) properly digests incoming HMAC-SHA256 signatures with 300-second replay attack protection and timing-safe equality checks (`crypto.timingSafeEqual`).
+
+3. **Dual-Path Settlement Architecture Live:**
+   - Both Path A (Asynchronous Server-to-Server Webhook) and Path B (Synchronous Client Return Redirect) now converge on [`finalizeSuccessfulPayment`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js) with database-level ACID idempotency locks.
+
+---
+
+## [2026-10-19] Operator Portal: Elimination of Erroneous Notifications on Workflows Tab
+
+### Overview
+Identified and resolved the root cause of unexpected notification badges appearing on the **Workflows** tab (`/operator/workflows`) in the Operator sidebar navigation:
+
+1. **Root Cause Analysis:**
+   - In [`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx) and [`NotificationContext.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/context/NotificationContext.jsx), a legacy fallback matching rule existed:
+     ```javascript
+     if (tabSlug.includes(notifType) || (notifType === 'service' && tabSlug.includes('workflow'))) return true;
+     ```
+   - Whenever backend controllers (`paymentController.js`, `activeServiceController.js`, `serviceController.js`) generated operational service notifications with `type: 'service'`, this legacy rule evaluated to `true` for any tab containing `'workflow'` in its slug.
+   - Because `/operator/workflows` was recently introduced for certified operators to author Standard Operating Procedure (SOP) templates, these service notifications were mistakenly bound to the Workflows navigation link.
+
+2. **Resolution & Defense-in-Depth:**
+   - **Removed Legacy Match Pattern ([`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx) & [`NotificationContext.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/context/NotificationContext.jsx)):**
+     - Completely eliminated `|| (notifType === 'service' && tabSlug.includes('workflow'))`.
+   - **Disallowed Operator Static Reference Tabs ([`AppSidebar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/AppSidebar/AppSidebar.jsx)):**
+     - Explicitly registered `/operator/workflows`, `/operator/services`, `/operator/resources`, `/operator/quick-links`, `/operator/history`, and `/operator/logs` as static management and reference tabs that strictly return `0` notification badges.
+   - **Operator Layout Defense ([`OperatorLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx)):**
+     - Explicitly mapped `'/operator/workflows': 0` in `tabNotifications`.
+
+3. **Production Deployment:**
+   - Compiled frontend via Vite (`npm run build`) with zero errors and deployed to Firebase Hosting (`https://fairfly-1e83b.web.app`).
+
+---
+
+## [2026-10-19] Client Quotations & Inquiries: Descriptive Text Labels for Action Buttons
+
+### Overview
+Enhanced the user interface in the Client Portal (`ClientTrackingPage.jsx` and `PdfDocumentView.jsx`) by adding clear, descriptive text labels to all icon-only action buttons in the Official Quotations and Inquiries views:
+
+1. **Official Quotations Table Actions ([`ClientTrackingPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx) & [`client-tracking.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/client-tracking.css)):**
+   - **View Details**: Replaced standalone eye icon with `<i className="fa-solid fa-eye"></i> <span>View Details</span>`.
+   - **View PDF**: Replaced standalone PDF icon with `<i className="fa-solid fa-file-pdf"></i> <span>View PDF</span>`.
+   - **Official E-Receipt**: Replaced standalone receipt icon with `<i className="fa-solid fa-receipt"></i> <span>E-Receipt</span>`.
+   - Applied consistent `.btn.btn-xs` dimensions, rectangular enterprise borders, and custom hover states for visual polish and immediate clarity.
+
+2. **Submitted Inquiries Table Actions ([`ClientTrackingPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx)):**
+   - Upgraded both "View Details" and "View PDF" actions from icon-only buttons to labeled buttons (`<span>View Details</span>` and `<span>View PDF</span>`), ensuring cohesive design across all subtabs.
+
+3. **Official PDF Document View Toolbar ([`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx)):**
+   - Added descriptive `<span>Close</span>` text label alongside the close icon (`<i className="fa-solid fa-xmark"></i>`) in the top modal toolbar, matching the adjacent "Print" and "Download PDF" buttons.
+
+4. **Production Deployment:**
+   - Compiled frontend production bundle via `npm run build` with zero errors and deployed to Firebase Hosting (`https://fairfly-1e83b.web.app`).
+
+---
+
+## [2026-10-19] Rate Limiting: High-Capacity Thresholds for Live Demonstrations & Production Deployment
+
+### Overview
+Significantly elevated all backend rate limit thresholds across `fly-api` ([`rateLimitService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/rateLimitService.js)) to eliminate any possibility of `HTTP 429 Too Many Requests` errors during presentations, audience trials, parallel testing, and demo walkthroughs:
+
+1. **High-Capacity Rate Limiters Configuration ([`rateLimitService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/rateLimitService.js)):**
+   - **Authenticated & API Limiter (`apiRateLimiter`)**: Increased from 300 to **20,000 requests per 1-minute window** (`API_RATE_LIMIT`), supporting heavy administrative workflows, rapid page navigations, real-time polling, and concurrent operator/client activity.
+   - **Public Tracking Limiter (`trackerRateLimiter`)**: Increased from 180 to **10,000 requests per 1-minute window** (`TRACKER_RATE_LIMIT`), accommodating simultaneous QR tracking scans, live status lookups, and auto-sync updates.
+   - **Public Endpoints Limiter (`publicRateLimiter`)**: Increased from 60 to **5,000 requests per 1-minute window** (`PUBLIC_RATE_LIMIT`), preventing IP collisions when multiple presenters or evaluators connect from the same Wi-Fi/public network while browsing landing pages, booking appointments, or submitting inquiries.
+   - Preserved dynamic environment variable overrides (`process.env.API_RATE_LIMIT`, `process.env.TRACKER_RATE_LIMIT`, `process.env.PUBLIC_RATE_LIMIT`) while supplying safe, robust presentation defaults.
+
+2. **Full Production Build & Firebase Deployment:**
+   - Compiled production frontend bundle in [`fair-fly`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly) via Vite without errors.
+   - Deployed Cloud Functions (`api` on Node 22 in `asia-southeast1`), Firebase Hosting (`fair-fly/dist`), Firestore security rules & indexes, and Cloud Storage security rules via `firebase deploy --non-interactive`.
+
+---
+
+## [2026-10-19] Resources: Direct File Download via Authenticated Stream Endpoint & Blob URLs
+
+### Overview
+Fixed an issue in the Operator Resources page (`OperatorResources.jsx`) and Admin Resources page (`ResourcesContent.jsx`) where clicking the "Download" button on materials/documents did not download the file to the user's computer, but instead opened the file in a new browser tab:
+
+1. **Root Cause Analysis:**
+   - Resources are hosted on Firebase Storage (`firebasestorage.googleapis.com`).
+   - The frontend previously generated an anchor link `<a href={resource.fileUrl} download={resource.fileName} target="_blank">`.
+   - In accordance with the HTML5 specification, web browsers strictly ignore the `download` attribute on cross-origin URLs for security reasons. Because `target="_blank"` was set, the browser executed standard navigation and opened the file directly in a new tab.
+
+2. **Authenticated File Streaming Endpoint ([`resourceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/resourceController.js) & [`resourceRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/resourceRoutes.js)):**
+   - Implemented `downloadResourceFile` on `GET /api/resources/:id/file`, protected with `verifyFirebaseToken` and `requireRole(['admin', 'operator'])`.
+   - The controller retrieves the resource document from Firestore and automatically increments `downloadCount`.
+   - Locates the file in Google Cloud Storage using `bucket.file(storagePath)` and sets proper response headers:
+     - `Content-Type: ${resource.fileType || 'application/octet-stream'}`
+     - `Content-Disposition: attachment; filename="${safeFileName}"; filename*=UTF-8''${safeFileName}`
+   - Streams the binary data directly to the client response via `file.createReadStream().pipe(res)` (with remote URL streaming fallback).
+
+3. **Frontend Helper Service ([`resourceService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/services/resourceService.js)):**
+   - Added `downloadResourceFile(token, resource)`:
+     - Queries the authenticated backend streaming endpoint with the operator's JWT token.
+     - Receives binary data into a local `Blob`.
+     - Generates a same-origin Blob URL (`window.URL.createObjectURL(blob)`), which browsers treat as same-origin and unconditionally honor the `download` attribute.
+     - Simulates click and revokes object URL cleanly after download initiation.
+
+4. **Operator UI & Visual Feedback ([`OperatorResources.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx) & [`operator-resources.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorResources/operator-resources.css)):**
+   - Connected `downloadResourceFile` to `handleDownload`.
+   - Added `downloadingId` state to track active downloads: disables the button, displays a rotating spinner icon (`fa-solid fa-spinner fa-spin`), and prevents duplicate requests while downloading.
+   - Optimistically updates `downloadCount` in the UI upon successful download.
+   - Applied disabled styles (`.op-download-btn:disabled`) for consistent UI/UX.
+
+5. **Admin Resources Synchronization ([`ResourcesContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx) & [`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx)):**
+   - Updated Admin Resources table download action to use `downloadResourceFile`.
+   - Updated PDF file view modal download handler to fetch and trigger same-origin Blob downloads.
+
+---
+
+
+## [2026-10-19] Submit Service Inquiry: Branch-Exclusive Service Processing Branch Lock
+
+### Overview
+Ensured that when a catalog service is branch-exclusive (`isBranchExclusive: true`), clients inquiring about the service are strictly restricted to the branch that created it, with no other branches present or selectable in the "Preferred Processing Branch" list:
+
+1. **Branch-Exclusive Branch Filtering ([`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx)):**
+   - Added a `useMemo` filter (`displayedBranches`) that verifies whether `effectiveLockedBranchUid` is present (derived from `selectedService.isBranchExclusive`, `selectedService.branchUid`, or `initialBranchUid`).
+   - When branch exclusivity applies, `displayedBranches` strictly filters the branches collection to only include the creating branch, preventing any other branches from appearing in the search dropdown list.
+   - Synchronized `selectedBranchUid` via `useEffect` to guarantee that the locked branch is auto-selected upon modal render.
+   - Derives `finalBranchUid` and `finalBranchName` in `handleSubmit` directly from `effectiveLockedBranchUid` as the primary truth.
+   - Enhanced the visual hint to show `Exclusively serviced by [Branch Name] (Branch Exclusive)` with a lock icon.
+
+2. **BranchSelectSearch Disabled & Locked States ([`BranchSelectSearch.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/BranchSelectSearch/BranchSelectSearch.jsx) & [`branch-select-search.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/BranchSelectSearch/branch-select-search.css)):**
+   - Implemented `disabled` prop support on `<BranchSelectSearch />`.
+   - Prevented opening the dropdown or modifying selection when `disabled` is active (`toggleDropdown`, `handleSelect`, keyboard `onKeyDown` guards, `tabIndex={-1}`, `aria-disabled`).
+   - Replaced chevron and "Change" action with a lock indicator icon and styled `.branch-search-trigger.disabled` with non-interactive styling (`cursor: not-allowed`).
+
+3. **Client Appointment Form Branch Filtering ([`ClientAppointmentForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx)):**
+   - Updated `displayedBranches` in the appointment booking modal to filter options strictly to the creating branch when booking an appointment for a branch-exclusive service.
+   - Explicitly imported `useMemo` from `'react'` to resolve reference error in component rendering.
+
+4. **Zero-Trust Backend Enforcement ([`inquiryController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/inquiryController.js)):**
+   - Added defense-in-depth in `createInquiry`: when `serviceId` is provided in the inquiry payload, server fetches the service from Firestore.
+   - If `isBranchExclusive: true`, `effectiveBranchUid` and `effectiveBranchName` are authoritatively overridden with `serviceDoc.branchUid` / `serviceDoc.createdByOperatorId`, preventing client-side payload tampering.
+
+---
+
+
+## [2026-10-19] Workflow Templates: Dedicated Backend Duplication Endpoint & Allowed Fields Sanitization
+
+### Overview
+Fixed a `400 Bad Request: Invalid fields in request body (createdBy, createdByRole, branchUid)` error that occurred when operators or administrators attempted to duplicate a workflow template:
+
+1. **Root Cause Analysis:**
+   - When duplicating a template, the client previously destructured the Firestore document using `{ id, createdAt, updatedAt, version, status, ...rest }` and passed `{ ...rest, name: ... }` to `POST /api/workflow/templates`.
+   - The forwarded payload contained database-internal ownership metadata (`createdBy`, `createdByRole`, `branchUid`, `branchName`).
+   - The zero-trust `allowedFields(WORKFLOW_TEMPLATE_FIELDS)` middleware correctly blocked the unexpected fields to enforce input whitelisting.
+
+2. **Dedicated Backend Duplication Endpoints ([`workflowController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/workflowController.js) & [`workflowRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/workflowRoutes.js)):**
+   - Implemented `duplicateTemplate` on `POST /api/workflow/templates/:id/duplicate` and `POST /api/workflows/:id/duplicate`.
+   - The controller retrieves the source template by ID directly from Firestore, clones its steps, description, and service type, and assigns template ownership authoritatively to the requesting user's session (`req.user.uid`, `req.userDetails.branchName`).
+   - Guarded with `allowedFields(['name'])` so clients can optionally specify a custom duplicate name or send an empty body without error.
+
+3. **Frontend Duplication Client Fix ([`AdminWorkflowTemplates.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx) & [`workflowService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/services/workflowService.js)):**
+   - Updated `handleDuplicate` to call the dedicated `POST /api/workflows/:id/duplicate` endpoint with `{ name: "${tmpl.name} (Copy)" }`.
+   - Added a safe fallback that constructs an explicit schema-whitelisted payload (`name`, `description`, `serviceType`, `steps`, `status`) if calling `POST /api/workflows` directly, guaranteeing that ownership metadata fields are never forwarded from the client.
+   - Enhanced `duplicateWorkflowTemplate` service helper to support optional custom copy names.
+
+---
+
+## [2026-10-19] Workflow Templates: Owning Branch Name Resolution & Display
+
+### Overview
+Enhanced workflow template displays across the system so administrators and branch operators can clearly identify which branch created and owns any workflow template:
+
+1. **Backend Automatic Branch Association ([`workflowController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/workflowController.js)):**
+   - Automatically attaches `branchName` (`req.userDetails.branchName || req.userDetails.branchLocation`) to persisted documents in `createTemplate` when authored by branch operators.
+   - Guarded `branchName` in `updateTemplate` by stripping it from update payloads alongside `createdBy`, `createdByRole`, and `branchUid` to prevent unauthorized metadata tampering.
+
+2. **Branch Directory Resolution Service ([`AdminWorkflowTemplates.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx) & [`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx)):**
+   - Integrated `fetchPublicBranches` to maintain a reactive lookup map of `branchUid` -> `branchName`.
+   - Built a comprehensive fallback resolver `getWorkflowBranchName(tmpl)` that checks `tmpl.branchName`, mapped UID names, and the logged-in operator's branch context.
+
+3. **Workflow Templates Table ([`AdminWorkflowTemplates.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx)):**
+   - Updated ownership pills beneath template titles to display the specific branch name:
+     - **Operator Own Branch**: Green badge displaying `Your Branch (Branch Name)`.
+     - **Other Branch**: Badge with building icon displaying `Branch: [Branch Name]`.
+     - **Admin View**: Clear branch distinction displaying `Branch: [Branch Name]` for branch templates, and `Head Office / Global` for standard templates.
+
+4. **Workflow Detail Modal ([`WorkflowDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowDetailModal/WorkflowDetailModal.jsx) & [`workflow-detail-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowDetailModal/workflow-detail-modal.css)):**
+   - Header ownership pill displays the specific owning branch name.
+   - Added a dedicated `.wfd-ownership-banner` inside the Process Overview card that visually highlights whether the workflow is a standard universal Head Office procedure or a branch-specific procedure owned by that branch location.
+
+5. **Service Workflows Modal ([`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx)):**
+   - Displayed branch ownership badges directly on workflow cards in the service workflow selector.
+   - Connected branch resolution to the nested preview modal.
+
+---
+
+## [2026-10-19] Workflow Templates: Dedicated Workflow Detail View Modal & Action View Button
+
+### Overview
+Added a dedicated read-only Workflow Detail Modal (`WorkflowDetailModal`) and "View" action buttons across workflow tables, allowing administrators and operators to inspect workflow specifications, metadata, and ordered step-by-step procedures:
+
+1. **Workflow Detail View Modal ([`WorkflowDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowDetailModal/WorkflowDetailModal.jsx) & [`workflow-detail-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/WorkflowDetailModal/workflow-detail-modal.css)):**
+   - **Header & Scope Presentation**: Displays the workflow template name, service type badge, steps counter pill, and ownership scope (Your Branch / Other Branch / Head Office Global).
+   - **Overview & Metadata Card**: Renders the process description alongside formatted creation and last-updated timestamps.
+   - **Sequential Steps Pipeline**:
+     - Visual timeline with numbered circular gradient badges (`1`, `2`, `3`, ...) and vertical connecting rails.
+     - Step name and complete instruction description.
+     - **Web Links**: Clickable quick link pills (`<i className="fa-solid fa-link"></i>`) opening attached external portals in a secure new tab.
+     - **File Attachments**: Document attachment pills with file-type iconography (PDF, Word, Excel, Image). Integrated with `ImageLightbox` for 1-click preview of image files and new-tab inspection for document files.
+   - **Footer Action Controls**: Offers Close, Duplicate, and "Edit Workflow" (when the user holds editing permissions for the template).
+
+2. **Workflows Table Integration ([`AdminWorkflowTemplates.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx) & [`admin-workflow-templates.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/admin-workflow-templates.css)):**
+   - Added a View action button (`.icon-btn.view` with `<i className="fa-solid fa-eye"></i>`) to the actions column, accessible to both operators and administrators for all templates.
+   - Made the template title clickable (`.workflow-clickable-title` with hover accent), allowing users to click either the title or the view button to inspect the workflow.
+
+3. **Service Workflows Modal Integration ([`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx)):**
+   - Added a compact preview eye button to workflow cards, enabling administrators to preview the step-by-step pipeline of any template before attaching it to a service.
+
+4. **Component Catalog Documentation ([`component-list.md`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/component-list.md)):**
+   - Documented `WorkflowDetailModal` with location, functionality, and prop specifications.
+
+---
+
+## [2026-10-19] Workflow Templates: Strict Operator Ownership Defense & Scoped Access Control
+
+### Overview
+Enforced strict object-level authorization (BOLA/IDOR prevention) and UI governance to prevent Branch Operators from editing or deleting workflow templates created by Head Office (Global templates) or other branch operators:
+
+1. **Backend Object-Level Ownership Defense ([`workflowController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/workflowController.js)):**
+   - *Vulnerability Fix*: The previous ownership check `if (isOperator && existing.createdBy && existing.createdBy !== req.user.uid && existing.branchUid !== req.user.uid)` evaluated to `false` if `existing.createdBy` was undefined (e.g. system seed templates or legacy templates without a `createdBy` field), allowing operators to edit or delete global templates.
+   - Refactored `updateTemplate` and `deleteTemplate` to verify that an operator is explicitly the owner:
+     ```javascript
+     const isOwner = (existing.branchUid && existing.branchUid === req.user.uid) ||
+                     (existing.createdBy && existing.createdBy === req.user.uid);
+     if (!isOwner) {
+       return res.status(403).json({ error: 'Forbidden: Operators can only update/delete workflow templates created by their branch.' });
+     }
+     ```
+   - Sanitized update payloads in `updateTemplate` by stripping `createdBy`, `createdByRole`, and `branchUid` to prevent operators from hijacking or tampering with template ownership.
+   - Hardened `bulkDeleteTemplates` to verify ownership across all requested IDs and return `403 Forbidden` if any non-owned template is included in the batch.
+
+2. **Reusable DataTable Row Selectability ([`DataTable.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/DataTable/DataTable.jsx) & [`data-table.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/DataTable/data-table.css)):**
+   - Added an `isRowSelectable` predicate prop to `DataTable`.
+   - Disabled row checkboxes (`disabled` + `cursor: not-allowed` + tooltip) on templates that an operator cannot delete.
+   - Constrained the "Select All" checkbox header to only compute and toggle selectable rows, preventing operators from selecting unowned templates for bulk deletion.
+
+3. **Frontend UI Badge & Action Locking ([`AdminWorkflowTemplates.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/AdminWorkflowTemplates.jsx) & [`admin-workflow-templates.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminWorkflowTemplates/admin-workflow-templates.css)):**
+   - Added context-aware ownership badges beneath template titles:
+     - **Your Branch:** Green pill (`✓ Your Branch`) indicating full authoring rights.
+     - **Other Branch:** Neutral pill (`🔒 Other Branch`) indicating another operator's template.
+     - **Head Office / Global:** Purple pill (`🔒 Head Office / Global`) indicating a standardized company workflow.
+   - Locked action buttons for non-owned templates: Edit and Delete buttons are replaced with disabled padlock buttons (`fa-solid fa-lock`) with explanatory tooltips.
+   - Preserved the **Duplicate** action for all templates so operators can clone global or branch templates to jumpstart their own customized branch workflows.
+   - Added client-side validation guards in `handleOpenEditModal`, `handleUpdateTemplate`, `handleDelete`, and `handleBulkDelete`.
+
+---
+
+## [2026-10-18] Profile View: Account & Access Level Icon & Role Badges Restoration
+
+### Overview
+Resolved a missing icon/logo issue in the Profile View (`/profile`) where the "Account & Access Level" section card header rendered with no icon:
+
+1. **FontAwesome Icon Resolution ([`ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx)):**
+   - *Root Cause*: The card header was using `fa-solid fa-shield-check`, which is a FontAwesome Pro icon and does not exist in the FontAwesome 6 Free package, causing the browser to render nothing (an empty space).
+   - *Fix*: Replaced `fa-solid fa-shield-check` with the standard Free security icon `fa-solid fa-shield-halved`.
+   - Also fixed `fa-shield-check` in the "Update Password" button, [`VerifyEmail.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/VerifyEmail/VerifyEmail.jsx), [`ResetPassword.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/ResetPassword/ResetPassword.jsx), [`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx), [`QuotationRequirementsReview.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx), and [`QuotationDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx).
+
+2. **Role-Specific Access Level Badges & Icons ([`ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx)):**
+   - Added `getRoleIcon()` helper returning context-aware iconography:
+     - **Super Admin:** `<i className="fa-solid fa-crown"></i>`
+     - **Support Admin:** `<i className="fa-solid fa-user-shield"></i>`
+     - **Branch Operator:** `<i className="fa-solid fa-building-user"></i>`
+     - **Client / Traveler:** `<i className="fa-solid fa-user-check"></i>`
+   - Rendered the role icon inside the Access Level field row in the Account & Access Level card.
+   - Rendered the role icon inside the top profile header role pill.
+
+---
+
+## [2026-10-18] Admin & Operator Resources: Picture Lightbox Preview Integration
+
+### Overview
+Integrated the system's universal `ImageLightbox` modal into the Resources materials management pages and modals, allowing administrators and operators to preview picture assets without navigating away or downloading raw files:
+
+1. **Admin Resources Table Lightbox Preview ([`ResourcesContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminResources/ResourcesContent.jsx) & [`admin-resources.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminResources/admin-resources.css)):**
+   - Wired `useLightbox` and `isImageUrl` into the Admin Resources DataTable.
+   - For picture assets (`.png, .jpg, .jpeg, .webp, .svg`, etc.):
+     - Rendered a live micro-thumbnail inside `.resource-type-icon` with smooth hover zoom effects and fallback icons on load error.
+     - Clicking either the thumbnail icon or the resource title text directly opens the high-resolution picture in the universal Lightbox with smooth zoom, download controls, and context subtitles (`${category} · ${fileName}`).
+     - Added a dedicated "View Picture in Lightbox" action button (`<i className="fa-solid fa-eye"></i>`) in the actions column.
+2. **Resource Creation & Edit Modal Lightbox Preview ([`ResourceForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ResourceModal/ResourceForm.jsx) & [`resource-modal.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ResourceModal/resource-modal.css)):**
+   - Enabled real-time Lightbox previewing for newly selected image files (using scoped object URLs) and existing stored image URLs during resource creation or editing.
+   - Added thumbnail preview and a quick-view eye button next to the replace/trash button in the file preview bar.
+3. **Operator Resources Grid/List Lightbox Preview ([`OperatorResources.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorResources/OperatorResources.jsx)):**
+   - Connected `useLightbox` into the Operator Resources `handlePreview` handler so clicking the preview button on picture materials opens the universal Lightbox instead of triggering a raw browser tab navigation.
+
+---
+
+## [2026-10-18] Client Registration & ID Re-upload: Dual Valid ID Slot Layout Stabilization & Card Preview Redesign
+
+### Overview
+Resolved a UI layout distortion issue during registration (`/register`) and ID re-upload (`/reupload-id`) where uploading an ID file into one slot caused the uploaded column to expand to ~75% of the container width and crushed the adjacent slot into a 25% narrow strip with text wrapping across 7 lines:
+
+1. **Balanced CSS Grid Architecture ([`valid-id-upload.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ValidIdUpload/valid-id-upload.css)):**
+   - Fixed `.id-dual-upload-grid` using strict `grid-template-columns: repeat(2, minmax(0, 1fr));` instead of `1fr 1fr` (which previously fell back to `minmax(auto, 1fr)`). This guarantees that both the Front and Back slots permanently maintain an exact 50% / 50% width distribution.
+   - Added `min-width: 0; box-sizing: border-box;` to `.id-dropzone-wrapper` and all direct children, ensuring that long file names and preview thumbnails cannot push column tracks.
+   - Enforced identical fixed heights (`7.75rem` / `124px`) between the empty dropzone (`.id-dropzone-box`) and the uploaded card preview (`.id-card-preview-slot`), ensuring zero layout jumping or shifting during file selection and deletion.
+   - On small mobile screens (`@media (max-width: 480px)`), slots gracefully stack vertically into a single column.
+
+2. **Government ID Card Preview Slot Redesign ([`ValidIdUpload.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ValidIdUpload/ValidIdUpload.jsx)):**
+   - Replaced cramped horizontal 3-column rows (`.id-uploaded-card`) with an authentic ID-card presentation:
+     - **Image IDs:** Displays a full-bleed ID card preview with subtle scrim gradients (`.id-preview-scrim`), an emerald glass status badge ("✓ Ready"), glass action buttons (1-click Lightbox inspection and Delete), and bottom filename with smooth ellipsis and file size.
+     - **PDF IDs:** Clean dark-slate card with centered PDF document icon, status badge, 1-click PDF modal view button, and delete button.
+   - Fixed an undefined handler invocation in `ValidIdUpload.jsx` by properly calling `openLightbox` instead of obsolete `setLightboxData`.
+   - Streamlined dropzone helper copy to `Choose Front / Back` and `JPG, PNG, or PDF` to eliminate awkward text wrapping.
+
+3. **Form Container Proportions ([`register.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/Register/register.css)):**
+   - Adjusted `.auth-form-inner` `max-width` to `29rem` (from `27rem`) to provide breathing room (~220px per slot) while preserving sleek split-screen form aesthetics.
+
+---
+
+## [2026-10-18] System-Wide Enhancements: Lightbox Animation, Registration Password Enforcements, Philippine Phone Format, UI Bloat Cleanups, Workflow Ordering & Qualified Operator Privileges
+
+### Overview
+Executed a multi-phase system refinement and feature delivery across FairFly frontend (`fair-fly`) and backend (`fly-api`):
+1. **Lightbox Backdrop Animation Fix ([`image-lightbox.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/UI/ImageLightbox/image-lightbox.css)):**
+   - *Issue*: When opening the image lightbox, the backdrop transitioned from transparent to blurry, then unexpectedly reverted back to clear/no blur due to keyframe compositing layer resets.
+   - *Fix*: Standardized static `backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);` with `forwards` animation fill-mode and smooth opacity fade-in. Preserves consistent crystal blur effect throughout lightbox inspection.
+2. **Standardized Strong Password Policy Across All Entry Points:**
+   - Unified all password reset, profile password updates, and account creation workflows to match the strict Registration Password Requirements (`/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/`, minimum 8 characters with at least one uppercase letter, one lowercase letter, and one number).
+   - Applied and validated live criteria checklists and match verification in [`ResetPassword.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/ResetPassword/ResetPassword.jsx) (supporting Firebase `oobCode` verification and `confirmPasswordReset`), [`ProfilePage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Shared/Profile/ProfilePage.jsx), [`AdminForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/AdminModal/AdminForm.jsx), and [`OperatorForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx).
+   - Enforced backend validation in [`authController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/authController.js), [`adminController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/adminController.js), and [`operatorController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/operatorController.js).
+3. **Philippine Mobile Phone Standard Enforcement (`09XXXXXXXXX`, 11 Digits):**
+   - Created centralized utility [`phoneUtils.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/utils/phoneUtils.js) adhering to national Philippine telecommunication standards (11 digits starting with `09`, regex `/^09\d{9}$/`, max length 11).
+   - Wired live sanitization, input restriction, formatting, and validation across all user-facing and administrative phone inputs: [`Register.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Index/Register/Register.jsx), [`ProfileEditModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/ProfileEditModal/ProfileEditModal.jsx), [`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx), [`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx), [`ClientAppointmentForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientAppointmentForm/ClientAppointmentForm.jsx), [`ClientEditForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ClientEditModal/ClientEditForm.jsx), [`FranchiseApplicationForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/FranchiseApplicationForm/FranchiseApplicationForm.jsx), [`AdminForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/AdminModal/AdminForm.jsx), [`OperatorForm.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/OperatorModal/OperatorForm.jsx), [`CreateInquiryFormModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx), and backend OTP verification in [`verificationService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/verificationService.js).
+4. **UI Bloat Text Removal (Document Codes in Buttons & Labels):**
+   - Stripped cluttering internal ISO document numbers (`(ADF-07-001)`, `(SAF-01-002)`, `(ADF-07-002)`, `(SAF-01)`) from user-facing action buttons, modal headers, navigation links, and tooltips across the application.
+   - Cleaned up [`QuotationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuotations/QuotationDetailPage.jsx), [`InquiryFormDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorInquiryForms/InquiryFormDetailPage.jsx), [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx), [`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx), [`ClientTrackingPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientTracking/ClientTrackingPage.jsx), [`ClientDashboard.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/ClientSide/ClientDashboard/ClientDashboard.jsx), [`ClientServiceTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceTracker/ClientServiceTracker.jsx), [`InquiryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/InquiryDetailModal/InquiryDetailModal.jsx), [`QuotationDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationDetailModal/QuotationDetailModal.jsx), [`AcceptOnBehalfModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/AcceptOnBehalfModal/AcceptOnBehalfModal.jsx), [`HistoryContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/HistoryContent.jsx), and [`ClientDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientDetailPage.jsx).
+5. **Operator History Redundancy Elimination ([`OperatorHistory.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx)):**
+   - Removed the redundant `requirements` column (`View Files` button) under the Service History tab since it opened the same detail dialog as the existing "View" action button.
+6. **Activity History Tab Removal ([`OperatorHistory.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx)):**
+   - Removed "My Activity History" tab button and condition from `OperatorHistory.jsx` (activity logs already have their own dedicated sidebar navigation page at `/operator/logs`).
+7. **Service Workflow Templates Ordering & Numeric Execution Badges ([`ServiceWorkflowsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Admin/Modals/ServiceWorkflowsModal/ServiceWorkflowsModal.jsx)):**
+   - Replaced plain checkboxes for selected workflows with circular numeric sequence order badges (`#{orderIndex + 1}`).
+   - Added Move Up (`▲`) and Move Down (`▼`) reordering buttons directly on selected workflow cards.
+   - Workflows now display selected items in their exact execution pipeline sequence, cleanly preserving ordered arrays when saved to the service document.
+8. **Privilege for Qualified Operators to Author Workflows:**
+   - **Backend RBAC & BOLA Hardening ([`workflowRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/workflowRoutes.js) & [`workflowController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/workflowController.js)):** Allowed `['admin', 'operator']` on template modification endpoints. Enforced that operators must have `req.userDetails.isQualified === true` and can only modify or delete workflows belonging to their branch.
+   - **Sidebar Navigation ([`OperatorLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx)):** Dynamically includes the `Workflows` link in the sidebar for operators with `userDetails?.isQualified === true`.
+   - **Routing & Workflow Management Portal ([`App.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/App.jsx) & [`OperatorWorkflows.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorWorkflows/OperatorWorkflows.jsx)):** Routed `/operator/workflows` to `OperatorWorkflows`. For qualified operators, renders the full workflow management suite with template authoring, step attachments, and duplication capabilities. Uncertified operators are guided with qualification accreditation information.
+
+---
+
+## [2026-10-18] QuickLinks Data Synchronization, Zero Mock Fallbacks & Per-Tab Count Isolation
+
+### Overview
+Investigated and resolved two critical issues with QuickLinks on the Operator portal:
+1. **Discrepancy Between Admin and Operator Portals (Ghost Records):**
+   - *Issue*: Operators saw 4 links under Visa ("US Embassy Manila", "VFS Global", "BLS International", "Japan Visa") that did not exist on the Admin side or in the database.
+   - *Root Cause*: `OperatorQuickLinks.jsx` included a hardcoded fallback (`DEFAULT_LINKS`). Whenever a category returned 0 documents from the database query (or before links were added), it fell back to mock data instead of rendering the standard empty state.
+   - *Fix*: Removed hardcoded `DEFAULT_LINKS` from [`OperatorQuickLinks.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorQuickLinks/OperatorQuickLinks.jsx). Operator QuickLinks now strictly reflects the real-time Firestore `quickLinks` collection populated by Admin. If a category has no links, it renders an empty state instead of phantom records.
+2. **Tab Strip Count Contagion (Active Tab Count Bleed):**
+   - *Issue*: When switching tabs, all tabs' count badges `(n)` changed simultaneously to match the number of entries in the active tab (e.g. clicking Visa with 4 entries caused all tabs to display `(4)`).
+   - *Root Cause*: Inside `TABS.map((tab) => ...)`, the button label evaluated `{tab} ({activeCategoryLinks.length})`, which bound all tab counts to the count of the single active category.
+   - *Fix*: Computed `categoryCounts` independently for all tabs from real-time database documents (`categoryCounts[tab.key] || 0`). Each tab now displays its own stable count.
+3. **Category Alignment & Filter Normalization:**
+   - Standardized category keys and labels across Admin and Operator (`Airlines`, `Hotels`, `Government`, `Visa & Embassy`, `Other`).
+   - In [`QuickLinksContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminQuickLinks/QuickLinksContent.jsx), improved category matching so `"visaAndEmbassy"` and variations with spaces or ampersands match reliably, and formatted the table badge text nicely.
+   - Fixed identical active step count bleeding in [`OperatorWorkflows.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorWorkflows/OperatorWorkflows.jsx) by calculating `tabStepCounts` per workflow category.
+   - Created [`seedQuickLinks.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/seedQuickLinks.js) to allow seeding standard portal links into Firestore with duplicate prevention if desired.
+
+---
+
+## [2026-10-18] PayMongo Payment Channel Formatting & GCash Substring Collision Fix
+
+### Overview
+Resolved an issue where paying with GCash via PayMongo resulted in the payment channel being displayed as "Direct Cash Payment" / "Direct Cash (Counter Receipt)" on Official E-Receipts and the Operator Payment History table:
+1. **Root Cause Resolution ([`paymentUtils.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/utils/paymentUtils.js)):** Created dedicated payment channel detection and formatting utilities (`isCashPayment`, `formatPaymentChannel`, `formatPaymentMethodPill`). Eliminated naive `rawMethod.toLowerCase().includes('cash')` checks where the word `'cash'` matched the substring inside `'gcash'`.
+2. **Official E-Receipt Ribbon & Metadata ([`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx)):** Updated `normalizeReceiptPdfData` to run raw payment methods through `formatPaymentChannel`. GCash payments now proudly and accurately display `Payment Channel: GCash (PayMongo)` instead of `Direct Cash (Counter Receipt)`.
+3. **Operator Payment History Table ([`OperatorHistory.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx)):** Updated the `Payment Method` column to check `isCashPayment` (which strictly treats `'gcash'` as electronic) and render `formatPaymentMethodPill` (displaying `GCash` with a QR icon and electronic badge styling rather than green cash styling).
+4. **History Detail Modal ([`HistoryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx)) & Public Tracker ([`RequestTracker.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/RequestTracker/RequestTracker.jsx)):** Wrapped payment methods in `formatPaymentChannel` so detail dialogs and public QR tracker callouts format `GCash (PayMongo)`, `Maya (PayMongo)`, `QR Ph (PayMongo)`, and `Credit / Debit Card (PayMongo)` uniformly.
+5. **Backend Receipt Payload Normalization ([`receiptService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/receiptService.js) & [`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js)):** Added backend formatting in `buildReceiptPayload` to canonicalize PayMongo provider source types upon receipt creation, and updated `finalizeSuccessfulPayment` to persist `paymentMethod` directly on quotation records.
+
+---
+
+## [2026-10-18] Fix Client Registration Allowed Fields Whitelist & Zero-Trust Isolation
+
+### Overview
+Resolved a `400 Bad Request` registration error on the deployed client application (`POST /api/auth/register-initiate`) where submitting the client registration form displayed `Bad Request: Invalid fields in request body (firstName, middleInitial, lastName)`:
+1. **Client Registration Field Whitelist ([`authRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/authRoutes.js)):** Added `firstName`, `middleInitial`, `lastName`, and `name` to `REGISTER_ALLOWED_FIELDS` in `authRoutes.js`.
+2. **Controller & Service Verification ([`verificationService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/verificationService.js)):** Verified that `createPendingRegistration` already parses, validates, and stores `firstName`, `middleInitial`, `lastName`, and `fullName` to Firestore pending registrations and the final client user profile upon OTP verification.
+3. **Zero Regression for Admin Account Creation Features:** Audited all existing admin creation routes and modals:
+   - Admin creating Operators (`POST /api/operators` in [`operatorRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/operatorRoutes.js)) remains strictly protected by `verifyFirebaseToken`, `requireSuperAdmin`, and its own isolated `allowedFields(['branchName', 'email', 'password', 'address', 'contactNumber', 'isQualified', 'franchiseApplicationId', 'appointmentId'])`.
+   - Admin creating Admins (`POST /api/admins` in [`adminRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/adminRoutes.js)) remains strictly protected by `verifyFirebaseToken`, `requireSuperAdmin`, and its own isolated `allowedFields(['email', 'password', 'username', 'fullName', 'name', 'phone', 'status', 'assignedOperators'])`.
+   - Admin reviewing/approving/rejecting Clients (`POST /api/clients/:id/approve`, `POST /api/clients/:id/reject`, `PATCH /api/clients/:id` in [`clientRoutes.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/routes/clientRoutes.js)) remains completely intact and unaffected.
+
+---
+
+## [2026-10-18] Operator Payment History Tab, Optional Specified Requirements & Blank Quotation Defaults
+
+### Overview
+Implemented 3 key user requests and architectural enhancements for the operator portal and quotation workflows:
+1. **Operator Payment History Tab ([`OperatorHistory.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorHistory/OperatorHistory.jsx)):** Added a dedicated "Payment History" tab to `/operator/history` listing all confirmed branch payments (both Cash counter payments and online QRPh/GCash/Card transactions). Includes Receipt/Ref codes, Client details, Service titles, bold green Amount, Method badges (Cash vs Electronic), Date Paid, and actions for Audit Details and 1-click Official E-Receipt PDF generation via [`PdfDocumentView`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx).
+2. **Optional Specified Requirements:** Made "Specified Requirements of Client" optional across all client and operator inquiry intake modals ([`CreateInquiryFormModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateInquiryFormModal/CreateInquiryFormModal.jsx), [`ClientInquiryModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientInquiryModal/ClientInquiryModal.jsx), [`ClientServiceRequestModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/ClientServiceRequestModal/ClientServiceRequestModal.jsx), and [`formController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/formController.js)). Removed blocking form validation, required attributes, and asterisks.
+3. **Blank Initial Quotation Fields ([`CreateQuotationModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/CreateQuotationModal/CreateQuotationModal.jsx)):** Cleared hardcoded template text from `inclusions`, `exclusions`, and `operatorRemarks` so that when operators open or create a quotation, the textareas start clean and rely on contextual placeholders instead of pre-filled bus/tour text.
+
+### Technical Implementation Details
+1. **Operator Payment History Data Flow ([`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js) & [`paymentService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/services/paymentService.js)):**
+   - Enhanced `GET /api/payments` for operators to query both `operatorId` and `branchUid` records with deduplication, ensuring zero missed counter or online receipts.
+   - Wired `fetchPayments` into `OperatorHistory.jsx`, providing pagination, error handling, and real-time tab switching alongside Appointment History, Service History, and My Activity History.
+2. **History Detail Modal Payment Integration ([`HistoryDetailModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/HistoryDetailModal/HistoryDetailModal.jsx)):**
+   - Added first-class `type="payment"` rendering, displaying client profile, financial settlement breakdown (Amount, Payment Method, Official Receipt No, System Payment ID, Quotation Ref, Fulfillment ID, Date Settled), and a direct "View Official E-Receipt (PDF)" trigger.
+3. **Inquiry Validation Relaxation:**
+   - Removed `specifiedRequirements.trim()` requirements from `isFormValid` and submit guards in client and operator inquiry forms.
+   - Replaced required indicator with `(Optional)`.
+
+---
+
+## [2026-10-18] Strict File Explorer Filtering, Multipart Upload Resiliency & Three.js Deprecation Fix
+
+### Overview
+Addressed service requirement submission failures and user experience issues during quotation and service attachment workflows:
+1. **Strict File Type Filtering in OS File Pickers:** Enforced rigorous file extension and MIME type filtering so that when submitting documents, users are strictly restricted to document formats (`.pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx`), and when submitting images, users are strictly restricted to photo formats (`.jpg, .jpeg, .png, .webp, .gif`).
+2. **Serverless 503 & Non-JSON Upload Response Handling:** Fixed transient `503 Service Unavailable` failures during multiple file uploads by correcting Firebase Hosting regional routing (`asia-southeast1`), migrating client upload loops from concurrent bursts (`Promise.all`) to sequential uploads, and implementing exponential backoff retries with safe `Content-Type` JSON inspection in `fileUploadApi.js`.
+3. **Three.js Deprecation Modernization:** Replaced deprecated `THREE.PCFSoftShadowMap` with `THREE.PCFShadowMap` and eliminated `new THREE.Clock()` in favor of high-precision `performance.now()` in `PuzzleHouse.jsx`, eliminating console warnings.
+
+### Technical Implementation Details
+1. **Firebase Hosting Regional Edge Proxy ([`firebase.json`](file:///c:/Users/Isaac/Downloads/Fair2/firebase.json)):**
+   - Configured `"region": "asia-southeast1"` on the `/api/**` Cloud Function rewrite to match `fly-api/index.js`, preventing cross-region routing drops.
+2. **Resilient Multipart Upload Utility ([`fileUploadApi.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/utils/fileUploadApi.js)):**
+   - Added content-type inspection before calling `response.json()`, preventing `SyntaxError: Unexpected token 'S', "Service Unavailable" is not valid JSON`.
+   - Added automatic exponential backoff retry (up to 2 retries) on transient 503 / 502 / network aborts.
+3. **Strict Document vs Image File Restrictions ([`QuotationAttachRequirementsModal.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Client/QuotationAttachRequirementsModal/QuotationAttachRequirementsModal.jsx) & [`QuotationRequirementsReview.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Operator/QuotationRequirementsReview/QuotationRequirementsReview.jsx)):**
+   - Defined canonical `ALLOWED_DOC_EXTENSIONS` (`.pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx`) and `ALLOWED_IMAGE_EXTENSIONS` (`.jpg, .jpeg, .png, .webp, .gif`).
+   - Bound `<input type="file" accept={isImageRequirement(inputType) ? IMAGE_ACCEPT_STRING : DOC_ACCEPT_STRING} />` ensuring the OS file dialog strictly filters out non-compliant file categories.
+   - Added pre-upload extension validation in `handleFileChange`.
+   - Changed multi-file batch upload from parallel `Promise.all` to sequential upload execution.
+4. **Three.js Scene Modernization ([`PuzzleHouse.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Landing/FranchisePuzzleBanner/PuzzleHouse.jsx)):**
+   - Replaced removed `THREE.PCFSoftShadowMap` with `THREE.PCFShadowMap`.
+   - Replaced deprecated `THREE.Clock` with standard `performance.now()` timer tracking.
+
+---
+
+## [2026-10-18] Revenue Metric Harmonization & Real-Time Sync (Approach A)
+
+### Overview
+Diagnosed and resolved a three-way revenue discrepancy where:
+- Admin System KPI Card showed **₱47,988**
+- Admin Operator Detail (Analytics Section) showed **₱45,688**
+- Operator Portal (Baliuag Branch) showed **₱62,388**
+
+Harmonized the platform to **Approach A (Unified Verified Received Payment Revenue = ₱45,688)** across all three views, resolved two backend bugs (missing refund decrement in cancellation and dot-notation map nesting in `paymentController`), stopped duplicate revenue increments on service step fulfillment, and safely resynced Firestore aggregation documents and operator account metrics.
+
+### Technical Implementation Details
+1. **Backend Cancellation & Refund Decrement Handling ([`activeServiceController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/activeServiceController.js)):**
+   - Added `COLLECTIONS.SYSTEM_STATS = 'system_stats'`.
+   - In `cancelActiveService`, when `refundAmount > 0`, atomically decrement `system_stats/revenue.totalRevenue` by `refundAmount` and `paidCount` by 1.
+   - Decrement the operator's entry in `system_stats/revenue.operators[opId]` (`totalRevenue` and `paidCount`).
+   - Decrement `users[opId].totalRevenue` by `refundAmount` and, if the service was completed prior to cancellation, decrement `completedServicesCount` by 1.
+   - In `updateServiceStep`, removed redundant `totalRevenue` increment upon completing all checklist steps (keeping strictly `completedServicesCount: increment(1)`) to eliminate double-counting of payment revenue.
+2. **Transaction Map Nesting & User Revenue Sync ([`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js)):**
+   - Switched from `transaction.set(ref, statsUpdate, { merge: true })` with dot-separated string keys to `transaction.update(systemStatsRef, statsUpdate)` so Firestore parses field paths and cleanly updates the nested `operators` map instead of creating root keys with dots.
+   - Simultaneously synced `users[targetOperatorId].totalRevenue` within the transaction whenever a payment is finalized.
+3. **Database Audit & Resync Script ([`fly-api/src/scripts/resyncRevenue.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/scripts/resyncRevenue.js)):**
+   - Executed clean resync across all active records:
+     - `system_stats/revenue`: Set `totalRevenue: 45688`, `paidCount: 4`, purged obsolete dot-separated root keys, and mapped operator stats (Baliuag: ₱45,688, Apalit: ₱0).
+     - `users/USR-OPR-QMgq9hEDeEGQvHKKYM8X` (Baliuag): Resynced `totalRevenue: 45688` and `completedServicesCount: 2`.
+     - `users/USR-OPR-m9B5qHBCZ7nqRdn9avTm` (Apalit): Set `totalRevenue: 0` and `completedServicesCount: 0`.
+4. **Real-Time Operator Header Revenue ([`OperatorLayout.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Operator/OperatorLayout/OperatorLayout.jsx)):**
+   - Subscribed in real-time to `system_stats/revenue` via `onSnapshot` (with fallback to `userDetails.totalRevenue`), displaying `branchRevenue = data.operators?.[user.uid]?.totalRevenue`.
+   - Updated KpiCard to title `"Total Revenue"`, detail `"From confirmed client payments"`, with peso icon and green theme matching the platform design standard.
+5. **Admin Qualification Detail Harmonization ([`AdminQualificationDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminQualifications/AdminQualificationDetailPage.jsx)):**
+   - Harmonized KpiCard to title `"Total Revenue"`, value `₱${branchRevenue.toLocaleString()}`, and detail `"Total verified received revenue"`.
+
+---
+
+## [2026-10-18] UI Polish: Fix Client Inquiry History Empty State Centering & PDF Button Styling
+
+### Overview
+Fixed two visual defects reported on the Client Detail Page's Inquiry History tab:
+1. **Empty State Alignment:** Corrected table container and row layout so that when no inquiries are present, the placeholder icon and empty state text are centered horizontally across the full card width instead of misaligning to the first column.
+2. **Action PDF Button Color:** Resolved uncolored/neutral PDF button rendering by applying canonical `.inquiry-data-table` classes and explicit high-specificity `.icon-btn.pdf` red styling (`#fef2f2` background, `#dc2626` icon, `#fecaca` border).
+
+### Changes Implemented
+- In [`ClientDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientDetailPage.jsx):
+  - Updated table wrapper to `inquiry-table-responsive` and table element to `inquiry-data-table`.
+  - Replaced inline loose icon with `.empty-state-box` wrapper (`fa-file-circle-question` with centered flex column).
+- In [`admin-clients.css`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/admin-clients.css):
+  - Added scoped styling for `.client-inquiries-card .inquiry-data-table`, `.icon-btn.pdf` (red accent), `.icon-btn.view` (purple accent), and `.empty-state-box` (centered layout with vertical spacing).
+- **Verification:** Ran `npm run build` in `fair-fly`, passing with 0 errors.
+
+---
+
+## [2026-10-18] Multi-Feature & Bugfix: Operator Calendar Role Restriction, Admin Inquiry Blank Page Fix, Client Detail Inquiries Table & Localhost Cleanup
+
+### Overview
+Addressed 5 key system maintenance and usability items across the FairFly platform:
+1. **Operator Consultations Calendar & Filter Legend Restriction (UI-only):** Dynamically restricted the "Completed" status legend and dropdown filter option in [`AppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx) so that only Administrators can view all 4 status states (`Confirmed`, `Pending`, `Completed`, `Cancelled`), while Operators view strictly the 3 operational states (`Confirmed`, `Pending`, `Cancelled`).
+2. **Admin Inquiry Detail Blank Page Crash Fix:** Diagnosed and fixed an uncaught `ReferenceError: isConfirmed is not defined` crash in [`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx#L249) that caused a white screen on opening inquiry records. Added resilient document resolution handling for prefixed entity IDs (`INQ-...`).
+3. **Admin Client Detail Page Support Tickets Removal:** Removed the obsolete "Support Tickets" KPI card and recent activity metrics from [`ClientDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientDetailPage.jsx) since support tickets in FairFly are strictly staff-only channels between Admins and Branch Operators.
+4. **Client-Scoped Inquiry History Table with Cursor Pagination:** Added a dedicated "Inquiry History" tab in [`ClientDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientDetailPage.jsx) using [`useFirestorePagination`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/hooks/useFirestorePagination.js) scoped strictly to the client's `clientUid`, loading top 5 records per page with search debouncing, status pills, and read-only admin actions (PDF export and View Details).
+5. **System-Wide Localhost URL Cleanup:** Replaced all hardcoded fallback URLs in production runtime files ([`receiptService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/receiptService.js), [`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js), [`clientController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/clientController.js), [`config.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/utils/config.js), [`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx)) to point strictly to the deployed FairFly production URL (`https://fairfly-1e83b.web.app`), enforcing single-link clean URLs without comma separation.
+
+### Technical Implementation Details
+1. **Operator Calendar Role Checking ([`AppointmentCalendar.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/AppointmentCalendar/AppointmentCalendar.jsx)):**
+   - Derived `isAdmin = (role || userDetails?.role || 'operator').toLowerCase() === 'admin'`.
+   - Wrapped the `<option value="Completed">Completed Only</option>` and legend dot `<span className="shared-legend-dot status-completed" /> Completed` in `{isAdmin && ...}` guards.
+   - Added an auto-reset effect so that if a non-admin user somehow had `Completed` active, the filter automatically defaults back to `'all'`.
+2. **Inquiry Detail Page Resiliency ([`AdminInquiryDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminInquiryHistory/AdminInquiryDetailPage.jsx)):**
+   - Memoized `isConfirmed` evaluating status strings (`accepted`, `confirmed`, `completed`, `paid`, `active`, `fulfilled`, `closed`).
+   - Enhanced the Firestore subscriber in `useEffect` to attempt fallback lookups by stripped prefix (`INQ-` removal/addition) and query by `controlNo` if the initial document snapshot does not exist, ensuring persistent routing reliability.
+3. **Client Detail Page Refactoring ([`ClientDetailPage.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientDetailPage.jsx)):**
+   - Replaced "Support Tickets" KPI card with "Inquiry Requests" showing real-time `inquiriesTotal`.
+   - Replaced "Support Tickets" in the Recent Account Activity panel with "Inquiry Requests".
+   - Added tab button `<button className="client-tab-btn">Inquiry History</button>`.
+   - Integrated `useFirestorePagination` targeting collection `'inquiries'` with `where('clientUid', '==', id)`, `orderBy('createdAt', 'desc')`, `initialPageSize: 5`, debounced search, responsive table styling, pagination controls, and `<PdfDocumentView>` modal.
+4. **Localhost Cleanup Across Runtime Services:**
+   - [`receiptService.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/services/receiptService.js): `frontendBaseUrl` defaults to `'https://fairfly-1e83b.web.app'` for QR tracking URLs.
+   - [`paymentController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/paymentController.js): `frontendBaseUrl` defaults to `'https://fairfly-1e83b.web.app'` for PayMongo checkout success/cancel redirects.
+   - [`clientController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/clientController.js): `CLIENT_BASE_URL` defaults to `'https://fairfly-1e83b.web.app'` for client approval and ID re-upload emails.
+   - [`config.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/utils/config.js): `API_BASE_URL` defaults to `'https://fairfly-1e83b.web.app'`.
+   - [`PdfDocumentView.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/components/Shared/PdfDocument/PdfDocumentView.jsx): Fallback URL defaults to `'https://fairfly-1e83b.web.app'`.
+   - Verified that `.env` files in both `fair-fly` and `fly-api` contain strictly single canonical production URLs.
+5. **Build & Quality Assurance:**
+   - Executed `npm run build` in `fair-fly`, passing with 0 errors.
+
+---
+
+### Overview
+Fixed an issue in the Admin Portal where selecting different account filters (e.g. "All Accounts", "Pending Approval", "Active", "Deactivated") caused the Status Bar (`AlertBar`) to reset to "Loading client records..." and lose its persistent system-wide account status warning, while KPI cards and filter chip count badges reset to zero or dropped to the filtered subset.
+
+### Root Cause
+1. **Unconditional Loading State in `alertBarProps`:**
+   In [`ClientsContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientsContent.jsx), `alertBarProps` returned `{ message: 'Loading client records...', type: 'info' }` whenever `loading` was true. Since selecting a filter chip invoked `loadClients` which called `setLoading(true)`, the status bar flashed and reset on every filter toggle.
+2. **Deriving Global KPI Counts from Filtered Table Slices:**
+   KPI metrics (`totalClients`, `pendingClients`, `activeClients`, `deactivatedClients`) and filter chip badges were calculated directly against the paginated table slice (`clients`). When an administrator selected "Active", `pendingClients` dropped to 0, which wiped out the high-priority warning message advising the administrator of pending government ID verifications and caused KPI summary cards to show 0.
+3. **Missing Global Counts in Backend Pagination Response:**
+   In [`clientController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/clientController.js), `GET /api/clients` with `page` and `limit` only returned `total` for the requested filter query without providing global system counts across all client statuses.
+
+### Architectural & Security Fixes Implemented
+1. **Global Aggregation & KPI Preservation ([`ClientsContent.jsx`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fair-fly/src/pages/Admin/AdminClients/ClientsContent.jsx)):**
+   - Introduced dedicated `counts` state `{ total, pending, active, deactivated, rejected }` tracking the global system counts across all client account statuses.
+   - Added `fetchKpiCounts` using Firestore server aggregation (`getCountFromServer`) to fetch persistent status metrics directly upon mount and refresh after administrative mutations (status toggles, profile updates, account deletions, bulk actions).
+   - Synchronized `counts` with backend response `res.counts` when available.
+   - Updated `alertBarProps` to evaluate against global `counts` rather than the filtered table page slice, and guarded against transient loading states so that the Status Bar remains stable and does not reset during filtering.
+   - Separated `initialLoading` (for page and KPI cards) from `tableLoading` (for `<DataTable>` row queries), preventing KPI cards and the Status Bar from flickering into loading skeletons when filtering.
+2. **Backend Server Aggregation & Search Support ([`clientController.js`](file:///c:/Users/Isaac/Downloads/Fair2/Fairfly/fly-api/src/controllers/clientController.js)):**
+   - In `getClients`, added parallel zero-read-cost Firestore count aggregations (`.count().get()`) across all client statuses (`Pending`, `Active`, `Deactivated`, `Rejected`, and total) and included `counts` in the API response.
+   - Added support for the `search` query parameter in `getClients` to enable reliable keyword filtering on the backend.
+3. **Verification:**
+   - Ran `npm run build` in `fair-fly`, completing production build with 0 errors.
+
 ## [2026-10-18] Security & RBAC Enforcement: Operator Branch Name Made Strictly Read-Only (Admin Exclusive Governance)
 
 ### Overview
@@ -5909,4 +6502,24 @@ All messages are computed via `useMemo` from data already available through `use
 ### Breaking Changes
 - None.
 
+---
 
+## [2026-10-20] Allow Figma Make Proxy Origin on CORS & Backend Deployment
+
+### Files Modified
+- `fly-api/src/server.js`
+- `fly-api/.env`
+- `update-logs.md`
+
+### Summary of Changes
+- **CORS Allowed Origins Update**:
+  - Added exact origin `https://app-k6x2ipem2lrpxjijg5rpvcjh2nmfewdx6e2b2mk6dkidrt2s4qra.makeproxy-c.figma.site` to the explicit `allowedOrigins` whitelist in `fly-api/src/server.js` and `FRONTEND_URL` in `fly-api/.env`.
+  - Added pattern matching regex (`/^https:\/\/[a-z0-9-]+\.makeproxy-[a-z0-9]+\.figma\.site$/i`) in `corsMiddleware` to ensure continuous support across Figma Make proxy clusters.
+- **Backend Deployment**:
+  - Successfully re-deployed Firebase Cloud Function `api` (Node.js 22, 2nd Gen) in `asia-southeast1`.
+
+### Reason
+- User request: "im currently using figma make to make some modifications to the Site... https://app-k6x2ipem2lrpxjijg5rpvcjh2nmfewdx6e2b2mk6dkidrt2s4qra.makeproxy-c.figma.site add this origin to allow on CORS, the deploy the backend"
+
+### Breaking Changes
+- None.

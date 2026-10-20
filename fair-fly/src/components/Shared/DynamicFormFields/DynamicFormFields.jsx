@@ -60,7 +60,7 @@ function DynamicField({ field, value, onChange, disabled, idPrefix }) {
           id={fieldId}
           name={field.id}
           type="file"
-          accept={field.accept || (field.type === 'image' ? 'image/*' : undefined)}
+          accept={field.accept || (field.type === 'image' ? '.jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif' : '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation')}
           multiple={field.multiple === true}
           required={field.required === true && !value}
           disabled={disabled}

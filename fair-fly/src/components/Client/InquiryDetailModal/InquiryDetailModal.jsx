@@ -19,7 +19,7 @@ export default function InquiryDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Submitted Service Inquiry Details"
-      subtitle={`Form SAF-01-002 · Control No: ${inquiry.controlNo || inquiry.id.substring(0, 8)}`}
+      subtitle={`Control No: ${inquiry.controlNo || inquiry.id.substring(0, 8)}`}
       size="large"
     >
       <div className="inquiry-detail-content">
@@ -27,7 +27,7 @@ export default function InquiryDetailModal({
         <div className="inq-modal-header-card">
           <div>
             <span className="inq-modal-tag">
-              <i className="fa-solid fa-file-signature"></i> {inquiry.formNo || 'SAF-01-002'} · {inquiry.controlNo || inquiry.id.substring(0, 8)}
+              <i className="fa-solid fa-file-signature"></i> Control No: {inquiry.controlNo || inquiry.id.substring(0, 8)}
             </span>
             <h3 className="inq-modal-title">{inquiry.clientName || 'Valued Client'}</h3>
             <span className="inq-modal-date">
@@ -104,11 +104,11 @@ export default function InquiryDetailModal({
           </div>
         </div>
 
-        {/* Specified Requirements of Client (What the client needs from the agency) */}
+        {/* Specified Requirements of Client */}
         <div className="inq-modal-section">
           <div className="inq-section-heading">
             <i className="fa-solid fa-clipboard-list"></i>
-            Specified Requirements of Client (SAF-01-002 Section 2)
+            Specified Requirements of Client
           </div>
           <div className="inq-text-block">
             {inquiry.specifiedRequirements || (typeof inquiry.notes === 'string' && inquiry.notes.trim()) || 'No specific requirements recorded in this inquiry.'}
@@ -120,7 +120,7 @@ export default function InquiryDetailModal({
           <div className="inq-modal-section">
             <div className="inq-section-heading" style={{ color: 'var(--primary, #4338ca)' }}>
               <i className="fa-regular fa-comment-dots" style={{ color: 'var(--brand-primary, #6366f1)' }}></i>
-              Client Remarks & Special Instructions (SAF-01-002 Col 3)
+              Client Remarks & Special Instructions
             </div>
             <div className="inq-text-block">
               {inquiry.clientRemarks || inquiry.remarks || inquiry.notes}
@@ -144,7 +144,7 @@ export default function InquiryDetailModal({
             onClick={() => onOpenPdf && onOpenPdf('inquiry', inquiry)}
           >
             <i className="fa-solid fa-file-pdf"></i>
-            <span>View Official PDF (SAF-01-002)</span>
+            <span>View Official PDF</span>
           </button>
         </div>
       </div>

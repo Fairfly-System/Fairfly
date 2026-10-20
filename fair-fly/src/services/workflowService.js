@@ -61,14 +61,29 @@ export function deleteWorkflowTemplate(token, id, successCallback, errorCallback
   );
 }
 
-export function duplicateWorkflowTemplate(token, id, successCallback, errorCallback, setIsLoading) {
+export function duplicateWorkflowTemplate(token, id, nameOrData, successCallback, errorCallback, setIsLoading) {
+  let body = {};
+  let cbSuccess = successCallback;
+  let cbError = errorCallback;
+  let cbLoading = setIsLoading;
+
+  if (typeof nameOrData === 'string' && nameOrData) {
+    body = { name: nameOrData };
+  } else if (nameOrData && typeof nameOrData === 'object' && nameOrData.name) {
+    body = { name: nameOrData.name };
+  } else if (typeof nameOrData === 'function') {
+    cbSuccess = nameOrData;
+    cbError = successCallback;
+    cbLoading = errorCallback;
+  }
+
   return ApiCaller(
     `${API_BASE_URL}/api/workflows/${id}/duplicate`,
     'POST',
-    {},
+    body,
     { Authorization: `Bearer ${token}` },
-    successCallback,
-    errorCallback,
-    setIsLoading
+    cbSuccess,
+    cbError,
+    cbLoading
   );
 }

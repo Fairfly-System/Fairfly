@@ -657,36 +657,68 @@ export default function ClientTrackingPage() {
             {/* View Details Button */}
             <button
               type="button"
-              className="icon-btn view-action"
+              className="btn btn-secondary btn-xs btn-view-quote-details"
               title="View Complete Quotation Details"
               aria-label="View Complete Quotation Details"
               onClick={() => setViewingQuotation(quote)}
+              style={{
+                borderRadius: '0px',
+                background: '#ede9fe',
+                color: '#6d28d9',
+                borderColor: '#ddd6fe',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontWeight: 600
+              }}
             >
               <i className="fa-solid fa-eye"></i>
+              <span>View Details</span>
             </button>
 
             {/* View PDF Button */}
             <button
               type="button"
-              className="icon-btn pdf-action"
-              title="View Official ADF-07-001 PDF"
-              aria-label="View Official ADF-07-001 PDF"
+              className="btn btn-secondary btn-xs btn-view-quote-pdf"
+              title="View Official Quotation PDF"
+              aria-label="View Official Quotation PDF"
               onClick={() => handleOpenPdf('quotation', quote)}
+              style={{
+                borderRadius: '0px',
+                background: '#f1f5f9',
+                color: '#334155',
+                borderColor: '#cbd5e1',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontWeight: 600
+              }}
             >
-              <i className="fa-solid fa-file-pdf"></i>
+              <i className="fa-solid fa-file-pdf" style={{ color: '#dc2626' }}></i>
+              <span>View PDF</span>
             </button>
 
             {/* View Official E-Receipt (if Paid) */}
             {isPaid && (
               <button
                 type="button"
-                className="icon-btn pdf-action"
-                title="View Official E-Receipt (ADF-07-002)"
+                className="btn btn-secondary btn-xs btn-view-quote-receipt"
+                title="View Official E-Receipt"
                 aria-label="View Official E-Receipt"
                 onClick={() => handleOpenReceipt(quote)}
-                style={{ color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4' }}
+                style={{
+                  borderRadius: '0px',
+                  color: '#16a34a',
+                  borderColor: '#86efac',
+                  background: '#f0fdf4',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  fontWeight: 600
+                }}
               >
                 <i className="fa-solid fa-receipt"></i>
+                <span>E-Receipt</span>
               </button>
             )}
 
@@ -931,23 +963,45 @@ export default function ClientTrackingPage() {
             {/* View Details Button */}
             <button
               type="button"
-              className="icon-btn view-action"
+              className="btn btn-secondary btn-xs btn-view-inq-details"
               title="View Complete Inquiry Details"
               aria-label="View Complete Inquiry Details"
               onClick={() => setViewingInquiry(inq)}
+              style={{
+                borderRadius: '0px',
+                background: '#ede9fe',
+                color: '#6d28d9',
+                borderColor: '#ddd6fe',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontWeight: 600
+              }}
             >
               <i className="fa-solid fa-eye"></i>
+              <span>View Details</span>
             </button>
 
             {/* View PDF Button */}
             <button
               type="button"
-              className="icon-btn pdf-action"
-              title="View Official SAF-01-002 PDF"
-              aria-label="View Official SAF-01-002 PDF"
+              className="btn btn-secondary btn-xs btn-view-inq-pdf"
+              title="View Official Inquiry PDF"
+              aria-label="View Official Inquiry PDF"
               onClick={() => handleOpenPdf('inquiry', inq)}
+              style={{
+                borderRadius: '0px',
+                background: '#f1f5f9',
+                color: '#334155',
+                borderColor: '#cbd5e1',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontWeight: 600
+              }}
             >
-              <i className="fa-solid fa-file-pdf"></i>
+              <i className="fa-solid fa-file-pdf" style={{ color: '#dc2626' }}></i>
+              <span>View PDF</span>
             </button>
           </div>
         );
@@ -965,7 +1019,7 @@ export default function ClientTrackingPage() {
             Client Requests & Tracking Portal
           </h2>
           <p className="tracking-header-subtitle">
-            Manage your custom inquiries, review official quotations (ADF-07-001), and track ongoing service milestones.
+            Manage your custom inquiries, review official quotations, and track ongoing service milestones.
           </p>
         </div>
 
@@ -1192,7 +1246,7 @@ export default function ClientTrackingPage() {
                 <div>
                   <h3 className="portal-sub-title">
                     <i className="fa-solid fa-file-invoice-dollar tracking-title-icon-purple"></i>
-                    Official Quotations Received (ADF-07-001)
+                    Official Quotations Received
                   </h3>
                   <p className="portal-sub-desc">
                     Review pricing, tour schedules, and inclusions prepared by FairFly operators. Accept a quotation to start service fulfillment.
@@ -1261,7 +1315,7 @@ export default function ClientTrackingPage() {
                 <div>
                   <h3 className="portal-sub-title">
                     <i className="fa-solid fa-file-signature tracking-title-icon-purple"></i>
-                    My Submitted Inquiries (SAF-01-002)
+                    My Submitted Inquiries
                   </h3>
                   <p className="portal-sub-desc">
                     Your submitted intake requests and specifications for custom service packages and travel assistance.

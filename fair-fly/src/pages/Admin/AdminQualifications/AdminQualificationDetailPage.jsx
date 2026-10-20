@@ -339,11 +339,11 @@ export default function AdminQualificationDetailPage() {
           {/* Performance & Operations KPI Cards */}
           <section className="services-summary-grid">
             <KpiCard
-              title="Fulfilled Revenue"
+              title="Total Revenue"
               value={`₱${branchRevenue.toLocaleString()}`}
-              detail="Total credited revenue earned"
-              icon="fa-solid fa-coins"
-              iconColor="#eab308"
+              detail="Total verified received revenue"
+              icon="fa-solid fa-peso-sign"
+              iconColor="#16a34a"
               badge="Revenue"
               badgeType="ok"
             />

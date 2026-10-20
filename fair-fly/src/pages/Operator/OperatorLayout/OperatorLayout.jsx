@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import AppLayout from '../../../components/UI/AppLayout/AppLayout';
 import KpiCard from '../../../components/UI/KpiCard/KpiCard';
 import { firestore } from '../../../firebase';
-import { collection, onSnapshot, query, where, or, limit } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, or, limit } from 'firebase/firestore';
 import { useAuthContext } from '../../../context/AuthContext';
 import './operator-layout.css';
 
@@ -38,6 +38,8 @@ export default function OperatorLayout() {
   const [completedServices, setCompletedServices] = useState(0);
   const [pendingActions, setPendingActions] = useState(0);
   const [openTickets, setOpenTickets] = useState(0);
+  const [branchRevenue, setBranchRevenue] = useState(0);
+  const [revenueLoading, setRevenueLoading] = useState(true);
 
   // Clear tab notification immediately when the operator clicks a tab in the sidebar
   const handleTabClick = useCallback((tabPath) => {
@@ -154,31 +156,72 @@ export default function OperatorLayout() {
     };
   }, [user?.uid, location.pathname]);
 
-  const branchRevenue = Number(userDetails?.totalRevenue) || 0;
+  // Real-time branch revenue from system_stats/revenue (with fallback to userDetails.totalRevenue)
+  useEffect(() => {
+    if (!user?.uid) return;
+    const revenueDocRef = doc(firestore, 'system_stats', 'revenue');
+    const unsubscribe = onSnapshot(
+      revenueDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const opStats = data.operators?.[user.uid];
+          const rev = Number(opStats?.totalRevenue ?? userDetails?.totalRevenue ?? 0);
+          setBranchRevenue(rev);
+        } else {
+          setBranchRevenue(Number(userDetails?.totalRevenue) || 0);
+        }
+        setRevenueLoading(false);
+      },
+      (err) => {
+        console.warn('OperatorLayout system_stats subscription notice:', err?.message);
+        setBranchRevenue(Number(userDetails?.totalRevenue) || 0);
+        setRevenueLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [user?.uid, userDetails?.totalRevenue]);
 
   const tabNotifications = useMemo(() => ({
     '/operator/appointments': pendingActions,
     '/operator/tickets': openTickets,
     '/operator/services': 0, // Keep Services tab strictly for catalog management, no badges from service requests
+    '/operator/workflows': 0, // Workflows tab is strictly for SOP templates authoring, zero badges
   }), [pendingActions, openTickets]);
+
+  const operatorLinks = useMemo(() => {
+    if (userDetails?.isQualified) {
+      const links = [...baseOperatorLinks];
+      const servicesIdx = links.findIndex(l => l.to === '/operator/services');
+      const workflowLink = { to: '/operator/workflows', icon: 'fa-solid fa-diagram-project', label: 'Workflows' };
+      if (servicesIdx !== -1) {
+        links.splice(servicesIdx + 1, 0, workflowLink);
+      } else {
+        links.push(workflowLink);
+      }
+      return links;
+    }
+    return baseOperatorLinks;
+  }, [userDetails?.isQualified]);
 
   return (
     <AppLayout
       portalName="Operator"
       portalSubtitle="Branch Operations"
-      navLinks={baseOperatorLinks}
+      navLinks={operatorLinks}
       tabNotifications={tabNotifications}
       onTabClick={handleTabClick}
       statCards={
         <>
           <KpiCard
-            title="Fulfilled Revenue"
+            title="Total Revenue"
             value={`₱${branchRevenue.toLocaleString()}`}
-            detail="Credited from completed services"
-            icon="fa-solid fa-coins"
-            iconColor="#eab308"
+            detail="From confirmed client payments"
+            icon="fa-solid fa-peso-sign"
+            iconColor="#16a34a"
             badge="Revenue"
             badgeType="ok"
+            isLoading={revenueLoading}
           />
 
           <KpiCard

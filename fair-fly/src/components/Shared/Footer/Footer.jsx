@@ -5,10 +5,8 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="left">
-        <a href="#" className="logo">
-
-            <img src='FairflyLogo.png'></img>
-
+        <a href="/" className="logo" aria-label="FairFly Home">
+          <img src="/FairflyLogo.png" alt="FairFly Logo" />
         </a>
       </div>
 

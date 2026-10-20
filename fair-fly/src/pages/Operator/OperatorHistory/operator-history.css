@@ -124,6 +124,43 @@
   cursor: default;
 }
 
+.op-payment-method-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.op-payment-method-pill.cash {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.op-payment-method-pill.cash i {
+  color: #10b981;
+}
+
+.op-payment-method-pill.electronic {
+  background: #f5f3ff;
+  color: #4c1d95;
+  border: 1px solid #ddd6fe;
+}
+
+.op-payment-method-pill.electronic i {
+  color: #7c3aed;
+}
+
+.op-history-receipt-btn:hover {
+  background: #fee2e2 !important;
+  border-color: #f87171 !important;
+  color: #b91c1c !important;
+}
+
 @media (max-width: 48rem) {
   .op-history {
     padding: 1rem;

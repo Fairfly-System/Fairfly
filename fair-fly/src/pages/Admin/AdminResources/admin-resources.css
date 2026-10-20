@@ -159,15 +159,17 @@
   color: #DB2777;
 }
 
+.resource-title-cell,
 .resource-row-title-cell {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
+.resource-type-icon,
 .resource-file-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.375rem;
+  height: 2.375rem;
   border-radius: var(--radius-sm);
   background: var(--purple-light-2);
   color: var(--purple);
@@ -176,6 +178,69 @@
   justify-content: center;
   font-size: 1rem;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.resource-type-icon[style*="cursor: pointer"]:hover,
+.resource-file-avatar[style*="cursor: pointer"]:hover {
+  transform: scale(1.06);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  border-color: var(--purple, #6366f1);
+}
+
+.resource-type-icon.is-image-icon {
+  background: #f1f5f9;
+}
+
+.resource-type-icon.marketing {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.resource-type-icon.documentation {
+  background: var(--purple-light-2);
+  color: var(--purple-dark);
+}
+
+.resource-type-icon.help {
+  background: var(--warning-yellow-light);
+  color: #B78103;
+}
+
+.resource-type-icon.forms {
+  background: var(--complete-green-light);
+  color: var(--complete-green-dark);
+}
+
+.resource-type-icon.brand {
+  background: #FDF2F8;
+  color: #DB2777;
+}
+
+.resource-thumbnail-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  transition: transform 0.2s ease;
+}
+
+.resource-type-icon:hover .resource-thumbnail-img {
+  transform: scale(1.08);
+}
+
+.resource-title-text.is-clickable {
+  transition: color 0.15s ease;
+}
+
+.resource-title-text.is-clickable:hover {
+  color: var(--purple, #6366f1);
+  text-decoration: underline;
 }
 
 .resource-title-meta {

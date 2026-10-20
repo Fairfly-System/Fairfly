@@ -91,87 +91,123 @@ export default function ValidIdUpload({
         />
 
         {fileData?.url ? (
-          <div className="id-uploaded-card">
-            <div className="id-uploaded-preview">
-              {isPdf ? (
-                <div className="id-pdf-icon-box">
-                  <FileText size={24} className="text-purple" />
+          <div className="id-card-preview-slot">
+            {isPdf ? (
+              <div className="id-pdf-preview-content">
+                <div className="id-card-top-row">
+                  <span className="id-card-ready-pill pdf">
+                    <FileText size={12} />
+                    <span>PDF</span>
+                  </span>
+                  <div className="id-card-action-btns">
+                    <button
+                      type="button"
+                      className="id-card-btn view"
+                      title="View PDF document"
+                      onClick={() =>
+                        openPdfModal({
+                          type: 'file',
+                          url: fileData.previewUrl || fileData.url,
+                          title: fileData.name || label || 'Government ID PDF'
+                        })
+                      }
+                    >
+                      <Eye size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="id-card-btn delete"
+                      title="Remove and replace"
+                      disabled={disabled}
+                      onClick={onRemove}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
-              ) : (
+
+                <div className="id-pdf-center-icon">
+                  <FileText size={26} />
+                </div>
+
+                <div className="id-card-bottom-info">
+                  <span className="id-card-filename" title={fileData.name}>
+                    {fileData.name || label}
+                  </span>
+                  <span className="id-card-filesize">
+                    {fileData.size ? `${(fileData.size / 1024).toFixed(0)} KB` : 'Attached'} • Ready
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="id-image-preview-content"
+                onClick={() =>
+                  openLightbox({
+                    url: fileData.previewUrl || fileData.url,
+                    title: fileData.name || label,
+                    subtitle: `${label} · ${idType || 'Government ID'}`
+                  })
+                }
+                title="Click to view full preview in lightbox"
+              >
                 <img
                   src={fileData.previewUrl || fileData.url}
                   alt={label}
-                  className="id-thumbnail-img"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() =>
-                    setLightboxData({
-                      url: fileData.previewUrl || fileData.url,
-                      title: fileData.name || label,
-                      subtitle: `${label} · ${idType || 'Government ID'}`
-                    })
-                  }
+                  className="id-preview-img-full"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-              )}
-            </div>
 
-            <div className="id-uploaded-info">
-              <span className="id-uploaded-name" title={fileData.name}>
-                {fileData.name || label}
-              </span>
-              <span className="id-uploaded-size">
-                {fileData.size ? `${(fileData.size / 1024).toFixed(0)} KB` : 'Attached'}
-                {' • '}
-                <span className="text-success font-semibold">
-                  <CheckCircle2 size={12} style={{ display: 'inline', verticalAlign: '-1px' }} /> Ready
-                </span>
-              </span>
-            </div>
+                <div className="id-preview-scrim" />
 
-            <div className="id-uploaded-actions">
-              {isPdf ? (
-                <button
-                  type="button"
-                  className="id-action-icon-btn view"
-                  title="View PDF document"
-                  onClick={() =>
-                    openPdfModal({
-                      type: 'file',
-                      url: fileData.previewUrl || fileData.url,
-                      title: fileData.name || label || 'Government ID PDF'
-                    })
-                  }
-                >
-                  <Eye size={15} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="id-action-icon-btn view"
-                  title="Preview in Lightbox"
-                  onClick={() =>
-                    openLightbox({
-                      url: fileData.previewUrl || fileData.url,
-                      title: fileData.name || label,
-                      subtitle: `${label} · ${idType || 'Government ID'}`
-                    })
-                  }
-                >
-                  <Eye size={15} />
-                </button>
-              )}
-              <button
-                type="button"
-                className="id-action-icon-btn delete"
-                title="Remove and replace"
-                disabled={disabled}
-                onClick={onRemove}
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
+                <div className="id-card-top-row" onClick={(e) => e.stopPropagation()}>
+                  <span className="id-card-ready-pill success">
+                    <CheckCircle2 size={12} />
+                    <span>Ready</span>
+                  </span>
+                  <div className="id-card-action-btns">
+                    <button
+                      type="button"
+                      className="id-card-btn view"
+                      title="Preview in Lightbox"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openLightbox({
+                          url: fileData.previewUrl || fileData.url,
+                          title: fileData.name || label,
+                          subtitle: `${label} · ${idType || 'Government ID'}`
+                        });
+                      }}
+                    >
+                      <Eye size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="id-card-btn delete"
+                      title="Remove and replace"
+                      disabled={disabled}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove();
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="id-card-bottom-info">
+                  <span className="id-card-filename" title={fileData.name}>
+                    {fileData.name || label}
+                  </span>
+                  <span className="id-card-filesize">
+                    {fileData.size ? `${(fileData.size / 1024).toFixed(0)} KB` : 'Attached'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div
@@ -188,11 +224,11 @@ export default function ValidIdUpload({
           >
             <div className="id-dropzone-content">
               <div className="id-dropzone-icon-circle">
-                <UploadCloud size={20} />
+                <UploadCloud size={18} />
               </div>
               <div className="id-dropzone-text">
-                <strong>Choose {isFront ? 'Front' : 'Back'} of ID</strong>
-                <span>JPG, PNG, WEBP, or PDF (Max 15MB)</span>
+                <strong>Choose {isFront ? 'Front' : 'Back'}</strong>
+                <span>JPG, PNG, or PDF</span>
               </div>
             </div>
           </div>

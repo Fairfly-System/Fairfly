@@ -8,6 +8,7 @@ import { initiateRegistration } from "../../../services/authService";
 import TermsPrivacyModal from "../../../components/Shared/TermsPrivacyModal/TermsPrivacyModal";
 import ValidIdUpload from "../../../components/Shared/ValidIdUpload/ValidIdUpload";
 import { uploadFileToBackend } from "../../../utils/fileUploadApi";
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from "../../../utils/phoneUtils";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -99,12 +100,10 @@ export default function Register() {
   };
 
   const validatePhone = (phone) => {
-    const phoneRegex = /^[0-9+\s-]{8,15}$/;
-
-    if (!phoneRegex.test(phone)) {
+    if (!isValidPhilippinePhone(phone)) {
       setErrors((prev) => ({
         ...prev,
-        phone: "Invalid phone number format",
+        phone: "Must be 11 digits starting with 09 (e.g. 09XXXXXXXXX)",
       }));
     } else {
       setErrors((prev) => {
@@ -427,10 +426,12 @@ export default function Register() {
                   className="auth-input"
                   value={formData.phone}
                   onChange={(e) => {
-                    handleInputChange(e.target.value, "phone");
-                    validatePhone(e.target.value);
+                    const sanitized = sanitizePhilippinePhone(e.target.value);
+                    handleInputChange(sanitized, "phone");
+                    validatePhone(sanitized);
                   }}
-                  placeholder="+63 912 345 6789"
+                  placeholder="09XXXXXXXXX"
+                  maxLength={PH_PHONE_MAX_LENGTH}
                   autoComplete="tel"
                   required
                 />

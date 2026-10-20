@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useToast } from '../../../UI/toast/ToastProvider';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../../utils/phoneUtils';
 
 export default function ClientEditForm({ onSubmit, isLoading, initialData }) {
   const { addToast } = useToast();
   const [fullName, setFullName] = useState(initialData?.fullName || initialData?.name || '');
-  const [phone, setPhone] = useState(initialData?.phone || '');
+  const [phone, setPhone] = useState(sanitizePhilippinePhone(initialData?.phone || ''));
   const [status, setStatus] = useState(initialData?.status || 'Active');
   const [address, setAddress] = useState(initialData?.address || '');
 
@@ -16,9 +17,14 @@ export default function ClientEditForm({ onSubmit, isLoading, initialData }) {
       return;
     }
 
+    if (phone.trim() && !isValidPhilippinePhone(phone)) {
+      addToast('Phone number must follow Philippine format: 09XXXXXXXXX (11 digits)', 'warning');
+      return;
+    }
+
     const payload = {
       fullName: fullName.trim(),
-      phone: phone.trim(),
+      phone: sanitizePhilippinePhone(phone),
       status: status,
       address: address.trim()
     };
@@ -65,9 +71,10 @@ export default function ClientEditForm({ onSubmit, isLoading, initialData }) {
           <input
             type="tel"
             className="form-input"
-            placeholder="+63 912 345 6789"
+            placeholder="09XXXXXXXXX"
+            maxLength={PH_PHONE_MAX_LENGTH}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(sanitizePhilippinePhone(e.target.value))}
             disabled={isLoading}
           />
         </div>

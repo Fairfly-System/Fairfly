@@ -92,10 +92,20 @@ export default function AppSidebar({
       const tabSlug = linkPath.split('/').filter(Boolean).pop() || '';
       const isPortalRoot = link.end === true || linkPath === '/operator' || linkPath === '/admin' || linkPath === '/client';
 
-      // Operator portal: the Services tab (/operator/services) is strictly Catalog Management.
-      // Client service requests (intake orders) should not place a badge on this tab.
-      if (portalName === 'Operator' && (linkPath === '/operator/services' || tabSlug === 'services')) {
-        return 0;
+      // Operator portal: Services, Workflows, Resources, QuickLinks, History, and Logs are management/reference tabs with zero badges.
+      if (portalName === 'Operator') {
+        const disallowedOperatorTabs = new Set([
+          '/operator',
+          '/operator/services',
+          '/operator/workflows',
+          '/operator/resources',
+          '/operator/quick-links',
+          '/operator/history',
+          '/operator/logs'
+        ]);
+        if (disallowedOperatorTabs.has(linkPath) || ['services', 'workflows', 'resources', 'quick-links', 'history', 'logs'].includes(tabSlug)) {
+          return 0;
+        }
       }
 
       // Admin portal: Services, Workflows, Analytics, Resources, QuickLinks, Chatbot, Operators, Admins, Clients have NO notifications.
@@ -132,7 +142,7 @@ export default function AppSidebar({
 
         // Match by notification type to tab slug
         if (notifType) {
-          if (tabSlug.includes(notifType) || (notifType === 'service' && tabSlug.includes('workflow'))) return true;
+          if (tabSlug.includes(notifType)) return true;
           if (notifType === 'franchise' && tabSlug.includes('franchise')) return true;
           if (notifType === 'appointment' && tabSlug.includes('appointment')) return true;
           if (notifType === 'ticket' && tabSlug.includes('ticket')) return true;

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthContext } from '../../../context/AuthContext';
 import { useToast } from '../../UI/toast/ToastProvider';
 import BaseModal from '../../UI/ModalBase/BaseModal';
 import ApiCaller from '../../../utils/ApiCaller';
 import { API_BASE_URL } from '../../../utils/config';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../utils/phoneUtils';
 import './client-appointment-form.css';
 
 export default function ClientAppointmentForm({
@@ -138,10 +139,19 @@ export default function ClientAppointmentForm({
     loadData();
   }, [isOpen, userToken]);
 
+  const displayedBranches = useMemo(() => {
+    if (lockedBranchUid) {
+      const matched = branchesList.filter((b) => (b.uid || b.id) === lockedBranchUid);
+      if (matched.length > 0) return matched;
+      return [{ uid: lockedBranchUid, branchName: lockedBranchName || branchName || 'Selected Branch' }];
+    }
+    return branchesList;
+  }, [branchesList, lockedBranchUid, lockedBranchName, branchName]);
+
   const handleBranchChange = (e) => {
     const chosenUid = e.target.value;
     setBranchUid(chosenUid);
-    const chosen = branchesList.find((b) => b.uid === chosenUid);
+    const chosen = displayedBranches.find((b) => (b.uid || b.id) === chosenUid);
     if (chosen) {
       setBranchName(chosen.branchName);
     }
@@ -150,6 +160,7 @@ export default function ClientAppointmentForm({
   const isFormValid = Boolean(
     clientName.trim() &&
     clientPhone.trim() &&
+    isValidPhilippinePhone(clientPhone) &&
     preferredDate
   );
 
@@ -158,6 +169,11 @@ export default function ClientAppointmentForm({
 
     if (!clientName.trim() || !clientPhone.trim() || !preferredDate) {
       addToast('Please fill in your name, contact number, and preferred date', 'warning');
+      return;
+    }
+
+    if (!isValidPhilippinePhone(clientPhone)) {
+      addToast('Please enter a valid Philippine mobile number (11 digits, e.g. 09XXXXXXXXX)', 'warning');
       return;
     }
 
@@ -289,9 +305,10 @@ export default function ClientAppointmentForm({
               <input
                 type="tel"
                 className="form-input"
-                placeholder="0912 345 6789"
+                placeholder="09XXXXXXXXX"
+                maxLength={PH_PHONE_MAX_LENGTH}
                 value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
+                onChange={(e) => setClientPhone(sanitizePhilippinePhone(e.target.value))}
                 required
               />
             </div>
@@ -352,10 +369,10 @@ export default function ClientAppointmentForm({
                 disabled={Boolean(lockedBranchUid)}
                 style={lockedBranchUid ? { backgroundColor: 'var(--bg-muted, #f1f5f9)', cursor: 'not-allowed' } : {}}
               >
-                {branchesList.length > 0 ? (
-                  branchesList.map((b) => (
-                    <option key={b.uid} value={b.uid}>
-                      {b.branchName} {b.address ? `(${b.address})` : ''}
+                {displayedBranches.length > 0 ? (
+                  displayedBranches.map((b) => (
+                    <option key={b.uid || b.id} value={b.uid || b.id}>
+                      {b.branchName || b.name} {b.address ? `(${b.address})` : ''}
                     </option>
                   ))
                 ) : (

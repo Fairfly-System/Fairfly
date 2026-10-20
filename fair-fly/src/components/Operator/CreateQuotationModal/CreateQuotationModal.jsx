@@ -54,13 +54,13 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
     serviceId: '',
     serviceTitle: '',
     tourDates: '',
-    inclusions: '- Tourist Bus Transport\n- Driver\'s Fee, fuel, and allowances\n- Standard travel insurance coverage',
-    exclusions: '- Toll fees (NLEX / SCTEX / TPLEX)\n- Personal expenses, meals, and incidental items',
+    inclusions: '',
+    exclusions: '',
     rate: '',
     taxAmount: '',
     rateBreakdown: '',
     totalAmount: '',
-    operatorRemarks: '- Initial payment of 50% upon confirmation\n- Full payment on or before tour commencement',
+    operatorRemarks: '',
     clientRemarks: '',
     preparedByName: userDetails?.name || userDetails?.fullName || 'Emmanuel Manlapig',
     preparedByTitle: userDetails?.role === 'admin' ? 'Business Head' : 'Branch Operator',
@@ -204,7 +204,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
         payload,
         (res) => {
           setIsSubmitting(false);
-          addToast('Official Quotation (ADF-07-001) created successfully', 'success');
+          addToast('Official Quotation created successfully', 'success');
           if (onQuotationCreated) {
             onQuotationCreated(res);
           }
@@ -229,7 +229,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
       onClose={onClose}
       maxWidth="76rem"
       width="96%"
-      title="Create Service Quotation (ADF-07-001)"
+      title="Create Service Quotation"
       subtitle="Generate an official quotation based on client requirements"
       isLoading={isSubmitting}
     >
@@ -363,7 +363,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
               marginBottom: '1rem'
             }}>
               <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--primary, #4338ca)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <i className="fa-solid fa-clipboard-list"></i> Client's Requested Specifications (from SAF-01-002 Intake):
+                <i className="fa-solid fa-clipboard-list"></i> Client's Requested Specifications:
               </div>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-main, #1e293b)', whiteSpace: 'pre-wrap', lineHeight: '1.45' }}>
                 {initialData.specifiedRequirements}
@@ -380,7 +380,7 @@ export default function CreateQuotationModal({ isOpen, onClose, initialData, onQ
               marginBottom: '1rem'
             }}>
               <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--primary, #4338ca)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <i className="fa-regular fa-comment-dots"></i> Client's Remarks / Special Instructions (from SAF-01-002 Intake):
+                <i className="fa-regular fa-comment-dots"></i> Client's Remarks / Special Instructions:
               </div>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-main, #1e293b)', whiteSpace: 'pre-wrap', lineHeight: '1.45' }}>
                 {initialData.remarks || initialData.clientRemarks}

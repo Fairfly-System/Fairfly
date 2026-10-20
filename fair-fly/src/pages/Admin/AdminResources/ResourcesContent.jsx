@@ -8,10 +8,11 @@ import PageHeader from '../../../components/UI/PageHeader/PageHeader';
 import Breadcrumbs from '../../../components/UI/Breadcrumbs/Breadcrumbs';
 import ConfirmationModal from '../../../components/Admin/Modals/ConfirmationModal/ConfirmationModal';
 import ResourceModal from '../../../components/Admin/Modals/ResourceModal/ResourceModal';
-import { fetchResources, createResource, updateResource, deleteResource, recordResourceDownload } from '../../../services/resourceService';
+import { fetchResources, createResource, updateResource, deleteResource, recordResourceDownload, downloadResourceFile } from '../../../services/resourceService';
 import useDebounce from '../../../hooks/useDebounce';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
 import { usePdfModal, isPdfUrl } from '../../../components/Shared/PdfDocument/PdfDocumentView';
+import { useLightbox, isImageUrl } from '../../../components/UI/ImageLightbox/ImageLightbox';
 import './admin-resources.css';
 
 const TrashIcon = (props) => <i className="fa-solid fa-trash-can" {...props}></i>;
@@ -50,6 +51,7 @@ export default function ResourcesContent() {
   const { userToken } = useAuthContext();
   const { addToast } = useToast();
   const { openPdfModal } = usePdfModal();
+  const { openLightbox } = useLightbox();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -202,21 +204,14 @@ export default function ResourcesContent() {
   };
 
   const handleDownload = async (resource) => {
+    if (!resource || !resource.id) return;
     try {
-      // Record download on backend
-      recordResourceDownload(userToken, resource.id, () => {}, (e) => console.warn('Download tracking warning:', e));
-
-      // Trigger download
-      const link = document.createElement('a');
-      link.href = resource.fileUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.download = resource.fileName || 'resource';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      addToast(`Preparing download for "${resource.title}"...`, 'info');
+      await downloadResourceFile(userToken, resource);
+      addToast(`Downloaded "${resource.title}" successfully.`, 'success');
     } catch (error) {
       console.error('Download error:', error);
+      addToast(toFriendlyMessage(error, 'Download could not be completed. Please try again.'), 'error');
     }
   };
 
@@ -228,37 +223,63 @@ export default function ResourcesContent() {
         header: 'Material / Document',
         render: (r) => {
           const isPdf = isPdfUrl(r.fileUrl, r.fileName);
+          const isImage = isImageUrl(r.fileUrl, r.fileName);
+          const canPreview = isPdf || isImage;
+
+          const handlePreview = () => {
+            if (isImage) {
+              openLightbox({
+                url: r.fileUrl,
+                title: r.title || r.fileName || 'Resource Picture',
+                subtitle: `${r.category || 'Resource Material'} · ${r.fileName || 'Image'}`
+              });
+            } else if (isPdf) {
+              openPdfModal({
+                type: 'file',
+                url: r.fileUrl,
+                title: r.title || r.fileName || 'Resource Document'
+              });
+            }
+          };
+
           return (
             <div className="resource-title-cell">
               <div
-                className={`resource-type-icon ${getCategoryClass(r.category)}`}
-                style={isPdf ? { cursor: 'pointer' } : {}}
-                onClick={() => {
-                  if (isPdf) {
-                    openPdfModal({
-                      type: 'file',
-                      url: r.fileUrl,
-                      title: r.title || r.fileName || 'Resource Document'
-                    });
-                  }
-                }}
-                title={isPdf ? 'Click to preview PDF' : undefined}
+                className={`resource-type-icon ${getCategoryClass(r.category)} ${isImage ? 'is-image-icon' : ''}`}
+                style={canPreview ? { cursor: 'pointer' } : {}}
+                onClick={canPreview ? handlePreview : undefined}
+                title={
+                  isImage
+                    ? 'Click to view picture in Lightbox'
+                    : isPdf
+                    ? 'Click to preview PDF'
+                    : undefined
+                }
               >
+                {isImage && (
+                  <img
+                    src={r.fileUrl}
+                    alt={r.title || 'Resource'}
+                    className="resource-thumbnail-img"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
                 <i className={getFileTypeIcon(r.fileExtension || r.fileName?.split('.').pop())}></i>
               </div>
               <div className="resource-title-meta">
                 <span
-                  className="resource-title-text"
-                  style={isPdf ? { cursor: 'pointer' } : {}}
-                  onClick={() => {
-                    if (isPdf) {
-                      openPdfModal({
-                        type: 'file',
-                        url: r.fileUrl,
-                        title: r.title || r.fileName || 'Resource Document'
-                      });
-                    }
-                  }}
+                  className={`resource-title-text ${canPreview ? 'is-clickable' : ''}`}
+                  style={canPreview ? { cursor: 'pointer' } : {}}
+                  onClick={canPreview ? handlePreview : undefined}
+                  title={
+                    isImage
+                      ? 'Click to view picture in Lightbox'
+                      : isPdf
+                      ? 'Click to preview PDF'
+                      : undefined
+                  }
                 >
                   {r.title}
                 </span>
@@ -338,51 +359,74 @@ export default function ResourcesContent() {
         key: 'actions',
         header: 'Actions',
         className: 'actions-col',
-        render: (r) => (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
-            {isPdfUrl(r.fileUrl, r.fileName) && (
+        render: (r) => {
+          const isPdf = isPdfUrl(r.fileUrl, r.fileName);
+          const isImage = isImageUrl(r.fileUrl, r.fileName);
+
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+              {isImage && (
+                <button
+                  type="button"
+                  className="icon-btn view"
+                  title="View Picture in Lightbox"
+                  onClick={() =>
+                    openLightbox({
+                      url: r.fileUrl,
+                      title: r.title || r.fileName || 'Resource Picture',
+                      subtitle: `${r.category || 'Resource Material'} · ${r.fileName || 'Image'}`
+                    })
+                  }
+                >
+                  <i className="fa-solid fa-eye"></i>
+                </button>
+              )}
+              {isPdf && (
+                <button
+                  type="button"
+                  className="icon-btn view"
+                  title="Preview PDF Document"
+                  onClick={() =>
+                    openPdfModal({
+                      type: 'file',
+                      url: r.fileUrl,
+                      title: r.title || r.fileName || 'Resource Document'
+                    })
+                  }
+                >
+                  <i className="fa-solid fa-eye"></i>
+                </button>
+              )}
               <button
                 type="button"
                 className="icon-btn view"
-                title="Preview PDF Document"
-                onClick={() => openPdfModal({
-                  type: 'file',
-                  url: r.fileUrl,
-                  title: r.title || r.fileName || 'Resource Document'
-                })}
+                title="Download Material"
+                onClick={() => handleDownload(r)}
               >
-                <i className="fa-solid fa-eye"></i>
+                <i className="fa-solid fa-download"></i>
               </button>
-            )}
-            <button
-              type="button"
-              className="icon-btn view"
-              title="Download Material"
-              onClick={() => handleDownload(r)}
-            >
-              <i className="fa-solid fa-download"></i>
-            </button>
-            <button
-              type="button"
-              className="icon-btn edit"
-              title="Edit Resource"
-              onClick={() => handleOpenEditModal(r)}
-            >
-              <i className="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button
-              type="button"
-              className="icon-btn delete"
-              title="Delete Resource"
-              onClick={() => setResourceToDelete(r)}
-            >
-              <i className="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        )
+              <button
+                type="button"
+                className="icon-btn edit"
+                title="Edit Resource"
+                onClick={() => handleOpenEditModal(r)}
+              >
+                <i className="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button
+                type="button"
+                className="icon-btn delete"
+                title="Delete Resource"
+                onClick={() => setResourceToDelete(r)}
+              >
+                <i className="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          );
+        }
       }
     ],
-    []
+    [openPdfModal, openLightbox]
   );
 
   const breadcrumbItems = [

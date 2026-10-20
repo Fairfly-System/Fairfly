@@ -5,6 +5,7 @@ import { useToast } from '../../UI/toast/ToastProvider';
 import { fetchServices } from '../../../services/serviceService';
 import { createInquiry } from '../../../services/inquiryService';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { sanitizePhilippinePhone, isValidPhilippinePhone, PH_PHONE_MAX_LENGTH } from '../../../utils/phoneUtils';
 import './create-inquiry-form-modal.css';
 
 const todayIso = new Date().toISOString().split('T')[0];
@@ -82,7 +83,8 @@ export default function CreateInquiryFormModal({ onClose }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const finalVal = name === 'cellphone' ? sanitizePhilippinePhone(value) : value;
+    setForm((prev) => ({ ...prev, [name]: finalVal }));
   };
 
   const handleToggleService = (srv) => {
@@ -125,9 +127,10 @@ export default function CreateInquiryFormModal({ onClose }) {
     (form.clientType === 'company'
       ? (form.companyName.trim() && form.contactPersonFirstName.trim() && form.contactPersonLastName.trim())
       : (form.firstName.trim() && form.lastName.trim())) &&
-    (form.cellphone.trim() || form.email.trim()) &&
-    ((form.servicesOffered || []).length > 0 || form.serviceType.trim()) &&
-    form.specifiedRequirements.trim()
+    form.cellphone.trim() &&
+    isValidPhilippinePhone(form.cellphone) &&
+    form.email.trim() &&
+    ((form.servicesOffered || []).length > 0 || form.serviceType.trim())
   );
 
   const handleSubmit = () => {
@@ -159,16 +162,12 @@ export default function CreateInquiryFormModal({ onClose }) {
       addToast('A valid E-mail Address is mandatory for all inquiries', 'error');
       return;
     }
-    if (!form.cellphone?.trim()) {
-      addToast('Please provide a cellphone number', 'error');
+    if (!form.cellphone?.trim() || !isValidPhilippinePhone(form.cellphone)) {
+      addToast('Please provide a valid Philippine mobile number (11 digits, e.g. 09XXXXXXXXX)', 'error');
       return;
     }
     if ((form.servicesOffered || []).length === 0) {
       addToast('Please select at least one service offered checkbox', 'error');
-      return;
-    }
-    if (!form.specifiedRequirements.trim()) {
-      addToast('Please enter the Specified Requirements of Client', 'error');
       return;
     }
 
@@ -219,7 +218,7 @@ export default function CreateInquiryFormModal({ onClose }) {
       payload,
       () => {
         setIsSubmitting(false);
-        addToast('Official Inquiry Form (SAF-01-002) recorded successfully', 'success');
+        addToast('Official Inquiry Form recorded successfully', 'success');
         onClose();
       },
       (error) => {
@@ -236,7 +235,7 @@ export default function CreateInquiryFormModal({ onClose }) {
       onClose={onClose}
       maxWidth="72rem"
       width="95%"
-      title="Official Service Inquiry Intake Form (SAF-01-002)"
+      title="Official Service Inquiry Intake Form"
       subtitle="Intake client specifications and requirements for custom travel or document services"
       isLoading={isSubmitting}
     >
@@ -389,7 +388,15 @@ export default function CreateInquiryFormModal({ onClose }) {
         <div className="cif-row2">
           <div className="cif-field">
             <label>Cellphone No. <span>*</span></label>
-            <input name="cellphone" placeholder="+63 912 345 6789" value={form.cellphone} onChange={handleChange} disabled={isSubmitting} />
+            <input
+              name="cellphone"
+              type="tel"
+              placeholder="09XXXXXXXXX"
+              maxLength={PH_PHONE_MAX_LENGTH}
+              value={form.cellphone}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
           </div>
           <div className="cif-field">
             <label>Telephone No.</label>
@@ -432,7 +439,7 @@ export default function CreateInquiryFormModal({ onClose }) {
         </div>
 
         <h3 className="cif-section-title">
-          <i className="fa-solid fa-list-check"></i> 2. Services Offered (SAF-01-002)
+          <i className="fa-solid fa-list-check"></i> 2. Services Offered
         </h3>
 
         <div className="cif-services-grid">
@@ -470,7 +477,7 @@ export default function CreateInquiryFormModal({ onClose }) {
         )}
 
         <h3 className="cif-section-title">
-          <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span>*</span>
+          <i className="fa-solid fa-clipboard-list"></i> 3. Specified Requirements of Client <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-light, #64748b)' }}>(Optional)</span>
         </h3>
         <p className="cif-help-text">
           What does the client want? Describe vehicles, passenger count, itinerary, destinations, target tour dates, lodging preferences, and specific requests.
@@ -484,7 +491,6 @@ export default function CreateInquiryFormModal({ onClose }) {
             rows={5}
             className="cif-textarea-light"
             disabled={isSubmitting}
-            required
           />
         </div>
 

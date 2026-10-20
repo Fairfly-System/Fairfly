@@ -248,7 +248,7 @@ export default function VerifyEmail() {
 
           <div className="auth-showcase-main">
             <div className="auth-showcase-badge">
-              <i className="fa-solid fa-shield-check"></i>
+              <i className="fa-solid fa-shield-halved"></i>
               <span>Identity & Account Security</span>
             </div>
 

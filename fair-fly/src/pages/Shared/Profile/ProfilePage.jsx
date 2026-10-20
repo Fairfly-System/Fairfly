@@ -113,6 +113,18 @@ export default function ProfilePage() {
     return 'Registered Traveler / Client';
   };
 
+  // Derive human-readable role icon
+  const getRoleIcon = () => {
+    if (isAdmin) {
+      const isSuper = profileData?.isSuperAdmin === true || profileData?.email === 'admin@gmail.com' || user?.email === 'admin@gmail.com';
+      return isSuper ? 'fa-solid fa-crown' : 'fa-solid fa-user-shield';
+    }
+    if (isOperator) {
+      return 'fa-solid fa-building-user';
+    }
+    return 'fa-solid fa-user-check';
+  };
+
   // Save basic profile edits
   const handleSaveProfile = async (formData) => {
     let token = userToken;
@@ -180,8 +192,9 @@ export default function ProfilePage() {
     e.preventDefault();
     setPasswordError('');
 
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters in length.');
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!newPassword || !strongPasswordRegex.test(newPassword)) {
+      setPasswordError('New password must be at least 8 characters and include uppercase, lowercase, and a number.');
       return;
     }
 
@@ -267,7 +280,8 @@ export default function ProfilePage() {
           <div className="profile-header-titles">
             <h1 className="profile-title-name">{displayName}</h1>
             <div className="profile-role-badge-row">
-              <span className="status-pill status-pill-active">
+              <span className="status-pill status-pill-active" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <i className={getRoleIcon()}></i>
                 {getRoleTitle()}
               </span>
               <span className={`status-pill ${accountStatus.toLowerCase() === 'active' ? 'status-pill-active' : 'status-pill-pending'}`}>
@@ -391,6 +405,23 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {!isOperator && (profileData?.firstName || profileData?.lastName) && (
+                <>
+                  <div className="profile-field-row">
+                    <span className="profile-field-label">First Name</span>
+                    <span className="profile-field-value">{displayVal(profileData?.firstName)}</span>
+                  </div>
+                  <div className="profile-field-row">
+                    <span className="profile-field-label">Middle Name / M.I.</span>
+                    <span className="profile-field-value">{displayVal(profileData?.middleName || profileData?.middleInitial, 'None')}</span>
+                  </div>
+                  <div className="profile-field-row">
+                    <span className="profile-field-label">Last Name</span>
+                    <span className="profile-field-value">{displayVal(profileData?.lastName)}</span>
+                  </div>
+                </>
+              )}
+
               <div className="profile-field-row">
                 <span className="profile-field-label">Email Address</span>
                 <span className="profile-field-value">
@@ -419,7 +450,7 @@ export default function ProfilePage() {
           <section className="profile-content-card">
             <div className="profile-card-header">
               <h2 className="profile-card-title">
-                <i className="fa-solid fa-shield-check"></i>
+                <i className="fa-solid fa-shield-halved"></i>
                 <span>Account & Access Level</span>
               </h2>
             </div>
@@ -427,7 +458,8 @@ export default function ProfilePage() {
             <div className="profile-fields-list">
               <div className="profile-field-row">
                 <span className="profile-field-label">Access Level</span>
-                <span className="profile-field-value">
+                <span className="profile-field-value" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <i className={getRoleIcon()} style={{ color: 'var(--purple)', fontSize: '0.875rem' }}></i>
                   <strong>{getRoleTitle()}</strong>
                 </span>
               </div>
@@ -717,7 +749,7 @@ export default function ProfilePage() {
                       id="new-password-input"
                       type={showNewPassword ? 'text' : 'password'}
                       className="form-input"
-                      placeholder="Enter new secure password (min. 6 characters)"
+                      placeholder="Enter new password (8+ chars, upper, lower, number)"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
@@ -763,9 +795,21 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="password-policy-box">
-                  <div className={`policy-item ${newPassword.length >= 6 ? 'ok' : 'pending'}`}>
-                    <i className={`fa-solid ${newPassword.length >= 6 ? 'fa-circle-check' : 'fa-circle-dot'}`}></i>
-                    <span>At least 6 characters in length</span>
+                  <div className={`policy-item ${newPassword.length >= 8 ? 'ok' : 'pending'}`}>
+                    <i className={`fa-solid ${newPassword.length >= 8 ? 'fa-circle-check' : 'fa-circle-dot'}`}></i>
+                    <span>At least 8 characters in length</span>
+                  </div>
+                  <div className={`policy-item ${/[A-Z]/.test(newPassword) ? 'ok' : 'pending'}`}>
+                    <i className={`fa-solid ${/[A-Z]/.test(newPassword) ? 'fa-circle-check' : 'fa-circle-dot'}`}></i>
+                    <span>Contains uppercase letter (A-Z)</span>
+                  </div>
+                  <div className={`policy-item ${/[a-z]/.test(newPassword) ? 'ok' : 'pending'}`}>
+                    <i className={`fa-solid ${/[a-z]/.test(newPassword) ? 'fa-circle-check' : 'fa-circle-dot'}`}></i>
+                    <span>Contains lowercase letter (a-z)</span>
+                  </div>
+                  <div className={`policy-item ${/\d/.test(newPassword) ? 'ok' : 'pending'}`}>
+                    <i className={`fa-solid ${/\d/.test(newPassword) ? 'fa-circle-check' : 'fa-circle-dot'}`}></i>
+                    <span>Contains at least one number (0-9)</span>
                   </div>
                   <div className={`policy-item ${newPassword && confirmPassword && newPassword === confirmPassword ? 'ok' : 'pending'}`}>
                     <i className={`fa-solid ${newPassword && confirmPassword && newPassword === confirmPassword ? 'fa-circle-check' : 'fa-circle-dot'}`}></i>
@@ -785,7 +829,7 @@ export default function ProfilePage() {
                   <button
                     type="submit"
                     className="btn-primary"
-                    disabled={isSubmittingPassword || newPassword.length < 6 || newPassword !== confirmPassword}
+                    disabled={isSubmittingPassword || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword) || newPassword !== confirmPassword}
                     id="btn-submit-new-pwd"
                   >
                     {isSubmittingPassword ? (
@@ -795,7 +839,7 @@ export default function ProfilePage() {
                       </>
                     ) : (
                       <>
-                        <i className="fa-solid fa-shield-check"></i>
+                        <i className="fa-solid fa-shield-halved"></i>
                         <span>Update Password</span>
                       </>
                     )}

@@ -5,6 +5,7 @@ import { fetchPublicTracking } from '../../../services/trackingService';
 import { fetchPublicReceipt } from '../../../services/receiptService';
 import PdfDocumentView from '../../Shared/PdfDocument/PdfDocumentView';
 import toFriendlyMessage from '../../../utils/friendlyErrors';
+import { formatPaymentChannel } from '../../../utils/paymentUtils';
 import './request-tracker.css';
 
 const SAMPLE_CODES = ['SRV-2026-000123', 'SRV-2026-784291', 'SRV-2026-9B3E2F'];
@@ -529,7 +530,7 @@ export default function RequestTracker({ hideHeader = false }) {
                   </div>
                   <div className="receipt-callout-details">
                     <span className="receipt-callout-no">
-                      Receipt No: <strong>{trackingData.receipt?.receiptNo || 'ADF-07-002 (Authenticated)'}</strong>
+                      Receipt No: <strong>{trackingData.receipt?.receiptNo || 'Official (Authenticated)'}</strong>
                     </span>
                     {trackingData.serviceCode && (
                       <span className="receipt-callout-code">
@@ -538,7 +539,7 @@ export default function RequestTracker({ hideHeader = false }) {
                     )}
                     {trackingData.receipt?.amount && (
                       <span className="receipt-callout-amount">
-                        Amount Paid: <strong>{formatCurrency(trackingData.receipt.amount)}</strong> via {trackingData.receipt.paymentMethod || 'Verified Payment'}
+                        Amount Paid: <strong>{formatCurrency(trackingData.receipt.amount)}</strong> via {formatPaymentChannel(trackingData.receipt.paymentMethod, trackingData.receipt.provider) || 'Verified Payment'}
                       </span>
                     )}
                   </div>
