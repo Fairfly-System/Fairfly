@@ -1,0 +1,8 @@
+{
+  "installOn": [
+    "fair-fly/package.json",
+    "fair-fly/package-lock.json",
+    "fly-api/package.json",
+    "fly-api/package-lock.json"
+  ]
+}
